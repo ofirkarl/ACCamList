@@ -787,10 +787,27 @@ details.more > summary::-webkit-details-marker { display: none; }
 .pv-seg .btn:first-child { border-start-start-radius: 8px; border-end-start-radius: 8px; }
 .pv-seg .btn:last-child { border-start-end-radius: 8px; border-end-end-radius: 8px; }
 .pv-send { padding-inline-start: 14px; border-inline-start: 1px solid var(--line); }
-.toast.with-undo { width: max-content; display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 14px; font-size: 14px; }
-.toast[hidden] { display: none; }
-.undo-btn { border: 0; border-inline-start: 1px solid rgba(127, 127, 127, .45); border-radius: 0 6px 6px 0; background: none; color: inherit; font-weight: 700; font-size: 14px; padding: 8px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
-.undo-btn:hover { background: rgba(127, 127, 127, .2); }
+/* undo: a quiet card, not a black bar */
+.undo-bar { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 41; width: min(420px, calc(100% - 32px));
+  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 4px 4px 16px; overflow: hidden;
+  background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; font-size: 14px;
+  box-shadow: 0 12px 32px rgba(16, 36, 64, .10), 0 2px 6px rgba(16, 36, 64, .06);
+  opacity: 0; transform: translate(-50%, 8px); transition: opacity .2s ease, transform .24s cubic-bezier(.2, .8, .2, 1); }
+.undo-bar.in { opacity: 1; transform: translate(-50%, 0); }
+.undo-bar[hidden] { display: none; }
+.ub-msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.ub-msg b { color: var(--fg); font-weight: 600; }
+.ub-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent); font: inherit; font-weight: 600; }
+.ub-btn:hover, .ub-btn:focus-visible { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.ub-time { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: var(--accent); opacity: .28; transform-origin: left center; }
+.undo-bar.in .ub-time { animation: ub-time 8s linear forwards; }
+@keyframes ub-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.flash { animation: flash-back 1.4s ease-out; }
+@keyframes flash-back { 0%, 25% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); background-color: color-mix(in srgb, var(--accent) 7%, var(--surface)); } 100% { box-shadow: 0 0 0 3px transparent; } }
+@media (prefers-reduced-motion: reduce) { .undo-bar { transition: opacity .15s linear; transform: translate(-50%, 0); } .undo-bar.in .ub-time, .flash { animation: none; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .undo-bar { box-shadow: 0 12px 32px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3); } }
+:root[data-theme="dark"] .undo-bar { box-shadow: 0 12px 32px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3); }
 @media (max-width: 560px) { .pv-bar .hint { display: none; } .pv-bar > b { flex: 1; } }
 .set-group { display: grid; gap: 10px; padding-block: 16px; border-top: 1px solid var(--line); }
 .set-group:first-of-type { border-top: 0; }
@@ -884,6 +901,7 @@ details.more[open] > summary .chev { transform: rotate(180deg); }
   <main id="view"></main>
 </div>
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="undo-bar" id="undoBar" role="status" aria-live="polite" hidden></div>
 <div class="notice" id="notice" role="status" aria-live="polite" hidden></div>
 
 <script>
@@ -940,21 +958,42 @@ const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(
 const clampQ = v => Math.max(0, Math.min(999, Math.floor(Number(v) || 0)));
 function toast(msg) {
   const t = document.getElementById("toast");
-  t.textContent = msg; t.hidden = false; t.classList.remove("with-undo"); undoFn = null;
+  t.textContent = msg; t.hidden = false;
+  if (undoFn) hideUndo();  // one message at a time at the bottom
   clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2600);
 }
-/* undo: something just deleted can be taken back from the bar at the bottom, for a few seconds */
-let undoFn = null;
-function undoable(msg, fn) {
-  const t = document.getElementById("toast"); if (!t) return;
-  t.innerHTML = `<span>${esc(msg)}</span><button class="undo-btn" type="button" data-act="undo">Undo</button>`;
-  t.hidden = false; t.classList.add("with-undo"); undoFn = fn;
-  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; t.classList.remove("with-undo"); undoFn = null; }, 8000);
+/* undo: something just deleted can be taken back for a few seconds, from a quiet card at the bottom
+   ("Removed ARRI Alexa Mini · Undo") with a thin line running down the time left; what comes back glows for a moment */
+const UNDO_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>`;
+const UNDO_MS = 8000;
+let undoFn = null, undoT = 0;
+function undoable(verb, what, fn) {
+  const u = document.getElementById("undoBar"); if (!u) return;
+  const t = document.getElementById("toast"); if (t) t.hidden = true;
+  undoFn = fn;
+  u.innerHTML = `<span class="ub-msg">${esc(verb)} <b>${esc(what || "")}</b></span><button class="ub-btn" type="button" data-act="undo">${UNDO_ICON}<span>Undo</span></button><span class="ub-time" aria-hidden="true"></span>`;
+  u.hidden = false; u.classList.remove("in"); void u.offsetWidth; u.classList.add("in");
+  clearTimeout(undoT); undoT = setTimeout(hideUndo, UNDO_MS);
+}
+function hideUndo() {
+  undoFn = null; clearTimeout(undoT);
+  const u = document.getElementById("undoBar"); if (!u || !u.classList) return;
+  u.classList.remove("in"); setTimeout(() => { if (!u.classList.contains("in")) u.hidden = true; }, 220);
+}
+/* what came back glows softly, so you see where it is */
+function flashBack(sel) {
+  if (typeof document === "undefined" || !document.querySelectorAll) return;
+  (typeof requestAnimationFrame === "function" ? requestAnimationFrame : f => f())(() => document.querySelectorAll(sel).forEach(el => { el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }));
 }
 /* a list's lines as they are now, to put back */
 function snapItems(p) {
   const id = p.id, items = clone(p.items), ok = clone(p.clashOk);
-  return () => { const q = findProd(id); if (!q) return; q.items = items; q.clashOk = ok; touch(q); rerenderKeepScroll(); };
+  return () => {
+    const q = findProd(id); if (!q) return;
+    const back = Object.keys(items).filter(k => !q.items[k] || JSON.stringify(q.items[k]) !== JSON.stringify(items[k]));
+    q.items = items; q.clashOk = ok; touch(q); rerenderKeepScroll();
+    if (back.length) flashBack(back.map(k => `li.line[data-line="${CSS.escape(k)}"]`).join(","));
+  };
 }
 /* productions about to be deleted (with their 2nd Units), to put back where they were */
 function snapProds(ids) {
@@ -965,6 +1004,7 @@ function snapProds(ids) {
     app.productions = [...before.filter(x => now.has(x.id) || back.includes(x)), ...app.productions.filter(x => !beforeIds.has(x.id))];
     back.forEach(x => touch(x));
     if (home || app.view === "home") rerenderKeepScroll(); else render();
+    if (back.length) flashBack(back.map(x => `.prod-card[data-id="${CSS.escape(x.id)}"]`).join(","));
   };
 }
 
@@ -2045,7 +2085,7 @@ function setQty(p, id, qty, field) {
   notifyDefaults(adds);
   // an ARRI hand unit (Hi-5, WCU-4) needs motors: ask which ones
   if (wasNew && p.items[id] && !cov && !clash && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
-  if (und && !p.items[id]) undoable(`Removed ${gone}`, und);
+  if (und && !p.items[id]) undoable("Removed", gone, und);
   return changed;
 }
 
@@ -3774,7 +3814,7 @@ document.addEventListener("click", e => {
     case "pm-del": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
       const nm = app.productions.find(x => x.id === id)?.name || "Production";
-      const und = snapProds([id]); closeModal(); deleteProductions([id]); render(); undoable(`${nm} deleted`, und);
+      const und = snapProds([id]); closeModal(); deleteProductions([id]); render(); undoable("Deleted", nm, und);
       break;
     }
     case "pick-prod": { if (!app.sel) break; if (app.sel.has(id)) app.sel.delete(id); else app.sel.add(id); rerenderKeepScroll(); break; }
@@ -3788,7 +3828,8 @@ document.addEventListener("click", e => {
     case "sel-del": {
       const ids = [...(app.sel || [])]; if (!ids.length) break;
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = `Tap again to delete ${ids.length}`; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete"; } }, 4000); break; }
-      const und = snapProds(ids); deleteProductions(ids); app.sel = null; rerenderKeepScroll(); undoable(`Deleted ${ids.length} production${ids.length === 1 ? "" : "s"}`, und);
+      const und = snapProds(ids), what = ids.length === 1 ? findProd(ids[0])?.name || "1 production" : `${ids.length} productions`;
+      deleteProductions(ids); app.sel = null; rerenderKeepScroll(); undoable("Deleted", what, und);
       break;
     }
     /* the shoot dates calendar */
@@ -3831,9 +3872,9 @@ document.addEventListener("click", e => {
     case "send-open": sendDialog(p); break;
     case "delete": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete production"; } }, 4000); break; }
-      const delId = mainOf(findProd(app.formFor))?.id || app.formFor, und = snapProds([delId]);
+      const delId = mainOf(findProd(app.formFor))?.id || app.formFor, und = snapProds([delId]), nm = findProd(delId)?.name || "the production";
       deleteProductions([delId]);
-      app.view = "home"; app.pid = null; render(); undoable("Production deleted", und);
+      app.view = "home"; app.pid = null; render(); undoable("Deleted", nm, und);
       break;
     }
     case "dup": startDuplicate(id || app.pid); break;
@@ -3886,7 +3927,7 @@ document.addEventListener("click", e => {
     case "remove": {
       const und = snapItems(p), name = p.items[id]?.name; delete p.items[id];
       if (app.editing === id) app.editing = null;
-      applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable(`Removed ${name}`, und);
+      applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable("Removed", name, und);
       break;
     }
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
@@ -3897,10 +3938,10 @@ document.addEventListener("click", e => {
       const und = snapItems(p);
       c.qty = clampQ(c.qty + (act === "kinc" ? 1 : -1));
       if (!c.qty) l.children = l.children.filter(k => k !== c);
-      touch(p); rerenderKeepScroll(); if (!c.qty) undoable(`Removed ${c.name}`, und); break;
+      touch(p); rerenderKeepScroll(); if (!c.qty) undoable("Removed", c.name, und); break;
     }
-    case "krm": { const { l, c } = kidRef(p, id); if (c) { const und = snapItems(p); l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); undoable(`Removed ${c.name}`, und); } break; }
-    case "undo": { const fn = undoFn; undoFn = null; const t = document.getElementById("toast"); if (t) { t.hidden = true; t.classList.remove("with-undo"); } if (fn) { fn(); toast("Back as it was"); } break; }
+    case "krm": { const { l, c } = kidRef(p, id); if (c) { const und = snapItems(p); l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); undoable("Removed", c.name, und); } break; }
+    case "undo": { const fn = undoFn; hideUndo(); if (fn) fn(); break; }
     /* editing the catalog and headings */
     case "cat-editmode": app.editCat = !app.editCat; rerenderKeepScroll(); break;
     case "cat-edit": catEditDialog(houseById(p.houseId), id); break;
@@ -3984,7 +4025,7 @@ document.addEventListener("click", e => {
       const rid = b.dataset.rid, r = clashRules().find(x => x.id === rid); let ids = [];
       if (act === "clash-keep") { (q.clashOk || (q.clashOk = {}))[rid] = true; touch(q); }
       else if (act === "clash-swap") { ids = clashSwap(q, rid); if (r) toast(`Swapped for ${shortName(itName(r.swap))}`); }
-      else { const und = snapItems(q); ids = clashDrop(q, rid); undoable("Removed", und); }
+      else { const und = snapItems(q), names = (r ? r.b : []).filter(x => q.items[x]).map(x => shortName(itName(x))).join(", "); ids = clashDrop(q, rid); undoable("Removed", names, und); }
       if (app.tab === "add" && !(app.q || "").trim()) refreshRows(q, Object.keys(q.items).concat(ids)); else rerenderKeepScroll();
       break;
     }
@@ -4228,7 +4269,7 @@ document.addEventListener("submit", e => {
       p.unit2 = q.id; p.unit = "Main Unit"; touch(q);
     } else if (oldQ) {
       const unitWas = p.unit; deleteProductions([oldQ.id]); delete p.unit2; p.unit = "";
-      undoable("2nd Unit removed", () => { if (!findProd(oldQ.id)) app.productions.push(oldQ); p.unit2 = oldQ.id; p.unit = unitWas || "Main Unit"; touch(oldQ); touch(p); render(); });
+      undoable("Removed", "the 2nd Unit", () => { if (!findProd(oldQ.id)) app.productions.push(oldQ); p.unit2 = oldQ.id; p.unit = unitWas || "Main Unit"; touch(oldQ); touch(p); render(); });
     }
     else if (p.unit && !p.mainOf) p.unit = "";
     app.dupFrom = null;
