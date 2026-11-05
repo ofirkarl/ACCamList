@@ -1113,9 +1113,80 @@ h2.page, .ph-name, .prod-title h2, .f-title { font-family: var(--font-body); fon
 .cal-day.start, .cal-day.end { box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--accent) 70%, transparent); }
 .cal-wd { text-transform: none; letter-spacing: 0; font-size: 12px; }
 
+/* ---- the production header: a friendly status, the name, the dates as quiet chips ---- */
+.prod-head { gap: 8px; padding-block: 6px 4px; }
+.ph-status { justify-self: center; display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 -4px; font-size: 13px; font-weight: 500; color: var(--accent); }
+.ph-status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 16%, transparent); }
+.ph-status.live { color: var(--ok); }
+.ph-status.live::before { animation: live 1.8s ease-in-out infinite; }
+.ph-status.done { color: var(--muted); }
+@keyframes live { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, currentColor 0%, transparent); } }
+.prod-head .ph-name { margin-top: 2px; }
+.ph-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 2px 0 4px; }
+.ph-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; box-sizing: border-box; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  font: inherit; font-size: 13px; font-weight: 500; box-shadow: 0 1px 2px rgba(48, 40, 28, .04); white-space: nowrap; }
+.ph-chip svg:not(.chev) { width: 15px; height: 15px; color: var(--muted); flex: none; }
+.ph-chip .ph-n { color: var(--muted); font-weight: 400; font-size: 13px; }
+button.ph-chip { cursor: pointer; transition: background-color .15s, transform .12s var(--ease); }
+button.ph-chip:active { transform: scale(.97); }
+.ph-info, .ph-add { color: var(--accent); background: var(--accent-soft); border-color: transparent; box-shadow: none; }
+.ph-info { width: 34px; padding: 0; justify-content: center; }
+.ph-info svg:not(.chev) { width: 17px; height: 17px; }
+.ph-info[aria-expanded="true"] { background: var(--accent); color: var(--accent-fg); }
+.ph-info svg:not(.chev), .ph-add svg { color: currentColor; }
+.ph-add { padding-inline-end: 12px; }
+.ph-info:hover, .ph-add:hover { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+.ph-info[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.ph-info .chev { transition: transform .2s var(--ease); }
+
+/* ---- the three tabs: an icon over each name, in its own color (add green, favorites amber, the list indigo) ---- */
+.tabs { --t-add: #1e9e5a; --t-fav: #e08a00; --t-list: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); padding: 5px; border-radius: 18px; gap: 5px; }
+.tab { display: grid; justify-items: center; align-content: center; gap: 3px; padding: 8px 4px 7px; border-radius: 14px; font-size: 12.5px; color: var(--muted); }
+.tab-i { position: relative; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; color: var(--tc); transition: background-color .2s, color .2s, transform .2s var(--ease); }
+.tab-ico { width: 20px; height: 20px; }
+.tab-l { line-height: 1.2; white-space: nowrap; }
+.t-add { --tc: var(--t-add); } .t-fav { --tc: var(--t-fav); } .t-list { --tc: var(--t-list); }
+.tab[aria-selected="true"] { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .08), 0 4px 12px -4px color-mix(in srgb, var(--tc) 35%, transparent); }
+.tab[aria-selected="true"] .tab-i { background: var(--tc); color: #fff; }
+.tab[aria-selected="true"] .tab-l { color: color-mix(in srgb, var(--tc) 70%, var(--fg)); font-weight: 500; }
+.tab:not([aria-selected="true"]):hover .tab-i { background: color-mix(in srgb, var(--tc) 12%, transparent); }
+.tab .num, .tab[aria-selected="true"] .num { position: absolute; top: -6px; inset-inline-end: -12px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 10.5px; font-weight: 600;
+  background: var(--tc); color: #fff; border: 2px solid var(--seg-on); vertical-align: 0; }
+.tab:not([aria-selected="true"]) .num { border-color: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
+:root[data-theme="dark"] .tabs { --t-add: #4ade80; --t-fav: #f7ba4d; }
+:root[data-theme="dark"] .tab[aria-selected="true"] .tab-i, :root[data-theme="dark"] .tab .num { color: #111015; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs { --t-add: #4ade80; --t-fav: #f7ba4d; } :root:not([data-theme="light"]) .tab[aria-selected="true"] .tab-i, :root:not([data-theme="light"]) .tab .num { color: #111015; } }
+
+/* the buttons next to the search: tinted, like the other quiet actions */
+.btn.icon-btn:not(.primary), .btn.spec-btn:not(.primary) { background: var(--accent-soft); border-color: transparent; color: var(--accent); box-shadow: none; }
+.btn.icon-btn:not(.primary):hover { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+
+/* ---- the lens finder: shorter cards, a few at a time ---- */
+.f-cards { gap: 8px; }
+.f-card { position: relative; gap: 4px; padding: 11px 12px; border-radius: 14px; }
+.f-nm { font-weight: 500; font-size: 14px; line-height: 1.3; padding-inline-end: 26px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.f-card .ext.corner { position: absolute; top: 8px; inset-inline-end: 6px; margin: 0; }
+.f-stopline { align-items: center; flex-wrap: nowrap; gap: 8px; min-height: 32px; margin-top: 0; }
+.f-stop { font-size: 14px; padding: 3px 8px; border-radius: 8px; background: var(--sunken); flex: none; }
+.f-stop.hit { background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.f-stop.hit::before { font-size: 12px; }
+.f-gap { font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-stopline .ctl { margin-inline-start: auto; flex: none; }
+.f-card .add { height: 32px; width: auto; padding-inline: 14px; }
+.f-card .stepper { width: auto; }
+.f-meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f-card .lens-line { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.f-more { border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; }
+.f-more span { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); font-weight: 400; }
+.f-narrow { display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--line); }
+.f-narrow > span { font-size: 12px; color: var(--muted); }
+.f-narrow-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.f-narrow .chip { padding: 6px 10px; font-size: 12.5px; }
+.f-nm .u { display: inline; }
+
 /* nothing moves for people who asked their phone for less motion */
 @media (prefers-reduced-motion: reduce) {
-  .modal, .modal-card, .toast, .bump, .pop { animation: none !important; }
+  .modal, .modal-card, .toast, .bump, .pop, .ph-status.live::before { animation: none !important; }
   .btn, .chip, .tab, .add, .stepper button, .prod-card { transition: none; }
   .btn:active, .add:active, .stepper button:active, .tab:active, .chip:active, .prod-card:active { transform: none; }
 }
@@ -1275,9 +1346,12 @@ function nameHtml(text, q) {
   return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u">${hl(w.join(" "), q)}</span>`; }).join(" ");
 }
 /* a lens set on one flowing line, each lens with its stop: "18 T2.9 • 25 T2.1 • 35 T2.1 …" (the set name already says how many); hi marks the focal length being searched */
-function perHtml(per, hi) {
+function perHtml(per, hi, around) {
   if (!per || !per.length) return "";
-  return `<span class="lens-line">${per.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}</span>`;
+  // around: only the lenses next to the one you looked for (a set of 12 stays on one line)
+  let list = per, pre = "", post = "";
+  if (around != null) { const i = Math.max(0, per.findIndex(x => x.f === hi)), a = Math.max(0, i - around), b = Math.min(per.length, i + around + 1); list = per.slice(a, b); pre = a > 0 ? "… " : ""; post = b < per.length ? " …" : ""; }
+  return `<span class="lens-line">${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
 }
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
@@ -1376,7 +1450,9 @@ const TAPE_ICONS = {
   tag: '<path d="M3.5 12.5V3.5h9l8 8-9 9z"/><circle cx="8" cy="8" r="1.5"/>'
 };
 const TAPE_OF = { camera: "cam", lens: "lens", lenses: "lens", accessories: "knob", camera_accessories: "knob", filters: "filter", support: "tripod", display: "monitor", media: "card", power: "bolt", grip: "grip", aks: "box" };
-const tapeIcon = key => `<span class="tape" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[TAPE_OF[key] || "tag"]}</svg></span>`;
+const TAPE_BY_NAME = [[/grip/i, "grip"], [/power|batter/i, "bolt"], [/monitor|display|video village/i, "monitor"], [/media|card|storage/i, "card"], [/support|tripod|head/i, "tripod"], [/filter/i, "filter"], [/lens/i, "lens"], [/accessor/i, "knob"], [/camera/i, "cam"]];
+const tapeIcon = (key, name = "") => { const k = TAPE_OF[key] || (TAPE_BY_NAME.find(([re]) => re.test(name)) || [])[1] || "tag";
+  return `<span class="tape" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[k]}</svg></span>`; };
 const isHex = v => /^#[0-9a-f]{6}$/i.test(v || "");
 function catTape(c) {
   const v = (app.settings.catColors || {})[c.id];
@@ -2754,6 +2830,36 @@ function ruleDialog() {
   document.getElementById("pk-when-c")?.focus();
 }
 
+/* where the production stands today, in a few words: "Shoot starts in 6 days", "Shoot day 3 of 6", "Wrapped 18 Nov" */
+function todayIso() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+const dayGap = (a, b) => { const pa = parseDate(a), pb = parseDate(b); return pa && pb ? Math.round((Date.UTC(pb.y, pb.m - 1, pb.d) - Date.UTC(pa.y, pa.m - 1, pa.d)) / 86400000) : null; };
+const fmtDM = s => { const q = parseDate(s); return q ? `${q.d} ${MONTHS[q.m - 1]}` : ""; };
+function fmtSpan(a, b) {
+  const pa = parseDate(a), pb = parseDate(b);
+  if (!pa) return ""; if (!pb || a === b) return fmtDM(a);
+  return pa.m === pb.m && pa.y === pb.y ? `${pa.d}–${pb.d} ${MONTHS[pa.m - 1]}` : `${fmtDM(a)} – ${fmtDM(b)}`;
+}
+function prodStatus(p, today = todayIso()) {
+  const end = p.shootEnd || p.shootStart, inDays = (n, what) => n === 1 ? `${what} tomorrow` : `${what} in ${n} days`;
+  if (p.prep && today < p.prep && (!p.shootStart || p.prep <= p.shootStart)) return { t: inDays(dayGap(today, p.prep), "Prep"), k: "soon" };
+  if (p.prep && today === p.prep) return { t: "Prep day today", k: "live" };
+  if (p.shootStart && today < p.shootStart) return { t: inDays(dayGap(today, p.shootStart), "Shoot starts"), k: "soon" };
+  if (p.shootStart && today <= end) {
+    const all = rangeDates(p.shootStart, end).filter(x => dayOn(p.days, x)), k = all.filter(x => x <= today).length;
+    return dayOn(p.days, today) ? { t: `Shoot day ${k} of ${all.length}`, k: "live" } : { t: "Day off today", k: "soon" };
+  }
+  if (end && today > end) return { t: `Wrapped ${fmtDM(end)}`, k: "done" };
+  return null;
+}
+const CHIP_CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>`;
+const PREP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.2L4 17v3h3l5.3-5.2a4 4 0 0 0 5.2-5.3l-2.5 2.5-2.5-2.5z"/></svg>`;
+const INFO_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>`;
+const TAB_ICONS = {
+  add: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+  fav: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+  list: '<path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" stroke-width="3"/>'
+};
+const tabIcon = k => `<svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]}</svg>`;
 function viewProduction() {
   const p = cur(), h = houseById(p.houseId), t = totals(p);
   const when = fmtRange(p.shootStart, p.shootEnd), days = shootDays(p);
@@ -2769,17 +2875,18 @@ function viewProduction() {
   // the row under the name: day and month only, so shoot and prep fit on one line (the years are in Info)
   const dm = s => { const q = parseDate(s); return q ? q.d + "." + q.m : ""; };
   const shootDM = p.shootStart ? (p.shootEnd && p.shootEnd !== p.shootStart ? `${dm(p.shootStart)}–${dm(p.shootEnd)}` : dm(p.shootStart)) : "";
-  const shootTxt = shootDM ? `<span class="ph-it"><span class="ph-k">Shoot</span> <b>${esc(shootDM)}</b>${days ? ` <span class="ph-n">· ${days} day${days === 1 ? "" : "s"}</span>` : ""}</span>` : "";
-  const prepTxt = p.prep ? `<span class="ph-it"><span class="ph-k">Prep</span> <b>${esc(dm(p.prep))}</b></span>` : "";
+  const st = prodStatus(p);
+  const shootTxt = p.shootStart ? `<span class="ph-chip">${CHIP_CAL}<span>${esc(fmtSpan(p.shootStart, p.shootEnd))}</span>${days ? `<span class="ph-n">· ${days} day${days === 1 ? "" : "s"}</span>` : ""}</span>` : "";
+  const prepTxt = p.prep ? `<span class="ph-chip">${PREP_ICON}<span class="ph-n">Prep</span><span>${esc(fmtDM(p.prep))}</span></span>` : "";
   // the lens finder gets the whole screen: nothing above the tabs
   const finder = app.tab === "add" && fin().on;
   const head = finder ? "" : `<div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
+      ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : ""}
       <h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
-      <button class="ph-row" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Production details">
-        <span class="ph-dates">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<span class="ph-it ph-k">No dates yet</span>`}</span></button>
-      <button class="ph-tab" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo">Info${CHEV}</button>
+      <div class="ph-chips">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
+        <button class="ph-chip ph-info" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Info: company, DP, 1st AC and notes" title="Info">${INFO_ICON}</button></div>
       <div class="pinfo${infoOpen ? " open" : ""}" id="pinfo"><div class="pinfo-in"><div class="pinfo-card">
         <dl class="prod-facts">${facts.map(([k, v]) => `<div${k === "Notes" ? ` class="pf-wide"` : ""}><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
         <div class="pinfo-acts"><button class="btn sm" type="button" data-act="edit">${missing ? "+ Add DP, 1st AC and dates" : "Edit details"}</button></div></div></div></div>
@@ -2787,9 +2894,9 @@ function viewProduction() {
   return `<section class="pad">
     ${head}
     <div class="tabs" role="tablist"${finder ? " hidden" : ""}>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}">Add gear</button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}">Favorites <span class="num">${nFav || ""}</span></button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Camera List <span class="num" id="tabCount">${t.lines}</span></button>
+      <button class="tab t-add" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}"><span class="tab-i">${tabIcon("add")}</span><span class="tab-l">Add gear</span></button>
+      <button class="tab t-fav" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}"><span class="tab-i">${tabIcon("fav")}<span class="num">${nFav || ""}</span></span><span class="tab-l">Favorites</span></button>
+      <button class="tab t-list" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}"><span class="tab-i">${tabIcon("list")}<span class="num" id="tabCount">${t.lines || ""}</span></span><span class="tab-l">Camera List</span></button>
     </div>
   </section>
   ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : viewList(p, h)}`;
@@ -2935,7 +3042,7 @@ function treeHtml(p, h) {
     const nSel = selCount(p, e => e.c.id === c.id && e.h.id === h.id);
     const open = searching || app.cat === c.id || app.open.has(c.id);
     const addSub = ed ? `<div class="add-row"><button class="add-head" type="button" data-act="new-item" data-k="${esc(c.direct.key)}">+ New item in ${esc(c.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(c.id)}">+ New folder in ${esc(c.name)}</button></div>` : "";
-    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id)}${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.join("")}${addSub}</div></details>`);
+    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.join("")}${addSub}</div></details>`);
   }
   if (ed && !searching) out.push(`<button class="add-head big" type="button" data-act="new-cat">+ Add category or subcategory</button>`);
   const lq = searching ? parseLensQuery(app.q) : null;
@@ -3078,12 +3185,17 @@ function finderCard(p, m, T) {
   const meta = [m.type === "set" ? `${m.pos}mm from a ${sp.focals.length}-lens set` : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}" data-fcard="${esc(m.id)}">
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
-    <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
-    ${meta.length ? `<span class="f-meta">${meta.map(esc).join(" · ")}</span>` : ""}
-    ${sp.per ? perHtml(sp.per, m.pos) : ""}
     ${linkHtml(it, m.e.h).replace('class="ext"', 'class="ext corner"')}
-    <span class="f-foot"><span class="ctl">${ctlHtml(p, m.id)}</span></span>
+    <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}<span class="ctl">${ctlHtml(p, m.id)}</span></span>
+    ${meta.length ? `<span class="f-meta">${meta.map(esc).join(" · ")}</span>` : ""}
+    ${sp.per ? perHtml(sp.per, m.pos, 2) : ""}
   </li>`;
+}
+/* a long column: the makers in it, one tap to see only theirs */
+function narrowHtml(ms) {
+  const n = new Map(); for (const m of ms) { const b = m.e.it.brand || "Generic"; n.set(b, (n.get(b) || 0) + 1); }
+  const top = [...n].sort((a, b) => b[1] - a[1]).slice(0, 6);
+  return `<div class="f-narrow"><span>Or see one maker</span><div class="f-narrow-chips">${top.map(([b, c]) => `<button class="chip" type="button" data-act="fin-narrow" data-b="${esc(b)}">${esc(b)} <span class="num">${c}</span></button>`).join("")}</div></div>`;
 }
 function finderResults(p, h) {
   const r = finderMatches(h);
@@ -3098,12 +3210,13 @@ function finderResults(p, h) {
   const shown = keys.flatMap(k => by.get(k)), nExact = shown.filter(m => m.exact).length;
   if (!shown.length) return `<p class="f-none">No lenses between ${fmtN(F / 2)} and ${fmtN(F * 2)}mm at ${esc(h.name)} with these filters.</p>`;
   const cols = keys.map(k => {
-    const ms = by.get(k), center = k === ck, lim = fin().more[k] ? ms.length : center ? 6 : 4;
+    const ms = by.get(k), center = k === ck, lim = (center ? 5 : 3) + 5 * (fin().more[k] || 0), left = ms.length - lim;
     const sub = center ? (ms.some(m => m.exact) ? "exact" : "your search") : `${k < F ? "−" : "+"}${fmtN(Math.abs(k - F))}mm`;
     return `<section class="f-col${center ? " center" : ""}" data-col="${k}" aria-label="${fmtN(k)}mm">
       <button class="f-tick" type="button" data-act="fin-recenter" data-mm="${k}" ${center ? "disabled" : `title="Search ${fmtN(k)}mm instead"`}><b>${fmtN(k)}mm</b><small>${sub}</small></button>
       ${ms.length ? `<ul class="f-cards">${ms.slice(0, lim).map(m => finderCard(p, m, T)).join("")}</ul>` : `<p class="f-none">No ${fmtN(F)}mm${T ? " T" + fmtN(T) : ""} with these filters. Swipe for the closest.</p>`}
-      ${ms.length > lim ? `<button class="f-more" type="button" data-act="fin-more" data-mm="${k}">+ ${ms.length - lim} more at ${fmtN(k)}mm</button>` : ""}
+      ${left > 0 ? `<button class="f-more" type="button" data-act="fin-more" data-mm="${k}">Show ${Math.min(5, left)} more <span>· ${left} left at ${fmtN(k)}mm</span></button>` : ""}
+      ${center && left > 5 && !fin().brand ? narrowHtml(ms) : ""}
     </section>`;
   }).join("");
   return `<p class="f-sum"><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close · ${esc(h.name)}</p>
@@ -3193,7 +3306,7 @@ function refreshRows(p, ids) {
   const t = totals(p);
   const set = (sel, v) => { const el = document.getElementById(sel); if (el) el.textContent = v; };
   const tc = document.getElementById("tabCount"), was = tc ? parseInt(tc.textContent, 10) || 0 : 0;
-  set("dockLines", t.lines); set("dockPcs", t.pcs); set("tabCount", t.lines);
+  set("dockLines", t.lines); set("dockPcs", t.pcs); set("tabCount", t.lines || "");
   if (tc && t.lines > was) replay(tc, "bump");
 }
 /* restart a short CSS animation on an element */
@@ -3443,7 +3556,7 @@ function favByCategory(h, rows) {
     // items placed straight in the category come first, without a heading
     const list = [...subs.entries()].sort((a, b) => (a[0].direct ? 0 : 1) - (b[0].direct ? 0 : 1))
       .map(([s, l]) => (s.direct ? "" : `<li class="fav-head">${esc(s.name)}<span class="cnt">${l.length}</span></li>`) + l.join("")).join("");
-    return `<div class="fav-cat" style="--tape: ${catTape(c)}"><h4 class="fav-cat-h">${tapeIcon(c.id)}${esc(c.name)}<span class="cnt">${n}</span></h4><ul class="fav-list">${list}</ul></div>`;
+    return `<div class="fav-cat" style="--tape: ${catTape(c)}"><h4 class="fav-cat-h">${tapeIcon(c.id, c.name)}${esc(c.name)}<span class="cnt">${n}</span></h4><ul class="fav-list">${list}</ul></div>`;
   }).join("");
 }
 
@@ -3494,7 +3607,7 @@ function viewList(p, h) {
   const sections = secs.map(s => {
     const rows = by[s.id], shut = closed(s);
     const pcs = rows.reduce((a, [, l]) => a + lineQty(l), 0);
-    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span>${tapeIcon(s.custom ? "custom" : s.id)}${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
+    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span>${tapeIcon(s.custom ? "custom" : s.id, secName(s.id))}${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
       <div class="sec-body">${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
       <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
     </div>`;
@@ -4143,7 +4256,8 @@ document.addEventListener("click", e => {
     case "fin-brand": finBrandDialog(); break;
     case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
-    case "fin-more": fin().more[b.dataset.mm] = true; refreshFinder(b.dataset.mm); break;
+    case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) v.textContent = s3.brand; refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
+    case "fin-more": { const mo = fin().more; mo[b.dataset.mm] = (+mo[b.dataset.mm] || 0) + 1; refreshFinder(b.dataset.mm); break; }
     case "chip": app.cat = b.dataset.cat; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId));
       document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === b))); break;
     /* catalog + favorites rows */
