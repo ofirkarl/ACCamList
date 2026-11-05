@@ -1260,6 +1260,18 @@ button.ph-chip:active { transform: scale(.97); }
 .finder .f-field.set > span:first-child::after { content: " ●"; color: var(--tape); font-size: 9px; vertical-align: 2px; }
 .finder .f-sum { padding-inline: 2px; }
 
+/* ---- a production in its rental house's color: Utopia orange, Fitussi purple (the color only, never their logos) ---- */
+:root[data-house="utopia"] { --accent: #cc4f0a; --accent-fg: #ffffff; }
+:root[data-house="fitussi"] { --accent: #7e3af2; --accent-fg: #ffffff; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-house="utopia"] { --accent: #ff9a5c; --accent-fg: #1a0f08; }
+  :root:not([data-theme="light"])[data-house="fitussi"] { --accent: #b39dff; --accent-fg: #140f1f; }
+}
+:root[data-theme="dark"][data-house="utopia"] { --accent: #ff9a5c; --accent-fg: #1a0f08; }
+:root[data-theme="dark"][data-house="fitussi"] { --accent: #b39dff; --accent-fg: #140f1f; }
+/* the switch is a soft fade, not a jump */
+.btn, .tab, .tabs, .add, .stepper button, .ph-chip, .house-opt, .fv-head, .f-more, .ub-btn, .tab .num { transition: background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease, transform .12s var(--ease); }
+
 /* nothing moves for people who asked their phone for less motion */
 @media (prefers-reduced-motion: reduce) {
   .modal, .modal-card, .toast, .bump, .pop, .ph-status.live::before { animation: none !important; }
@@ -2547,6 +2559,10 @@ function stripe(root) {
 if (typeof MutationObserver !== "undefined" && document.body) new MutationObserver(() => { stripe(); const r = document.getElementById("fRuler"); if (r && !r.dataset.c) centerFinder(); }).observe(document.body, { childList: true, subtree: true });
 
 /* ---------- views ---------- */
+function houseTheme(id) {
+  const r = typeof document !== "undefined" && document.documentElement; if (!r || !r.dataset) return;
+  if (id && houseById(id)) r.dataset.house = id; else delete r.dataset.house;
+}
 function render() {
   const v = document.getElementById("view");
   if (app.view === "form") v.innerHTML = viewForm();
@@ -2554,6 +2570,9 @@ function render() {
   else if (app.view === "production" && cur()) v.innerHTML = viewProduction();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") app.sel = null;
+  // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
+  const hp = app.view === "form" ? document.getElementById("housePick") : null;
+  houseTheme(app.view === "production" && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
   if (app.view === "production" && app.tab === "list") applyListFilter();
   uiSave(); navSync();
@@ -4291,6 +4310,7 @@ document.addEventListener("click", e => {
       const wrap = document.getElementById("housePick");
       wrap.dataset.value = b.dataset.house;
       wrap.querySelectorAll(".house-opt").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+      houseTheme(b.dataset.house);
       const err = document.getElementById("houseErr"); if (err) err.hidden = true;
       break;
     }
