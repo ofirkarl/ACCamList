@@ -2147,11 +2147,10 @@ function viewSettings() {
         <div class="field"><label for="me-name">Your name (1st AC)</label><input id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
-    <div class="set-group"><h3>The final list</h3>
-      <div class="field"><label for="set-title">Title at the top</label><input id="set-title" data-settitle="1" maxlength="60" value="${esc(app.settings.docTitle || "")}" placeholder="Camera List"><span class="hint">Shown across from the production's name on every page. A production can have its own, in its details.</span></div></div>
-    ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length, any = hasEdits(h); return n || any ? `<div class="cat-tools"><b>${esc(h.name)}</b>${n ? `<button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button>` : ""}${any ? `<button class="btn ghost sm" type="button" data-act="cat-reset-all" data-house="${h.id}">Undo all edits</button>` : ""}</div>` : ""; }).join("");
+    ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       return rows ? `<div class="set-group"><h3>Catalog</h3>${rows}<span class="hint">Edit the catalog with the pencil in Add gear.</span></div>` : ""; })()}
     <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span></div>
+    <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
     ${acct ? `<div class="set-group"><h3>Account</h3>${acct}<span class="hint store-line"><span class="dot" aria-hidden="true"></span><span id="storeLine">${app.saveKind === "offline" ? "Can't reach your account yet" : storageText()}</span></span></div>` : ""}
     <div class="set-group"><h3>Defaults</h3>
       <p class="hint" style="margin:0">Pick an item and what comes with it. When you add that item to a list, these are added too and follow its quantity, and a notice tells you.</p>
@@ -3030,9 +3029,9 @@ function exportRows(id, l) {
   if (l.tx !== undefined) return [{ ...base, kids: [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : "", ...kids].filter(Boolean), qty: lineQty(l), name: l.name }];
   return [{ ...base, qty: l.qty, name: l.name }];
 }
-function listText(p) {
+function listText(p, o = {}) {
   const by = linesBySection(p);
-  const out = [docTitle(p).toUpperCase(), ...headerLines(p), ""];
+  const out = [docTitle(p).toUpperCase() + (o.noVer ? "" : ` · VERSION ${docVer(p)}`), ...headerLines(p), ""];
   for (const s of allSections()) {
     if (!by[s.id].length) continue;
     out.push(secName(s.id).toUpperCase());
@@ -3052,12 +3051,20 @@ function csvText(p) {
     rows.push([secName(s.id), r.qty, r.name, r.extra.join("; "), r.kids.join("; "), r.sku, l.brand || "", l.cat || "", l.sub || ""]);
   return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
 }
-function fileBase(p) { return ("Camera list - " + (p.name || "production") + (unitLine(p) ? " " + unitLine(p) : "") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "")).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
+function fileBase(p) { return ("Camera list - " + (p.name || "production") + (unitLine(p) ? " " + unitLine(p) : "") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "") + " v" + docVer(p)).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
 
 /* ----- the clean layout (default), after the camlist look: the production's name with "Camera List" across from it on every page,
    a short block of details, then each section between two thin rules: "2 x" and the item in bold, its sub-items and notes under it,
    the SKU in its own column on the right ----- */
 const layoutOf = () => app.settings.exportLayout === "table" ? "table" : "clean";
+/* the list's version: one more each time a changed list is saved (Word, PDF or Send); saving the same list again keeps its number */
+function docSigOf(p) {
+  const o = otherUnit(p), t = JSON.stringify([listText(p, { noVer: true }), p.notesBold, p.notesSize, o ? [o.dp, acText(o), o.prep, o.shootStart, o.shootEnd] : 0]);
+  let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
+  return String(h >>> 0);
+}
+const docVer = p => p.docSig && p.docSig === docSigOf(p) ? (p.docVer || 1) : (p.docVer || 0) + 1;
+function commitVer(p) { const sig = docSigOf(p); if (p.docSig !== sig) { p.docVer = docVer(p); p.docSig = sig; touch(p); } }
 /* the title at the top of the list ("Camera List", or the one set in Settings) */
 const docTitle = p => String((p && p.docTitle) || app.settings.docTitle || "Camera List").slice(0, 60);
 const CLEAN_FONT = "Futura, 'Century Gothic', 'Avenir Next', 'IBM Plex Sans', Arial, Helvetica, sans-serif";
@@ -3093,7 +3100,7 @@ function cleanTitleHtml(p, page) {
   return `<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:16px;font-family:${CLEAN_FONT};color:#111">
     <div style="font-size:11px;color:#777;padding-top:9px">${page ? esc(page) : ""}</div>
     <div style="text-align:center;min-width:0"><div style="font-size:25px;line-height:1.15;font-weight:700"><bdi>${esc(p.name || "Production")}</bdi></div>${unit ? `<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:3px">${esc(unit)}</div>` : ""}</div>
-    <div style="font-size:18px;white-space:nowrap;text-align:right;padding-top:4px">${esc(docTitle(p))}</div></div>`;
+    <div style="text-align:right;padding-top:4px"><div style="font-size:18px;white-space:nowrap">${esc(docTitle(p))}</div><div style="font-size:10.5px;color:#777;margin-top:3px">Version ${docVer(p)}</div></div></div>`;
 }
 function exportHtmlClean(p, o = {}) {
   const by = linesBySection(p), sku = skuOn();
@@ -3125,7 +3132,7 @@ const W_TEXT = 9638;
 function docxHeaderClean(p) {
   const fld = (code, sz) => `<w:fldSimple w:instr="${code}"><w:r><w:rPr><w:sz w:val="${sz}"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>`;
   const unit = unitLine(p);
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="${unit ? 0 : 160}"/></w:pPr>${fld("PAGE", 17)}${wRun(" / ", { sz: 17, color: "777777" })}${fld("NUMPAGES", 17)}<w:r><w:tab/></w:r>${wRun(p.name || "Production", { b: true, sz: 36 })}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 28 })}</w:p>${unit ? `<w:p><w:pPr><w:spacing w:before="0" w:after="160"/><w:jc w:val="center"/></w:pPr>${wRun(unit, { b: true, caps: true, sz: 17 })}</w:p>` : ""}</w:hdr>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="0"/></w:pPr>${fld("PAGE", 17)}${wRun(" / ", { sz: 17, color: "777777" })}${fld("NUMPAGES", 17)}<w:r><w:tab/></w:r>${wRun(p.name || "Production", { b: true, sz: 36 })}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 28 })}</w:p><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="160"/></w:pPr><w:r><w:tab/></w:r>${unit ? wRun(unit, { b: true, caps: true, sz: 17 }) : ""}<w:r><w:tab/></w:r>${wRun("Version " + docVer(p), { sz: 16, color: "777777" })}</w:p></w:hdr>`;
 }
 function docxXmlClean(p) {
   const by = linesBySection(p), sku = skuOn();
@@ -3175,7 +3182,7 @@ function docxXmlTable(p) {
   const table = n ? `<w:tbl><w:tblPr><w:tblW w:w="${2 * (W.lbl + W.qty + W.item)}" w:type="dxa"/><w:tblBorders>${["top", "left", "bottom", "right", "insideH", "insideV"].map(border).join("")}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="80" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${[W.lbl, W.qty, W.item, W.lbl, W.qty, W.item].map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows}</w:tbl>` : "";
   // compact top block: a small title, then shaded lines with no space between them, straight into the table
   const shaded = runs => `<w:p><w:pPr><w:shd w:val="clear" w:color="auto" w:fill="${DOC_HEAD_FILL}"/><w:spacing w:before="0" w:after="0" w:line="252" w:lineRule="auto"/></w:pPr>${runs}</w:p>`;
-  const head = para(r(docTitle(p) + ":", { b: true }), { after: 0 })
+  const head = para(r(docTitle(p) + ":", { b: true }) + r("   Version " + docVer(p), { color: "7F7F7F", sz: 16 }), { after: 0 })
     + headerParts(p).map(ln => { const sz = ln.big ? 32 : 20; return shaded(ln.plain ? r(ln.plain, { sz }) : ln.segs.map(g => r(g.lbl + ": ", { b: true, sz }) + r(g.v, { sz })).join(r(" // ", { sz }))); }).join("")
     + `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="120" w:lineRule="exact"/></w:pPr></w:p>`;
   const notes = p.notes ? para("", { after: 120 }) + para(r("Notes", { b: true, sz: 22 })) + p.notes.split(/\n/).map(t => para(r(t))).join("") : "";
@@ -3209,7 +3216,7 @@ function exportHtmlTable(p) {
   for (let i = 0; i < n; i++) body += `<tr data-break>${L[i] || i >= L.length ? cellsFor(L[i]) : ""}${R[i] || i >= R.length ? cellsFor(R[i]) : ""}</tr>`;
   return `<div style="width:794px;box-sizing:border-box;padding:0 48px;font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;font-size:12px;line-height:1.35">
     <style>.pdf{color:#000;font-size:12px;font-family:Arial,Helvetica,sans-serif}.pdf td{color:#000;border:1px solid #a6a6a6;padding:4px 6px;vertical-align:top;font-size:12px}.pdf .lb{font-weight:700;width:86px;text-align:center}.pdf .q{font-weight:700;text-align:center;width:24px}.pdf .ex{font-style:italic;color:#595959;font-size:11px}.pdf .kd{font-size:11px}.pdf .sk{color:#7f7f7f;font-size:10px;font-family:'Courier New',monospace;white-space:nowrap}</style>
-    <div data-break style="padding-top:8px"><div style="font-size:13px;font-weight:700;line-height:1.3">${esc(docTitle(p))}:</div>${(() => { const hp = headerParts(p); return hp.length ? `<div style="background:#${DOC_HEAD_FILL};padding:1px 6px 2px;line-height:1.3">${hp.map(ln => `<div style="font-size:${ln.big ? 21 : 13}px">${ln.plain ? esc(ln.plain) : ln.segs.map(g => `<b>${esc(g.lbl)}:</b> ${esc(g.v)}`).join(" // ")}</div>`).join("")}</div>` : ""; })()}<div style="height:7px"></div></div>
+    <div data-break style="padding-top:8px"><div style="font-size:13px;font-weight:700;line-height:1.3">${esc(docTitle(p))}: <span style="font-weight:400;color:#7f7f7f;font-size:11px">Version ${docVer(p)}</span></div>${(() => { const hp = headerParts(p); return hp.length ? `<div style="background:#${DOC_HEAD_FILL};padding:1px 6px 2px;line-height:1.3">${hp.map(ln => `<div style="font-size:${ln.big ? 21 : 13}px">${ln.plain ? esc(ln.plain) : ln.segs.map(g => `<b>${esc(g.lbl)}:</b> ${esc(g.v)}`).join(" // ")}</div>`).join("")}</div>` : ""; })()}<div style="height:7px"></div></div>
     ${n ? `<table class="pdf" style="width:100%;border-collapse:collapse;table-layout:fixed">${body}</table>` : ""}
     ${p.notes ? `<div data-break style="margin-top:14px"><b>Notes</b><div style="white-space:pre-wrap">${esc(p.notes)}</div></div>` : ""}
   </div>`;
@@ -3241,6 +3248,20 @@ function fitPreview() {
   paper.style.transform = `scale(${k})`;
   fit.style.width = 794 * k + "px";
   fit.style.height = paper.offsetHeight * k + "px";
+}
+/* a saved or sent list: its version number is taken, and the preview says so */
+function savedVer(p) {
+  const was = p.docSig === docSigOf(p);
+  commitVer(p);
+  if (!was) toast(`Saved as version ${p.docVer}`);
+  const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
+}
+/* the app itself, to send to someone */
+const APP_URL = "https://ofirkarl.github.io/ACCamList/";
+async function shareApp() {
+  const data = { title: "AC Cam List", text: "Camera equipment lists for camera assistants: pick the rental house, build the list, send it.", url: APP_URL };
+  try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(APP_URL); toast("Link to the app copied"); } catch (e) { toast(APP_URL); }
 }
 function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; navSync(); } }
 /* Send: the file goes out through the phone's share menu (Gmail, WhatsApp…) with a subject and message the user can edit */
@@ -3295,14 +3316,14 @@ async function sendNow(p, f) {
   const file = typeof File === "function" ? new File([blob], name, { type: blob.type || (fmt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document") }) : null;
   let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
   if (can) {
-    try { await navigator.share({ files: [file], title: subject, text: message }); closeModal(); }
+    try { await navigator.share({ files: [file], title: subject, text: message }); closeModal(); savedVer(p); }
     catch (e) { if (!e || e.name !== "AbortError") toast("The share menu didn't open. Try again."); }
     return;
   }
   // no sharing for this file here: save it, copy the message, and on a phone open an email with the subject and message filled in
   closeModal();
   try { await navigator.clipboard.writeText(subject + "\n\n" + message); } catch (e) {}
-  await saveFile(name, blob);
+  if (await saveFile(name, blob)) savedVer(p);
   if (isTouch()) {
     setTimeout(() => { location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message); }, 700);
     toast(`${fmt === "docx" ? "Word file" : "PDF"} saved. Attach it to the email that opens.`);
@@ -3358,11 +3379,12 @@ async function buildPdf(p) {
 let DL;
 async function saveFile(filename, data) {
   if (DL === undefined) { try { DL = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads") : null; } catch (e) { DL = null; } }
-  if (!DL) { toast("Downloads aren't available in this view. Use Copy text instead."); return; }
-  try { await DL.save({ filename, data }); }
+  if (!DL) { toast("Downloads aren't available in this view. Use Copy text instead."); return false; }
+  try { await DL.save({ filename, data }); return true; }
   catch (e) {
-    if (e && e.code === "declined") return;
+    if (e && e.code === "declined") return false;
     toast(e && e.code === "rate_limited" ? "A download prompt is already open." : "The file couldn't be saved here. Use Copy text instead.");
+    return false;
   }
 }
 function copyText(text) {
@@ -3651,11 +3673,12 @@ document.addEventListener("click", e => {
     case "rinc": case "rdec": { const r = app.settings.rules.find(x => x.id === b.dataset.rid); if (r) { r.qty = Math.max(0, Math.min(99, r.qty + (act === "rinc" ? 1 : -1))); touchSettings(); rerenderKeepScroll(); } break; }
     case "rdel": app.settings.rules = app.settings.rules.filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
     case "rule-new": ruleDialog(); break;
+    case "share-app": shareApp(); break;
     case "notice-close": { const n = document.getElementById("notice"); if (n) { n.classList.remove("in"); n.hidden = true; } break; }
     /* exports */
-    case "export-docx": buildDocx(p).then(blob => saveFile(fileBase(p) + ".docx", blob)).catch(() => toast("The Word file couldn't be built. Use CSV or Copy text.")); break;
+    case "export-docx": buildDocx(p).then(blob => saveFile(fileBase(p) + ".docx", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The Word file couldn't be built. Use PDF or Text.")); break;
     case "export-csv": saveFile(fileBase(p) + ".csv", csvText(p)); break;
-    case "export-pdf": toast("Building the PDF…"); buildPdf(p).then(blob => saveFile(fileBase(p) + ".pdf", blob)).catch(() => toast("The PDF couldn't be built here. Use Word or Copy text.")); break;
+    case "export-pdf": toast("Building the PDF…"); buildPdf(p).then(blob => saveFile(fileBase(p) + ".pdf", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The PDF couldn't be built here. Use Word or Text.")); break;
     case "copy": copyText(listText(p)); break;
     case "preview": openPreview(p); break;
     case "preview-close": closePreview(); break;
