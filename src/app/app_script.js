@@ -1672,9 +1672,16 @@ function viewProduction() {
   const p = cur(), h = houseById(p.houseId), t = totals(p);
   const when = fmtRange(p.shootStart, p.shootEnd), days = shootDays(p);
   const shootDates = p.shootStart ? (p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)}–${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart)) : "";
-  const facts = [["Production company", esc(p.company || "")], ["Rental house", h ? esc(h.name) : ""], ["DP", esc(p.dp || "")],
-    ["1st AC", p.ac || p.acPhone ? esc(p.ac || "") + (p.acPhone ? `<small>${esc(p.acPhone)}</small>` : "") : ""],
-    ["Prep", p.prep ? esc(fmtShort(p.prep)) : ""], ["Shoot", shootDates ? esc(shootDates) + (days ? `<small>${days} shoot day${days === 1 ? "" : "s"}</small>` : "") : ""]].filter(([, v]) => v);
+  const factsOf = x => { const xd = shootDays(x), xs = x.shootStart ? (x.shootEnd && x.shootEnd !== x.shootStart ? `${fmtShort(x.shootStart)}–${fmtShort(x.shootEnd)}` : fmtShort(x.shootStart)) : "";
+    return [["Production company", esc(x.company || "")], ["Rental house", h ? esc(h.name) : ""], ["DP", esc(x.dp || "")],
+      ["1st AC", x.ac || x.acPhone ? esc(x.ac || "") + (x.acPhone ? `<small>${esc(x.acPhone)}</small>` : "") : ""],
+      ["Prep", x.prep ? esc(fmtShort(x.prep)) : ""], ["Shoot", xs ? esc(xs) + (xd ? `<small>${xd} shoot day${xd === 1 ? "" : "s"}</small>` : "") : ""]]; };
+  // with two units, both show the same rows (a dash where one has nothing), so switching between them doesn't move the page
+  const ou = otherUnit(p), oFacts = ou ? factsOf(ou) : [];
+  const facts = factsOf(p).filter(([k, v], i) => v || (oFacts[i] && oFacts[i][1])).map(([k, v]) => {
+    const o2 = (oFacts.find(f => f[0] === k) || [])[1] || "", out = v || `<span class="pf-none">—</span>`;
+    return [k, /<small>/.test(o2) && !/<small>/.test(out) ? out + `<small aria-hidden="true">&nbsp;</small>` : out];  // same height as the other unit's row
+  });
   if (unitLine(p)) facts.splice(1, 0, ["Unit", esc(unitLine(p))]);
   if (p.notes) facts.push(["Notes", `<span class="pf-notes">${esc(p.notes)}</span>`]);
   const missing = !p.dp && !p.ac && !p.shootStart;
@@ -1690,7 +1697,7 @@ function viewProduction() {
   const finder = app.tab === "add" && fin().on;
   const head = finder ? "" : `<div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
-      ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : ""}
+      ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       <h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
       <div class="ph-chips">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
