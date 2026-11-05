@@ -1202,13 +1202,16 @@ button.ph-chip:active { transform: scale(.97); }
 .fv .f-gap { font-size: 12.5px; white-space: normal; overflow: visible; }
 .fv .f-meta { grid-column: 1 / -1; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fv .f-meta:empty { display: none; }
-.fv .f-per { grid-column: 1 / -1; min-width: 0; }
-.fv .f-per .lens-line { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.fv .f-per { grid-column: 1 / -1; min-width: 0; display: grid; grid-template-rows: 1fr; transition: grid-template-rows .3s var(--ease), opacity .2s ease, margin .3s var(--ease); }
+.fv .f-per .lens-line { display: block; min-height: 0; overflow: hidden; font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); }
 .fv .f-card.open .f-meta { white-space: normal; }
-.fv .f-card.open .f-per { display: none; }
-.fv .f-info { grid-column: 1 / -1; display: none; gap: 10px; padding-top: 4px; font-size: 13px; }
-.fv .f-card.open .f-info { display: grid; animation: info-in .22s var(--ease); }
-@keyframes info-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.fv .f-card.open .f-per { grid-template-rows: 0fr; opacity: 0; margin-top: -6px; }
+/* opening a line: the details grow in height and fade up into place */
+.fv .f-info { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; margin-top: -6px; font-size: 13px; transition: grid-template-rows .34s var(--ease), margin .34s var(--ease); }
+.fv .f-info-in { min-height: 0; overflow: hidden; }
+.fv .f-info-body { display: grid; gap: 10px; padding-top: 4px; opacity: 0; transform: translateY(-8px); transition: opacity .18s ease, transform .34s var(--ease); }
+.fv .f-card.open .f-info { grid-template-rows: 1fr; margin-top: 0; }
+.fv .f-card.open .f-info-body { opacity: 1; transform: none; transition-delay: .08s, 0s; }
 .f-full { color: var(--muted); }
 .f-info dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--hair); }
 .f-info dt { font-size: 12px; color: var(--muted); }
@@ -1220,7 +1223,15 @@ button.ph-chip:active { transform: scale(.97); }
 .fv .f-card .stepper { width: 96px; }
 .fv .f-card .stepper button { width: 30px; height: 30px; }
 .fv .f-card .stepper input { width: 30px; }
-@media (prefers-reduced-motion: reduce) { .fv .f-card.open .f-info { animation: none; } }
+/* a press on a line: it dips a little */
+.fv .f-card:has(> .fv-tap:active) { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.fv-head:active:not(:disabled), .f-more:active, .f-narrow .chip:active { transform: scale(.98); }
+.fv-head, .f-more { transition: background-color .15s, transform .12s var(--ease); }
+/* the focal length passing under the top while you scroll */
+.f-col.here:not(.center) .fv-mark b { color: var(--accent); }
+.f-col.here:not(.center) .fv-mark::before { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.fv-mark b, .fv-mark::before { transition: color .2s, border-color .2s, background-color .2s; }
+@media (prefers-reduced-motion: reduce) { .fv .f-info, .fv .f-info-body, .fv .f-per { transition: none; } }
 .f-more { border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; padding: 11px; cursor: pointer; }
 .f-more span { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); font-weight: 400; }
 .f-narrow { display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--line); }
@@ -1315,7 +1326,7 @@ let undoFn = null, undoT = 0;
 function undoable(verb, what, fn) {
   const u = document.getElementById("undoBar"); if (!u) return;
   const t = document.getElementById("toast"); if (t) t.hidden = true;
-  undoFn = fn;
+  undoFn = fn; buzz("warn");
   u.innerHTML = `<span class="ub-msg">${esc(verb)} <b>${esc(what || "")}</b></span><button class="ub-btn" type="button" data-act="undo">${UNDO_ICON}<span>Undo</span></button><span class="ub-time" aria-hidden="true"></span>`;
   u.hidden = false; u.classList.remove("in"); void u.offsetWidth; u.classList.add("in");
   clearTimeout(undoT); undoT = setTimeout(hideUndo, UNDO_MS);
@@ -2280,6 +2291,7 @@ function clashActs(i, inModal) {
 function clashPrompt(p, ids) {
   const i = clashIssues(p).find(x => ids.some(id => x.a.includes(id) || x.b.includes(id)));
   if (!i) return false;
+  buzz("warn");
   showModal(`<h3>Doesn't work together</h3><p>${clashPair(i)}</p>${i.r.why ? `<p>${esc(i.r.why)}</p>` : ""}${clashActs(i, true)}`);
   return true;
 }
@@ -2452,6 +2464,7 @@ function setQty(p, id, qty, field) {
   // an ARRI hand unit (Hi-5, WCU-4) needs motors: ask which ones
   if (wasNew && p.items[id] && !cov && !clash && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
   if (und && !p.items[id]) undoable("Removed", gone, und);
+  else if (wasNew && p.items[id] && !cov && !clash) buzz("add");
   return changed;
 }
 
@@ -2816,7 +2829,8 @@ function viewSettings() {
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       return rows ? `<div class="set-group"><h3>Catalog</h3>${rows}<span class="hint">Edit the catalog with the pencil in Add gear.</span></div>` : ""; })()}
-    <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span></div>
+    <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span>
+      ${canBuzz() ? `<label class="check"><input type="checkbox" name="haptics" ${app.settings.haptics === false ? "" : "checked"}> Vibrate lightly on taps</label>` : ""}</div>
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
     <div class="set-group"><h3>Defaults</h3>
       <p class="hint" style="margin:0">Pick an item and what comes with it. When you add that item to a list, these are added too and follow its quantity, and a notice tells you.</p>
@@ -3236,14 +3250,29 @@ function finderCard(p, m, T) {
     <span class="ctl">${ctlHtml(p, m.id)}</span>
     <span class="f-meta">${meta.map(esc).join(" · ")}</span>
     ${sp.per ? `<span class="f-per">${perHtml(sp.per, m.pos, 2)}</span>` : ""}
-    <span class="f-info">
+    <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
       <dl>${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
       ${sp.per ? `<span class="f-set"><span class="f-set-h">Lens by lens</span>${perHtml(sp.per, m.pos)}</span>` : ""}
       ${noteOf(m.id) ? `<span class="inote">${esc(noteOf(m.id))}</span>` : ""}
-    </span>
+    </span></span></span>
   </li>`;
 }
+let rulerKey = null, rulerRaf = 0;
+if (typeof addEventListener === "function") addEventListener("scroll", () => {
+  if (rulerRaf) return;
+  rulerRaf = requestAnimationFrame(() => {
+    rulerRaf = 0;
+    const r = document.getElementById("fRuler"); if (!r) { rulerKey = null; return; }
+    let here = null;
+    for (const c of r.querySelectorAll(".f-col")) { const bx = c.getBoundingClientRect(); if (bx.top <= 28 && bx.bottom > 28) { here = c; break; } }
+    const k = here ? here.dataset.col : null;
+    if (k === rulerKey) return;
+    if (rulerKey !== null && k !== null) buzz("tick");
+    rulerKey = k;
+    r.querySelectorAll(".f-col.here").forEach(c => c.classList.remove("here")); if (here) here.classList.add("here");
+  });
+}, { passive: true });
 /* a long column: the makers in it, one tap to see only theirs */
 function narrowHtml(ms) {
   const n = new Map(); for (const m of ms) { const b = m.e.it.brand || "Generic"; n.set(b, (n.get(b) || 0) + 1); }
@@ -3363,6 +3392,11 @@ function refreshRows(p, ids) {
   set("dockLines", t.lines); set("dockPcs", t.pcs); set("tabCount", t.lines || "");
   if (tc && t.lines > was) replay(tc, "bump");
 }
+/* touch feedback on phones that can vibrate (Android): a short tap on every press, a pattern when something is added,
+   removed or needs a look, and a tiny tick as the lens ruler passes each focal length. Off in Settings. */
+const HAPTIC = { tap: 8, tick: 5, add: [10, 35, 12], warn: [18, 60, 18], done: [8, 45, 18] };
+const canBuzz = () => typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
+function buzz(kind) { if (app.settings.haptics === false || !canBuzz()) return; try { navigator.vibrate(HAPTIC[kind] || 8); } catch (e) {} }
 /* restart a short CSS animation on an element */
 function replay(el, cls) { if (!el || !el.classList) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function popQty(kind, id, f) { if (typeof document === "undefined") return; document.querySelectorAll(`[data-${kind}qty="${CSS.escape(id)}"]${f ? `[data-f="${f}"]` : ""}`).forEach(el => replay(el, "pop")); }
@@ -3998,7 +4032,7 @@ function fitPreview() {
 function savedVer(p, sent) {
   const was = p.docSig === docSigOf(p);
   commitVer(p);
-  if (sent) toast(`✓ Sent · version ${p.docVer}`);
+  if (sent) { toast(`✓ Sent · version ${p.docVer}`); buzz("done"); }
   else if (!was) toast(`Saved as version ${p.docVer}`);
   const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
 }
@@ -4187,6 +4221,7 @@ document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]");
   if (!b || b.disabled) return;
   const act = b.dataset.act, id = b.dataset.id, f = b.dataset.f;
+  buzz("tap");
   if (act === "mfr-toggle") {  // a manufacturer heading: close or open it (not when its drag handle was tapped)
     if (e.target.closest("[data-drag]")) return;
     const m = app.settings.closedBrands || (app.settings.closedBrands = {}), k = b.dataset.k;
@@ -4518,6 +4553,7 @@ document.addEventListener("change", e => {
   }
   if (t.dataset.rqty) { const r = app.settings.rules.find(x => x.id === t.dataset.rqty); if (r) { r.qty = Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)); touchSettings(); } return; }
   if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
+  if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
   if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
   if (t.id === "f-u2same") { document.getElementById("u2Dates").hidden = t.checked; return; }
   if (t.form && t.form.id === "prodForm" && (t.name === "notesBold" || t.name === "notesSize")) {
