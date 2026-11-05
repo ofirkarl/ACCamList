@@ -797,27 +797,25 @@ details.more > summary::-webkit-details-marker { display: none; }
 .pv-seg .btn:first-child { border-start-start-radius: 8px; border-end-start-radius: 8px; }
 .pv-seg .btn:last-child { border-start-end-radius: 8px; border-end-end-radius: 8px; }
 .pv-send { padding-inline-start: 14px; border-inline-start: 1px solid var(--line); }
-/* undo: a quiet card, not a black bar */
-.undo-bar { position: fixed; left: 50%; bottom: calc(88px + env(safe-area-inset-bottom, 0px)); z-index: 41; width: min(420px, calc(100% - 32px));
-  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 4px 4px 16px; overflow: hidden;
-  background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; font-size: 14px;
-  box-shadow: 0 12px 32px rgba(16, 36, 64, .10), 0 2px 6px rgba(16, 36, 64, .06);
-  opacity: 0; transform: translate(-50%, 8px); transition: opacity .2s ease, transform .24s cubic-bezier(.2, .8, .2, 1); }
-.undo-bar.in { opacity: 1; transform: translate(-50%, 0); }
+/* undo: a small faded arrow in the bottom-left corner, out of the way; a thin ring counts down the seconds */
+.undo-bar { position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); z-index: 41;
+  opacity: 0; transform: scale(.8); transition: opacity .25s ease, transform .25s var(--ease); }
+.undo-bar.in { opacity: 1; transform: none; }
+.undo-bar.over-dock { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
 .undo-bar[hidden] { display: none; }
-.ub-msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
-.ub-msg b { color: var(--fg); font-weight: 600; }
-.ub-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px; cursor: pointer;
-  background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--accent); font: inherit; font-weight: 600; }
-.ub-btn:hover, .ub-btn:focus-visible { background: color-mix(in srgb, var(--accent) 16%, transparent); }
-.ub-time { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: var(--accent); opacity: .28; transform-origin: left center; }
-.undo-bar.in .ub-time { animation: ub-time 8s linear forwards; }
-@keyframes ub-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.ub-btn { position: relative; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--muted); opacity: .62;
+  box-shadow: 0 2px 8px rgba(48, 40, 28, .08); transition: opacity .2s, color .2s, transform .12s var(--ease); }
+.ub-btn:hover, .ub-btn:focus-visible, .ub-btn:active { opacity: 1; color: var(--accent); }
+.ub-btn svg:first-child { width: 16px; height: 16px; }
+.ub-btn::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; }
+.ub-ring { position: absolute; inset: -1px; width: 36px; height: 36px; transform: rotate(-90deg); pointer-events: none; }
+.ub-ring circle { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 103.7; stroke-dashoffset: 0; opacity: .55; }
+.undo-bar.in .ub-ring circle { animation: ub-ring 8s linear forwards; }
+@keyframes ub-ring { to { stroke-dashoffset: 103.7; } }
 .flash { animation: flash-back 1.4s ease-out; }
 @keyframes flash-back { 0%, 25% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); background-color: color-mix(in srgb, var(--accent) 7%, var(--surface)); } 100% { box-shadow: 0 0 0 3px transparent; } }
-@media (prefers-reduced-motion: reduce) { .undo-bar { transition: opacity .15s linear; transform: translate(-50%, 0); } .undo-bar.in .ub-time, .flash { animation: none; } }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .undo-bar { box-shadow: 0 12px 32px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3); } }
-:root[data-theme="dark"] .undo-bar { box-shadow: 0 12px 32px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3); }
+@media (prefers-reduced-motion: reduce) { .undo-bar { transition: opacity .15s linear; transform: none; } .undo-bar.in .ub-ring circle, .flash { animation: none; } }
 @media (max-width: 560px) { .pv-bar .hint { display: none; } .pv-bar > b { flex: 1; } }
 .set-group { display: grid; gap: 10px; padding-block: 16px; border-top: 1px solid var(--line); }
 .set-group:first-of-type { border-top: 0; }
@@ -1270,7 +1268,7 @@ button.ph-chip:active { transform: scale(.97); }
 :root[data-theme="dark"][data-house="utopia"] { --accent: #ff9a5c; --accent-fg: #1a0f08; }
 :root[data-theme="dark"][data-house="fitussi"] { --accent: #b39dff; --accent-fg: #140f1f; }
 /* the switch is a soft fade, not a jump */
-.btn, .tab, .tabs, .add, .stepper button, .ph-chip, .house-opt, .fv-head, .f-more, .ub-btn, .tab .num { transition: background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease, transform .12s var(--ease); }
+.btn, .tab, .tabs, .add, .stepper button, .ph-chip, .house-opt, .fv-head, .f-more, .tab .num { transition: background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease, transform .12s var(--ease); }
 
 /* nothing moves for people who asked their phone for less motion */
 @media (prefers-reduced-motion: reduce) {
@@ -1359,7 +1357,10 @@ function undoable(verb, what, fn) {
   const u = document.getElementById("undoBar"); if (!u) return;
   const t = document.getElementById("toast"); if (t) t.hidden = true;
   undoFn = fn; buzz("warn");
-  u.innerHTML = `<span class="ub-msg">${esc(verb)} <b>${esc(what || "")}</b></span><button class="ub-btn" type="button" data-act="undo">${UNDO_ICON}<span>Undo</span></button><span class="ub-time" aria-hidden="true"></span>`;
+  // just a small faded undo arrow in the bottom corner, with a thin ring running down the seconds left
+  const label = `Undo: ${verb.toLowerCase()} ${what || ""}`.trim();
+  u.innerHTML = `<span class="sr">${esc(verb)} ${esc(what || "")}</span><button class="ub-btn" type="button" data-act="undo" aria-label="${esc(label)}" title="${esc(label)}">${UNDO_ICON}<svg class="ub-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16.5"/></svg></button>`;
+  u.classList.toggle("over-dock", !!document.querySelector(".dock:not([hidden])"));
   u.hidden = false; u.classList.remove("in"); void u.offsetWidth; u.classList.add("in");
   clearTimeout(undoT); undoT = setTimeout(hideUndo, UNDO_MS);
 }
