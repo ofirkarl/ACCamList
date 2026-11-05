@@ -606,13 +606,46 @@ body.finder-on .app > main > .pad:first-child .tabs { margin-top: 12px; }
 .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
 #sd-msg { resize: vertical; }
 .send-how { margin: 0; }
+/* batch 3 */
+.row-dates { grid-template-columns: minmax(0, 1fr) !important; max-width: 560px; }
+.cal-day.ctx { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.cal-day.prepday::before { content: "P"; position: absolute; top: 3px; right: 6px; font: 600 9px/1 var(--font-body); color: var(--muted); }
+.modal-card { max-height: 100%; }
+.modal.kb { align-items: flex-end; }
+details.more { border-top: 1px solid var(--line); padding-top: 6px; }
+details.more > summary { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-weight: 600; font-size: 14px; padding: 6px 0; list-style: none; }
+details.more > summary::-webkit-details-marker { display: none; }
+.more-in { display: grid; gap: 12px; padding-top: 8px; }
+.ext-gap { display: inline-block; width: 22px; height: 22px; flex: none; }
+.line .tools > .ext { width: 30px; height: 32px; display: inline-flex; align-items: center; justify-content: center; margin: 0; }
+.line .tools > .ext-gap { width: 30px; }
+.item.edit > .ext, .item.edit > .ext-gap { flex: none; width: 26px; display: inline-flex; justify-content: center; }
+.lens-line .sep { color: var(--fg); opacity: .4; font-weight: 700; margin: 0 1px; }
+.line .qtys { flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.q-sets > span:first-child { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.q-txrx { display: inline-flex; gap: 12px; flex-wrap: nowrap; }
+.more-acts { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.seg.sm { border-radius: 7px; }
+.seg button { border: 0; background: transparent; padding: 6px 11px; font-weight: 500; font-size: 13px; color: var(--fg); }
+.seg button + button { border-inline-start: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
+.pv-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pv-actions .btn { justify-content: center; gap: 6px; padding-inline: 6px; min-height: 42px; }
+@media (max-width: 560px) { .pv-bar .hint { display: none; } .pv-bar > b { flex: 1; } }
+.set-group { display: grid; gap: 10px; padding-block: 16px; border-top: 1px solid var(--line); }
+.set-group:first-of-type { border-top: 0; }
+.set-group h3 { margin: 0; font-size: 13px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.set-group .acct { margin-top: 0; }
+.form.tight { padding-block: 0; gap: 8px; }
+.item, .line { border-top-color: var(--line); }
+.item { padding-block: 9px; }
 @media (prefers-reduced-motion: reduce) { .chev, .pinfo, .pinfo-card, .pinfo:not(.open) .pinfo-in { transition: none; } }
 </style>
 
 <div class="app">
   <div class="topbar pad">
     <div class="brandmark">AC Cam <span>List</span></div>
-    <div class="top-right"><div class="save-state" id="saveState" aria-live="polite"></div><button class="iconbtn theme-btn" id="themeBtn" type="button" data-act="theme" aria-label="Theme"></button></div>
+    <div class="top-right"><div class="save-state" id="saveState" aria-live="polite"></div><button class="iconbtn theme-btn" id="setBtn" type="button" data-act="settings" aria-label="Settings" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </div>
   <main id="view"></main>
 </div>
@@ -713,10 +746,10 @@ function nameHtml(text, q) {
   }
   return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u">${hl(w.join(" "), q)}</span>`; }).join(" ");
 }
-/* a lens set on one flowing line, each lens with its stop: "5 lenses: 18 T2.9 · 25 T2.1 · 35 T2.1 …"; hi marks the focal length being searched */
+/* a lens set on one flowing line, each lens with its stop: "18 T2.9 • 25 T2.1 • 35 T2.1 …" (the set name already says how many); hi marks the focal length being searched */
 function perHtml(per, hi) {
   if (!per || !per.length) return "";
-  return `<span class="lens-line">${per.length} lenses: ${per.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}</span>`).join(`<span class="sep"> · </span>`)}</span>`;
+  return `<span class="lens-line">${per.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}</span>`;
 }
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
@@ -742,7 +775,6 @@ function specsHtml(it, extra, o = {}) {
     if (sp && sp.per) per = perHtml(sp.per);
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
-  if (it.txrx && !o.list) out.push(`<span>Choose TX and RX</span>`);
   if (o.link && out.length) out.push(o.link);  // the product page globe ends the line
   return (out.length ? `<span class="specs">${out.join("")}</span>` : "") + per;
 }
@@ -1016,6 +1048,19 @@ function saveCatItem(h, id, v) {
     g: g !== naturalGroup(now, tgt) ? g : undefined,
     section: v.section && v.section !== base.section ? v.section : undefined,
   });
+}
+/* a catalog item renamed (here or from a list): the catalog keeps the name, and lists that still use the old name follow */
+function renameCatItem(h, id, name) {
+  const e = ITEM.get(id); name = String(name || "").trim().slice(0, 160);
+  if (!e || !name || name === e.it.name) return false;
+  const own = e.it.own && catEdits(h.id).newItems.find(d => d.id === id);
+  if (own) { own.name = name; applyCatalog(); touchSettings(); }
+  else { const base = BITEM.get(id), old = { ...(peekEdits(h.id).items[id] || {}) }; old.name = name !== base.name ? name : undefined; storeItemEdit(h, id, old); }
+  return true;
+}
+function syncLineNames(id, from, to) {
+  if (!from || !to || from === to) return;
+  for (const q of app.productions) { const l = q.items && q.items[id]; if (l && (l.name === from || !l.name)) { l.name = to; l.orig = to; touch(q); } else if (l && l.orig === from) l.orig = to; }
 }
 /* a new item of the user's own, placed where they chose */
 function createOwnItem(h, v) {
@@ -1410,10 +1455,10 @@ function copyProduction(p, fields) {
 function lineFromCatalog(id) {
   const e = ITEM.get(id);
   const l = { qty: 1, note: "", name: e.it.name, orig: e.it.name, brand: e.it.brand, section: e.it.section, cat: e.c.name, sub: e.s.name, ord: e.ord, children: [] };
-  if (e.it.txrx) { l.tx = 1; l.rx = 1; l.qty = 2; }
+  if (e.it.txrx) { l.sets = 1; l.tx = 1; l.rx = 1; l.qty = 1; }  // wireless video: counted in sets; each set starts with one TX and one RX
   return l;
 }
-const lineQty = l => l.tx !== undefined ? (l.tx || 0) + (l.rx || 0) : (l.qty || 0);
+const lineQty = l => l.tx !== undefined ? (l.sets ?? 1) : (l.qty || 0);
 function totals(p) {
   const v = Object.values(p.items || {});
   return { lines: v.length, pcs: v.reduce((a, x) => a + lineQty(x), 0) };
@@ -1553,9 +1598,23 @@ function showModal(html) {
   m.className = "modal"; m.id = "modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true");
   m.innerHTML = `<div class="modal-card">${html}</div>`;
   document.body.appendChild(m);
+  fitToKeyboard();
   m.querySelector(".btn.primary")?.focus();
   navSync();
 }
+/* a dialog stays above the on-screen keyboard: it takes only the part of the screen the keyboard leaves, and the field being typed in scrolls into view */
+function fitToKeyboard() {
+  const vv = window.visualViewport, m = document.getElementById("modal");
+  if (!vv || !m) return;
+  m.style.top = vv.offsetTop + "px"; m.style.height = vv.height + "px"; m.style.bottom = "auto";
+  m.classList.toggle("kb", window.innerHeight - vv.height > 120);
+}
+if (window.visualViewport) { window.visualViewport.addEventListener("resize", fitToKeyboard); window.visualViewport.addEventListener("scroll", fitToKeyboard); }
+document.addEventListener("focusin", e => {
+  const t = e.target;
+  if (!t || !t.closest || !t.closest("#modal") || !/^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
+  setTimeout(() => { if (document.activeElement === t) { fitToKeyboard(); t.scrollIntoView({ block: "nearest" }); } }, 320);
+});
 function closeModal() { const m = document.getElementById("modal"); if (m) { m.remove(); navSync(); } }
 
 /* the phone's back button steps back through the app (the standalone app only): a dialog, the preview, the lens finder,
@@ -1582,7 +1641,8 @@ function stepBack() {
     app.view = ed ? "production" : "home"; app.pid = ed ? app.formFor : null; app.dupFrom = null;
     render(); window.scrollTo(0, 0); return;
   }
-  if (app.view !== "home") { app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; render(); window.scrollTo(0, 0); }
+  if (app.view === "settings" && app.setFrom && app.productions.some(x => x.id === app.setFrom)) { app.pid = app.setFrom; app.setFrom = null; app.view = "production"; render(); window.scrollTo(0, 0); return; }
+  if (app.view !== "home") { app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; app.setFrom = null; render(); window.scrollTo(0, 0); }
 }
 window.addEventListener("popstate", () => {
   if (!NAV.on) return;
@@ -1624,12 +1684,14 @@ function setQty(p, id, qty, field) {
   if (!l) {
     if (qty === 0 || !ITEM.has(id)) return [];
     l = p.items[id] = lineFromCatalog(id);
-    if (field) { l.tx = 0; l.rx = 0; l[field] = qty; }
-    else if (l.tx !== undefined) { l.tx = qty; l.rx = qty; }
+    if (l.tx !== undefined) { l.sets = qty; l.tx = qty; l.rx = qty; }
     else l.qty = qty;
   } else if (field && l.tx !== undefined) {
-    l[field] = qty;
-    if (!l.tx && !l.rx) delete p.items[id];
+    l[field] = qty;  // TX and RX are counted on their own; the sets stay as they are
+  } else if (l.tx !== undefined) {  // another set (or one less) brings one TX and one RX with it
+    const d = qty - lineQty(l);
+    l.sets = qty; l.tx = Math.max(0, (l.tx || 0) + d); l.rx = Math.max(0, (l.rx || 0) + d);
+    if (qty === 0) delete p.items[id];
   } else {
     l.qty = qty;
     if (qty === 0) delete p.items[id];
@@ -1676,6 +1738,11 @@ function applyTheme() {
   if (want) { if (root.getAttribute("data-theme") !== want) root.setAttribute("data-theme", want); } else root.removeAttribute("data-theme");
   const b = document.getElementById("themeBtn");
   if (b) { b.innerHTML = THEME_ICONS[theme.pref]; b.setAttribute("aria-label", "Theme: " + THEME_NAMES[theme.pref] + ". Tap to change."); b.title = "Theme: " + THEME_NAMES[theme.pref]; }
+}
+function setTheme(v) {
+  if (!["light", "dark", "auto"].includes(v)) return;
+  theme.pref = v; try { localStorage.setItem("acTheme", v); } catch (err) {}
+  applyTheme();
 }
 function cycleTheme() {
   theme.pref = theme.pref === "light" ? "dark" : theme.pref === "dark" ? "auto" : "light";
@@ -1736,9 +1803,6 @@ function viewHome() {
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Export the finished list to Word or CSV.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
-    <div style="padding-top:18px"><button class="btn" type="button" data-act="settings">Camera defaults</button>
-    <span class="hint">&nbsp;Batteries and memory cards that come with each camera you add.</span></div>
-    ${accountHtml()}
   </section>${selDock}`;
 }
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -1765,14 +1829,15 @@ function startDuplicate(id) {
 function accountHtml() {
   const a = window.AC_AUTH; if (!a) return "";
   const u = a.user();
-  return u ? `<div class="acct"><span><b>${esc(u.name || u.email || "Signed in")}</b><span class="hint">Your lists are saved to your Google account, on every device.</span></span><button class="btn ghost sm" type="button" data-act="acct-out">Sign out</button></div>`
+  return u ? `<div class="acct"><span><b>${esc(u.name || u.email || "Signed in")}</b><span class="hint">Your lists are saved to your Google account, on every device.</span></span><button class="btn sm" type="button" data-act="acct-out">Sign out</button></div>`
     : `<div class="acct"><span><b>Saved on this device</b><span class="hint">Sign in with Google to keep your lists safe and use them on your phone and computer.</span></span><button class="btn sm" type="button" data-act="acct-in">Sign in with Google</button></div>`;
 }
 
 function viewForm() {
   const editing = app.formFor ? app.productions.find(p => p.id === app.formFor) : null;
   const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
-  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({}));
+  const me = app.settings.me || {};
+  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "" }));
   const hasItems = (editing || src) && totals(editing || src).lines > 0;
   const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
   // an old list with a typed-in day count keeps it until its dates are picked again
@@ -1796,11 +1861,13 @@ function viewForm() {
         <div class="field"><label for="f-acphone">1st AC phone</label><input id="f-acphone" name="acPhone" type="tel" inputmode="tel" value="${esc(p.acPhone)}"></div>
       </div>
       <div class="row-dates">
-        <div class="field"><span class="lbl" id="dates-lbl">Shoot dates</span>
-          <button class="date-btn" type="button" data-act="cal-open" id="f-dates" aria-labelledby="dates-lbl f-dates">${datesBtnHtml(p.shootStart, p.shootEnd, days, p.shootDays)}</button>
+        <div class="field"><span class="lbl" id="prep-lbl">Prep day</span>
+          <button class="date-btn" type="button" data-act="cal-open" data-mode="prep" id="f-prepbtn" aria-labelledby="prep-lbl f-prepbtn">${prepBtnHtml(p.prep)}</button>
+          <input type="hidden" name="prep" id="f-prep" value="${esc(p.prep)}"></div>
+        <div class="field"><span class="lbl" id="dates-lbl">Shoot days</span>
+          <button class="date-btn" type="button" data-act="cal-open" data-mode="shoot" id="f-dates" aria-labelledby="dates-lbl f-dates">${datesBtnHtml(p.shootStart, p.shootEnd, days, p.shootDays)}</button>
           <input type="hidden" name="shootStart" id="f-start" value="${esc(p.shootStart)}"><input type="hidden" name="shootEnd" id="f-end" value="${esc(p.shootEnd)}">
           <input type="hidden" name="days" id="f-days" value="${esc(days ? JSON.stringify(days) : "")}"><input type="hidden" name="shootDays" id="f-ndays" value="${esc(days ? "" : p.shootDays)}"></div>
-        <div class="field"><label for="f-prep">Prep day</label><input id="f-prep" name="prep" type="date" value="${esc(p.prep)}"></div>
       </div>
       <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" rows="3" placeholder="Anything the rental house should know">${esc(p.notes)}</textarea></div>
       <div class="form-actions">
@@ -1820,20 +1887,27 @@ function datesBtnHtml(a, b, days, typed) {
   return `<span class="d-range">${esc(range)}</span><span class="d-n"><b class="num">${n}</b> shoot day${n === 1 ? "" : "s"}</span>`;
 }
 const CAL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
-/* the calendar: tap the first shoot day, then the last. Fridays and Saturdays start off; tap a day in the range to switch it on or off */
-const cal = { start: "", end: "", days: {}, y: 0, m: 0, stage: "start" };
+function prepBtnHtml(d) {
+  return d ? `<span class="d-range">${esc(fmtShort(d))}</span><span class="d-n">${WEEKDAYS[weekday(d)] || ""}</span>` : `<span class="d-range muted">Pick the prep day</span><span class="d-n">${CAL_ICON}</span>`;
+}
+/* the calendar, for the prep day (one day) and the shoot days (a range). Shoot: tap the first day, then the last.
+   Fridays and Saturdays start off; tap a day in the range to switch it on or off. Switching every day off clears the range. */
+const cal = { mode: "shoot", start: "", end: "", days: {}, prep: "", y: 0, m: 0, stage: "start" };
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-function calOpen() {
+function calOpen(mode) {
   const f = document.getElementById("prodForm"); if (!f) return;
-  cal.start = f.elements.shootStart.value; cal.end = f.elements.shootEnd.value || cal.start;
+  cal.mode = mode === "prep" ? "prep" : "shoot";
+  cal.start = f.elements.shootStart.value; cal.end = f.elements.shootEnd.value || cal.start; cal.prep = f.elements.prep.value;
   try { cal.days = JSON.parse(f.elements.days.value || "{}") || {}; } catch (e) { cal.days = {}; }
-  const now = new Date(), base = parseDate(cal.start) || { y: now.getFullYear(), m: now.getMonth() + 1 };
+  const now = new Date(), base = parseDate(cal.mode === "prep" ? cal.prep || cal.start : cal.start || cal.prep) || { y: now.getFullYear(), m: now.getMonth() + 1 };
   cal.y = base.y; cal.m = base.m; cal.stage = cal.start ? "done" : "start";
   showModal(`<div class="cal" id="cal">${calHtml()}</div>`);
   document.querySelector("#modal .modal-card")?.classList.add("cal-card");
-  (document.querySelector("#cal .cal-day.start") || document.querySelector("#cal .cal-day.today") || document.querySelector("#cal .cal-day"))?.focus({ preventScroll: true });
+  const pick = cal.mode === "prep" ? "#cal .cal-day.pick" : "#cal .cal-day.start";
+  (document.querySelector(pick) || document.querySelector("#cal .cal-day.today") || document.querySelector("#cal .cal-day"))?.focus({ preventScroll: true });
 }
 function calHtml() {
+  const prep = cal.mode === "prep";
   const first = new Date(Date.UTC(cal.y, cal.m - 1, 1)), lead = first.getUTCDay(), n = new Date(Date.UTC(cal.y, cal.m, 0)).getUTCDate();
   const now = new Date(), today = isoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
   const end = cal.stage === "done" ? cal.end || cal.start : "";
@@ -1842,41 +1916,68 @@ function calHtml() {
   for (let d = 1; d <= n; d++) {
     const s = isoDate(cal.y, cal.m, d), inR = !!(cal.start && (s === cal.start || (end && s >= cal.start && s <= end)));
     const on = inR && dayOn(cal.days, s), wk = isWeekend(s);
-    const cls = ["cal-day", wk ? "wknd" : "", inR ? "in" : "", inR && !on ? "off" : "", on ? "on" : "", s === cal.start ? "start" : "", end && s === end ? "end" : "", s === today ? "today" : ""].filter(Boolean).join(" ");
-    cells += `<button class="${cls}" type="button" data-act="cal-day" data-d="${s}" aria-pressed="${on}" aria-label="${d} ${MONTHS[cal.m - 1]}${inR ? on ? ", shoot day" : ", day off" : ""}">${d}</button>`;
+    // picking the prep day, the shoot days show faintly for reference
+    const cls = prep
+      ? ["cal-day", wk ? "wknd" : "", on ? "ctx" : "", s === cal.prep ? "start end pick on" : "", s === today ? "today" : ""]
+      : ["cal-day", wk ? "wknd" : "", inR ? "in" : "", inR && !on ? "off" : "", on ? "on" : "", s === cal.start ? "start" : "", end && s === end ? "end" : "", s === today ? "today" : "", s === cal.prep ? "prepday" : ""];
+    const lbl = `${d} ${MONTHS[cal.m - 1]}${prep ? s === cal.prep ? ", prep day" : on ? ", shoot day" : "" : inR ? on ? ", shoot day" : ", day off" : ""}`;
+    cells += `<button class="${cls.filter(Boolean).join(" ")}" type="button" data-act="cal-day" data-d="${s}" aria-pressed="${prep ? s === cal.prep : on}" aria-label="${lbl}">${d}</button>`;
   }
-  const count = cal.start ? countShootDays(cal.start, end || cal.start, cal.days) : 0;
-  const range = cal.start ? (end && end !== cal.start ? `${fmtShort(cal.start)} – ${fmtShort(end)}` : fmtShort(cal.start)) : "";
-  const tip = cal.stage === "start" ? "Tap the first shoot day." : cal.stage === "end" ? "Now tap the last shoot day." : "Tap a day in the range to switch it on or off. Fridays and Saturdays start off.";
-  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
-    <div class="cal-grid" role="group" aria-label="Shoot days">${WEEKDAYS.map((w, i) => `<span class="cal-wd${i >= 5 ? " wknd" : ""}">${w}</span>`).join("")}${cells}</div>
-    <p class="cal-sum" aria-live="polite">${range ? `<b>${esc(range)}</b> · <b class="num">${count}</b> shoot day${count === 1 ? "" : "s"}` : "No dates yet"}</p>
+  let sum, tip, any;
+  if (prep) {
+    any = !!cal.prep; sum = cal.prep ? `Prep <b>${esc(fmtShort(cal.prep))}</b> · ${WEEKDAYS[weekday(cal.prep)]}` : "No prep day yet";
+    tip = cal.start ? "Tap the prep day. The shoot days show faintly." : "Tap the prep day.";
+  } else {
+    const count = cal.start ? countShootDays(cal.start, end || cal.start, cal.days) : 0, r = shootTrim(cal.start, end || cal.start, cal.days);
+    const range = r.a ? (r.b !== r.a ? `${fmtShort(r.a)} – ${fmtShort(r.b)}` : fmtShort(r.a)) : "";
+    any = !!cal.start; sum = range ? `<b>${esc(range)}</b> · <b class="num">${count}</b> shoot day${count === 1 ? "" : "s"}` : "No dates yet";
+    tip = cal.stage === "start" ? "Tap the first shoot day." : cal.stage === "end" ? "Now tap the last shoot day." : "Tap a day in the range to switch it on or off. Fridays and Saturdays start off.";
+  }
+  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${prep ? "Prep day · " : "Shoot days · "}${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
+    <div class="cal-grid${prep ? " prep" : ""}" role="group" aria-label="${prep ? "Prep day" : "Shoot days"}">${WEEKDAYS.map((w, i) => `<span class="cal-wd${i >= 5 ? " wknd" : ""}">${w}</span>`).join("")}${cells}</div>
+    <p class="cal-sum" aria-live="polite">${sum}</p>
     <p class="hint cal-tip">${tip}</p>
-    <div class="modal-actions">${cal.start ? `<button class="btn ghost" type="button" data-act="cal-clear">Clear</button>` : ""}<span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cal-done">Done</button></div>`;
+    <div class="modal-actions">${any ? `<button class="btn ghost" type="button" data-act="cal-clear">Clear</button>` : ""}<span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cal-done">Done</button></div>`;
+}
+/* the range as it really is: from the first day that's on to the last */
+function shootTrim(a, b, days) {
+  const on = rangeDates(a, b).filter(d => dayOn(days, d));
+  return { a: on[0] || "", b: on[on.length - 1] || "" };
 }
 function calRefresh(focusD) {
   const el = document.getElementById("cal"); if (!el) return;
   el.innerHTML = calHtml();
   if (focusD) el.querySelector(`[data-d="${focusD}"]`)?.focus();
 }
+function calClear() {
+  if (cal.mode === "prep") cal.prep = "";
+  else { cal.start = ""; cal.end = ""; cal.days = {}; cal.stage = "start"; }
+}
 function calPick(s) {
+  if (cal.mode === "prep") { cal.prep = cal.prep === s ? "" : s; calRefresh(s); return; }
   if (cal.stage === "start" || (cal.stage === "done" && (s < cal.start || s > (cal.end || cal.start)))) { cal.start = s; cal.end = ""; cal.days = {}; cal.stage = "end"; }
   else if (cal.stage === "end") { if (s < cal.start) cal.start = s; else { cal.end = s; cal.stage = "done"; } }
-  else {  // switch a day in the range on or off
+  else {  // switch a day in the range on or off; every day off is the same as Clear
     const now = dayOn(cal.days, s);
     if (!now === !isWeekend(s)) delete cal.days[s]; else cal.days[s] = now ? 0 : 1;
+    if (!countShootDays(cal.start, cal.end || cal.start, cal.days)) calClear();
   }
   calRefresh(s);
 }
 function calDone() {
   const f = document.getElementById("prodForm");
-  if (f) {
-    const a = cal.start, b = cal.start ? (cal.end || cal.start) : "";
-    const days = {}; for (const d of rangeDates(a, b)) if (cal.days[d] !== undefined) days[d] = cal.days[d];
-    f.elements.shootStart.value = a; f.elements.shootEnd.value = b; f.elements.days.value = JSON.stringify(days); f.elements.shootDays.value = "";
-    document.getElementById("f-dates").innerHTML = datesBtnHtml(a, b, days);
+  if (f && cal.mode === "prep") {
+    f.elements.prep.value = cal.prep;
+    document.getElementById("f-prepbtn").innerHTML = prepBtnHtml(cal.prep);
+  } else if (f) {
+    // keep only the real shoot days: the range starts and ends on days that are on
+    const r = cal.start ? shootTrim(cal.start, cal.end || cal.start, cal.days) : { a: "", b: "" };
+    const days = {}; for (const d of rangeDates(r.a, r.b)) if (cal.days[d] !== undefined) days[d] = cal.days[d];
+    f.elements.shootStart.value = r.a; f.elements.shootEnd.value = r.b; f.elements.days.value = JSON.stringify(days); f.elements.shootDays.value = "";
+    document.getElementById("f-dates").innerHTML = datesBtnHtml(r.a, r.b, days);
   }
-  closeModal(); document.getElementById("f-dates")?.focus();
+  const back = cal.mode === "prep" ? "f-prepbtn" : "f-dates";
+  closeModal(); document.getElementById(back)?.focus();
 }
 
 function viewSettings() {
@@ -1891,9 +1992,19 @@ function viewSettings() {
   const bats = new Map();
   for (const e of ITEM.values()) if (e.it.section === "power" && /batter|v-mount|gold mount|b-mount|np-|bp-/i.test(e.it.name) && !/charger|plate|adaptor/i.test(e.it.name) && !bats.has(flat(e.it.name))) bats.set(flat(e.it.name), e.it.name);
   const batOpts = [...bats.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, n]) => `<option value="${esc(k)}">${esc(n)}</option>`).join("");
+  const me = app.settings.me || {}, acct = accountHtml();
+  const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
-    <div class="prod-head"><button class="btn ghost back" type="button" data-act="home">← Productions</button><h2 class="page">Camera defaults</h2>
-    <p class="hint" style="margin:0">When you add a camera to a list, these batteries and memory cards are added with it and follow the camera's quantity. Extras you add by hand stay on top.</p></div>
+    <div class="prod-head">${app.setFrom && app.productions.some(x => x.id === app.setFrom) ? `<button class="btn ghost back" type="button" data-act="open" data-id="${esc(app.setFrom)}" data-keep="1">← Back to the list</button>` : `<button class="btn ghost back" type="button" data-act="home">← Productions</button>`}<h2 class="page">Settings</h2></div>
+    <div class="set-group"><h3>Your details</h3>
+      <form class="form tight" id="meForm" autocomplete="off"><div class="row2">
+        <div class="field"><label for="me-name">Your name (1st AC)</label><input id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
+        <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
+        <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
+    <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span></div>
+    ${acct ? `<div class="set-group"><h3>Account</h3>${acct}</div>` : ""}
+    <div class="set-group"><h3>Camera defaults</h3>
+    <p class="hint" style="margin:0">When you add a camera to a list, these batteries and memory cards (and a card reader) are added with it and follow the camera's quantity. Extras you add by hand stay on top.</p>
     <div class="rules" style="padding-top:10px">${rules || `<p class="hint">No rules yet.</p>`}</div>
     <form class="form" id="ruleForm" autocomplete="off" style="padding-top:18px">
       <h3 style="margin:0">Add a battery rule</h3>
@@ -1903,7 +2014,7 @@ function viewSettings() {
       </div>
       <div class="row3"><div class="field"><label for="r-qty">Batteries per camera</label><input id="r-qty" name="qty" type="number" min="1" max="99" value="4" inputmode="numeric"></div></div>
       <div><button class="btn primary" type="submit">Add rule</button></div>
-    </form>
+    </form></div>
   </section>`;
 }
 
@@ -1924,7 +2035,8 @@ function viewProduction() {
   const shootTxt = shootDM ? `<span class="ph-it"><span class="ph-k">Shoot</span> <b>${esc(shootDM)}</b>${days ? ` <span class="ph-n">· ${days} day${days === 1 ? "" : "s"}</span>` : ""}</span>` : "";
   const prepTxt = p.prep ? `<span class="ph-it"><span class="ph-k">Prep</span> <b>${esc(dm(p.prep))}</b></span>` : "";
   // the lens finder gets the whole screen: nothing above the tabs
-  const head = app.tab === "add" && fin().on ? "" : `<div class="prod-head">
+  const finder = app.tab === "add" && fin().on;
+  const head = finder ? "" : `<div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
       <div class="ph-name-row"><h2 class="ph-name">${esc(p.name || "Untitled production")}</h2><button class="ph-tab" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo">Info${CHEV}</button></div>
       <button class="ph-row" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Production details">
@@ -1935,10 +2047,10 @@ function viewProduction() {
     </div>`;
   return `<section class="pad">
     ${head}
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="tablist"${finder ? " hidden" : ""}>
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}">Add gear</button>
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}">Favorites <span class="num">${nFav || ""}</span></button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Cam list <span class="num" id="tabCount">${t.lines}</span></button>
+      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Camera List <span class="num" id="tabCount">${t.lines}</span></button>
     </div>
   </section>
   ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : viewList(p, h)}`;
@@ -1952,20 +2064,19 @@ function stepper(act, id, val, field, small) {
 function ctlHtml(p, id) {
   const l = p.items[id];
   if (!l) return `<button class="add" type="button" data-act="cinc" data-id="${esc(id)}" aria-label="Add">+ Add</button>`;
-  if (l.tx !== undefined) return `<span class="tr"><span>TX</span>${stepper("c", id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper("c", id, l.rx, "rx", true)}</span>`;
   return stepper("c", id, l.qty, null, false);
 }
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h);
   const specs = specsHtml(it, extra, { q }), nameLink = "";
   const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "";  // the product page globe sits in the row's top-right corner
-  return `<li class="item ${on ? "on" : ""} ${it.txrx ? "has-txrx" : ""}${corner ? " has-link" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
+  return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
     <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
 }
 
 /* ----- Add gear: the rental house catalog ----- */
 function viewCatalog(p, h) {
-  if (fin().on) return finderHtml(p, h) + dockHtml(p);
+  if (fin().on) return finderHtml(p, h);
   const chips = [`<button class="chip" type="button" data-act="chip" data-cat="all" aria-pressed="${app.cat === "all"}">All <span class="num">${houseCount(h)}</span></button>`]
     .concat(h.categories.filter(c => app.editCat || catCount(c)).map(c => `<button class="chip" type="button" data-act="chip" data-cat="${c.id}" aria-pressed="${app.cat === c.id}" style="--tape: ${catTape(c)}"><span class="dot"></span>${esc(c.name)} <span class="num">${catCount(c)}</span></button>`)).join("");
   return `<div class="bar pad">
@@ -1975,8 +2086,7 @@ function viewCatalog(p, h) {
       <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
     </div>
     <div class="pad edit-row">${editRowBar(h)}</div>
-    <div class="pad" id="tree">${treeHtml(p, h)}</div>
-    ${dockHtml(p)}`;
+    <div class="pad" id="tree">${treeHtml(p, h)}</div>`;
 }
 function editRowBar(h) {
   const any = hasEdits(h), newBtn = `<button class="btn sm" type="button" data-act="new-item">+ New item</button>`;
@@ -2004,13 +2114,12 @@ function groupItems(items, s) {
   else out = [...m.entries()].sort((a, b) => a[0] === "Generic" ? 1 : b[0] === "Generic" ? -1 : a[0].localeCompare(b[0], "en", { sensitivity: "base" }));
   return userOrder(out, s.gorder, e => e[0]);
 }
-const groupWord = (s, n) => (s.groupBy === "size" ? (n === 1 ? "size" : "sizes") : s.groupBy === "type" ? (n === 1 ? "type" : "types") : (n === 1 ? "brand" : "brands"));
 const hay = (it, s) => norm(it.name + " " + (it.sku || "") + " " + noteOf(it.id) + " " + it.brand + " " + (it.group || "") + " " + s.name + " " + (it.site_name || "") + " " + (it.lens ? (it.lens.focals || "") + " " + (it.lens.coverage || "") : ""));
 const GRIP = `<svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg>`;
 function editRowHtml(it, kB, q, brand) {
   return `<li class="item edit" data-drop="${esc(kB)}" data-row="${esc(it.id)}"${brand ? ` data-brand="${esc(brand)}"` : ""}><button class="handle" type="button" data-drag="cat" data-id="${esc(it.id)}" aria-label="Drag ${esc(it.name)} to another heading">${GRIP}</button>
-    <span class="info"><span class="nm-row"><span class="nm">${nameHtml(it.name, q)}</span>${linkHtml(it, ITEM.get(it.id)?.h)}</span>${q && it.sku && norm(it.sku).includes(q) ? `<span class="specs"><span class="sku">${hl(it.sku, q)}</span></span>` : ""}${noteHtml(it.id)}</span>
-    <button class="btn sm" type="button" data-act="cat-edit" data-id="${esc(it.id)}">Edit</button></li>`;
+    <span class="info"><span class="nm-row"><span class="nm">${nameHtml(it.name, q)}</span></span>${q && it.sku && norm(it.sku).includes(q) ? `<span class="specs"><span class="sku">${hl(it.sku, q)}</span></span>` : ""}${noteHtml(it.id)}</span>
+    ${linkHtml(it, ITEM.get(it.id)?.h) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="btn sm" type="button" data-act="cat-edit" data-id="${esc(it.id)}">Edit</button></li>`;
 }
 /* a lens subcategory split by format, largest first; items without a known format go last ("Other").
    Only when it holds more than one format; folders the user made are left as they are. */
@@ -2083,8 +2192,7 @@ function treeHtml(p, h) {
       const nHeads = (brands.match(/<details class="brand|class="mfr-head/g) || []).length;
       const anyClosed = /<details class="brand[^>]*" >/.test(brands) || brands.includes('class="mfr-head closed"');
       const allBtn = !ed && !searching && nHeads >= 2 ? `<div class="sub-tools"><button class="btn ghost sm" type="button" data-act="sub-all" data-k="${esc(kS)}" data-open="${anyClosed ? 1 : 0}">${anyClosed ? "Open all" : "Close all"}</button></div>` : "";
-      const nGroups = fmt ? fmt.covs.length + fmt.other.length : groups.length;
-      subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}${nGroups ? ` <small>· ${nGroups} ${fmt ? (nGroups === 1 ? "format" : "formats") : groupWord(s, nGroups)}</small>` : ""}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
+      subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
     }
     const dItems = searching ? c.direct.items.filter(it => hay(it, c.direct).includes(q)) : c.direct.items;
     cn += dItems.length;
@@ -2275,7 +2383,7 @@ function finderHtml(p, h) {
     <div class="f-form">
       <div class="f-fields">
         <label class="f-field"><span>Focal length</span><span class="f-inp"><input data-fin="f" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.f)}" placeholder="50" aria-label="Focal length in mm"><i>mm</i></span></label>
-        <label class="f-field"><span>Stop</span><span class="f-inp"><i>T</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" placeholder="any" aria-label="Stop (T or f-number)"></span></label>
+        <label class="f-field"><span>Stop</span><span class="f-inp"><i>f/</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="Stop (f-number or T-stop)"></span></label>
       </div>
       <label class="f-field"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
       <div class="f-fields">
@@ -2305,10 +2413,6 @@ function parseLensQuery(q) {
   return { f: m[1].replace(",", "."), t: t ? t[1].replace(",", ".") : "" };
 }
 
-function dockHtml(p) {
-  const t = totals(p);
-  return `<div class="dock pad" id="dock"><div class="dock-in"><span class="summary-line"><b class="num" id="dockLines">${t.lines}</b> items · <span class="num" id="dockPcs">${t.pcs}</span> pcs</span><button class="btn primary" type="button" data-act="tab" data-tab="list">Cam list →</button></div></div>`;
-}
 function refreshRows(p, ids) {
   for (const id of new Set(ids)) {
     const e = ITEM.get(id);
@@ -2378,7 +2482,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
   const sec = e ? e.it.section : opts.addTo || typicalSection(h, hc, hs, "accessories");
   const secs = optList(allSections().map(s => [s.id, secName(s.id)]), sec);
   const hint = mode === "base" ? `On the ${esc(h.name)} site: ${esc(base.site_name || base.name)}${base.sku ? ` · SKU ${esc(base.sku)}` : ""}`
-    : mode === "own" ? "" : opts.addTo ? `It goes on the Cam list, and into ${esc(h.name)}'s catalog for next time. Check where it should live.` : `Added to ${esc(h.name)}'s catalog for you. Add it to any list like other items.`;
+    : mode === "own" ? "" : opts.addTo ? `It goes on the Camera List, and into ${esc(h.name)}'s catalog for next time. Check where it should live.` : `Added to ${esc(h.name)}'s catalog for you. Add it to any list like other items.`;
   const dupBtn = mode !== "new" ? `<button class="btn" type="button" data-act="cat-item-dup" data-id="${esc(id)}">Duplicate</button>` : "";
   const actions = mode === "base" ? `<button class="btn danger" type="button" data-act="cat-item-remove" data-id="${esc(id)}">Remove from catalog</button>` + (e.it.edited ? `<button class="btn ghost" type="button" data-act="cat-item-reset" data-id="${esc(id)}">Undo edits</button>` : "") + dupBtn
     : mode === "own" ? `<button class="btn danger" type="button" data-act="cat-item-delete" data-id="${esc(id)}">Delete item</button>` + dupBtn
@@ -2388,24 +2492,23 @@ function catEditDialog(h, id, presetKey, opts = {}) {
     <h3 class="plain">${mode === "new" ? opts.addTo ? "Add to the list and the catalog" : "New item" : "Edit item"}</h3>
     <div class="field"><label for="ci-name">Name</label><input id="ci-name" name="name" maxlength="160" value="${esc(e ? e.it.name : opts.name || "")}" required>
       ${hint ? `<span class="hint">${hint}</span>` : ""}</div>
-    ${opts.addTo ? "" : `<div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the Cam list.">${esc(id ? noteOf(id) : "")}</textarea></div>`}
-    ${mode === "base" ? `<div class="field"><label for="ci-brand">Manufacturer</label><input id="ci-brand" name="brand" maxlength="60" value="${esc(e.it.brand || "")}" list="ci-brands"></div>` : ""}
-    ${mode !== "base" ? `<div class="row2">
-      <div class="field"><label for="ci-brand">Manufacturer</label><input id="ci-brand" name="brand" maxlength="60" value="${esc(own && own.brand || opts.brand || "")}" placeholder="Optional" list="ci-brands"></div>
-      ${opts.addTo ? "" : `<div class="field"><label for="ci-sku">SKU</label><input id="ci-sku" name="sku" maxlength="40" value="${esc(own && own.sku || "")}" placeholder="Optional"></div>`}</div>
-    ${opts.addTo ? "" : `<div class="field"><label for="ci-url">Link</label><input id="ci-url" name="url" type="url" inputmode="url" maxlength="500" value="${esc(own && own.url || "")}" placeholder="Optional: the product page"></div>`}` : ""}
+    <div class="field"><label for="ci-brand">Manufacturer</label><input id="ci-brand" name="brand" maxlength="60" value="${esc(mode === "base" ? e.it.brand || "" : own && own.brand || opts.brand || "")}"${mode === "base" ? "" : ` placeholder="Optional"`} list="ci-brands"></div>
     <div class="row2">
       <div class="field"><label for="ci-c">Category</label><select id="ci-c" name="c">${catOptions(h, cat.id)}</select>
         <input id="ci-cnew" name="cnew" maxlength="60" placeholder="New category name" aria-label="New category name" hidden></div>
       <div class="field"><label for="ci-s">Subcategory</label><select id="ci-s" name="s">${subOptions(cat, sub.key)}</select>
         <input id="ci-snew" name="snew" maxlength="60" placeholder="New subcategory name" aria-label="New subcategory name" value="General" hidden></div>
     </div>
-    <div class="row2">
-      <div class="field" id="ci-gfield" ${sub.direct ? "hidden" : ""}><label for="ci-g">Group</label><select id="ci-g" name="g">${groupOpts(h, sub.key, gsel, mode !== "base")}</select>
-        <input id="ci-gnew" name="gnew" maxlength="60" placeholder="New group name" aria-label="New group name" hidden></div>
-      <div class="field"><label for="ci-sec">Cam list section</label><select id="ci-sec" name="section">${secs}</select></div>
-    </div>
-    <div class="modal-actions">${actions}<span class="grow"></span>
+    <div class="field" id="ci-gfield" ${sub.direct ? "hidden" : ""}><label for="ci-g">Folder</label><select id="ci-g" name="g">${groupOpts(h, sub.key, gsel, mode !== "base")}</select>
+      <input id="ci-gnew" name="gnew" maxlength="60" placeholder="New folder name" aria-label="New folder name" hidden></div>
+    <details class="more"><summary>More${CHEV}</summary><div class="more-in">
+      ${opts.addTo ? "" : `<div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the Camera List.">${esc(id ? noteOf(id) : "")}</textarea></div>`}
+      ${mode !== "base" && !opts.addTo ? `<div class="field"><label for="ci-sku">SKU</label><input id="ci-sku" name="sku" maxlength="40" value="${esc(own && own.sku || "")}" placeholder="Optional"></div>
+      <div class="field"><label for="ci-url">Link</label><input id="ci-url" name="url" type="url" inputmode="url" maxlength="500" value="${esc(own && own.url || "")}" placeholder="Optional: the product page"></div>` : ""}
+      <div class="field"><label for="ci-sec">Camera List section</label><select id="ci-sec" name="section">${secs}</select><span class="hint">Where it goes on the Camera List and in the exports.</span></div>
+      ${mode !== "new" && actions ? `<div class="more-acts">${actions}</div>` : ""}
+    </div></details>
+    <div class="modal-actions">${mode === "new" ? actions : ""}<span class="grow"></span>
       <button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">${mode === "new" ? "Add item" : "Save"}</button></div>
   </form>`);
   if (opts.addTo) { document.getElementById("ci-s")?.focus({ preventScroll: true }); const card = document.querySelector("#modal .modal-card"); if (card) card.scrollTop = 0; }
@@ -2425,7 +2528,7 @@ function noteDialog(id) {
   showModal(`<form class="form dialog" id="noteForm" data-id="${esc(id)}" autocomplete="off">
     <h3 class="plain">Note</h3>
     <div class="field"><label for="nt-text">${esc(e.it.name)}</label><textarea id="nt-text" name="note" rows="3" maxlength="300" placeholder="">${esc(now)}</textarea>
-      <span class="hint">Only you see it, here in the catalog. It isn't added to the Cam list or the exports.</span></div>
+      <span class="hint">Only you see it, here in the catalog. It isn't added to the Camera List or the exports.</span></div>
     <div class="modal-actions">${now ? `<button class="btn ghost" type="button" data-act="note-clear" data-id="${esc(id)}">Delete note</button>` : ""}<span class="grow"></span>
       <button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save</button></div>
   </form>`);
@@ -2462,7 +2565,7 @@ function catDialogSync(changed) {
 function newHeadDialog(kind, h, cid) {
   const secs = optList(allSections().map(s => [s.id, secName(s.id)]), "accessories");
   const body = kind === "section"
-    ? `<h3 class="plain">New Cam list section</h3>
+    ? `<h3 class="plain">New Camera List section</h3>
       <div class="row2"><div class="field"><label for="nh-name">Section name</label><input id="nh-name" name="name" maxlength="60" required placeholder=""></div>
       <div class="field"><label for="nh-pos">Place it</label><select id="nh-pos" name="pos">${sectionSlots("R|aks")}</select></div></div>
       <p class="hint">Shows in every production and in the Word, PDF and CSV exports. Drag lines into it, or type items in.</p>`
@@ -2471,7 +2574,7 @@ function newHeadDialog(kind, h, cid) {
         <input id="nh-name" name="name" maxlength="60" placeholder="New category name" aria-label="New category name" ${cid ? "hidden" : ""}></div>
       <div id="nh-color" ${cid ? "hidden" : ""}>${swatchField({ id: "__new", custom: true }, "nh-col")}</div>
       <div class="row2"><div class="field"><label for="nh-sub">Subcategory</label><input id="nh-sub" name="sub" maxlength="60" placeholder="${cid ? "" : "Optional: leave empty for none"}"></div>
-      <div class="field"><label for="nh-sec">Cam list section</label><select id="nh-sec" name="section">${secs}</select></div></div>
+      <div class="field"><label for="nh-sec">Camera List section</label><select id="nh-sec" name="section">${secs}</select></div></div>
       <p class="hint">Then drag items onto it, or pick it in an item's Edit.</p>`;
   showModal(`<form class="form dialog" id="newHeadForm" data-kind="${kind === "section" ? "section" : "cat"}" autocomplete="off">${body}
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Add</button></div></form>`);
@@ -2484,7 +2587,7 @@ function folderDialog(h, parent) {
   showModal(`<form class="form dialog" id="folderForm" data-parent="${esc(parent)}" autocomplete="off">
     <h3 class="plain">New folder in ${esc(where || "")}</h3>
     <div class="field"><label for="fd-name">Folder name</label><input id="fd-name" name="name" maxlength="60" required placeholder=""></div>
-    ${inCat ? `<div class="field"><label for="fd-sec">Cam list section for its items</label><select id="fd-sec" name="section">${secs}</select></div>` : ""}
+    ${inCat ? `<div class="field"><label for="fd-sec">Camera List section for its items</label><select id="fd-sec" name="section">${secs}</select></div>` : ""}
     <p class="hint">${inCat ? "It shows as a subcategory" : "It shows as a group"} in ${esc(where || "")}. Drag items into it.</p>
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Add folder</button></div>
   </form>`);
@@ -2511,7 +2614,7 @@ function headDialog(scope, h, k) {
   const orig = headOrig(scope, h, k);
   const now = scope === "section" ? secName(k) : headLabel(h, k, orig);
   const [, s, g] = splitKey(k);
-  const what = scope === "section" ? "Cam list section" : g ? "folder" : s ? "subcategory" : "category";
+  const what = scope === "section" ? "Camera List section" : g ? "folder" : s ? "subcategory" : "category";
   const ownFolder = scope !== "section" && g && isOwnGroup(h, k);
   const own = scope === "section" ? (app.settings.customSections || []).find(c => c.id === k) : ownFolder || customDef(h, k);
   const nOwn = scope === "section" || !own || ownFolder ? 0 : ownItemsIn(h, k).length;
@@ -2565,7 +2668,7 @@ function viewFavorites(p, h) {
       ${starred || typed ? starred + typed : `<p class="hint">Tap ☆ next to any item in Add gear or in the list to keep it here for quick picking.</p>`}</div>
     <div class="fav-group"><h3>Used before</h3>
       ${used || `<p class="hint">Items from your other ${esc(h.name)} productions will show up here.</p>`}</div>
-  </section>${dockHtml(p)}`;
+  </section>`;
 }
 /* favorites laid out like the catalog: one open block per category, a small heading per subcategory, catalog order inside */
 function favByCategory(h, rows) {
@@ -2598,27 +2701,24 @@ function lineHtml(p, id, l) {
   const e = ITEM.get(id);
   const key = l.custom ? favKeyCustom(l.name, l.section) : id;
   const qtys = l.tx !== undefined
-    ? `<span class="qtys"><span class="tr"><span>TX</span>${stepper("l", id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper("l", id, l.rx, "rx", true)}</span></span>`
+    ? `<span class="qtys"><span class="tr q-sets"><span>Sets</span>${stepper("l", id, lineQty(l), null, false)}</span><span class="q-txrx"><span class="tr"><span>TX</span>${stepper("l", id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper("l", id, l.rx, "rx", true)}</span></span></span>`
     : stepper("l", id, l.qty, null, false);
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
-  const secOpts = allSections().map(s => `<option value="${s.id}" ${s.id === l.section ? "selected" : ""}>${esc(secName(s.id))}</option>`).join("");
+  // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
   const editor = editing ? `<div class="editor">
-      <div class="row2">
-        <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}"></div>
-        <div class="field"><label for="es-${esc(id)}">Section</label><select id="es-${esc(id)}" data-sec="${esc(id)}">${secOpts}</select></div>
-      </div>
-      <div class="field"><label for="eo-${esc(id)}">Note</label><input id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="Shown in brackets after the name" value="${esc(l.note)}"></div>
+      <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}">${e ? `<span class="hint">A new name is kept in ${esc(e.h.name)}'s catalog too, for your next lists.</span>` : ""}</div>
       <div class="field"><span class="lbl">Sub-items</span>
         <ul class="children">${(l.children || []).map(c => `<li class="child">${stepper("k", id + "|" + c.id, c.qty, null, true)}<input type="text" data-kname="${esc(id + "|" + c.id)}" value="${esc(c.name)}" aria-label="Sub-item name"><button class="x" type="button" data-act="krm" data-id="${esc(id + "|" + c.id)}" aria-label="Remove ${esc(c.name)}">×</button></li>`).join("")}</ul>
         <form class="custom-add" data-kadd="${esc(id)}" autocomplete="off"><input name="name" placeholder="Add a sub-item" aria-label="New sub-item"><button type="submit">+ Add</button></form></div>
-      <div class="editor-actions"><span class="grp">${l.orig && l.orig !== l.name ? `<button class="btn ghost" type="button" data-act="rename-reset" data-id="${esc(id)}">Use catalog name</button>` : ""}<button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button></span><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
+      <div class="field"><label for="eo-${esc(id)}">Note</label><input id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="Shown in brackets after the name" value="${esc(l.note)}"></div>
+      <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-top"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}${e ? linkHtml(e.it, e.h) : ""}</span>
-        <span class="tools">${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
+      <div class="l-top"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>
+        <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
       ${specs ? `<div class="l-meta">${specs}</div>` : ""}
       ${kids}
       <div class="l-bottom">${qtys}${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}</div>
@@ -2642,7 +2742,7 @@ function viewList(p, h) {
   return `<section class="pad">
     <div class="list-tools">
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-        <input id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Cam list"></label>
+        <input id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
         ${t.lines ? `<button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button>` : ""}</div></div>
     <div id="copyFallback"></div>
@@ -2741,7 +2841,7 @@ function exportRows(id, l) {
   const base = { extra, kids, sku: l.sku || (e && e.it.sku) || "", l };
   if (l.tx !== undefined) {
     const parts = [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean);
-    return parts.length ? [{ ...base, qty: (l.tx || 0) + (l.rx || 0), name: `${l.name} (${parts.join(" / ")})` }] : [];
+    return [{ ...base, qty: lineQty(l), name: l.name + (parts.length ? ` (${parts.join(" / ")})` : "") }];
   }
   return [{ ...base, qty: l.qty, name: l.name }];
 }
@@ -2769,8 +2869,73 @@ function csvText(p) {
 }
 function fileBase(p) { return ("Camera list - " + (p.name || "production") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "")).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
 
+/* ----- the clean layout (default), after the camlist look: the production's name with "Camera List" across from it on every page,
+   a short block of details, then each section between two thin rules: "2 x" and the item in bold, its sub-items and notes under it,
+   the SKU in its own column on the right ----- */
+const layoutOf = () => app.settings.exportLayout === "table" ? "table" : "clean";
+const DOC_TITLE = "Camera List";
+const CLEAN_FONT = "Futura, 'Century Gothic', 'Avenir Next', 'IBM Plex Sans', Arial, Helvetica, sans-serif";
+function shootRangeText(p) {
+  if (!p.shootStart) return "";
+  const days = shootDays(p), range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)} – ${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart);
+  return range + (days ? ` · ${days} shoot day${days === 1 ? "" : "s"}` : "");
+}
+/* the details block: label and value; the rental house is not printed */
+const infoRows = p => [["Production company", p.company], ["DP", p.dp], ["1st AC", [p.ac, p.acPhone].filter(Boolean).join("   ")], ["Prep", p.prep ? fmtShort(p.prep) : ""], ["Shoot", shootRangeText(p)]].filter(r => r[1]);
+function cleanTitleHtml(p, page) {
+  return `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;font-family:${CLEAN_FONT};color:#111">
+    <div style="font-size:25px;line-height:1.15;min-width:0"><b>${esc(p.name || "Production")}</b>${page ? ` <span style="font-weight:400">(${esc(page)})</span>` : ""}</div>
+    <div style="font-size:20px;white-space:nowrap">${DOC_TITLE}</div></div>`;
+}
+function exportHtmlClean(p, o = {}) {
+  const by = linesBySection(p), sku = skuOn();
+  let body = "";
+  for (const s of allSections()) {
+    const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
+    if (!rows.length) continue;
+    body += `<div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty} x</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("");
+  }
+  const info = infoRows(p);
+  return `<div class="cl" style="width:794px;box-sizing:border-box;padding:0 56px;background:#fff">
+    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:12px;line-height:1.35}.cl .cl-inf{border-collapse:collapse;margin:12px 0 0}.cl .cl-inf td{padding:1px 0;vertical-align:top;font-size:11.5px;color:#111}.cl .cl-inf td:first-child{font-weight:700;width:140px;padding-right:12px}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:18px;padding:5px 0 4px;font-weight:700;font-size:11.5px}.cl .cl-r{display:flex;padding-top:7px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:12px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:11px;padding-top:1px}.cl .cl-x{font-size:11px;font-style:italic;color:#555;padding-top:1px}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:18px;border-top:1px solid #111;padding-top:6px}</style>
+    ${o.pdf ? "" : `<div style="padding-top:4px">${cleanTitleHtml(p)}</div>`}
+    ${info.length ? `<table class="cl-inf" data-break>${info.map(([k, v]) => `<tr><td>${esc(k)}:</td><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
+    ${body}
+    ${p.notes ? `<div class="cl-nt" data-break><b>Notes</b><div style="white-space:pre-wrap">${esc(p.notes)}</div></div>` : ""}
+    <div style="height:8px"></div>
+  </div>`;
+}
+const exportHtml = (p, o) => layoutOf() === "table" ? exportHtmlTable(p) : exportHtmlClean(p, o);
+/* Word, clean: the same, with the title line as the page header ("Mizrahi (1 out of 3)" … "Camera List") */
+const xmlEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const wRun = (t, o = {}) => `<w:r><w:rPr>${o.b ? "<w:b/>" : ""}${o.i ? "<w:i/>" : ""}${o.color ? `<w:color w:val="${o.color}"/>` : ""}${o.mono ? '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/>' : ""}<w:sz w:val="${o.sz || 20}"/><w:szCs w:val="${o.sz || 20}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
+const W_TEXT = 9638;
+function docxHeaderClean(p) {
+  const fld = (code, sz) => `<w:fldSimple w:instr="${code}"><w:r><w:rPr><w:sz w:val="${sz}"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="160"/></w:pPr>${wRun(p.name || "Production", { b: true, sz: 36 })}${wRun(" (", { sz: 28 })}${fld("PAGE", 28)}${wRun(" out of ", { sz: 28 })}${fld("NUMPAGES", 28)}${wRun(")", { sz: 28 })}<w:r><w:tab/></w:r>${wRun(DOC_TITLE, { sz: 30 })}</w:p></w:hdr>`;
+}
+function docxXmlClean(p) {
+  const by = linesBySection(p), sku = skuOn();
+  const para = (runs, o = {}) => `<w:p><w:pPr>${o.keep ? "<w:keepNext/>" : ""}${o.bdr ? `<w:pBdr><w:top w:val="single" w:sz="6" w:space="2" w:color="111111"/><w:bottom w:val="single" w:sz="6" w:space="2" w:color="111111"/></w:pBdr>` : ""}<w:spacing w:before="${o.before || 0}" w:after="${o.after ?? 0}"/>${o.ind ? `<w:ind w:left="${o.ind}"/>` : ""}${o.right ? '<w:jc w:val="right"/>' : ""}</w:pPr>${runs}</w:p>`;
+  const noBorders = `<w:tblBorders>${["top", "left", "bottom", "right", "insideH", "insideV"].map(v => `<w:${v} w:val="nil"/>`).join("")}</w:tblBorders>`;
+  const cell = (w, content) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${content || para("")}</w:tc>`;
+  const table = (cols, rows) => `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/>${noBorders}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${cols.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows.join("")}</w:tbl>`;
+  const info = infoRows(p);
+  let body = info.length ? table([2100, W_TEXT - 2100], info.map(([k, v]) => `<w:tr>${cell(2100, para(wRun(k + ":", { b: true, sz: 19 })))}${cell(W_TEXT - 2100, para(wRun(v, { sz: 19 })))}</w:tr>`)) : "";
+  const S = sku ? 1500 : 0, Q = 640, N = W_TEXT - Q - S;
+  for (const s of allSections()) {
+    const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
+    if (!rows.length) continue;
+    body += para(wRun(secName(s.id), { b: true, sz: 20 }), { bdr: true, keep: true, before: 300, after: 40 });
+    body += table(sku ? [Q, N, S] : [Q, N], rows.map(r => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty + " x", { b: true, sz: 20 })))}${cell(N, para(wRun(r.name, { b: true, sz: 20 })) + r.kids.map(t => para(wRun(t, { sz: 18 }))).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 18 }))).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`));
+  }
+  if (p.notes) body += para(wRun("Notes", { b: true, sz: 20 }), { before: 300, after: 40 }) + p.notes.split(/\n/).map(t => para(wRun(t, { sz: 19 }))).join("");
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1250" w:right="1134" w:bottom="1134" w:left="1134" w:header="560" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+}
+const docxXml = p => layoutOf() === "table" ? docxXmlTable(p) : docxXmlClean(p);
+
 /* Word document in the user's two-column layout: Section | Qty | Item, twice */
-function docxXml(p) {
+function docxXmlTable(p) {
   const x = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const r = (t, o = {}) => `<w:r><w:rPr>${o.b ? "<w:b/>" : ""}${o.i ? "<w:i/>" : ""}${o.color ? `<w:color w:val="${o.color}"/>` : ""}<w:sz w:val="${o.sz || 20}"/></w:rPr><w:t xml:space="preserve">${x(t)}</w:t></w:r>`;
   const para = (runs, o = {}) => `<w:p><w:pPr><w:spacing w:before="0" w:after="${o.after ?? 60}"/>${o.center ? '<w:jc w:val="center"/>' : ""}</w:pPr>${runs}</w:p>`;
@@ -2803,15 +2968,17 @@ function docxXml(p) {
 async function buildDocx(p) {
   if (!window.JSZip) throw new Error("zip");
   const z = new JSZip();
-  z.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`);
+  const clean = layoutOf() === "clean";
+  z.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>${clean ? '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>' : ""}</Types>`);
   z.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
-  z.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+  z.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${clean ? '<Relationship Id="rIdHdr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' : ""}</Relationships>`);
   z.file("word/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`);
   z.file("word/document.xml", docxXml(p));
+  if (clean) z.file("word/header1.xml", docxHeaderClean(p));
   return z.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 }
 /* PDF: the same two-column layout, drawn as HTML and paged at row boundaries */
-function exportHtml(p) {
+function exportHtmlTable(p) {
   const by = linesBySection(p);
   const side = col => { const rows = []; for (const s of allSections().filter(s => s.column === col)) { const rs = []; for (const [id, l] of by[s.id]) for (const er of exportRows(id, l)) rs.push(er); rs.forEach((er, i) => rows.push({ sec: secName(s.id), fill: secFill(s.id), span: i === 0 ? rs.length : 0, er })); } return rows; };
   const L = side("L"), R = side("R"), n = Math.max(L.length, R.length);
@@ -2837,9 +3004,12 @@ function openPreview(p) {
   const o = document.createElement("div");
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
-  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><button class="btn" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKUs ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
+  const lay = layoutOf();
+  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
+      <span class="seg sm" role="group" aria-label="Layout">${[["clean", "Clean"], ["table", "Table"]].map(([v, t]) => `<button type="button" data-act="preview-layout" data-v="${v}" aria-pressed="${lay === v}">${t}</button>`).join("")}</span>
+      <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
-    <div class="pv-actions"><button class="btn primary send-btn" type="button" data-act="send-open">${SEND_ICON}Send</button><span class="pv-sep" aria-hidden="true"></span><span class="hint">Save as</span><button class="btn" type="button" data-act="export-docx">Word</button><button class="btn" type="button" data-act="export-pdf">PDF</button><button class="btn" type="button" data-act="export-csv">CSV</button><button class="btn" type="button" data-act="copy">Text</button></div>`;
+    <div class="pv-actions"><button class="btn primary" type="button" data-act="send-open">${SEND_ICON}<span>Send</span></button><button class="btn" type="button" data-act="export-pdf">${FILE_ICON}<span>PDF</span></button><button class="btn" type="button" data-act="export-docx">${FILE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="copy">${COPY_ICON}<span>Text</span></button></div>`;
   document.body.appendChild(o);
   document.body.style.overflow = "hidden";
   fitPreview();
@@ -2857,6 +3027,8 @@ function fitPreview() {
 }
 function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; navSync(); } }
 /* Send: the file goes out through the phone's share menu (Gmail, WhatsApp…) with a subject and message the user can edit */
+const FILE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M12 11v6M9 14l3 3 3-3"/></svg>`;
+const COPY_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4H4v13h4"/></svg>`;
 const SEND_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
 const SEND_DEFAULT = { subject: "Camera list – {production}", message: "Hi,\n\nAttached is the camera list for {production}.\n\nThanks,\n{ac}", fmt: "pdf" };
 const sendFill = (t, p) => String(t || "").replace(/\{production\}/g, p.name || "the production").replace(/\{ac\}/g, p.ac || "").replace(/\s+$/, "");
@@ -2870,14 +3042,26 @@ function sendDialog(p) {
     <div class="field"><label for="sd-subj">Subject</label><input id="sd-subj" name="subject" maxlength="200" value="${esc(sendFill(s.subject, p))}"></div>
     <div class="field"><label for="sd-msg">Message</label><textarea id="sd-msg" name="message" rows="6" maxlength="2000">${esc(sendFill(s.message, p))}</textarea>
       <span class="hint">Your changes are kept for the next list.</span></div>
-    <p class="hint send-how">This opens your phone's share menu with the file attached: pick Gmail, WhatsApp or any other app.</p>
+    <p class="hint send-how" id="sendHow">${sendHowText(s.fmt)}</p>
     <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit" id="sendGo" disabled>Preparing…</button></div>
   </form>`);
   sendPrep(p, s.fmt);
 }
+/* can this browser put a file of this kind in the share menu? Chrome on Android shares PDFs but not Word files */
+const SEND_MIME = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+function canShareKind(fmt) {
+  try { return typeof File === "function" && !!navigator.canShare && navigator.canShare({ files: [new File(["x"], "x." + fmt, { type: SEND_MIME[fmt] })] }); } catch (e) { return false; }
+}
+const isTouch = () => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } };
+function sendHowText(fmt) {
+  if (canShareKind(fmt)) return "This opens your phone's share menu with the file attached: pick Gmail, WhatsApp or any other app.";
+  if (fmt === "docx" && canShareKind("pdf")) return "This phone can't attach Word files through the share menu (PDF works). Tap Send to save the Word file and open an email with your message; attach the file there.";
+  return "Sending with the file attached works from your phone. Here, Send saves the file and copies the message for you to paste.";
+}
 /* the file is built as soon as the dialog opens, so tapping Send shares it straight away (phones only open the share menu right after a tap) */
 function sendPrep(p, fmt) {
-  const key = p.id + ":" + p.updatedAt + ":" + fmt + ":" + skuOn();
+  const key = p.id + ":" + p.updatedAt + ":" + fmt + ":" + skuOn() + ":" + layoutOf();
+  const how = document.getElementById("sendHow"); if (how) how.textContent = sendHowText(fmt);
   const go = document.getElementById("sendGo");
   const ready = () => { const g = document.getElementById("sendGo"); if (g && sendJob.key === key) { g.disabled = false; g.textContent = "Send…"; } };
   if (sendJob.key === key && sendJob.blob) { ready(); return; }
@@ -2898,24 +3082,29 @@ async function sendNow(p, f) {
     catch (e) { if (!e || e.name !== "AbortError") toast("The share menu didn't open. Try again."); }
     return;
   }
-  // a computer, or a view without sharing: save the file and copy the message to paste into the email
+  // no sharing for this file here: save it, copy the message, and on a phone open an email with the subject and message filled in
   closeModal();
   try { await navigator.clipboard.writeText(subject + "\n\n" + message); } catch (e) {}
   await saveFile(name, blob);
-  toast("Sending with the file works from your phone. Here the file was saved and the message copied.");
+  if (isTouch()) {
+    setTimeout(() => { location.href = "mailto:?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(message); }, 700);
+    toast(`${fmt === "docx" ? "Word file" : "PDF"} saved. Attach it to the email that opens.`);
+  } else toast("File saved, and the message copied for your email.");
 }
 window.addEventListener("resize", fitPreview);
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 async function buildPdf(p) {
   if (!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
   if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-  const host = document.createElement("div");
-  host.style.cssText = "position:fixed;left:-12000px;top:0;width:794px;background:#fff";
-  host.innerHTML = exportHtml(p);
-  document.body.appendChild(host);
+  const clean = layoutOf() === "clean";
+  const mk = html => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:-12000px;top:0;width:794px;background:#fff"; d.innerHTML = html; document.body.appendChild(d); return d; };
+  const host = mk(exportHtml(p, { pdf: true }));
+  // the clean layout repeats its title line at the top of every page: "Mizrahi (1 out of 3)" … "Camera List"
+  const head = clean ? mk(`<div style="box-sizing:border-box;width:794px;padding:0 56px;background:#fff">${cleanTitleHtml(p, "9 out of 9")}</div>`) : null;
   try {
     const node = host.firstElementChild;
-    const PAGE_PX = 1123, MARGIN = 40, USABLE = PAGE_PX - 2 * MARGIN, H = node.scrollHeight;
+    const PAGE_PX = 1123, TOP = 40, BOTTOM = 44, headH = head ? head.firstElementChild.offsetHeight : 0;
+    const bodyTop = clean ? TOP + headH + 10 : TOP, USABLE = PAGE_PX - bodyTop - BOTTOM, H = node.scrollHeight;
     const SCALE = Math.min(2, Math.sqrt(14e6 / (794 * Math.max(H, 1))));  // stay under mobile canvas limits
     const canvas = await window.html2canvas(node, { scale: SCALE, backgroundColor: "#ffffff" });
     const top0 = node.getBoundingClientRect().top;
@@ -2930,19 +3119,24 @@ async function buildPdf(p) {
       ends.push(best); start = best;
     }
     const pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
-    const pw = pdf.internal.pageSize.getWidth(), k = pw / 794;
+    const pw = pdf.internal.pageSize.getWidth(), k = pw / 794, n = ends.length;
     let s0 = 0;
-    ends.forEach((e, i) => {
-      const h = e - s0, c2 = document.createElement("canvas");
+    for (let i = 0; i < n; i++) {
+      const e = ends[i], h = e - s0, c2 = document.createElement("canvas");
       c2.width = canvas.width; c2.height = Math.max(1, Math.round(h * SCALE));
       const ctx = c2.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c2.width, c2.height);
       ctx.drawImage(canvas, 0, Math.round(s0 * SCALE), canvas.width, c2.height, 0, 0, canvas.width, c2.height);
       if (i) pdf.addPage();
-      pdf.addImage(c2.toDataURL("image/jpeg", 0.92), "JPEG", 0, MARGIN * k, pw, h * k);
+      if (head) {
+        head.firstElementChild.innerHTML = cleanTitleHtml(p, n > 1 ? `${i + 1} out of ${n}` : "");
+        const hc = await window.html2canvas(head.firstElementChild, { scale: 2, backgroundColor: "#ffffff" });
+        pdf.addImage(hc.toDataURL("image/jpeg", 0.92), "JPEG", 0, TOP * k, pw, head.firstElementChild.offsetHeight * k);
+      }
+      pdf.addImage(c2.toDataURL("image/jpeg", 0.92), "JPEG", 0, bodyTop * k, pw, h * k);
       s0 = e;
-    });
+    }
     return pdf.output("blob");
-  } finally { host.remove(); }
+  } finally { host.remove(); head?.remove(); }
 }
 let DL;
 async function saveFile(filename, data) {
@@ -2999,12 +3193,17 @@ document.addEventListener("click", e => {
   const p = cur();
   switch (act) {
     case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; render(); window.scrollTo(0, 0); break;
-    case "settings": app.view = "settings"; render(); window.scrollTo(0, 0); break;
+    case "settings": if (app.view === "settings") break; closePreview(); app.setFrom = app.view === "production" ? app.pid : null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
     case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
-    case "open": app.pid = id; app.view = "production"; app.editing = null; app.editCat = false; app.dupFrom = null; app.tab = totals(cur() || { items: {} }).lines ? "list" : "add"; app.q = ""; app.lq = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break;
+    case "open": {
+      const keep = b.dataset.keep === "1" && app.pid === id;
+      app.pid = id; app.view = "production"; app.editing = null; app.dupFrom = null; app.setFrom = null;
+      if (!keep) { app.editCat = false; app.tab = totals(cur() || { items: {} }).lines ? "list" : "add"; app.q = ""; app.lq = ""; app.cat = "all"; }
+      render(); window.scrollTo(0, 0); break;
+    }
     case "edit": app.formFor = app.pid; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
     case "pick-house": {
       const wrap = document.getElementById("housePick");
@@ -3045,10 +3244,10 @@ document.addEventListener("click", e => {
       break;
     }
     /* the shoot dates calendar */
-    case "cal-open": calOpen(); break;
+    case "cal-open": calOpen(b.dataset.mode); break;
     case "cal-day": calPick(b.dataset.d); break;
     case "cal-prev": case "cal-next": { const d = act === "cal-next" ? 1 : -1; cal.m += d; if (cal.m < 1) { cal.m = 12; cal.y--; } if (cal.m > 12) { cal.m = 1; cal.y++; } calRefresh(); document.querySelector(`#cal [data-act="${act}"]`)?.focus(); break; }
-    case "cal-clear": cal.start = ""; cal.end = ""; cal.days = {}; cal.stage = "start"; calRefresh(); break;
+    case "cal-clear": calClear(); calRefresh(); break;
     case "cal-done": calDone(); break;
     /* Cam list sections: close and open */
     case "sec-toggle": {
@@ -3107,7 +3306,7 @@ document.addEventListener("click", e => {
     }
     case "cinc": case "cdec": {
       const l = p.items[id];
-      const cur0 = l ? (f ? l[f] : l.qty) : 0;
+      const cur0 = l ? (f ? l[f] : lineQty(l)) : 0;
       const ids = setQty(p, id, cur0 + (act === "cinc" ? 1 : -1), l ? f : undefined);
       if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids);
       break;
@@ -3130,7 +3329,7 @@ document.addEventListener("click", e => {
     /* gear list lines */
     case "linc": case "ldec": {
       const l = p.items[id]; if (!l) break;
-      const cur0 = f ? l[f] : l.qty;
+      const cur0 = f ? l[f] : lineQty(l);
       setQty(p, id, cur0 + (act === "linc" ? 1 : -1), f);
       rerenderKeepScroll();
       break;
@@ -3233,7 +3432,13 @@ document.addEventListener("click", e => {
     case "preview-close": closePreview(); break;
     case "preview-sku": {
       app.settings.exportSku = !skuOn(); touchSettings();
-      b.setAttribute("aria-pressed", String(skuOn())); b.textContent = "SKUs " + (skuOn() ? "on" : "off");
+      b.setAttribute("aria-pressed", String(skuOn())); b.textContent = "SKU " + (skuOn() ? "on" : "off");
+      const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
+      break;
+    }
+    case "preview-layout": {
+      app.settings.exportLayout = b.dataset.v === "table" ? "table" : "clean"; touchSettings();
+      document.querySelectorAll('[data-act="preview-layout"]').forEach(x => x.setAttribute("aria-pressed", String(x === b)));
       const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
       break;
     }
@@ -3268,13 +3473,22 @@ document.addEventListener("change", e => {
     return;
   }
   if (t.dataset.rqty) { const r = app.settings.rules.find(x => x.id === t.dataset.rqty); if (r) { r.qty = Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)); touchSettings(); } return; }
+  if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
+  if (t.form && t.form.id === "meForm") {
+    app.settings.me = { name: t.form.elements.name.value.trim().slice(0, 80), phone: t.form.elements.phone.value.trim().slice(0, 30) };
+    touchSettings(); toast("Saved for new productions"); return;
+  }
   if (t.form && t.form.id === "sendForm" && t.name === "fmt") { if (p) sendPrep(p, t.value); return; }
   if (!p) return;
   const f = t.dataset.f;
   if (t.dataset.cqty) { const ids = setQty(p, t.dataset.cqty, t.value, p.items[t.dataset.cqty] ? f : undefined); if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids); return; }
   if (t.dataset.lqty) { setQty(p, t.dataset.lqty, t.value, f); rerenderKeepScroll(); return; }
   if (t.dataset.kqty) { const { l, c } = kidRef(p, t.dataset.kqty); if (c) { c.qty = clampQ(t.value); if (!c.qty) l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); } return; }
-  if (t.dataset.sec) { const l = p.items[t.dataset.sec]; if (l) { l.section = t.value; delete l.pos; touch(p); rerenderKeepScroll(); } return; }
+  if (t.dataset.ename) {  // a line renamed: its catalog item takes the name too, for the next lists
+    const id = t.dataset.ename, l = p.items[id], e = ITEM.get(id);
+    if (l && e && !l.custom) { const from = e.it.name; if (renameCatItem(e.h, id, l.name)) { syncLineNames(id, from, l.name); l.orig = l.name; toast(`Renamed in ${e.h.name}'s catalog too`); } }
+    return;
+  }
 });
 document.addEventListener("submit", e => {
   e.preventDefault();
@@ -3290,7 +3504,8 @@ document.addEventListener("submit", e => {
       [v.c, v.s] = ensureCategory(h, nm, v.s === "__new" ? (v.snew || "").trim() || "General" : "", v.section);
     } else if (v.s === "__new") v.s = ensureSub(h, v.c, (v.snew || "").trim() || "General", v.section);
     let id = f.dataset.id;
-    if (f.dataset.mode === "new") id = createOwnItem(h, v); else saveCatItem(h, id, v);
+    const was = id ? ITEM.get(id)?.it.name : "";
+    if (f.dataset.mode === "new") id = createOwnItem(h, v); else { saveCatItem(h, id, v); syncLineNames(id, was, ITEM.get(id)?.it.name); }
     if (id) setNote(id, v.note);
     const e2 = id && ITEM.get(id);
     if (e2) { app.open.add(e2.c.id); app.open.add(e2.s.key); app.open.add(e2.s.key + "/" + grpOf(e2.it, e2.s)); }

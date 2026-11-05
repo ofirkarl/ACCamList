@@ -33,7 +33,7 @@ rep('<title>AC Cam List</title>\n<meta name="claude:viewport-fit-sides" content=
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>AC Cam List</title>
 <meta name="description" content="Camera equipment lists for camera assistants: pick the rental house, build the list, export to Word or PDF.">
 <meta name="theme-color" content="#e7eaee" media="(prefers-color-scheme: light)">
@@ -64,7 +64,7 @@ if ('serviceWorker' in navigator) window.addEventListener('load', function () { 
 rep('(app.storage === "cloud" ? "Saved to your account" : "Saved in this browser")',
     '(app.storage === "cloud" ? (window.AC_AUTH && !window.AC_AUTH.user() ? "Saved on this device" : "Saved to your account") : "Saved in this browser")')
 # the account line appears once the cloud has answered
-rep('render();\ninitAccount();', 'render();\ninitAccount().then(() => { if (window.AC_AUTH && app.view === "home") render(); });')
+rep('render();\ninitAccount();', 'render();\ninitAccount().then(() => { if (window.AC_AUTH && (app.view === "home" || app.view === "settings")) render(); });')
 
 OUT.mkdir(parents=True, exist_ok=True)
 (OUT / 'index.html').write_text(s, encoding='utf-8')
