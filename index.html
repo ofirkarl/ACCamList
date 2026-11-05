@@ -537,7 +537,7 @@ details.cat.drop-on > summary { outline: 2px solid var(--accent); outline-offset
 .search-row { display: flex; gap: 8px; align-items: stretch; }
 .bar { grid-template-columns: minmax(0, 1fr); }
 .search-row .search { flex: 1; min-width: 0; }
-.spec-btn { flex: none; border-radius: 10px; padding: 0 12px; gap: 6px; font-size: 14px; }
+.spec-btn { flex: none; border-radius: 10px; padding: 0 12px; gap: 6px; font-size: 14px; white-space: nowrap; }
 .spec-btn svg { color: var(--accent); }
 .f-banner { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; text-align: start; margin: 14px 0 2px; padding: 12px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); color: var(--fg); font-size: 13px; }
 .f-banner > span:nth-child(2) { flex: 1; min-width: 0; color: var(--muted); }
@@ -2306,7 +2306,7 @@ function viewCatalog(p, h) {
   return `<div class="bar pad">
       <div class="search-row"><label class="search" for="q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
       <input id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
-      <button class="btn spec-btn" type="button" data-act="fin-open" aria-label="Advanced search: find a lens by focal length and stop">${RULER_ICON}<span>Advanced</span></button>
+      <button class="btn icon-btn spec-btn" type="button" data-act="fin-open" aria-label="Lens search: find a lens by focal length and stop" title="Lens search">${LENS_ICON}</button>
       <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
       <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
     </div>
@@ -2427,8 +2427,10 @@ function treeHtml(p, h) {
   const banner = lq ? `<button class="f-banner" type="button" data-act="fin-open" data-mm="${esc(lq.f)}" data-t="${esc(lq.t)}">${RULER_ICON}<span><b>${esc(lq.f)}mm${lq.t ? " · T" + esc(lq.t) : ""}</b>See the exact lens and the closest ones on a ruler</span><span aria-hidden="true">→</span></button>` : "";
   return banner + (out.length ? out.join("") : `<p class="empty">Nothing in ${esc(h.name)} matches "${esc(app.q)}". Try part of the model name, the brand, or a focal length like 35mm.</p>`);
 }
-/* ----- Advanced search: a lens by focal length and stop, plus lens type, mount and format.
+/* ----- Lens search: a lens by focal length and stop, plus lens type, mount and format.
    The exact match sits in the middle of a ruler, shorter lenses to the left, longer to the right. ----- */
+/* a cine lens from the side: mount, barrel with its focus and iris rings, wider front */
+const LENS_ICON = `<svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="1.8" y="9.2" width="2.7" height="5.6" rx=".5"/><rect x="4.5" y="7" width="10.5" height="10" rx="1"/><path d="M7.6 7v10M10.2 7v10M7.6 5.6v1.4M8.9 5.6v1.4M10.2 5.6v1.4"/><path d="M15 5.2h5.6a1 1 0 0 1 1 1v11.6a1 1 0 0 1-1 1H15z"/><path d="M18.3 8.2v7.6"/></svg>`;
 const RULER_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 18h18M5 18v-4M9 18v-7M12 18v-4M15 18v-7M19 18v-4"/></svg>`;
 const fin = () => app.finder || (app.finder = { on: false, f: "50", t: "", kind: "", mount: "", cov: "", more: {} });
 const numIn = s => parseFloat(String(s || "").replace(",", "."));
