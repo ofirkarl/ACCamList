@@ -636,8 +636,17 @@ details.more > summary::-webkit-details-marker { display: none; }
 .seg button { border: 0; background: transparent; padding: 6px 11px; font-weight: 500; font-size: 13px; color: var(--fg); }
 .seg button + button { border-inline-start: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
-.pv-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.pv-actions .btn { justify-content: center; gap: 6px; padding-inline: 6px; min-height: 42px; }
+.pv-actions { display: grid; grid-template-columns: minmax(0, 380px) auto; justify-content: center; align-items: end; gap: 14px; }
+.pv-actions .btn { justify-content: center; gap: 6px; padding-inline: 6px; min-height: 44px; }
+.pv-save, .pv-send { display: grid; gap: 5px; min-width: 0; }
+.pv-lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-inline-start: 2px; white-space: nowrap; }
+.pv-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pv-seg .btn { border-radius: 0; }
+.pv-seg .btn + .btn { margin-inline-start: -1px; }
+.pv-seg .btn:first-child { border-start-start-radius: 8px; border-end-start-radius: 8px; }
+.pv-seg .btn:last-child { border-start-end-radius: 8px; border-end-end-radius: 8px; }
+.pv-send { padding-inline-start: 14px; border-inline-start: 1px solid var(--line); }
+.pv-send .btn { min-width: 96px; padding-inline: 14px; }
 @media (max-width: 560px) { .pv-bar .hint { display: none; } .pv-bar > b { flex: 1; } }
 .set-group { display: grid; gap: 10px; padding-block: 16px; border-top: 1px solid var(--line); }
 .set-group:first-of-type { border-top: 0; }
@@ -3324,13 +3333,15 @@ function openPreview(p) {
   const o = document.createElement("div");
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
-  const lay = layoutOf();
+  if (app.settings.exportLayout === "table") { app.settings.exportLayout = "clean"; touchSettings(); }  // one layout now
   o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
-      <span class="seg sm" role="group" aria-label="Layout">${[["clean", "Clean"], ["table", "Table"]].map(([v, t]) => `<button type="button" data-act="preview-layout" data-v="${v}" aria-pressed="${lay === v}">${t}</button>`).join("")}</span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
-    <div class="pv-actions"><button class="btn primary" type="button" data-act="send-open">${SEND_ICON}<span>Send</span></button><button class="btn" type="button" data-act="export-pdf">${FILE_ICON}<span>PDF</span></button><button class="btn" type="button" data-act="export-docx">${FILE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="copy">${COPY_ICON}<span>Text</span></button></div>`;
+    <div class="pv-actions">
+      <div class="pv-save" role="group" aria-labelledby="pv-save-l"><span class="pv-lbl" id="pv-save-l">Save to this ${isTouch() ? "phone" : "computer"}</span>
+        <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button><button class="btn" type="button" data-act="export-txt" aria-label="Save as text">${SAVE_ICON}<span>Text</span></button></div></div>
+      <div class="pv-send"><span class="pv-lbl">Send</span><button class="btn primary" type="button" data-act="send-open">${SEND_ICON}<span>Send</span></button></div></div>`;
   document.body.appendChild(o);
   document.body.style.overflow = "hidden";
   fitPreview();
@@ -3362,6 +3373,7 @@ async function shareApp() {
 }
 function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; navSync(); } }
 /* Send: the file goes out through the phone's share menu (Gmail, WhatsApp…) with a subject and message the user can edit */
+const SAVE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></svg>`;
 const FILE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M12 11v6M9 14l3 3 3-3"/></svg>`;
 const COPY_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4H4v13h4"/></svg>`;
 const SEND_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
@@ -3491,11 +3503,14 @@ async function buildPdf(p) {
 let DL;
 async function saveFile(filename, data) {
   if (DL === undefined) { try { DL = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads") : null; } catch (e) { DL = null; } }
-  if (!DL) { toast("Downloads aren't available in this view. Use Copy text instead."); return false; }
+  if (!DL) {  // nowhere to save here: the text goes to the clipboard instead
+    if (/\.txt$/.test(filename) && typeof data === "string") { copyText(data); return false; }
+    toast("Files can't be saved in this view. Try Text."); return false;
+  }
   try { await DL.save({ filename, data }); return true; }
   catch (e) {
     if (e && e.code === "declined") return false;
-    toast(e && e.code === "rate_limited" ? "A download prompt is already open." : "The file couldn't be saved here. Use Copy text instead.");
+    toast(e && e.code === "rate_limited" ? "A download prompt is already open." : "The file couldn't be saved here. Try again, or Send it.");
     return false;
   }
 }
@@ -3805,6 +3820,7 @@ document.addEventListener("click", e => {
     case "export-csv": saveFile(fileBase(p) + ".csv", csvText(p)); break;
     case "export-pdf": toast("Building the PDF…"); buildPdf(p).then(blob => saveFile(fileBase(p) + ".pdf", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The PDF couldn't be built here. Use Word or Text.")); break;
     case "copy": copyText(listText(p)); break;
+    case "export-txt": saveFile(fileBase(p) + ".txt", listText(p)).then(ok => { if (ok) savedVer(p); }); break;
     case "preview": openPreview(p); break;
     case "preview-close": closePreview(); break;
     case "preview-sku": {

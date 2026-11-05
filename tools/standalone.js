@@ -92,12 +92,13 @@
     return conn;
   }
 
-  // files: the share sheet on phones (save to Files, send on WhatsApp), a plain download elsewhere
+  // saving a file: on an iPhone or iPad the share sheet (its "Save to Files"), since downloads there go nowhere useful;
+  // everywhere else, Android included, a plain download to the Downloads folder
   var downloads = {
     save: async function (o) {
       var blob = o.data instanceof Blob ? o.data : new Blob([o.data], {type: /\.csv$/i.test(o.filename) ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8'});
-      var touch = false; try { touch = matchMedia('(pointer: coarse)').matches; } catch (e) {}
-      if (touch && navigator.canShare && typeof File === 'function') {
+      var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      if (ios && navigator.canShare && typeof File === 'function') {
         var file = new File([blob], o.filename, {type: blob.type || 'application/octet-stream'});
         if (navigator.canShare({files: [file]})) {
           try { await navigator.share({files: [file], title: o.filename}); return; }
