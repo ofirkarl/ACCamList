@@ -1,65 +1,75 @@
 <title>AC Cam List</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=JetBrains+Mono:wght@500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 /* Layout: one narrow working column, like an AC's clipboard; productions -> a production with three tabs (Add gear / Favorites / Gear list); camera-tape colors tag catalog categories */
 :root {
-  --bg: #e7eaee;
+  /* Color bars: a warm off-white page, white cards, near-black ink; the color lives in the category tapes and one indigo for actions */
+  --bg: #f6f4f0;
   --surface: #ffffff;
-  --sunken: #f5f6f8;
-  --fg: #15181d;
-  --muted: #5a6270;
-  --line: #d3d8df;
-  /* framed boxes sit a little above the page */
-  --frame-shadow: 0 1px 2px rgba(20, 28, 40, .07), 0 0 0 1px rgba(20, 28, 40, .015);
-  --accent: #1d4f7a;
+  --sunken: #f1eee8;
+  --fg: #18171d;
+  --muted: #6b6874;
+  --line: #e6e1d8;
+  /* soft depth, tinted toward the page instead of gray */
+  --frame-shadow: 0 1px 2px rgba(48, 40, 28, .05), 0 3px 10px rgba(48, 40, 28, .04);
+  --raise-shadow: 0 12px 32px rgba(48, 40, 28, .12), 0 2px 6px rgba(48, 40, 28, .06);
+  --accent: #4f46e5;
   --accent-fg: #ffffff;
-  --danger: #b3261e;
-  --ok: #2f7a4f;
+  --accent-soft: color-mix(in srgb, var(--accent) 9%, var(--surface));
+  --danger: #d7263d;
+  --ok: #1e9e5a;
   --mark: #fde68a;
-  --tape-camera: #c8392f;
-  --tape-lenses: #d99b00;
-  --tape-camera_accessories: #2c6fb3;
-  --tape-filters: #7a4fb3;
-  --tape-custom: #5f6b7a;
-  --warn: #9a5b00;
-  --warn-bg: #fff4e0;
-  --star: #d08a00;
-  --desk: #c9ced6;
+  --tape-camera: #e5484d;
+  --tape-lenses: #f5a524;
+  --tape-camera_accessories: #1e9be8;
+  --tape-filters: #8b5cf6;
+  --tape-custom: #64748b;
+  --warn: #b45309;
+  --warn-bg: #fff4de;
+  --star: #f5a524;
+  --desk: #dcd7cd;
   --paper: #ffffff;
-  /* category color palette (the four rental house categories start on red, amber, blue and violet) */
-  --pal-red: #c8392f; --pal-orange: #d0661f; --pal-amber: #d99b00; --pal-olive: #7f8a1f; --pal-green: #3f8a3a; --pal-teal: #2f8a83;
-  --pal-sky: #2a8fc0; --pal-blue: #2c6fb3; --pal-indigo: #4a5fc1; --pal-violet: #7a4fb3; --pal-pink: #c0447e; --pal-slate: #5f6b7a;
-  /* gear list sections: the camera, lens, filter and accessory sections reuse their category's tape */
+  /* category colors (the four rental house categories start on red, amber, blue and violet) */
+  --pal-red: #e5484d; --pal-orange: #f97316; --pal-amber: #f5a524; --pal-olive: #84a31f; --pal-green: #22b45e; --pal-teal: #14b8a6;
+  --pal-sky: #22c3e6; --pal-blue: #1e9be8; --pal-indigo: #6366f1; --pal-violet: #8b5cf6; --pal-pink: #d946ef; --pal-slate: #64748b;
+  /* gear list sections reuse their category's tape */
   --sec-camera: var(--tape-camera); --sec-lens: var(--tape-lenses); --sec-filters: var(--tape-filters); --sec-accessories: var(--tape-camera_accessories); --sec-custom: var(--tape-custom);
-  --sec-support: #2f8a83; --sec-display: #4a5fc1; --sec-media: #3f8a3a; --sec-power: #c7631f; --sec-grip: #8a6a45; --sec-aks: #6b7380;
-  /* how strongly the tape color tints a heading, and how dark every other row is */
-  --tint-a: 9%; --tint-b: 6%; --zebra-a: 3.2%;
+  --sec-support: #14b8a6; --sec-display: #d946ef; --sec-media: #22b45e; --sec-power: #f97316; --sec-grip: #a47148; --sec-aks: #64748b;
+  --tint-a: 10%; --tint-b: 5.5%; --zebra-a: 2.4%;
   --zebra: color-mix(in srgb, var(--fg) var(--zebra-a), var(--surface));
-  --picked: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  --picked: color-mix(in srgb, var(--accent) 8%, var(--surface));
   --hair: color-mix(in srgb, var(--line) 72%, var(--surface));
-  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
-  --font-body: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bars: linear-gradient(90deg, #e5484d 0 16.66%, #f5a524 0 33.33%, #22b45e 0 50%, #1e9be8 0 66.66%, #4f46e5 0 83.33%, #d946ef 0);
+  --font-display: "Rubik", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Rubik", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --r-card: 16px; --r-ctl: 12px;
+  --seg-track: color-mix(in srgb, var(--fg) 6%, var(--bg)); --seg-on: var(--surface);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0d0f12; --surface: #1d2027; --sunken: #16191e; --fg: #e8eaee; --muted: #9aa2af; --line: #30353f; --frame-shadow: 0 1px 2px rgba(0, 0, 0, .4);
-    --accent: #7fb2e0; --accent-fg: #0e1a26; --danger: #ef8a83; --ok: #6cc795; --mark: #6b5a12;
-    --tape-camera: #e0645a; --tape-lenses: #f0c040; --tape-camera_accessories: #5b9be0; --tape-filters: #a98be0; --tape-custom: #8e9aab; --warn: #f0b060; --warn-bg: #33270f; --star: #f0c040; --desk: #2a2e35; --paper: #ffffff;
-    --pal-red: #e0645a; --pal-orange: #f0935a; --pal-amber: #f0c040; --pal-olive: #c2cc5a; --pal-green: #79c26f; --pal-teal: #5fc0b8; --pal-sky: #6cc4ec; --pal-blue: #5b9be0; --pal-indigo: #8796ec; --pal-violet: #a98be0; --pal-pink: #ec86b6; --pal-slate: #8e9aab;
-    --sec-support: #5fc0b8; --sec-display: #8796ec; --sec-media: #79c26f; --sec-power: #f0935a; --sec-grip: #c49a6c; --sec-aks: #9aa2af; --tint-a: 12%; --tint-b: 7.5%; --zebra-a: 3.8%;
+    --bg: #0f0f14; --surface: #18181f; --sunken: #131318; --fg: #edebf2; --muted: #a09dad; --line: #2a2a33; --frame-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .015); --raise-shadow: 0 14px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35);
+    --accent: #8b87ff; --accent-fg: #0f0f14; --danger: #ff6b6f; --ok: #4ade80; --mark: #5b4a10;
+    --tape-camera: #f2696d; --tape-lenses: #f7ba4d; --tape-camera_accessories: #4cc2f1; --tape-filters: #a78bfa; --tape-custom: #94a3b8; --warn: #fbbf5c; --warn-bg: #2b2110; --star: #f7ba4d; --desk: #24242c; --paper: #ffffff;
+    --pal-red: #f2696d; --pal-orange: #fb923c; --pal-amber: #f7ba4d; --pal-olive: #b5cf4a; --pal-green: #4ade80; --pal-teal: #2dd4bf; --pal-sky: #67e8f9; --pal-blue: #4cc2f1; --pal-indigo: #8b8df8; --pal-violet: #a78bfa; --pal-pink: #e879f9; --pal-slate: #94a3b8;
+    --sec-support: #2dd4bf; --sec-display: #e879f9; --sec-media: #4ade80; --sec-power: #fb923c; --sec-grip: #c9a27a; --sec-aks: #a09dad; --tint-a: 14%; --tint-b: 8%; --zebra-a: 3%;
+    --bars: linear-gradient(90deg, #f2696d 0 16.66%, #f7ba4d 0 33.33%, #4ade80 0 50%, #4cc2f1 0 66.66%, #8b87ff 0 83.33%, #e879f9 0);
+    --seg-track: #16161c; --seg-on: #2c2c38;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0d0f12; --surface: #1d2027; --sunken: #16191e; --fg: #e8eaee; --muted: #9aa2af; --line: #30353f; --frame-shadow: 0 1px 2px rgba(0, 0, 0, .4);
-  --accent: #7fb2e0; --accent-fg: #0e1a26; --danger: #ef8a83; --ok: #6cc795; --mark: #6b5a12;
-  --tape-camera: #e0645a; --tape-lenses: #f0c040; --tape-camera_accessories: #5b9be0; --tape-filters: #a98be0; --tape-custom: #8e9aab; --warn: #f0b060; --warn-bg: #33270f; --star: #f0c040; --desk: #2a2e35; --paper: #ffffff;
-    --pal-red: #e0645a; --pal-orange: #f0935a; --pal-amber: #f0c040; --pal-olive: #c2cc5a; --pal-green: #79c26f; --pal-teal: #5fc0b8; --pal-sky: #6cc4ec; --pal-blue: #5b9be0; --pal-indigo: #8796ec; --pal-violet: #a98be0; --pal-pink: #ec86b6; --pal-slate: #8e9aab;
-    --sec-support: #5fc0b8; --sec-display: #8796ec; --sec-media: #79c26f; --sec-power: #f0935a; --sec-grip: #c49a6c; --sec-aks: #9aa2af; --tint-a: 12%; --tint-b: 7.5%; --zebra-a: 3.8%;
+  --bg: #0f0f14; --surface: #18181f; --sunken: #131318; --fg: #edebf2; --muted: #a09dad; --line: #2a2a33; --frame-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .015); --raise-shadow: 0 14px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35);
+  --accent: #8b87ff; --accent-fg: #0f0f14; --danger: #ff6b6f; --ok: #4ade80; --mark: #5b4a10;
+  --tape-camera: #f2696d; --tape-lenses: #f7ba4d; --tape-camera_accessories: #4cc2f1; --tape-filters: #a78bfa; --tape-custom: #94a3b8; --warn: #fbbf5c; --warn-bg: #2b2110; --star: #f7ba4d; --desk: #24242c; --paper: #ffffff;
+  --pal-red: #f2696d; --pal-orange: #fb923c; --pal-amber: #f7ba4d; --pal-olive: #b5cf4a; --pal-green: #4ade80; --pal-teal: #2dd4bf; --pal-sky: #67e8f9; --pal-blue: #4cc2f1; --pal-indigo: #8b8df8; --pal-violet: #a78bfa; --pal-pink: #e879f9; --pal-slate: #94a3b8;
+  --sec-support: #2dd4bf; --sec-display: #e879f9; --sec-media: #4ade80; --sec-power: #fb923c; --sec-grip: #c9a27a; --sec-aks: #a09dad; --tint-a: 14%; --tint-b: 8%; --zebra-a: 3%;
+  --bars: linear-gradient(90deg, #f2696d 0 16.66%, #f7ba4d 0 33.33%, #4ade80 0 50%, #4cc2f1 0 66.66%, #8b87ff 0 83.33%, #e879f9 0);
+  --seg-track: #16161c; --seg-on: #2c2c38;
   color-scheme: dark;
 }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
@@ -750,6 +760,225 @@ details.more[open] > summary .chev { transform: rotate(180deg); }
 .tabs .tab { white-space: nowrap; padding-inline: 6px; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .notice { transition: opacity .2s; transform: translate(-50%, 0); } }
 @media (prefers-reduced-motion: reduce) { .chev, .pinfo, .pinfo-card, .pinfo:not(.open) .pinfo-in { transition: none; } }
+/* ================= Color bars: the app's look (after the camlist layout above) =================
+   type: Rubik 400/500/700; sizes 13 (meta), 15 (body), 18 (titles in a screen), 28 (screen titles); sentence case;
+   cards 16 radius, controls 12, pills round; soft tinted shadows; one indigo for actions; the categories carry the color */
+body { font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+/* the brand: name, then the color bars */
+.topbar { padding-block: 16px 6px; }
+.brandmark { position: relative; font-family: var(--font-body); font-weight: 700; font-size: 22px; letter-spacing: -.015em; text-transform: none; padding-bottom: 11px; }
+.brandmark span { color: inherit; font-weight: 700; }
+.brandmark::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border-radius: 2px; background: var(--bars); }
+.theme-btn, .topbar .icon-btn { border-radius: 12px; }
+
+/* screen titles: bold, sentence case, no more condensed capitals */
+h2.page, .ph-name, .prod-title h2, .f-title { font-family: var(--font-body); font-weight: 700; font-size: 28px; line-height: 1.15; letter-spacing: -.02em; text-transform: none; }
+.home-head { padding-block: 16px 12px; }
+
+/* buttons */
+.btn { border-radius: var(--r-ctl); padding: 10px 16px; font-weight: 500; border-color: var(--line); background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .05);
+  transition: transform .12s var(--ease), background-color .15s, border-color .15s, box-shadow .15s; }
+.btn:hover { border-color: color-mix(in srgb, var(--fg) 22%, var(--line)); }
+.btn:active, .add:active, .stepper button:active, .tab:active, .chip:active, .prod-card:active, .ub-btn:active { transform: scale(.97); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 6px 16px -6px color-mix(in srgb, var(--accent) 70%, transparent); }
+.btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, var(--fg)); border-color: transparent; }
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--accent); padding-inline: 10px; }
+.btn.ghost:hover { background: var(--accent-soft); }
+.btn.danger { color: var(--danger); }
+.btn.danger.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.sm { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+.btn.spec-btn { padding: 0 12px; }
+.btn.icon-btn { padding: 0; }
+.btn[disabled] { opacity: .45; }
+
+/* fields */
+.field label, .field .lbl, .f-field > span:first-child { font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 500; color: var(--muted); }
+.field input, .field textarea, .field select, .date-btn, .f-pick, .f-field select, .f-inp { border-radius: var(--r-ctl); border-color: var(--line); background: var(--surface); }
+.field input, .field select, .f-field select { min-height: 46px; }
+.field input:focus, .field textarea:focus, .field select:focus, .f-field select:focus, .f-inp:focus-within, .search:focus-within {
+  border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); outline: none; }
+.house-opt { border-radius: 14px; padding: 12px 14px; }
+.house-opt[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--frame-shadow); background: var(--accent-soft); }
+.hint { font-size: 13px; }
+
+/* cards: rounder, softer */
+.prod-card, .sub, .lines, .fav-list, .items.direct, .rule, .f-form, .f-card, .empty-state, .search, .editor, .pinfo-card, .prod-facts, .u2, .acct, fieldset.pk, .pick-list, .bp-list { border-radius: var(--r-card); }
+.prod-card, .sub, .lines, .fav-list, .items.direct, .rule, .f-form, .f-card, .search, .pinfo-card { border-color: var(--line); box-shadow: var(--frame-shadow); }
+.empty-state { border-style: solid; box-shadow: var(--frame-shadow); padding: 28px 22px; }
+.empty-state h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+
+/* home: a production is a card with its gear mix in color bars */
+.prod-list { gap: 12px; }
+.prod-card { padding: 16px 18px; gap: 6px; transition: transform .12s var(--ease), box-shadow .2s; }
+.prod-card:hover { box-shadow: var(--raise-shadow); }
+.prod-card b { font-size: 18px; font-weight: 500; letter-spacing: -.01em; }
+.prod-card .pc-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.prod-card .pc-top b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prod-card .pc-ver { flex: none; font-size: 12px; color: var(--muted); }
+.prod-card .meta { font-size: 13px; gap: 2px 10px; }
+.mix { display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 6px; background: var(--sunken); }
+.mix i { display: block; min-width: 4px; background: var(--tape); }
+.mix.none { opacity: .7; }
+.unit-tag { color: var(--accent); font-weight: 500; }
+
+/* production header */
+.ph-name { font-size: 28px; }
+.ph-k { font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--muted); }
+.ph-it b { font-weight: 500; font-family: var(--font-mono); font-size: 14px; letter-spacing: 0; }
+.ph-tab { border-radius: 999px; padding: 6px 10px 6px 14px; font-weight: 500; color: var(--accent); background: var(--accent-soft); border-color: transparent; box-shadow: none; }
+.ph-tab:hover { border-color: transparent; background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
+.ph-unit { border-radius: 999px; padding: 2px 8px; font-size: 11px; letter-spacing: .04em; }
+.prod-facts dt { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.prod-facts dd { font-weight: 500; }
+
+/* the three tabs: a segmented control; the Camera List count is a badge that bounces when it grows */
+.tabs { background: var(--seg-track); border-radius: 14px; padding: 4px; gap: 4px; margin-block: 10px 6px; }
+.tab { border-radius: 11px; padding: 10px 6px; font-weight: 500; font-size: 14px; color: var(--muted); transition: background-color .2s, color .2s, box-shadow .2s; }
+.tab[aria-selected="true"] { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .08), 0 2px 8px rgba(48, 40, 28, .06); }
+.tab .num { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--muted); vertical-align: 1px; }
+.tab .num:empty { display: none; }
+.tab[aria-selected="true"] .num { background: var(--accent); color: var(--accent-fg); }
+.bump { animation: bump .45s var(--ease); }
+@keyframes bump { 0% { transform: scale(1); } 35% { transform: scale(1.35); } 70% { transform: scale(.92); } 100% { transform: scale(1); } }
+
+/* category tapes become small icon tiles in the category's color */
+.tape { width: 30px; height: 30px; border-radius: 9px; transform: none; display: inline-grid; place-items: center; color: #fff; background: var(--tape); flex: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 3px 8px -3px color-mix(in srgb, var(--tape) 70%, transparent); }
+.tape svg { width: 17px; height: 17px; display: block; }
+:root[data-theme="dark"] .tape { color: #111015; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tape { color: #111015; } }
+.fav-cat-h .tape, .section h3 .tape { width: 30px; height: 30px; }
+
+/* Add gear: search, category chips, the category list */
+.bar { padding-block: 10px 12px; border-bottom-color: transparent; box-shadow: 0 8px 12px -12px rgba(48, 40, 28, .25); }
+.search { border-radius: 14px; min-height: 46px; }
+.spec-btn, .icon-btn { border-radius: 14px; }
+.chips { gap: 8px; padding-block: 2px; }
+.chip { border-radius: 999px; padding: 7px 14px 7px 10px; font-size: 13px; font-weight: 500; border-color: var(--line); box-shadow: 0 1px 2px rgba(48, 40, 28, .04); transition: background-color .15s, border-color .15s, transform .12s var(--ease); }
+.chip .dot { width: 10px; height: 10px; border-radius: 50%; }
+.chip[aria-pressed="true"] { background: color-mix(in srgb, var(--tape, var(--accent)) 14%, var(--surface)); border-color: color-mix(in srgb, var(--tape, var(--accent)) 55%, var(--line));
+  color: color-mix(in srgb, var(--tape, var(--accent)) 55%, var(--fg)); }
+.chip[aria-pressed="true"] .num { color: inherit; opacity: .8; }
+.chip:not([style]) { padding-inline-start: 14px; }
+.cat { border-bottom: 0; }
+.cat > summary { padding-block: 12px; }
+.cat-title { font-family: var(--font-body); font-weight: 700; font-size: 20px; letter-spacing: -.015em; text-transform: none; gap: 12px; }
+.cat-body { gap: 10px; }
+.sub { overflow: hidden; }
+.sub > summary { padding: 13px 16px; font-weight: 500; }
+.cnt { font-size: 12px; }
+.sel { font-size: 11px; font-weight: 600; min-width: 18px; text-align: center; padding: 1px 6px; }
+.mfr-head { font-size: 11px; letter-spacing: .07em; }
+.item { padding-inline-end: 16px; }
+.item .nm, .line .nm { font-size: 14px; }
+.item.on { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* quantity: a soft pill; + is the filled, most-used side */
+.add { border: 0; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13px; padding: 7px 14px; transition: background-color .15s, transform .12s var(--ease); }
+.add:hover { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.stepper { border: 0; border-radius: 999px; background: var(--sunken); padding: 2px; gap: 2px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 5%, transparent); }
+.stepper button { width: 30px; height: 30px; border-radius: 50%; color: var(--fg); font-size: 18px; display: grid; place-items: center; padding: 0; transition: background-color .15s, transform .12s var(--ease); }
+.stepper button:hover { background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.stepper button:last-child { background: var(--accent); color: var(--accent-fg); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--accent) 70%, transparent); }
+.stepper button:last-child:hover { background: color-mix(in srgb, var(--accent) 88%, var(--fg)); }
+.stepper input { border: 0; width: 34px; height: 30px; font-weight: 600; font-size: 14px; }
+.stepper.sm button { width: 26px; height: 26px; font-size: 16px; }
+.stepper.sm input { width: 28px; height: 26px; font-size: 13px; }
+.item .stepper, .f-card .stepper { width: 96px; }
+.item .stepper button, .f-card .stepper button { width: 30px; height: 30px; }
+.item .stepper input, .f-card .stepper input { width: 30px; height: 30px; }
+.item .add, .f-card .add { width: 96px; height: 34px; }
+.pop { animation: pop .32s var(--ease); }
+@keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.28); color: var(--accent); } 100% { transform: scale(1); } }
+
+/* the Camera List: each section opens on a band in its color, with its icon */
+.list-tools { padding-block: 12px 2px; }
+.summary-line { font-size: 13px; }
+.section { padding-block: 12px 2px; gap: 10px; }
+.section h3 { font-family: var(--font-body); font-weight: 700; font-size: 18px; letter-spacing: -.01em; text-transform: none; line-height: 1.2; align-items: center;
+  background: var(--tint); color: var(--ink); border-radius: 14px; padding: 7px 6px 7px 7px; }
+.section h3 > span:first-child { gap: 10px; }
+.section h3 .tape { margin-inline-end: 0; }
+.section h3 .cnt { color: var(--ink); opacity: .85; }
+.section h3 .sec-tog { color: var(--ink); }
+.section.closed h3 { background: color-mix(in srgb, var(--tape) 6%, var(--surface)); }
+.lines { overflow: hidden; }
+.line { padding: 12px 14px; }
+.l-top .nm { font-weight: 500; }
+.custom-add input, .custom-add button { border-radius: 12px; }
+.custom-add button { font-weight: 500; }
+.add-head { border-radius: 14px; font-weight: 500; }
+.warnbox { border-radius: 14px; border-color: color-mix(in srgb, var(--warn) 45%, transparent); padding: 14px 16px; }
+.inote { border-radius: 8px; }
+
+/* favorites */
+.fav-group h3, .fav-cat-h { font-family: var(--font-body); font-weight: 700; text-transform: none; letter-spacing: -.01em; }
+.fav-group h3 { font-size: 18px; }
+.fav-cat-h { font-size: 15px; gap: 10px; }
+.fav-head { font-size: 11px; }
+
+/* lens finder */
+.f-title { font-size: 28px; }
+.f-form { padding: 14px; }
+.f-card { padding: 12px 14px; }
+.f-banner { border-radius: 14px; }
+.f-more, .f-none { border-radius: 12px; }
+
+/* dialogs: on a phone they rise from the bottom as sheets, in thumb reach */
+.modal { background: rgba(18, 16, 24, .42); animation: fade-in .2s ease; }
+.modal-card { border-radius: 24px; padding: 20px; gap: 12px; box-shadow: var(--raise-shadow); animation: sheet-in .28s var(--ease); }
+.modal-card h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+@media (max-width: 599px) {
+  .modal { padding: 0; }
+  .modal-card { max-width: none; border-radius: 24px 24px 0 0; padding: 12px 18px max(18px, env(safe-area-inset-bottom, 0px)); }
+  .modal-card::before { content: ""; justify-self: center; width: 38px; height: 4px; border-radius: 2px; background: var(--line); margin-bottom: 4px; }
+}
+@keyframes sheet-in { from { transform: translateY(28px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* small messages: the same quiet card as Undo */
+.toast { background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; font-size: 14px; box-shadow: var(--raise-shadow); width: max-content; animation: toast-in .24s var(--ease); }
+@keyframes toast-in { from { transform: translate(-50%, 8px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.notice { border-left: 0; border-radius: 16px; padding: 12px 8px 12px 14px; box-shadow: var(--raise-shadow); }
+.notice .nt-ico { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: var(--accent-soft); font-size: 14px; flex: none; }
+
+/* the floating bar at the bottom */
+.dock { border-top-color: var(--line); box-shadow: 0 -8px 24px -12px rgba(48, 40, 28, .18); }
+
+/* settings */
+.set-group { gap: 12px; padding-block: 18px; }
+.set-group h3 { font-size: 15px; font-weight: 700; letter-spacing: -.005em; text-transform: none; color: var(--fg); }
+.seg { border-radius: 12px; background: var(--seg-track); border-color: transparent; padding: 3px; gap: 3px; }
+.seg span { border-radius: 9px; padding: 8px 16px; }
+.seg label + label span { border-inline-start: 0; }
+.seg input:checked + span { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .1), 0 2px 6px rgba(48, 40, 28, .06); }
+.seg button { border-radius: 9px; }
+.seg button + button { border-inline-start: 0; }
+.seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .1), 0 2px 6px rgba(48, 40, 28, .06); }
+.rule { padding: 14px 16px; }
+
+/* preview */
+.pv-bar, .pv-actions { border-color: var(--line); }
+.pv-paper { box-shadow: 0 2px 6px rgba(0, 0, 0, .08), 0 18px 40px -12px rgba(0, 0, 0, .28); }
+.pv-lbl { font-size: 11px; letter-spacing: .07em; }
+.pv-seg .btn:first-child { border-start-start-radius: 12px; border-end-start-radius: 12px; }
+.pv-seg .btn:last-child { border-start-end-radius: 12px; border-end-end-radius: 12px; }
+
+/* calendar */
+.cal-day.start, .cal-day.end { box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--accent) 70%, transparent); }
+.cal-wd { text-transform: none; letter-spacing: 0; font-size: 12px; }
+
+/* nothing moves for people who asked their phone for less motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal, .modal-card, .toast, .bump, .pop { animation: none !important; }
+  .btn, .chip, .tab, .add, .stepper button, .prod-card { transition: none; }
+  .btn:active, .add:active, .stepper button:active, .tab:active, .chip:active, .prod-card:active { transform: none; }
+}
 </style>
 
 <div class="app">
@@ -991,6 +1220,22 @@ function customDef(h, k) {
 const PALETTE = [["red", "Red"], ["orange", "Orange"], ["amber", "Amber"], ["olive", "Olive"], ["green", "Green"], ["teal", "Teal"], ["sky", "Sky"], ["blue", "Blue"], ["indigo", "Indigo"], ["violet", "Violet"], ["pink", "Pink"], ["slate", "Slate"]];
 const DEFAULT_PAL = { camera: "red", lenses: "amber", camera_accessories: "blue", filters: "violet" };
 const defaultPal = c => DEFAULT_PAL[c.id] || "slate";
+/* each category and gear list section has a small icon on its color tile */
+const TAPE_ICONS = {
+  cam: '<rect x="2.5" y="8" width="12.5" height="10" rx="2"/><path d="m15 11.5 6-3v9l-6-3z"/><circle cx="6.5" cy="5" r="2"/><circle cx="11.5" cy="5" r="2"/>',
+  lens: '<circle cx="12" cy="12" r="9.5"/><path d="m14.3 8 4.9 8.5M9.7 8h9.8M7.4 12l4.9-8.5M9.7 16 4.8 7.5M14.3 16H4.5M16.6 12l-4.9 8.5"/>',
+  knob: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3.5V6M12 18v2.5M3.5 12H6M18 12h2.5"/>',
+  filter: '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>',
+  tripod: '<rect x="7.5" y="2.5" width="9" height="4.5" rx="1"/><path d="M12 7v4M12 11l-6.5 10M12 11l6.5 10M12 11v10"/>',
+  monitor: '<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8.5 20h7M12 16.5V20"/>',
+  card: '<path d="M6.5 2.5h8l3 3v16h-11z"/><path d="M10 6v3M13 6v3"/>',
+  bolt: '<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z"/>',
+  grip: '<path d="M7 4h7a4 4 0 0 1 4 4v1h-3.5V7.5h-6v9h6V15H18v1a4 4 0 0 1-4 4H7z"/>',
+  box: '<path d="M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9"/>',
+  tag: '<path d="M3.5 12.5V3.5h9l8 8-9 9z"/><circle cx="8" cy="8" r="1.5"/>'
+};
+const TAPE_OF = { camera: "cam", lens: "lens", lenses: "lens", accessories: "knob", camera_accessories: "knob", filters: "filter", support: "tripod", display: "monitor", media: "card", power: "bolt", grip: "grip", aks: "box" };
+const tapeIcon = key => `<span class="tape" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[TAPE_OF[key] || "tag"]}</svg></span>`;
 const isHex = v => /^#[0-9a-f]{6}$/i.test(v || "");
 function catTape(c) {
   const v = (app.settings.catColors || {})[c.id];
@@ -2019,6 +2264,12 @@ function render() {
   uiSave(); navSync();
 }
 
+/* a list's gear by section, as a thin bar of their colors (how much camera, lens, support...) */
+function mixBar(p) {
+  const by = linesBySection(p), parts = allSections().map(s => [s, by[s.id].reduce((a, [, l]) => a + lineQty(l), 0)]).filter(([, n]) => n > 0);
+  if (!parts.length) return `<span class="mix none" aria-hidden="true"></span>`;
+  return `<span class="mix" role="img" aria-label="${esc(parts.map(([s, n]) => `${n} ${secName(s.id)}`).join(", "))}">${parts.map(([s, n]) => `<i style="flex:${n};--tape:${secTape(s)}"></i>`).join("")}</span>`;
+}
 function viewHome() {
   const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
   const sel = app.sel;
@@ -2027,8 +2278,9 @@ function viewHome() {
     const t = totals(p), h = houseById(p.houseId);
     const when = fmtRange(p.shootStart, p.shootEnd), on = !!(sel && sel.has(p.id));
     return `<li><button class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}" type="button" data-act="${sel ? "pick-prod" : "open"}" data-lp="prod" data-id="${esc(p.id)}"${sel ? ` aria-pressed="${on}"` : ""}>
-      ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<b>${esc(p.name || "Untitled production")}</b>
+      ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<span class="pc-top"><b>${esc(p.name || "Untitled production")}</b>${p.docVer ? `<span class="pc-ver">Version ${p.docVer}</span>` : ""}</span>
       <span class="meta">${unit2Of(p) ? `<span class="unit-tag">+ 2nd Unit</span>` : ""}<span>${esc(h ? h.name : "")}</span>${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
+      ${mixBar(p)}
     </button></li>`;
   }).join("");
   const n = sel ? sel.size : 0;
@@ -2038,7 +2290,7 @@ function viewHome() {
     <div class="home-head"><h2 class="page">Productions</h2>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>
     ${list.length ? `<ul class="prod-list">${cards}</ul>${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
-      <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Export the finished list to Word or CSV.</p>
+      <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
   </section>${selDock}`;
 }
@@ -2542,7 +2794,7 @@ function treeHtml(p, h) {
     const nSel = selCount(p, e => e.c.id === c.id && e.h.id === h.id);
     const open = searching || app.cat === c.id || app.open.has(c.id);
     const addSub = ed ? `<div class="add-row"><button class="add-head" type="button" data-act="new-item" data-k="${esc(c.direct.key)}">+ New item in ${esc(c.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(c.id)}">+ New folder in ${esc(c.name)}</button></div>` : "";
-    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}<span class="tape" aria-hidden="true"></span>${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.join("")}${addSub}</div></details>`);
+    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id)}${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.join("")}${addSub}</div></details>`);
   }
   if (ed && !searching) out.push(`<button class="add-head big" type="button" data-act="new-cat">+ Add category or subcategory</button>`);
   const lq = searching ? parseLensQuery(app.q) : null;
@@ -2799,8 +3051,13 @@ function refreshRows(p, ids) {
   });
   const t = totals(p);
   const set = (sel, v) => { const el = document.getElementById(sel); if (el) el.textContent = v; };
+  const tc = document.getElementById("tabCount"), was = tc ? parseInt(tc.textContent, 10) || 0 : 0;
   set("dockLines", t.lines); set("dockPcs", t.pcs); set("tabCount", t.lines);
+  if (tc && t.lines > was) replay(tc, "bump");
 }
+/* restart a short CSS animation on an element */
+function replay(el, cls) { if (!el || !el.classList) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function popQty(kind, id, f) { if (typeof document === "undefined") return; document.querySelectorAll(`[data-${kind}qty="${CSS.escape(id)}"]${f ? `[data-f="${f}"]` : ""}`).forEach(el => replay(el, "pop")); }
 
 /* ----- edit dialogs ----- */
 function optList(pairs, sel) { return pairs.map(([v, t]) => `<option value="${esc(v)}" ${v === sel ? "selected" : ""}>${esc(t)}</option>`).join(""); }
@@ -3023,7 +3280,7 @@ function viewFavorites(p, h) {
     return `<li class="item ${lid ? "on" : ""}">${starBtn(c.key, c)}<span class="info"><span class="nm">${esc(c.name)}</span><span class="specs"><span>${esc(secName(c.section))}</span></span></span><span class="ctl">${ctl}</span></li>`;
   }).join("");
   const starred = favByCategory(h, f.starred.map(e => [e, rowHtml(p, e.it, "")]));
-  const typed = cRows ? `<div class="fav-cat" style="--tape: var(--tape-custom)"><h4 class="fav-cat-h"><span class="tape" aria-hidden="true"></span>Not in the catalog<span class="cnt">${f.custom.length}</span></h4><ul class="fav-list">${cRows}</ul></div>` : "";
+  const typed = cRows ? `<div class="fav-cat" style="--tape: var(--tape-custom)"><h4 class="fav-cat-h">${tapeIcon("custom")}Not in the catalog<span class="cnt">${f.custom.length}</span></h4><ul class="fav-list">${cRows}</ul></div>` : "";
   const used = favByCategory(h, f.used.map(({ e, n }) => [e, rowHtml(p, e.it, "", `In ${n} production${n === 1 ? "" : "s"}`)]));
   return `<section class="pad">
     <div class="fav-group"><h3>Starred</h3>
@@ -3045,7 +3302,7 @@ function favByCategory(h, rows) {
     // items placed straight in the category come first, without a heading
     const list = [...subs.entries()].sort((a, b) => (a[0].direct ? 0 : 1) - (b[0].direct ? 0 : 1))
       .map(([s, l]) => (s.direct ? "" : `<li class="fav-head">${esc(s.name)}<span class="cnt">${l.length}</span></li>`) + l.join("")).join("");
-    return `<div class="fav-cat" style="--tape: ${catTape(c)}"><h4 class="fav-cat-h"><span class="tape" aria-hidden="true"></span>${esc(c.name)}<span class="cnt">${n}</span></h4><ul class="fav-list">${list}</ul></div>`;
+    return `<div class="fav-cat" style="--tape: ${catTape(c)}"><h4 class="fav-cat-h">${tapeIcon(c.id)}${esc(c.name)}<span class="cnt">${n}</span></h4><ul class="fav-list">${list}</ul></div>`;
   }).join("");
 }
 
@@ -3096,7 +3353,7 @@ function viewList(p, h) {
   const sections = secs.map(s => {
     const rows = by[s.id], shut = closed(s);
     const pcs = rows.reduce((a, [, l]) => a + lineQty(l), 0);
-    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span><span class="tape" aria-hidden="true"></span>${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
+    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span>${tapeIcon(s.custom ? "custom" : s.id)}${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
       <div class="sec-body">${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
       <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
     </div>`;
@@ -3430,10 +3687,11 @@ function fitPreview() {
   fit.style.height = paper.offsetHeight * k + "px";
 }
 /* a saved or sent list: its version number is taken, and the preview says so */
-function savedVer(p) {
+function savedVer(p, sent) {
   const was = p.docSig === docSigOf(p);
   commitVer(p);
-  if (!was) toast(`Saved as version ${p.docVer}`);
+  if (sent) toast(`✓ Sent · version ${p.docVer}`);
+  else if (!was) toast(`Saved as version ${p.docVer}`);
   const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
 }
 /* the app itself, to send to someone */
@@ -3502,7 +3760,7 @@ async function sendNow(p, f) {
   const file = typeof File === "function" ? new File([blob], name, { type: blob.type || (fmt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document") }) : null;
   let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })) && !(fmt === "docx" && noDocxShare()); } catch (e) {}
   if (can) {
-    try { await navigator.share({ files: [file], title: subject, text: message }); closeModal(); savedVer(p); }
+    try { await navigator.share({ files: [file], title: subject, text: message }); closeModal(); savedVer(p, true); }
     catch (e) {
       if (e && e.name === "AbortError") return;  // you closed the share menu
       if (fmt === "docx") {  // the phone won't attach Word files: remember it, and offer to save it instead (the next tap)
@@ -3758,6 +4016,7 @@ document.addEventListener("click", e => {
       const cur0 = l ? (f ? l[f] : lineQty(l)) : 0;
       const ids = setQty(p, id, cur0 + (act === "cinc" ? 1 : -1), l ? f : undefined);
       if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids);
+      popQty("c", id, l ? f : undefined);
       break;
     }
     case "star": {
@@ -3780,7 +4039,7 @@ document.addEventListener("click", e => {
       const l = p.items[id]; if (!l) break;
       const cur0 = f ? l[f] : lineQty(l);
       setQty(p, id, cur0 + (act === "linc" ? 1 : -1), f);
-      rerenderKeepScroll();
+      rerenderKeepScroll(); popQty("l", id, f);
       break;
     }
     case "remove": {
