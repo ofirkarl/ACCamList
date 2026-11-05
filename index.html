@@ -211,9 +211,9 @@ button { cursor: pointer; }
 
 /* top bar */
 .topbar { padding-block: 18px 8px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.brandmark { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; line-height: 1; }
+.brandmark { font-family: var(--font-display); font-weight: 800; font-size: 30px; letter-spacing: .02em; text-transform: uppercase; line-height: 1; white-space: nowrap; }
 .brandmark span { color: var(--muted); font-weight: 700; }
-.save-state { font-size: 12px; color: var(--muted); text-align: end; }
+.save-state { font-size: 12px; color: var(--muted); text-align: end; line-height: 1.25; }
 .top-right { display: flex; align-items: center; gap: 6px; align-self: center; }
 .theme-btn { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); box-shadow: var(--frame-shadow); }
 .theme-btn:hover { color: var(--accent); }
@@ -640,7 +640,112 @@ details.sub.drop-after { box-shadow: inset 0 -3px 0 var(--accent); }
 .item .stepper input, .f-card .stepper input { width: 34px; height: 30px; }
 .item .stepper.sm, .f-card .stepper.sm { width: auto; }
 .item.on .nm { font-weight: inherit; }
-@media (prefers-reduced-motion: reduce) { .chev { transition: none; } }
+[hidden] { display: none !important; }
+/* production header: name, then shoot and prep dates; the Info tab slides the details open */
+.prod-head { padding-block: 8px 2px; gap: 2px; }
+.ph-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-inline-start: -8px; }
+.ph-name-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.ph-name-row .ph-tab { margin-bottom: 3px; }
+.ph-name { min-width: 0; font-family: var(--font-display); font-weight: 800; font-size: 40px; line-height: .95; margin: 0; text-transform: uppercase; overflow-wrap: anywhere; }
+.ph-row { display: flex; align-items: center; width: 100%; text-align: start; background: none; border: 0; padding: 6px 0 4px; color: var(--fg); min-height: 36px; }
+.ph-dates { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; font-size: 15px; min-width: 0; }
+.ph-it { white-space: nowrap; }
+.ph-k { color: var(--muted); font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; font-weight: 500; }
+.ph-it b { font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+.ph-n { color: var(--muted); font-size: 13px; }
+.ph-tab { flex: none; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px 4px 11px; box-shadow: var(--frame-shadow); }
+.ph-tab:hover { border-color: var(--accent); }
+.ph-tab[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.chev { transition: transform .2s; }
+.pinfo { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s cubic-bezier(.2, .7, .2, 1); }
+.pinfo.open { grid-template-rows: 1fr; }
+.pinfo-in { min-height: 0; overflow: hidden; }
+.pinfo:not(.open) .pinfo-in { visibility: hidden; transition: visibility 0s .3s; }
+.pinfo-card { margin: 4px 0 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: var(--frame-shadow); transform: translateY(-8px); opacity: 0; transition: transform .3s cubic-bezier(.2, .7, .2, 1), opacity .2s; }
+.pinfo.open .pinfo-card { transform: none; opacity: 1; }
+.pinfo .prod-facts { margin: 0; background: none; border: 0; padding: 0; box-shadow: none; border-radius: 0; }
+.prod-facts .pf-wide { grid-column: 1 / -1; }
+.pf-notes { white-space: pre-wrap; font-weight: 400; font-size: 14px; }
+.pinfo-acts { display: flex; justify-content: flex-end; margin-top: 10px; }
+body.finder-on .topbar { display: none; }
+body.finder-on .app > main > .pad:first-child .tabs { margin-top: 12px; }
+/* home: press and hold, selecting several */
+.prod-card { position: relative; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.prod-card.picking { padding-inline-start: 50px; }
+.prod-card .pick { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--accent-fg); }
+.prod-card.picked { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.prod-card.picked .pick { background: var(--accent); border-color: var(--accent); }
+.lp-hint { margin: 10px 2px 0; }
+.sel-dock .grp { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sheet { display: grid; gap: 12px; }
+.sheet-acts { display: grid; gap: 8px; }
+.sheet-acts .btn { justify-content: center; padding-block: 12px; }
+/* form: the shoot dates button and calendar */
+.err { font-size: 13px; color: var(--danger); font-weight: 500; }
+.row-dates { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 14px; }
+@media (max-width: 480px) { .row-dates { grid-template-columns: minmax(0, 1fr); } }
+.date-btn { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; box-sizing: border-box; min-height: 44px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; text-align: start; }
+.date-btn:hover, .date-btn:focus-visible { border-color: var(--accent); }
+.date-btn .d-range { font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 0; }
+.date-btn .d-range.muted { color: var(--muted); font-family: inherit; font-weight: 400; }
+.date-btn .d-n { flex: none; color: var(--muted); font-size: 13px; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.date-btn .d-n b { color: var(--fg); font-size: 15px; }
+.modal-card.cal-card { max-width: 400px; }
+.cal { display: grid; gap: 10px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-head b { font-size: 17px; }
+.cal-head .iconbtn { width: 40px; height: 40px; font-size: 24px; line-height: 1; color: var(--fg); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 4px; }
+.cal-wd { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; padding-bottom: 2px; }
+.cal-day { position: relative; height: 42px; border: 0; padding: 0; background: none; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 15px; color: var(--fg); }
+.cal-day.wknd, .cal-wd.wknd { color: var(--muted); }
+.cal-day.today { text-decoration: underline; text-underline-offset: 3px; }
+.cal-day.in { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+.cal-day.on { font-weight: 700; color: var(--fg); }
+.cal-day.on::after { content: ""; position: absolute; left: 50%; bottom: 6px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+.cal-day.off { color: var(--muted); text-decoration: line-through; }
+.cal-day.start, .cal-day.end { background: var(--accent); color: var(--accent-fg); }
+.cal-day.start { border-radius: 10px 0 0 10px; }
+.cal-day.end { border-radius: 0 10px 10px 0; }
+.cal-day.start.end, .cal-day.start:not(.in) { border-radius: 10px; }
+.cal-day.start.on::after, .cal-day.end.on::after { background: var(--accent-fg); }
+.cal-day.start.off, .cal-day.end.off { color: var(--accent-fg); opacity: .75; }
+.cal-day:focus-visible { outline-offset: -2px; z-index: 1; }
+.cal-sum { font-size: 15px; }
+.cal-tip { margin: 0; }
+/* Cam list: search, and sections that close */
+.list-tools { display: grid; gap: 8px; padding-block: 12px 4px; }
+.list-tools { justify-content: stretch; }
+.lsearch { width: 100%; box-sizing: border-box; }
+.lt-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-height: 32px; }
+.section h3 { cursor: pointer; }
+.section h3 .sumr { display: inline-flex; align-items: center; gap: 2px; }
+.section h3 .sec-tog { width: 30px; height: 30px; display: inline-grid; place-items: center; }
+.section.closed .sec-tog .chev { transform: rotate(-90deg); }
+.sec-body { display: grid; gap: 8px; }
+.section.closed:not(.searching) > .sec-body { display: none; }
+.section.searching .custom-add, .section.searching .section-empty { display: none; }
+.editor-actions .grp { display: flex; gap: 8px; flex-wrap: wrap; }
+.line .qtys { flex-wrap: nowrap; }
+/* catalog: a lens's focal length reads first; open or close a whole subcategory; a folder's own add button */
+.ll b { font-size: 13px; }
+.sub-tools { display: flex; justify-content: flex-end; padding: 0 2px; margin-top: -2px; }
+.sub-tools .btn { font-size: 12px; padding: 4px 8px; }
+.add-li { list-style: none; padding: 8px 14px 10px; }
+.add-li .add-head { font-size: 13px; padding: 8px 12px; }
+.brand.fmt > summary .bname { font-weight: 700; }
+/* preview: Send, and the send dialog */
+.pv-sep { width: 1px; height: 22px; background: var(--line); margin-inline: 4px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; justify-self: start; }
+.seg label { display: flex; position: relative; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--fg); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span { padding: 8px 18px; font-weight: 500; cursor: pointer; }
+.seg label + label span { border-inline-start: 1px solid var(--line); }
+.seg input:checked + span { background: var(--accent); color: var(--accent-fg); }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
+#sd-msg { resize: vertical; }
+.send-how { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .chev, .pinfo, .pinfo-card, .pinfo:not(.open) .pinfo-in { transition: none; } }
 </style>
 </head>
 <body>
@@ -777,7 +882,7 @@ function specsHtml(it, extra, o = {}) {
     if (sp && sp.per) per = perHtml(sp.per);
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
-  if (it.txrx) out.push(`<span>Choose TX and RX</span>`);
+  if (it.txrx && !o.list) out.push(`<span>Choose TX and RX</span>`);
   if (o.link && out.length) out.push(o.link);  // the product page globe ends the line
   return (out.length ? `<span class="specs">${out.join("")}</span>` : "") + per;
 }
@@ -1433,8 +1538,14 @@ async function initAccount() {
 /* ---------- production model ---------- */
 function newProduction(fields) {
   const now = Date.now();
-  return { id: uid("p"), name: "", company: "", houseId: HOUSES[0].id, dp: "", ac: "", acPhone: "",
-    prep: "", shootStart: "", shootEnd: "", shootDays: "", notes: "", items: {}, createdAt: now, updatedAt: now, ...fields };
+  return { id: uid("p"), name: "", company: "", houseId: "", dp: "", ac: "", acPhone: "",
+    prep: "", shootStart: "", shootEnd: "", shootDays: "", days: {}, notes: "", items: {}, createdAt: now, updatedAt: now, ...fields };
+}
+/* a copy of a production with all its items, under a new id (the caller names it) */
+function copyProduction(p, fields) {
+  const c = JSON.parse(JSON.stringify(p));
+  delete c._w;
+  return Object.assign(c, { id: uid("p"), createdAt: Date.now(), updatedAt: Date.now() }, fields || {});
 }
 function lineFromCatalog(id) {
   const e = ITEM.get(id);
@@ -1447,7 +1558,21 @@ function totals(p) {
   const v = Object.values(p.items || {});
   return { lines: v.length, pcs: v.reduce((a, x) => a + lineQty(x), 0) };
 }
-function shootDays(p) { return p.shootDays ? Number(p.shootDays) : daysBetween(p.shootStart, p.shootEnd); }
+/* shoot days: every day from the first to the last, except Fridays and Saturdays, unless a day was switched on or off by hand (p.days) */
+const isoDate = (y, m, d) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const weekday = s => { const p = parseDate(s); return p ? new Date(Date.UTC(p.y, p.m - 1, p.d)).getUTCDay() : -1; };
+const isWeekend = s => { const w = weekday(s); return w === 5 || w === 6; };
+function rangeDates(a, b) {
+  const pa = parseDate(a), pb = parseDate(b || a), out = [];
+  if (!pa || !pb) return out;
+  for (let t = Date.UTC(pa.y, pa.m - 1, pa.d), end = Date.UTC(pb.y, pb.m - 1, pb.d); t <= end && out.length < 400; t += 86400000) {
+    const d = new Date(t); out.push(isoDate(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate()));
+  }
+  return out;
+}
+function dayOn(days, s) { const o = (days || {})[s]; return o !== undefined ? !!o : !isWeekend(s); }
+const countShootDays = (a, b, days) => rangeDates(a, b).filter(d => dayOn(days, d)).length;
+function shootDays(p) { return p.shootDays ? Number(p.shootDays) : countShootDays(p.shootStart, p.shootEnd, p.days); }
 
 /* camera default batteries */
 function ruleMatches(r, e) {
@@ -1462,11 +1587,24 @@ const capGB = n => { const m = /(\d+(?:\.\d+)?)\s*(TB|GB)/i.exec(n); return m ? 
 function resolveMedia(e, houseId) {
   for (const type of e.it.camera.media) {
     let best = null;
-    for (const [id, x] of ITEM) if (x.h.id === houseId && x.s.id === "media" && grpOf(x.it, x.s) === type && (!best || capGB(x.it.name) > capGB(best.label))) best = { id, label: x.it.name };
+    for (const [id, x] of ITEM) if (x.h.id === houseId && x.s.id === "media" && grpOf(x.it, x.s) === type && (!best || capGB(x.it.name) > capGB(best.label))) best = { id, label: x.it.name, type };
     if (best) return best;
   }
   const t = e.it.camera.media[0];
-  return { id: "auto-card-" + flat(t), label: t + " card" };
+  return { id: "auto-card-" + flat(t), label: t + " card", type: t };
+}
+/* a card reader for a camera's cards: one in the house's Card Readers of that card type, else a multi-card reader that names it */
+const READER_WORD = { "SD": /\bSD\b/i, "microSD": /micro\s*SD/i, "CF": /\bCF\b/, "CFast 2.0": /CFast/i, "CFexpress Type B": /CFexpress/i, "CFexpress Type A": /CFexpress[^/]*Type A|Type A/i };
+function resolveReader(type, houseId) {
+  if (!type) return null;
+  let multi = null;
+  for (const [id, x] of ITEM) {
+    if (x.h.id !== houseId || x.s.id !== "card_readers") continue;
+    const g = grpOf(x.it, x.s);
+    if (g === type) return { id, label: x.it.name };
+    if (!multi && READER_WORD[type] && READER_WORD[type].test(x.it.name)) multi = { id, label: x.it.name };
+  }
+  return multi;
 }
 function resolveTarget(r, e, houseId) { return r.kind === "media" ? resolveMedia(e, houseId) : resolveBattery(r, houseId); }
 function resolveBattery(r, houseId) {
@@ -1498,6 +1636,8 @@ function applyDefaults(p) {
       w.qty += lineQty(l) * r.qty;
       w.why.push(`${r.qty} per ${shortName(e.it.name)}`);
       want.set(t.id, w);
+      // one card reader for each kind of card on the list
+      if (r.kind === "media") { const rd = resolveReader(t.type, p.houseId); if (rd && !want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${t.type} cards`], label: rd.label }); }
     }
   }
   const changed = [];
@@ -1535,16 +1675,6 @@ function coverageIssues(p) {
   }
   return out;
 }
-function wirelessIssue(p) {
-  let cams = 0, tx = 0, wireless = false;
-  for (const [id, l] of Object.entries(p.items)) {
-    const e = ITEM.get(id);
-    if (e && e.it.camera && e.it.camera.wireless) cams += lineQty(l);
-    if (l.tx !== undefined) { tx += l.tx || 0; wireless = true; }
-  }
-  return cams >= 2 && wireless && tx < cams ? { cams, tx } : null;
-}
-const wirelessText = w => `You have ${w.cams} cameras but ${w.tx === 0 ? "no" : w.tx} wireless video transmitter${w.tx === 1 ? "" : "s"}. Each camera needs its own TX.`;
 function issueText(i) {
   const cs = i.cam.e.it.camera;
   return `${i.cam.e.it.name} is ${COV_LABEL[cs.sensor] || cs.sensor}, but ${i.lenses.map(x => `${x.e.it.name} (${COV_LABEL[x.e.it.lens.coverage] || x.e.it.lens.coverage})`).join(", ")} ${i.lenses.length === 1 ? "covers" : "cover"} a smaller image circle.`;
@@ -1558,14 +1688,49 @@ function coverageAlert(p, id) {
     <p class="hint">Expect vignetting unless you shoot a cropped mode (for example S35 on a full-frame camera).</p>`;
 }
 function showModal(html) {
-  closeModal();
+  document.getElementById("modal")?.remove();
   const m = document.createElement("div");
   m.className = "modal"; m.id = "modal"; m.setAttribute("role", "dialog"); m.setAttribute("aria-modal", "true");
   m.innerHTML = `<div class="modal-card">${html}</div>`;
   document.body.appendChild(m);
   m.querySelector(".btn.primary")?.focus();
+  navSync();
 }
-function closeModal() { document.getElementById("modal")?.remove(); }
+function closeModal() { const m = document.getElementById("modal"); if (m) { m.remove(); navSync(); } }
+
+/* the phone's back button steps back through the app (the standalone app only): a dialog, the preview, the lens finder,
+   an open line, selecting several, then up a screen. On the productions screen it leaves the app. */
+const NAV = { on: false, guard: false, skip: false };
+try { NAV.on = !!window.AC_CONFIG && !!window.history && typeof history.pushState === "function"; } catch (e) {}
+const navDeep = () => !!(document.getElementById("modal") || document.getElementById("preview") || app.sel || app.view !== "home");
+function navSync() {
+  if (!NAV.on || NAV.skip) return;
+  const deep = navDeep();
+  try {
+    if (deep && !NAV.guard) { history.pushState({ ac: 1 }, ""); NAV.guard = true; }
+    else if (!deep && NAV.guard) { NAV.guard = false; NAV.skip = true; history.back(); }  // back on the first screen: drop the extra step
+  } catch (e) {}
+}
+function stepBack() {
+  if (document.getElementById("modal")) { closeModal(); return; }
+  if (document.getElementById("preview")) { closePreview(); return; }
+  if (app.view === "production" && app.tab === "add" && fin().on) { fin().on = false; render(); return; }
+  if (app.view === "production" && app.editing) { app.editing = null; rerenderKeepScroll(); return; }
+  if (app.sel) { app.sel = null; render(); return; }
+  if (app.view === "form") {
+    const ed = app.formFor && app.productions.some(x => x.id === app.formFor);
+    app.view = ed ? "production" : "home"; app.pid = ed ? app.formFor : null; app.dupFrom = null;
+    render(); window.scrollTo(0, 0); return;
+  }
+  if (app.view !== "home") { app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; render(); window.scrollTo(0, 0); }
+}
+window.addEventListener("popstate", () => {
+  if (!NAV.on) return;
+  if (NAV.skip) { NAV.skip = false; navSync(); return; }
+  NAV.guard = false; NAV.skip = true;
+  try { stepBack(); } finally { NAV.skip = false; }
+  navSync();
+});
 
 /* motors for a hand unit: the items in the house's Motors group */
 const MOTOR_HOST = /\bhi-?5\b|\bwcu-?\d\b|wireless compact unit/i;
@@ -1614,16 +1779,13 @@ function setQty(p, id, qty, field) {
   if ((p.items[id] && p.items[id].section === "camera") || ITEM.get(id)?.it.camera) changed.push(...applyDefaults(p));
   touch(p);
   const cov = wasNew && p.items[id] ? coverageAlert(p, id) : "";
-  const w = wirelessIssue(p);
-  const wNew = w && (!p._w || p._w.cams !== w.cams || p._w.tx !== w.tx);
-  if (cov || wNew) {
+  if (cov) {
     const e = ITEM.get(id);
-    showModal(cov + (wNew ? `<h3>Wireless video</h3><p>${esc(wirelessText(w))}</p>` : "") +
-      `<div class="modal-actions">${cov ? `<button class="btn" type="button" data-act="modal-undo" data-id="${esc(id)}">Remove ${esc(shortName(e.it.name))}</button>` : ""}<button class="btn primary" type="button" data-act="modal-close">${cov ? "Keep it" : "OK"}</button></div>`);
+    showModal(cov + `<div class="modal-actions"><button class="btn" type="button" data-act="modal-undo" data-id="${esc(id)}">Remove ${esc(shortName(e.it.name))}</button><button class="btn primary" type="button" data-act="modal-close">Keep it</button></div>`);
   }
-  p._w = w;
+  delete p._w;
   // an ARRI hand unit (Hi-5, WCU-4) needs motors: ask which ones
-  if (wasNew && p.items[id] && !cov && !wNew && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
+  if (wasNew && p.items[id] && !cov && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
   return changed;
 }
 
@@ -1673,6 +1835,7 @@ function stripe(root) {
     let n = 0;
     for (const li of ul.children) {
       if (li.classList.contains("mfr-head") || li.classList.contains("fav-head")) { n = 0; continue; }
+      if (li.hidden) continue;
       if (li.classList.contains("item") || li.classList.contains("line")) li.classList.toggle("alt", n++ % 2 === 1);
     }
   });
@@ -1686,29 +1849,57 @@ function render() {
   else if (app.view === "settings") v.innerHTML = viewSettings();
   else if (app.view === "production" && cur()) v.innerHTML = viewProduction();
   else { app.view = "home"; v.innerHTML = viewHome(); }
-  uiSave();
+  if (app.view !== "home") app.sel = null;
+  document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
+  if (app.view === "production" && app.tab === "list") applyListFilter();
+  uiSave(); navSync();
 }
 
 function viewHome() {
   const list = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const sel = app.sel;
+  if (sel) for (const id of [...sel]) if (!app.productions.some(p => p.id === id)) sel.delete(id);
   const cards = list.map(p => {
     const t = totals(p), h = houseById(p.houseId);
-    const when = fmtRange(p.shootStart, p.shootEnd);
-    return `<li><button class="prod-card" type="button" data-act="open" data-id="${esc(p.id)}">
-      <b>${esc(p.name || "Untitled production")}</b>
+    const when = fmtRange(p.shootStart, p.shootEnd), on = !!(sel && sel.has(p.id));
+    return `<li><button class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}" type="button" data-act="${sel ? "pick-prod" : "open"}" data-lp="prod" data-id="${esc(p.id)}"${sel ? ` aria-pressed="${on}"` : ""}>
+      ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<b>${esc(p.name || "Untitled production")}</b>
       <span class="meta"><span>${esc(h ? h.name : "")}</span>${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
     </button></li>`;
   }).join("");
+  const n = sel ? sel.size : 0;
+  const selDock = sel ? `<div class="dock pad sel-dock"><div class="dock-in"><span class="summary-line"><b class="num">${n}</b> selected</span>
+    <span class="grp"><button class="btn" type="button" data-act="sel-dup" ${n ? "" : "disabled"}>Duplicate</button><button class="btn danger" type="button" data-act="sel-del" ${n ? "" : "disabled"}>Delete</button><button class="btn ghost" type="button" data-act="sel-cancel">Cancel</button></span></div></div>` : "";
   return `<section class="pad">
-    <div class="home-head"><h2 class="page">Productions</h2><button class="btn primary" type="button" data-act="new">+ New production</button></div>
-    ${list.length ? `<ul class="prod-list">${cards}</ul>` :
+    <div class="home-head"><h2 class="page">Productions</h2>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>
+    ${list.length ? `<ul class="prod-list">${cards}</ul>${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Export the finished list to Word or CSV.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
     <div style="padding-top:18px"><button class="btn" type="button" data-act="settings">Camera defaults</button>
     <span class="hint">&nbsp;Batteries and memory cards that come with each camera you add.</span></div>
     ${accountHtml()}
-  </section>`;
+  </section>${selDock}`;
+}
+/* press and hold a production: duplicate, delete, or start selecting several */
+function prodMenu(id) {
+  const p = app.productions.find(x => x.id === id); if (!p) return;
+  try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
+  showModal(`<div class="sheet"><h3 class="plain">${esc(p.name || "Untitled production")}</h3>
+    <div class="sheet-acts"><button class="btn" type="button" data-act="pm-dup" data-id="${esc(id)}">Duplicate</button>
+      <button class="btn" type="button" data-act="pm-select" data-id="${esc(id)}">Select several</button>
+      <button class="btn danger" type="button" data-act="pm-del" data-id="${esc(id)}">Delete</button>
+      <button class="btn ghost" type="button" data-act="modal-close">Cancel</button></div></div>`);
+}
+function deleteProductions(ids) {
+  const set = new Set(ids);
+  app.productions = app.productions.filter(x => !set.has(x.id));
+  lsSave(); for (const id of set) removeRemote(id);
+}
+function startDuplicate(id) {
+  if (!app.productions.some(x => x.id === id)) return;
+  app.sel = null; app.dupFrom = id; app.formFor = null; app.view = "form"; render(); window.scrollTo(0, 0);
+  document.getElementById("f-name")?.select();
 }
 /* the standalone app's account line: who is signed in, or why to sign in (inside Claude there is nothing to show) */
 function accountHtml() {
@@ -1720,41 +1911,112 @@ function accountHtml() {
 
 function viewForm() {
   const editing = app.formFor ? app.productions.find(p => p.id === app.formFor) : null;
-  const p = editing || newProduction({});
-  const hasItems = editing && totals(editing).lines > 0;
+  const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
+  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({}));
+  const hasItems = (editing || src) && totals(editing || src).lines > 0;
   const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
+  // an old list with a typed-in day count keeps it until its dates are picked again
+  const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
+  const back = editing ? `data-act="open" data-id="${esc(editing.id)}"` : `data-act="home" data-id=""`;
   return `<section class="pad">
-    <div class="prod-head"><button class="btn ghost back" type="button" data-act="${editing ? "open" : "home"}" data-id="${editing ? esc(editing.id) : ""}">← ${editing ? "Back to list" : "Productions"}</button>
-    <h2 class="page">${editing ? "Production details" : "New production"}</h2></div>
+    <div class="prod-head"><button class="btn ghost back" type="button" ${back}>← ${editing ? "Back to list" : "Productions"}</button>
+    <h2 class="page">${editing ? "Production details" : src ? "Duplicate production" : "New production"}</h2>
+    ${src ? `<p class="hint" style="margin:0">A copy of ${esc(src.name || "the production")} with all ${totals(src).lines} items. Nothing is made until you tap Create.</p>` : ""}</div>
     <form class="form" id="prodForm" autocomplete="off">
       <div class="row2">
-        <div class="field"><label for="f-name">Production</label><input id="f-name" name="name" required placeholder="e.g. Mizrahi" value="${esc(p.name)}"></div>
-        <div class="field"><label for="f-company">Production company</label><input id="f-company" name="company" placeholder="e.g. Keshet" value="${esc(p.company)}"></div>
+        <div class="field"><label for="f-name">Production</label><input id="f-name" name="name" required value="${esc(p.name)}"></div>
+        <div class="field"><label for="f-company">Production company</label><input id="f-company" name="company" value="${esc(p.company)}"></div>
       </div>
-      <div class="field"><span class="lbl">Rental house</span><div class="house-pick" id="housePick" data-value="${esc(p.houseId)}">${houses}</div>
+      <div class="field"><span class="lbl" id="house-lbl">Rental house</span><div class="house-pick" id="housePick" role="group" aria-labelledby="house-lbl" data-value="${esc(p.houseId || "")}">${houses}</div>
+        <span class="err" id="houseErr" hidden>Pick the rental house this list is for.</span>
         ${hasItems ? `<span class="hint">The rental house is locked while the list has items, since each list uses that house's catalog.</span>` : ""}</div>
       <div class="row3">
         <div class="field"><label for="f-dp">DP</label><input id="f-dp" name="dp" value="${esc(p.dp)}"></div>
         <div class="field"><label for="f-ac">1st AC</label><input id="f-ac" name="ac" value="${esc(p.ac)}"></div>
         <div class="field"><label for="f-acphone">1st AC phone</label><input id="f-acphone" name="acPhone" type="tel" inputmode="tel" value="${esc(p.acPhone)}"></div>
       </div>
-      <div class="row3">
+      <div class="row-dates">
+        <div class="field"><span class="lbl" id="dates-lbl">Shoot dates</span>
+          <button class="date-btn" type="button" data-act="cal-open" id="f-dates" aria-labelledby="dates-lbl f-dates">${datesBtnHtml(p.shootStart, p.shootEnd, days, p.shootDays)}</button>
+          <input type="hidden" name="shootStart" id="f-start" value="${esc(p.shootStart)}"><input type="hidden" name="shootEnd" id="f-end" value="${esc(p.shootEnd)}">
+          <input type="hidden" name="days" id="f-days" value="${esc(days ? JSON.stringify(days) : "")}"><input type="hidden" name="shootDays" id="f-ndays" value="${esc(days ? "" : p.shootDays)}"></div>
         <div class="field"><label for="f-prep">Prep day</label><input id="f-prep" name="prep" type="date" value="${esc(p.prep)}"></div>
-        <div class="field"><label for="f-start">First shoot day</label><input id="f-start" name="shootStart" type="date" value="${esc(p.shootStart)}"></div>
-        <div class="field"><label for="f-end">Last shoot day</label><input id="f-end" name="shootEnd" type="date" value="${esc(p.shootEnd)}"></div>
-      </div>
-      <div class="row3">
-        <div class="field"><label for="f-days">Shoot days</label><input id="f-days" name="shootDays" type="number" min="0" inputmode="numeric" placeholder="${daysBetween(p.shootStart, p.shootEnd) || "Auto"}" value="${esc(p.shootDays)}">
-          <span class="hint">Leave empty to count from the dates.</span></div>
       </div>
       <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" rows="3" placeholder="Anything the rental house should know">${esc(p.notes)}</textarea></div>
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
-        <button class="btn" type="button" data-act="${editing ? "open" : "home"}" data-id="${editing ? esc(editing.id) : ""}">Cancel</button></div>
+        <button class="btn" type="button" ${back}>Cancel</button></div>
         ${editing ? `<button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production</button>` : ""}
       </div>
     </form>
   </section>`;
+}
+
+/* the shoot dates button on the form: the range and how many shoot days it makes */
+function datesBtnHtml(a, b, days, typed) {
+  if (!a) return `<span class="d-range muted">Pick the first and last shoot day</span><span class="d-n">${CAL_ICON}</span>`;
+  const range = b && b !== a ? `${fmtShort(a)} – ${fmtShort(b)}` : fmtShort(a);
+  const n = days ? countShootDays(a, b, days) : Number(typed) || countShootDays(a, b, {});
+  return `<span class="d-range">${esc(range)}</span><span class="d-n"><b class="num">${n}</b> shoot day${n === 1 ? "" : "s"}</span>`;
+}
+const CAL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>`;
+/* the calendar: tap the first shoot day, then the last. Fridays and Saturdays start off; tap a day in the range to switch it on or off */
+const cal = { start: "", end: "", days: {}, y: 0, m: 0, stage: "start" };
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+function calOpen() {
+  const f = document.getElementById("prodForm"); if (!f) return;
+  cal.start = f.elements.shootStart.value; cal.end = f.elements.shootEnd.value || cal.start;
+  try { cal.days = JSON.parse(f.elements.days.value || "{}") || {}; } catch (e) { cal.days = {}; }
+  const now = new Date(), base = parseDate(cal.start) || { y: now.getFullYear(), m: now.getMonth() + 1 };
+  cal.y = base.y; cal.m = base.m; cal.stage = cal.start ? "done" : "start";
+  showModal(`<div class="cal" id="cal">${calHtml()}</div>`);
+  document.querySelector("#modal .modal-card")?.classList.add("cal-card");
+  (document.querySelector("#cal .cal-day.start") || document.querySelector("#cal .cal-day.today") || document.querySelector("#cal .cal-day"))?.focus({ preventScroll: true });
+}
+function calHtml() {
+  const first = new Date(Date.UTC(cal.y, cal.m - 1, 1)), lead = first.getUTCDay(), n = new Date(Date.UTC(cal.y, cal.m, 0)).getUTCDate();
+  const now = new Date(), today = isoDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const end = cal.stage === "done" ? cal.end || cal.start : "";
+  let cells = "";
+  for (let i = 0; i < lead; i++) cells += `<span class="cal-pad"></span>`;
+  for (let d = 1; d <= n; d++) {
+    const s = isoDate(cal.y, cal.m, d), inR = !!(cal.start && (s === cal.start || (end && s >= cal.start && s <= end)));
+    const on = inR && dayOn(cal.days, s), wk = isWeekend(s);
+    const cls = ["cal-day", wk ? "wknd" : "", inR ? "in" : "", inR && !on ? "off" : "", on ? "on" : "", s === cal.start ? "start" : "", end && s === end ? "end" : "", s === today ? "today" : ""].filter(Boolean).join(" ");
+    cells += `<button class="${cls}" type="button" data-act="cal-day" data-d="${s}" aria-pressed="${on}" aria-label="${d} ${MONTHS[cal.m - 1]}${inR ? on ? ", shoot day" : ", day off" : ""}">${d}</button>`;
+  }
+  const count = cal.start ? countShootDays(cal.start, end || cal.start, cal.days) : 0;
+  const range = cal.start ? (end && end !== cal.start ? `${fmtShort(cal.start)} – ${fmtShort(end)}` : fmtShort(cal.start)) : "";
+  const tip = cal.stage === "start" ? "Tap the first shoot day." : cal.stage === "end" ? "Now tap the last shoot day." : "Tap a day in the range to switch it on or off. Fridays and Saturdays start off.";
+  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
+    <div class="cal-grid" role="group" aria-label="Shoot days">${WEEKDAYS.map((w, i) => `<span class="cal-wd${i >= 5 ? " wknd" : ""}">${w}</span>`).join("")}${cells}</div>
+    <p class="cal-sum" aria-live="polite">${range ? `<b>${esc(range)}</b> · <b class="num">${count}</b> shoot day${count === 1 ? "" : "s"}` : "No dates yet"}</p>
+    <p class="hint cal-tip">${tip}</p>
+    <div class="modal-actions">${cal.start ? `<button class="btn ghost" type="button" data-act="cal-clear">Clear</button>` : ""}<span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cal-done">Done</button></div>`;
+}
+function calRefresh(focusD) {
+  const el = document.getElementById("cal"); if (!el) return;
+  el.innerHTML = calHtml();
+  if (focusD) el.querySelector(`[data-d="${focusD}"]`)?.focus();
+}
+function calPick(s) {
+  if (cal.stage === "start" || (cal.stage === "done" && (s < cal.start || s > (cal.end || cal.start)))) { cal.start = s; cal.end = ""; cal.days = {}; cal.stage = "end"; }
+  else if (cal.stage === "end") { if (s < cal.start) cal.start = s; else { cal.end = s; cal.stage = "done"; } }
+  else {  // switch a day in the range on or off
+    const now = dayOn(cal.days, s);
+    if (!now === !isWeekend(s)) delete cal.days[s]; else cal.days[s] = now ? 0 : 1;
+  }
+  calRefresh(s);
+}
+function calDone() {
+  const f = document.getElementById("prodForm");
+  if (f) {
+    const a = cal.start, b = cal.start ? (cal.end || cal.start) : "";
+    const days = {}; for (const d of rangeDates(a, b)) if (cal.days[d] !== undefined) days[d] = cal.days[d];
+    f.elements.shootStart.value = a; f.elements.shootEnd.value = b; f.elements.days.value = JSON.stringify(days); f.elements.shootDays.value = "";
+    document.getElementById("f-dates").innerHTML = datesBtnHtml(a, b, days);
+  }
+  closeModal(); document.getElementById("f-dates")?.focus();
 }
 
 function viewSettings() {
@@ -1792,20 +2054,31 @@ function viewProduction() {
   const facts = [["Production company", esc(p.company || "")], ["Rental house", h ? esc(h.name) : ""], ["DP", esc(p.dp || "")],
     ["1st AC", p.ac || p.acPhone ? esc(p.ac || "") + (p.acPhone ? `<small>${esc(p.acPhone)}</small>` : "") : ""],
     ["Prep", p.prep ? esc(fmtShort(p.prep)) : ""], ["Shoot", shootDates ? esc(shootDates) + (days ? `<small>${days} shoot day${days === 1 ? "" : "s"}</small>` : "") : ""]].filter(([, v]) => v);
+  if (p.notes) facts.push(["Notes", `<span class="pf-notes">${esc(p.notes)}</span>`]);
   const missing = !p.dp && !p.ac && !p.shootStart;
   const fv = favoritesFor(p), nFav = fv.starred.length + fv.custom.length;
+  const infoOpen = app.open.has("prodfacts");
+  // the row under the name: day and month only, so shoot and prep fit on one line (the years are in Info)
+  const dm = s => { const q = parseDate(s); return q ? q.d + "." + q.m : ""; };
+  const shootDM = p.shootStart ? (p.shootEnd && p.shootEnd !== p.shootStart ? `${dm(p.shootStart)}–${dm(p.shootEnd)}` : dm(p.shootStart)) : "";
+  const shootTxt = shootDM ? `<span class="ph-it"><span class="ph-k">Shoot</span> <b>${esc(shootDM)}</b>${days ? ` <span class="ph-n">· ${days} day${days === 1 ? "" : "s"}</span>` : ""}</span>` : "";
+  const prepTxt = p.prep ? `<span class="ph-it"><span class="ph-k">Prep</span> <b>${esc(dm(p.prep))}</b></span>` : "";
+  // the lens finder gets the whole screen: nothing above the tabs
+  const head = app.tab === "add" && fin().on ? "" : `<div class="prod-head">
+      <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
+      <div class="ph-name-row"><h2 class="ph-name">${esc(p.name || "Untitled production")}</h2><button class="ph-tab" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo">Info${CHEV}</button></div>
+      <button class="ph-row" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Production details">
+        <span class="ph-dates">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<span class="ph-it ph-k">No dates yet</span>`}</span></button>
+      <div class="pinfo${infoOpen ? " open" : ""}" id="pinfo"><div class="pinfo-in"><div class="pinfo-card">
+        <dl class="prod-facts">${facts.map(([k, v]) => `<div${k === "Notes" ? ` class="pf-wide"` : ""}><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
+        <div class="pinfo-acts"><button class="btn sm" type="button" data-act="edit">${missing ? "+ Add DP, 1st AC and dates" : "Edit details"}</button></div></div></div></div>
+    </div>`;
   return `<section class="pad">
-    <div class="prod-head">
-      <button class="btn ghost back" type="button" data-act="home">← Productions</button>
-      <div class="prod-title"><h2>${esc(p.name || "Untitled production")}</h2>
-        <div class="prod-tools"><button class="btn" type="button" data-act="edit">Details</button><button class="btn" type="button" data-act="dup">Duplicate</button></div></div>
-      <details class="prod-more" data-k="prodfacts" ${app.open.has("prodfacts") ? "open" : ""}><summary><span class="pm-line">${esc([h ? h.name : "", p.dp ? "DP " + p.dp : "", shootDates ? "Shoot " + shootDates : ""].filter(Boolean).join(" · "))}</span><span class="pm-tog">Details${CHEV}</span></summary>
-      <dl class="prod-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}${missing ? `<div class="pf-add"><button class="btn ghost sm" type="button" data-act="edit">+ Add DP, 1st AC and dates</button></div>` : ""}</dl></details>
-    </div>
+    ${head}
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}">Add gear</button>
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}">Favorites <span class="num">${nFav || ""}</span></button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Gear list <span class="num" id="tabCount">${t.lines}</span></button>
+      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Cam list <span class="num" id="tabCount">${t.lines}</span></button>
     </div>
   </section>
   ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : viewList(p, h)}`;
@@ -1837,7 +2110,7 @@ function viewCatalog(p, h) {
     .concat(h.categories.filter(c => app.editCat || catCount(c)).map(c => `<button class="chip" type="button" data-act="chip" data-cat="${c.id}" aria-pressed="${app.cat === c.id}" style="--tape: ${catTape(c)}"><span class="dot"></span>${esc(c.name)} <span class="num">${catCount(c)}</span></button>`)).join("");
   return `<div class="bar pad">
       <div class="search-row"><label class="search" for="q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-      <input id="q" type="search" placeholder="Search ${esc(h.name)}, e.g. Alexa Mini, 35mm, Tiffen" autocomplete="off" value="${esc(app.q)}"></label>
+      <input id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
       <button class="btn spec-btn" type="button" data-act="fin-open" aria-label="Advanced search: find a lens by focal length and stop">${RULER_ICON}<span>Advanced</span></button></div>
       <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
     </div>
@@ -1879,6 +2152,21 @@ function editRowHtml(it, kB, q, brand) {
     <span class="info"><span class="nm-row"><span class="nm">${nameHtml(it.name, q)}</span>${linkHtml(it, ITEM.get(it.id)?.h)}</span>${q && it.sku && norm(it.sku).includes(q) ? `<span class="specs"><span class="sku">${hl(it.sku, q)}</span></span>` : ""}${noteHtml(it.id)}</span>
     <button class="btn sm" type="button" data-act="cat-edit" data-id="${esc(it.id)}">Edit</button></li>`;
 }
+/* a lens subcategory split by format, largest first; items without a known format go last ("Other").
+   Only when it holds more than one format; folders the user made are left as they are. */
+const COV_ORDER = ["MF", "LF", "FF", "S35", "APS-C", "MFT", "S16", "2/3", ""];
+function lensFormats(groups, s) {
+  if (s.groupBy || s.direct) return null;
+  const natural = [], other = [];
+  for (const grp of groups) (grp[1].length && !(s.extra || []).includes(grp[0]) && grp[1].every(it => (it.brand || "Generic") === grp[0]) ? natural : other).push(grp);
+  const m = new Map();
+  for (const [, its] of natural) for (const it of its) {
+    const cv = it.lens && COV_ORDER.includes(it.lens.coverage) ? it.lens.coverage : "";
+    if (!m.has(cv)) m.set(cv, []); m.get(cv).push(it);
+  }
+  if (m.size < 2) return null;
+  return { covs: [...m.entries()].sort((a, b) => COV_ORDER.indexOf(a[0]) - COV_ORDER.indexOf(b[0])).map(([cov, its]) => ({ cov, its })), other };
+}
 function treeHtml(p, h) {
   const q = norm(app.q.trim()), searching = q.length > 0, ed = app.editCat;
   const pen = (k, label) => ed ? `<button class="iconbtn pen" type="button" data-act="rename-head" data-k="${esc(k)}" aria-label="Rename ${esc(label)}">✎</button>` : "";
@@ -1904,11 +2192,21 @@ function treeHtml(p, h) {
         const kB = kS + "/" + b, label = headLabel(h, kB, b);
         const open = searching || groups.length === 1 || app.open.has(kB);
         const nSel = its.filter(it => p.items[it.id]).length;
+        // a folder of the user's own gets its own "+ New item", which lands in it
+        const addHere = ed && !searching && isOwnGroup(h, kB) ? `<li class="add-li"><button class="add-head" type="button" data-act="new-item" data-k="${esc(kB)}">+ New item in ${esc(label)}</button></li>` : "";
         return `<details class="brand" data-k="${esc(kB)}"${dz(kB)} ${open ? "open" : ""}><summary${dz(kB)}><span class="bname">${ed ? `<button class="handle" type="button" data-drag="cgrp" data-id="${esc(kB)}" data-label="${esc(label)}" aria-label="Move ${esc(label)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${hl(label, q)}${pen(kB, label)}</span><span class="sumr">${selBadge(nSel, kB)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items">` +
-          (its.length ? (splitByBrand(h, s, b) ? brandRows(its, (it, br) => ed ? editRowHtml(it, kB, q, br) : rowHtml(p, it, q), ed, kB, null, kB, (peekEdits(h.id).brandOrder || {})[kB], searching) : its.map(it => ed ? editRowHtml(it, kB, q) : rowHtml(p, it, q)).join("")) : `<li class="drop-empty"${dz(kB)}>Empty folder. Drag items here.</li>`) + `</ul></details>`;
+          (its.length ? (splitByBrand(h, s, b) ? brandRows(its, (it, br) => ed ? editRowHtml(it, kB, q, br) : rowHtml(p, it, q), ed, kB, null, kB, (peekEdits(h.id).brandOrder || {})[kB], searching) : its.map(it => ed ? editRowHtml(it, kB, q) : rowHtml(p, it, q)).join("")) : `<li class="drop-empty"${dz(kB)}>Empty folder. Drag items here.</li>`) + addHere + `</ul></details>`;
       };
       let brands;
-      if (isFlat(h, s)) {
+      const fmt = !ed && c.id === "lenses" ? lensFormats(groups, s) : null;
+      if (fmt) {
+        // lenses: first by format (Full frame, Super 35…), then by manufacturer; folders the user made stay folders
+        brands = fmt.covs.map(({ cov, its }) => {
+          const kF = kS + "#" + (cov || "other"), open = searching || app.open.has(kF);
+          const nSel = its.filter(it => p.items[it.id]).length;
+          return `<details class="brand fmt" data-k="${esc(kF)}" ${open ? "open" : ""}><summary><span class="bname">${esc(COV_LABEL[cov] || "Other")}</span><span class="sumr">${selBadge(nSel, kF)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items flat">${brandRows(its, it => rowHtml(p, it, q), false, kS, null, kF, (peekEdits(h.id).brandOrder || {})[kS], searching)}</ul></details>`;
+        }).join("") + fmt.other.map(renderGroup).join("");
+      } else if (isFlat(h, s)) {
         // items sitting in their own manufacturer's group go in one list with a heading per manufacturer; folders you made stay folders
         const natural = [], other = [];
         for (const grp of groups) (grp[1].length && !(s.extra || []).includes(grp[0]) && grp[1].every(it => (it.brand || "Generic") === grp[0]) ? natural : other).push(grp);
@@ -1921,7 +2219,12 @@ function treeHtml(p, h) {
       const nSel = selCount(p, e => e.s === s && e.h.id === h.id);
       const sHandle = ed ? `<button class="handle" type="button" data-drag="csub" data-id="${esc(kS)}" data-label="${esc(s.name)}" aria-label="Move ${esc(s.name)}: drag, or use the arrow keys">${GRIP}</button>` : "";
       const addItem = ed && !searching ? `<div class="add-row inset"><button class="add-head" type="button" data-act="new-item" data-k="${esc(kS)}">+ New item in ${esc(s.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(kS)}">+ New folder in ${esc(s.name)}</button></div>` : "";
-      subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}${groups.length ? ` <small>· ${groups.length} ${groupWord(s, groups.length)}</small>` : ""}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
+      // open or close everything inside at once, when there are a few headings to go through
+      const nHeads = (brands.match(/<details class="brand|class="mfr-head/g) || []).length;
+      const anyClosed = /<details class="brand[^>]*" >/.test(brands) || brands.includes('class="mfr-head closed"');
+      const allBtn = !ed && !searching && nHeads >= 2 ? `<div class="sub-tools"><button class="btn ghost sm" type="button" data-act="sub-all" data-k="${esc(kS)}" data-open="${anyClosed ? 1 : 0}">${anyClosed ? "Open all" : "Close all"}</button></div>` : "";
+      const nGroups = fmt ? fmt.covs.length + fmt.other.length : groups.length;
+      subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}${nGroups ? ` <small>· ${nGroups} ${fmt ? (nGroups === 1 ? "format" : "formats") : groupWord(s, nGroups)}</small>` : ""}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
     }
     const dItems = searching ? c.direct.items.filter(it => hay(it, c.direct).includes(q)) : c.direct.items;
     cn += dItems.length;
@@ -2144,7 +2447,7 @@ function parseLensQuery(q) {
 
 function dockHtml(p) {
   const t = totals(p);
-  return `<div class="dock pad" id="dock"><div class="dock-in"><span class="summary-line"><b class="num" id="dockLines">${t.lines}</b> items · <span class="num" id="dockPcs">${t.pcs}</span> pcs</span><button class="btn primary" type="button" data-act="tab" data-tab="list">Review list →</button></div></div>`;
+  return `<div class="dock pad" id="dock"><div class="dock-in"><span class="summary-line"><b class="num" id="dockLines">${t.lines}</b> items · <span class="num" id="dockPcs">${t.pcs}</span> pcs</span><button class="btn primary" type="button" data-act="tab" data-tab="list">Cam list →</button></div></div>`;
 }
 function refreshRows(p, ids) {
   for (const id of new Set(ids)) {
@@ -2156,8 +2459,9 @@ function refreshRows(p, ids) {
     });
     if (e) {
       const bk = grpOf(e.it, e.s);
+      const cv = x => x.it.lens && COV_ORDER.includes(x.it.lens.coverage) ? x.it.lens.coverage : "";
       const keys = [[e.c.id, x => x.c.id === e.c.id], [e.s.key, x => x.s === e.s],
-        [e.s.key + "/" + bk, x => x.s === e.s && grpOf(x.it, x.s) === bk]];
+        [e.s.key + "/" + bk, x => x.s === e.s && grpOf(x.it, x.s) === bk], [e.s.key + "#" + (cv(e) || "other"), x => x.s === e.s && cv(x) === cv(e)]];
       for (const [k, pred] of keys) {
         const el = document.querySelector(`[data-sel="${CSS.escape(k)}"]`);
         if (el) { const n = selCount(p, x => x.h.id === e.h.id && pred(x)); el.textContent = n; el.hidden = !n; }
@@ -2201,32 +2505,35 @@ function ensureSub(h, cid, name, section) {
   return ex ? ex.key : addSubcategory(h, cid, name, section);
 }
 /* the item dialog: edit a rental house item, edit one of the user's own, or make a new one (id null) at presetKey */
-function catEditDialog(h, id, presetKey) {
+function catEditDialog(h, id, presetKey, opts = {}) {
   const e = id ? ITEM.get(id) : null;
   if (id && !e) return;
   const mode = !e ? "new" : e.it.own ? "own" : "base";
   const base = e ? BITEM.get(id) : null, own = mode === "own" ? ownItem(h, id) : null;
-  let sub = e ? e.s : presetKey ? subByKey(h, presetKey) : null;
+  const [pc, ps, pg] = presetKey ? splitKey(presetKey) : ["", "", ""];  // a folder's key has a third part: the folder
+  let sub = e ? e.s : presetKey ? subByKey(h, pc + "/" + ps) : null;
   if (!sub) { const c0 = h.categories.find(c => c.id === app.cat && c.subcategories.length) || h.categories.find(c => c.subcategories.length); sub = c0.subcategories[0]; }
   const cat = catOfSub(h, sub), [hc, hs] = splitKey(sub.key);
-  const gsel = mode === "base" ? (!sub.groupBy && grpOf(e.it, e.s) === e.it.brand ? "__brand" : grpOf(e.it, e.s)) : own && own.g ? own.g : sub.groupBy ? defaultGroup({}, sub, h) : "__brand";
-  const sec = e ? e.it.section : typicalSection(h, hc, hs, "accessories");
+  const gsel = mode === "base" ? (!sub.groupBy && grpOf(e.it, e.s) === e.it.brand ? "__brand" : grpOf(e.it, e.s)) : own && own.g ? own.g : pg && sub === subByKey(h, pc + "/" + ps) ? pg : sub.groupBy ? defaultGroup({}, sub, h) : "__brand";
+  const sec = e ? e.it.section : opts.addTo || typicalSection(h, hc, hs, "accessories");
   const secs = optList(allSections().map(s => [s.id, secName(s.id)]), sec);
   const hint = mode === "base" ? `On the ${esc(h.name)} site: ${esc(base.site_name || base.name)}${base.sku ? ` · SKU ${esc(base.sku)}` : ""}`
-    : mode === "own" ? "" : `Added to ${esc(h.name)}'s catalog for you. Add it to any list like other items.`;
-  const actions = mode === "base" ? `<button class="btn danger" type="button" data-act="cat-item-remove" data-id="${esc(id)}">Remove from catalog</button>` + (e.it.edited ? `<button class="btn ghost" type="button" data-act="cat-item-reset" data-id="${esc(id)}">Undo edits</button>` : "")
-    : mode === "own" ? `<button class="btn danger" type="button" data-act="cat-item-delete" data-id="${esc(id)}">Delete item</button>` : "";
+    : mode === "own" ? "" : opts.addTo ? `It goes on the Cam list, and into ${esc(h.name)}'s catalog for next time. Check where it should live.` : `Added to ${esc(h.name)}'s catalog for you. Add it to any list like other items.`;
+  const dupBtn = mode !== "new" ? `<button class="btn" type="button" data-act="cat-item-dup" data-id="${esc(id)}">Duplicate</button>` : "";
+  const actions = mode === "base" ? `<button class="btn danger" type="button" data-act="cat-item-remove" data-id="${esc(id)}">Remove from catalog</button>` + (e.it.edited ? `<button class="btn ghost" type="button" data-act="cat-item-reset" data-id="${esc(id)}">Undo edits</button>` : "") + dupBtn
+    : mode === "own" ? `<button class="btn danger" type="button" data-act="cat-item-delete" data-id="${esc(id)}">Delete item</button>` + dupBtn
+    : opts.addTo ? `<button class="btn ghost" type="button" data-act="ci-listonly" data-to="${esc(opts.addTo)}">Only on this list</button>` : "";
   const brands = [...new Set([...ITEM.values()].filter(x => x.h === h).map(x => x.it.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
-  showModal(`<datalist id="ci-brands">${brands.map(b => `<option value="${esc(b)}"></option>`).join("")}</datalist><form class="form dialog" id="catItemForm" data-id="${esc(id || "")}" data-mode="${mode}" autocomplete="off">
-    <h3 class="plain">${mode === "new" ? "New item" : "Edit item"}</h3>
-    <div class="field"><label for="ci-name">Name</label><input id="ci-name" name="name" maxlength="160" value="${esc(e ? e.it.name : "")}" placeholder="${mode === "new" ? "e.g. Sony A7S III Cage Kit" : ""}" required>
+  showModal(`<datalist id="ci-brands">${brands.map(b => `<option value="${esc(b)}"></option>`).join("")}</datalist><form class="form dialog" id="catItemForm" data-id="${esc(id || "")}" data-mode="${mode}"${opts.addTo ? ` data-addto="${esc(opts.addTo)}"` : ""} autocomplete="off">
+    <h3 class="plain">${mode === "new" ? opts.addTo ? "Add to the list and the catalog" : "New item" : "Edit item"}</h3>
+    <div class="field"><label for="ci-name">Name</label><input id="ci-name" name="name" maxlength="160" value="${esc(e ? e.it.name : opts.name || "")}" required>
       ${hint ? `<span class="hint">${hint}</span>` : ""}</div>
-    <div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the gear list.">${esc(id ? noteOf(id) : "")}</textarea></div>
+    ${opts.addTo ? "" : `<div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the Cam list.">${esc(id ? noteOf(id) : "")}</textarea></div>`}
     ${mode === "base" ? `<div class="field"><label for="ci-brand">Manufacturer</label><input id="ci-brand" name="brand" maxlength="60" value="${esc(e.it.brand || "")}" list="ci-brands"></div>` : ""}
     ${mode !== "base" ? `<div class="row2">
-      <div class="field"><label for="ci-brand">Manufacturer</label><input id="ci-brand" name="brand" maxlength="60" value="${esc(own && own.brand || "")}" placeholder="Optional, e.g. Tilta" list="ci-brands"></div>
-      <div class="field"><label for="ci-sku">SKU</label><input id="ci-sku" name="sku" maxlength="40" value="${esc(own && own.sku || "")}" placeholder="Optional"></div></div>
-    <div class="field"><label for="ci-url">Link</label><input id="ci-url" name="url" type="url" inputmode="url" maxlength="500" value="${esc(own && own.url || "")}" placeholder="Optional, e.g. the product page"></div>` : ""}
+      <div class="field"><label for="ci-brand">Manufacturer</label><input id="ci-brand" name="brand" maxlength="60" value="${esc(own && own.brand || opts.brand || "")}" placeholder="Optional" list="ci-brands"></div>
+      ${opts.addTo ? "" : `<div class="field"><label for="ci-sku">SKU</label><input id="ci-sku" name="sku" maxlength="40" value="${esc(own && own.sku || "")}" placeholder="Optional"></div>`}</div>
+    ${opts.addTo ? "" : `<div class="field"><label for="ci-url">Link</label><input id="ci-url" name="url" type="url" inputmode="url" maxlength="500" value="${esc(own && own.url || "")}" placeholder="Optional: the product page"></div>`}` : ""}
     <div class="row2">
       <div class="field"><label for="ci-c">Category</label><select id="ci-c" name="c">${catOptions(h, cat.id)}</select>
         <input id="ci-cnew" name="cnew" maxlength="60" placeholder="New category name" aria-label="New category name" hidden></div>
@@ -2236,20 +2543,29 @@ function catEditDialog(h, id, presetKey) {
     <div class="row2">
       <div class="field" id="ci-gfield" ${sub.direct ? "hidden" : ""}><label for="ci-g">Group</label><select id="ci-g" name="g">${groupOpts(h, sub.key, gsel, mode !== "base")}</select>
         <input id="ci-gnew" name="gnew" maxlength="60" placeholder="New group name" aria-label="New group name" hidden></div>
-      <div class="field"><label for="ci-sec">Gear list section</label><select id="ci-sec" name="section">${secs}</select></div>
+      <div class="field"><label for="ci-sec">Cam list section</label><select id="ci-sec" name="section">${secs}</select></div>
     </div>
     <div class="modal-actions">${actions}<span class="grow"></span>
       <button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">${mode === "new" ? "Add item" : "Save"}</button></div>
   </form>`);
-  document.getElementById("ci-name")?.focus();
+  if (opts.addTo) { document.getElementById("ci-s")?.focus({ preventScroll: true }); const card = document.querySelector("#modal .modal-card"); if (card) card.scrollTop = 0; }
+  else document.getElementById("ci-name")?.focus();
+}
+/* a copy of a catalog item, as one of the user's own, right under it; then its dialog opens to rename it */
+function duplicateCatItem(h, id) {
+  const e = ITEM.get(id); if (!e) return null;
+  const own = e.it.own ? ownItem(h, id) : null, g = grpOf(e.it, e.s);
+  const nid = createOwnItem(h, { name: e.it.name + " (copy)", brand: e.it.brand === "Generic" ? "" : e.it.brand, sku: own ? own.sku : "", url: e.it.url || "", s: e.s.key, g: e.s.groupBy ? g || NOFOLDER : g && g !== e.it.brand ? g : "__brand", section: e.it.section });
+  if (nid) reorderItem(h, nid, id, true);
+  return nid;
 }
 function noteDialog(id) {
   const e = ITEM.get(id); if (!e) return;
   const now = noteOf(id);
   showModal(`<form class="form dialog" id="noteForm" data-id="${esc(id)}" autocomplete="off">
     <h3 class="plain">Note</h3>
-    <div class="field"><label for="nt-text">${esc(e.it.name)}</label><textarea id="nt-text" name="note" rows="3" maxlength="300" placeholder="e.g. Ask for the newer version, or: needs the 15mm rods">${esc(now)}</textarea>
-      <span class="hint">Only you see it, here in the catalog. It isn't added to the gear list or the exports.</span></div>
+    <div class="field"><label for="nt-text">${esc(e.it.name)}</label><textarea id="nt-text" name="note" rows="3" maxlength="300" placeholder="">${esc(now)}</textarea>
+      <span class="hint">Only you see it, here in the catalog. It isn't added to the Cam list or the exports.</span></div>
     <div class="modal-actions">${now ? `<button class="btn ghost" type="button" data-act="note-clear" data-id="${esc(id)}">Delete note</button>` : ""}<span class="grow"></span>
       <button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save</button></div>
   </form>`);
@@ -2286,16 +2602,16 @@ function catDialogSync(changed) {
 function newHeadDialog(kind, h, cid) {
   const secs = optList(allSections().map(s => [s.id, secName(s.id)]), "accessories");
   const body = kind === "section"
-    ? `<h3 class="plain">New gear list section</h3>
-      <div class="row2"><div class="field"><label for="nh-name">Section name</label><input id="nh-name" name="name" maxlength="60" required placeholder="e.g. Video Village"></div>
+    ? `<h3 class="plain">New Cam list section</h3>
+      <div class="row2"><div class="field"><label for="nh-name">Section name</label><input id="nh-name" name="name" maxlength="60" required placeholder=""></div>
       <div class="field"><label for="nh-pos">Place it</label><select id="nh-pos" name="pos">${sectionSlots("R|aks")}</select></div></div>
       <p class="hint">Shows in every production and in the Word, PDF and CSV exports. Drag lines into it, or type items in.</p>`
     : `<h3 class="plain">Add a category or subcategory</h3>
       <div class="field"><label for="nh-cat">Category</label><select id="nh-cat" name="cat">${catOptions(h, cid || "__new")}</select>
-        <input id="nh-name" name="name" maxlength="60" placeholder="New category name, e.g. Video Village" aria-label="New category name" ${cid ? "hidden" : ""}></div>
+        <input id="nh-name" name="name" maxlength="60" placeholder="New category name" aria-label="New category name" ${cid ? "hidden" : ""}></div>
       <div id="nh-color" ${cid ? "hidden" : ""}>${swatchField({ id: "__new", custom: true }, "nh-col")}</div>
-      <div class="row2"><div class="field"><label for="nh-sub">Subcategory</label><input id="nh-sub" name="sub" maxlength="60" placeholder="${cid ? "e.g. Director's monitors" : "Optional: leave empty for none"}"></div>
-      <div class="field"><label for="nh-sec">Gear list section</label><select id="nh-sec" name="section">${secs}</select></div></div>
+      <div class="row2"><div class="field"><label for="nh-sub">Subcategory</label><input id="nh-sub" name="sub" maxlength="60" placeholder="${cid ? "" : "Optional: leave empty for none"}"></div>
+      <div class="field"><label for="nh-sec">Cam list section</label><select id="nh-sec" name="section">${secs}</select></div></div>
       <p class="hint">Then drag items onto it, or pick it in an item's Edit.</p>`;
   showModal(`<form class="form dialog" id="newHeadForm" data-kind="${kind === "section" ? "section" : "cat"}" autocomplete="off">${body}
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Add</button></div></form>`);
@@ -2307,8 +2623,8 @@ function folderDialog(h, parent) {
   const secs = inCat ? optList(allSections().map(s => [s.id, secName(s.id)]), typicalSection(h, parent, "_", "accessories")) : "";
   showModal(`<form class="form dialog" id="folderForm" data-parent="${esc(parent)}" autocomplete="off">
     <h3 class="plain">New folder in ${esc(where || "")}</h3>
-    <div class="field"><label for="fd-name">Folder name</label><input id="fd-name" name="name" maxlength="60" required placeholder="${inCat ? "e.g. Director's Monitors" : "e.g. Ultrasonic Distance Measurement"}"></div>
-    ${inCat ? `<div class="field"><label for="fd-sec">Gear list section for its items</label><select id="fd-sec" name="section">${secs}</select></div>` : ""}
+    <div class="field"><label for="fd-name">Folder name</label><input id="fd-name" name="name" maxlength="60" required placeholder=""></div>
+    ${inCat ? `<div class="field"><label for="fd-sec">Cam list section for its items</label><select id="fd-sec" name="section">${secs}</select></div>` : ""}
     <p class="hint">${inCat ? "It shows as a subcategory" : "It shows as a group"} in ${esc(where || "")}. Drag items into it.</p>
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Add folder</button></div>
   </form>`);
@@ -2335,7 +2651,7 @@ function headDialog(scope, h, k) {
   const orig = headOrig(scope, h, k);
   const now = scope === "section" ? secName(k) : headLabel(h, k, orig);
   const [, s, g] = splitKey(k);
-  const what = scope === "section" ? "gear list section" : g ? "folder" : s ? "subcategory" : "category";
+  const what = scope === "section" ? "Cam list section" : g ? "folder" : s ? "subcategory" : "category";
   const ownFolder = scope !== "section" && g && isOwnGroup(h, k);
   const own = scope === "section" ? (app.settings.customSections || []).find(c => c.id === k) : ownFolder || customDef(h, k);
   const nOwn = scope === "section" || !own || ownFolder ? 0 : ownItemsIn(h, k).length;
@@ -2418,16 +2734,15 @@ function linesBySection(p) {
   for (const k in by) by[k].sort((a, b) => { const x = key(a[1]), y = key(b[1]); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; });
   return by;
 }
-const EXAMPLES = { camera: "Alexa Mini body", lens: "Lens set case", support: "Hi Hat", display: "20m BNC cable", filters: "Rota Pola",
-  media: "USB hub", accessories: "Nano clamp", power: "D-Tap splitter", grip: "Applebox 20", aks: "Magliner HD" };
 function lineHtml(p, id, l) {
   const e = ITEM.get(id);
   const key = l.custom ? favKeyCustom(l.name, l.section) : id;
   const qtys = l.tx !== undefined
     ? `<span class="qtys"><span class="tr"><span>TX</span>${stepper("l", id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper("l", id, l.rx, "rx", true)}</span></span>`
     : stepper("l", id, l.qty, null, false);
-  const sub = [l.custom ? "" : [l.cat, l.sub].filter(Boolean).join(" · ")];
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
+  const specs = e ? specsHtml(e.it, "", { list: true }) : "";
+  const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
   const secOpts = allSections().map(s => `<option value="${s.id}" ${s.id === l.section ? "selected" : ""}>${esc(secName(s.id))}</option>`).join("");
   const editor = editing ? `<div class="editor">
@@ -2435,17 +2750,16 @@ function lineHtml(p, id, l) {
         <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}"></div>
         <div class="field"><label for="es-${esc(id)}">Section</label><select id="es-${esc(id)}" data-sec="${esc(id)}">${secOpts}</select></div>
       </div>
-      <div class="field"><label for="eo-${esc(id)}">Note</label><input id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="e.g. or similar / with screen" value="${esc(l.note)}"></div>
+      <div class="field"><label for="eo-${esc(id)}">Note</label><input id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="Shown in brackets after the name" value="${esc(l.note)}"></div>
       <div class="field"><span class="lbl">Sub-items</span>
         <ul class="children">${(l.children || []).map(c => `<li class="child">${stepper("k", id + "|" + c.id, c.qty, null, true)}<input type="text" data-kname="${esc(id + "|" + c.id)}" value="${esc(c.name)}" aria-label="Sub-item name"><button class="x" type="button" data-act="krm" data-id="${esc(id + "|" + c.id)}" aria-label="Remove ${esc(c.name)}">×</button></li>`).join("")}</ul>
-        <form class="custom-add" data-kadd="${esc(id)}" autocomplete="off"><input name="name" placeholder="Add a sub-item, e.g. USB hub, pin adaptor" aria-label="New sub-item"><button type="submit">+ Add</button></form></div>
-      <div class="editor-actions">${l.orig && l.orig !== l.name ? `<button class="btn ghost" type="button" data-act="rename-reset" data-id="${esc(id)}">Use catalog name</button>` : "<span></span>"}<button class="btn primary" type="button" data-act="edit-done">Done</button></div>
+        <form class="custom-add" data-kadd="${esc(id)}" autocomplete="off"><input name="name" placeholder="Add a sub-item" aria-label="New sub-item"><button type="submit">+ Add</button></form></div>
+      <div class="editor-actions"><span class="grp">${l.orig && l.orig !== l.name ? `<button class="btn ghost" type="button" data-act="rename-reset" data-id="${esc(id)}">Use catalog name</button>` : ""}<button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button></span><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
-  const meta = [esc(sub.join(" · "))];
-  return `<li class="line" data-line="${esc(id)}">
+  return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
       <div class="l-top"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}${e ? linkHtml(e.it, e.h) : ""}</span>
         <span class="tools">${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
-      <div class="l-meta"><span>${meta.join("")}</span>${e ? specsHtml(e.it, "", { sku: true }) : ""}</div>
+      ${specs ? `<div class="l-meta">${specs}</div>` : ""}
       ${kids}
       <div class="l-bottom">${qtys}${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}</div>
       ${editor}
@@ -2455,24 +2769,84 @@ const SEC_CAT = { camera: "camera", lens: "lenses", filters: "filters", accessor
 const secTape = s => SEC_CAT[s.id] && (app.settings.catColors || {})[SEC_CAT[s.id]] ? catTape({ id: SEC_CAT[s.id] }) : `var(--sec-${s.custom ? "custom" : s.id}, var(--pal-slate))`;
 function viewList(p, h) {
   const t = totals(p), by = linesBySection(p), issues = coverageIssues(p);
-  const sections = allSections().map(s => {
-    const rows = by[s.id];
+  const secs = allSections(), closed = s => app.open.has("secx/" + s.id);
+  const anyOpen = secs.some(s => by[s.id].length && !closed(s));
+  const sections = secs.map(s => {
+    const rows = by[s.id], shut = closed(s);
     const pcs = rows.reduce((a, [, l]) => a + lineQty(l), 0);
-    return `<div class="section" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3><span><span class="tape" aria-hidden="true"></span>${esc(secName(s.id))}<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button></span><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span></h3>
-      ${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Not in the rental catalog. Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
-      <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input name="name" placeholder="Add to ${esc(secName(s.id))}${EXAMPLES[s.id] ? `, e.g. ${esc(EXAMPLES[s.id])}` : ""}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form>
+    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span><span class="tape" aria-hidden="true"></span>${esc(secName(s.id))}<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button></span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
+      <div class="sec-body">${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
+      <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
     </div>`;
   }).join("");
   return `<section class="pad">
-    <div class="list-tools"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs from ${esc(h.name)}</span>
-      <span class="grp"><button class="btn primary" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button><button class="btn" type="button" data-act="copy" ${t.lines ? "" : "disabled"}>Copy text</button></span></div>
+    <div class="list-tools">
+      <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Cam list"></label>
+      <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
+        ${t.lines ? `<button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button>` : ""}</div></div>
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
-    ${wirelessIssue(p) ? `<div class="warnbox" role="alert"><b>Wireless video</b><p>${esc(wirelessText(wirelessIssue(p)))}</p></div>` : ""}
     ${t.lines ? "" : `<div class="empty-state"><h3>The list is empty</h3><p>Open Add gear to pick items from ${esc(h.name)}'s catalog, or type items into any section below.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
-    ${sections}
+    <p class="empty" id="lqNone" hidden>Nothing on the list matches. Try another word.</p>
+    <div id="listSecs">${sections}</div>
     <div class="section"><button class="add-head big" type="button" data-act="new-section">+ New section</button></div>
   </section>`;
+}
+/* the Cam list search: hide lines that don't match, and sections left empty */
+function applyListFilter() {
+  const q = norm((app.lq || "").trim()), wrap = document.getElementById("listSecs");
+  if (!wrap) return;
+  let shown = 0;
+  wrap.querySelectorAll(".section[data-sec]").forEach(sec => {
+    let n = 0;
+    sec.querySelectorAll("li.line").forEach(li => { const hit = !q || (li.dataset.s || "").includes(q); li.hidden = !hit; if (hit) n++; });
+    sec.classList.toggle("searching", !!q);
+    sec.hidden = !!q && !n; shown += n;
+  });
+  const none = document.getElementById("lqNone"); if (none) none.hidden = !q || shown > 0;
+  stripe(wrap);
+}
+function addCustomLine(p, name, sec) {
+  const id = uid("custom-");
+  p.items[id] = { qty: 1, note: "", name: String(name).slice(0, 120), brand: "", section: sec, cat: "", sub: "", custom: true, added: Date.now(), children: [] };
+  touch(p);
+  return id;
+}
+/* an item typed into the Cam list: is it already in the house's catalog, and if not, where would it go?
+   Each subcategory holding items of that list section is scored by the words its items share with the name (rare words count more). */
+const GUESS_STOP = new Set(["the", "and", "for", "with", "set", "kit", "mm", "inch", "pro", "mini", "new", "black", "of", "to", "x"]);
+const words = s => norm(s).replace(/[^a-z0-9.]+/g, " ").split(" ").filter(w => w.length >= 2 && !GUESS_STOP.has(w));
+function catalogGuess(h, name, sec) {
+  const n = flat(name), all = [...ITEM.values()].filter(e => e.h === h);
+  const exact = all.find(e => flat(e.it.name) === n);
+  if (exact) return { match: exact.it.id };
+  if (n.length >= 5) { const inc = all.filter(e => flat(e.it.name).includes(n)); if (inc.length === 1) return { match: inc[0].it.id }; }
+  const pool = all.filter(e => e.it.section === sec);
+  if (!pool.length) return { none: true };
+  const df = new Map();
+  for (const e of all) for (const w of new Set(words(e.it.name))) df.set(w, (df.get(w) || 0) + 1);
+  const ws = [...new Set(words(name))];
+  const brands = new Map(all.map(e => [norm(e.it.brand), e.it.brand]));
+  const brand = ws.map(w => brands.get(w)).find(b => b && b !== "Generic") || "";
+  const hits = new Map(), best = new Map();
+  for (const e of pool) {
+    const iw = new Set(words(e.it.name + " " + e.s.name)); let sc = 0;
+    for (const w of ws) if (iw.has(w) && norm(e.it.brand) !== w) sc += 1 / Math.log2(1.5 + (df.get(w) || 1));
+    if (!sc) continue;
+    hits.set(e.s, (hits.get(e.s) || 0) + 1);
+    if (!best.has(e.s) || sc > best.get(e.s).sc) best.set(e.s, { sc, e });
+  }
+  const subs = [...new Set(pool.map(e => e.s))];
+  // the closest single item counts most; a few more alike in the same subcategory tip the balance
+  const ranked = [...best.entries()].map(([s, b]) => [s, b.sc + 0.1 * Math.min(5, hits.get(s))]).sort((a, b) => b[1] - a[1]);
+  let sub = ranked.length ? ranked[0][0] : null, sure = false;
+  if (subs.length === 1) { sub = subs[0]; sure = true; }
+  else if (ranked.length) sure = best.get(sub).sc >= 0.9 && (ranked.length === 1 || ranked[0][1] >= ranked[1][1] * 1.4);
+  if (!sub) sub = subs.sort((a, b) => pool.filter(e => e.s === b).length - pool.filter(e => e.s === a).length)[0];
+  const like = best.has(sub) ? best.get(sub).e : null;
+  const group = sub.groupBy && like ? grpOf(like.it, like.s) : undefined;
+  return { sub, sure, brand, group };
 }
 
 /* ---------- exports ---------- */
@@ -2496,7 +2870,7 @@ const headerLines = p => headerParts(p).map(l => l.plain || l.segs.map(s => `${s
 /* colors from the user's Word list: peach header block, green labels for camera/lens/support, blue for the rest */
 const DOC_HEAD_FILL = "FBE4D5";
 const secFill = id => ["camera", "lens", "support"].includes(id) ? "C5E0B3" : "DEEAF6";
-/* one exported row per line, or two for a TX/RX line */
+/* one exported row per line; a wireless video line says its transmitters and receivers on the same row */
 const skuOn = () => app.settings.exportSku !== false;
 function exportRows(id, l) {
   const e = ITEM.get(id);
@@ -2504,12 +2878,10 @@ function exportRows(id, l) {
   if (l.note) extra.push(l.note);
   if (e && e.it.lens && e.it.lens.set && e.it.lens.focals) extra.push(e.it.lens.focals);
   const kids = (l.children || []).map(c => `${c.qty}x ${c.name}`);
-  const base = { extra, kids, sku: e && e.it.sku || "", l };
+  const base = { extra, kids, sku: l.sku || (e && e.it.sku) || "", l };
   if (l.tx !== undefined) {
-    const r = [];
-    if (l.tx) r.push({ ...base, qty: l.tx, name: l.name + " (TX)", kids: [], extra: [] });
-    if (l.rx) r.push({ ...base, qty: l.rx, name: l.name + " (RX)" });
-    return r;
+    const parts = [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean);
+    return parts.length ? [{ ...base, qty: (l.tx || 0) + (l.rx || 0), name: `${l.name} (${parts.join(" / ")})` }] : [];
   }
   return [{ ...base, qty: l.qty, name: l.name }];
 }
@@ -2532,7 +2904,7 @@ function csvText(p) {
   const q = v => /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v);
   const by = linesBySection(p), rows = [["Section", "Qty", "Item", "Note", "Sub-items", "SKU", "Brand", "Catalog category", "Catalog subcategory"]];
   for (const s of allSections()) for (const [id, l] of by[s.id]) for (const r of exportRows(id, l))
-    rows.push([secName(s.id), r.qty, r.name, r.extra.join("; "), r.kids.join("; "), r.sku, l.brand || "", l.custom ? "" : l.cat, l.custom ? "" : l.sub]);
+    rows.push([secName(s.id), r.qty, r.name, r.extra.join("; "), r.kids.join("; "), r.sku, l.brand || "", l.cat || "", l.sub || ""]);
   return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
 }
 function fileBase(p) { return ("Camera list - " + (p.name || "production") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "")).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
@@ -2602,29 +2974,76 @@ function exportHtml(p) {
 /* preview: the export document on a page, scaled to the screen, with the export buttons under it */
 function openPreview(p) {
   closePreview();
-  fitPreview.zoom = false;
   const o = document.createElement("div");
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
-  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><button class="btn" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKUs ${skuOn() ? "on" : "off"}</button><button class="btn" type="button" data-act="preview-zoom" aria-pressed="false">Zoom</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
+  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><button class="btn" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKUs ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
-    <div class="pv-actions"><span class="hint">Save as</span><button class="btn primary" type="button" data-act="export-docx">Word</button><button class="btn primary" type="button" data-act="export-pdf">PDF</button><button class="btn" type="button" data-act="export-csv">CSV</button><button class="btn" type="button" data-act="copy">Copy text</button></div>`;
+    <div class="pv-actions"><button class="btn primary send-btn" type="button" data-act="send-open">${SEND_ICON}Send</button><span class="pv-sep" aria-hidden="true"></span><span class="hint">Save as</span><button class="btn" type="button" data-act="export-docx">Word</button><button class="btn" type="button" data-act="export-pdf">PDF</button><button class="btn" type="button" data-act="export-csv">CSV</button><button class="btn" type="button" data-act="copy">Text</button></div>`;
   document.body.appendChild(o);
   document.body.style.overflow = "hidden";
   fitPreview();
   o.querySelector(".x").focus();
+  navSync();
 }
 function fitPreview() {
   const o = document.getElementById("preview");
   if (!o) return;
   const sc = o.querySelector(".pv-scroll"), fit = o.querySelector(".pv-fit"), paper = o.querySelector(".pv-paper");
-  const k = fitPreview.zoom ? 1 : Math.min(1, (sc.clientWidth - 24) / 794);
+  const k = Math.min(1, (sc.clientWidth - 24) / 794);
   paper.style.transform = `scale(${k})`;
   fit.style.width = 794 * k + "px";
   fit.style.height = paper.offsetHeight * k + "px";
 }
-fitPreview.zoom = false;
-function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; } }
+function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; navSync(); } }
+/* Send: the file goes out through the phone's share menu (Gmail, WhatsApp…) with a subject and message the user can edit */
+const SEND_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg>`;
+const SEND_DEFAULT = { subject: "Camera list – {production}", message: "Hi,\n\nAttached is the camera list for {production}.\n\nThanks,\n{ac}", fmt: "pdf" };
+const sendFill = (t, p) => String(t || "").replace(/\{production\}/g, p.name || "the production").replace(/\{ac\}/g, p.ac || "").replace(/\s+$/, "");
+const sendUnfill = (t, p) => { let s = String(t || ""); if (p.name && p.name.length > 1) s = s.split(p.name).join("{production}"); if (p.ac && p.ac.length > 1) s = s.split(p.ac).join("{ac}"); return s; };
+const sendJob = { key: "", blob: null, wait: null };
+function sendDialog(p) {
+  const s = { ...SEND_DEFAULT, ...(app.settings.send || {}) };
+  showModal(`<form class="form dialog" id="sendForm" autocomplete="off">
+    <h3 class="plain">Send the list</h3>
+    <div class="field"><span class="lbl" id="sd-fmt">File</span><div class="seg" role="radiogroup" aria-labelledby="sd-fmt">${[["pdf", "PDF"], ["docx", "Word"]].map(([v, t]) => `<label><input type="radio" name="fmt" value="${v}" ${s.fmt === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div></div>
+    <div class="field"><label for="sd-subj">Subject</label><input id="sd-subj" name="subject" maxlength="200" value="${esc(sendFill(s.subject, p))}"></div>
+    <div class="field"><label for="sd-msg">Message</label><textarea id="sd-msg" name="message" rows="6" maxlength="2000">${esc(sendFill(s.message, p))}</textarea>
+      <span class="hint">Your changes are kept for the next list.</span></div>
+    <p class="hint send-how">This opens your phone's share menu with the file attached: pick Gmail, WhatsApp or any other app.</p>
+    <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit" id="sendGo" disabled>Preparing…</button></div>
+  </form>`);
+  sendPrep(p, s.fmt);
+}
+/* the file is built as soon as the dialog opens, so tapping Send shares it straight away (phones only open the share menu right after a tap) */
+function sendPrep(p, fmt) {
+  const key = p.id + ":" + p.updatedAt + ":" + fmt + ":" + skuOn();
+  const go = document.getElementById("sendGo");
+  const ready = () => { const g = document.getElementById("sendGo"); if (g && sendJob.key === key) { g.disabled = false; g.textContent = "Send…"; } };
+  if (sendJob.key === key && sendJob.blob) { ready(); return; }
+  if (go) { go.disabled = true; go.textContent = fmt === "pdf" ? "Preparing the PDF…" : "Preparing…"; }
+  sendJob.key = key; sendJob.blob = null;
+  sendJob.wait = (fmt === "pdf" ? buildPdf(p) : buildDocx(p)).then(b => { if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
+    .catch(() => { if (sendJob.key === key) { sendJob.key = ""; const g = document.getElementById("sendGo"); if (g) g.textContent = "Couldn't build the file"; } });
+}
+async function sendNow(p, f) {
+  const fmt = f.elements.fmt.value || "pdf", subject = f.elements.subject.value.trim(), message = f.elements.message.value;
+  app.settings.send = { subject: sendUnfill(subject, p), message: sendUnfill(message, p), fmt }; touchSettings();
+  const blob = sendJob.blob; if (!blob) return;
+  const name = fileBase(p) + (fmt === "pdf" ? ".pdf" : ".docx");
+  const file = typeof File === "function" ? new File([blob], name, { type: blob.type || (fmt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document") }) : null;
+  let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+  if (can) {
+    try { await navigator.share({ files: [file], title: subject, text: message }); closeModal(); }
+    catch (e) { if (!e || e.name !== "AbortError") toast("The share menu didn't open. Try again."); }
+    return;
+  }
+  // a computer, or a view without sharing: save the file and copy the message to paste into the email
+  closeModal();
+  try { await navigator.clipboard.writeText(subject + "\n\n" + message); } catch (e) {}
+  await saveFile(name, blob);
+  toast("Sending with the file works from your phone. Here the file was saved and the message copied.");
+}
 window.addEventListener("resize", fitPreview);
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 async function buildPdf(p) {
@@ -2688,7 +3107,25 @@ function copyText(text) {
 /* ---------- events ---------- */
 function kidRef(p, ref) { const [lid, kid] = ref.split("|"); const l = p.items[lid]; const c = l && (l.children || []).find(k => k.id === kid); return { l, c }; }
 function rerenderKeepScroll() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+/* press and hold (a production card): a menu instead of opening it */
+const lp = { t: 0, x: 0, y: 0, el: null, fired: false };
+function longPress(el) { if (el.dataset.lp === "prod" && !app.sel) prodMenu(el.dataset.id); }
+document.addEventListener("pointerdown", e => {
+  lp.fired = false; clearTimeout(lp.t); lp.el = null;
+  const el = e.target.closest && e.target.closest("[data-lp]");
+  if (!el || e.button > 0 || app.sel) return;
+  lp.el = el; lp.x = e.clientX; lp.y = e.clientY;
+  lp.t = setTimeout(() => { if (lp.el === el && el.isConnected) { lp.fired = true; longPress(el); } }, 520);
+});
+document.addEventListener("pointermove", e => { if (lp.el && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) { clearTimeout(lp.t); lp.el = null; } });
+for (const t of ["pointerup", "pointercancel", "scroll"]) document.addEventListener(t, () => { clearTimeout(lp.t); lp.el = null; }, true);
+document.addEventListener("contextmenu", e => {
+  const el = e.target.closest && e.target.closest("[data-lp]"); if (!el || app.sel) return;
+  e.preventDefault();
+  if (!lp.fired) { clearTimeout(lp.t); lp.el = null; lp.fired = true; longPress(el); }
+});
 document.addEventListener("click", e => {
+  if (lp.fired && e.target.closest && e.target.closest("[data-lp]")) { lp.fired = false; e.preventDefault(); return; }
   const b = e.target.closest("[data-act]");
   if (!b || b.disabled) return;
   const act = b.dataset.act, id = b.dataset.id, f = b.dataset.f;
@@ -2701,20 +3138,90 @@ document.addEventListener("click", e => {
   }
   const p = cur();
   switch (act) {
-    case "home": closePreview(); app.view = "home"; app.pid = null; app.editing = null; render(); window.scrollTo(0, 0); break;
+    case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; render(); window.scrollTo(0, 0); break;
     case "settings": app.view = "settings"; render(); window.scrollTo(0, 0); break;
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
-    case "new": app.formFor = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
-    case "open": app.pid = id; app.view = "production"; app.editing = null; app.editCat = false; app.tab = totals(cur() || { items: {} }).lines ? "list" : "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break;
-    case "edit": app.formFor = app.pid; app.view = "form"; render(); window.scrollTo(0, 0); break;
+    case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
+    case "open": app.pid = id; app.view = "production"; app.editing = null; app.editCat = false; app.dupFrom = null; app.tab = totals(cur() || { items: {} }).lines ? "list" : "add"; app.q = ""; app.lq = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break;
+    case "edit": app.formFor = app.pid; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
     case "pick-house": {
       const wrap = document.getElementById("housePick");
       wrap.dataset.value = b.dataset.house;
       wrap.querySelectorAll(".house-opt").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+      const err = document.getElementById("houseErr"); if (err) err.hidden = true;
       break;
     }
+    /* the production's details panel under its name */
+    case "pinfo": {
+      const on = !app.open.has("prodfacts");
+      if (on) app.open.add("prodfacts"); else app.open.delete("prodfacts");
+      document.getElementById("pinfo")?.classList.toggle("open", on);
+      document.querySelectorAll('[data-act="pinfo"]').forEach(x => x.setAttribute("aria-expanded", String(on)));
+      break;
+    }
+    /* home: press-and-hold menu and selecting several */
+    case "pm-dup": closeModal(); startDuplicate(id); break;
+    case "pm-select": closeModal(); app.sel = new Set([id]); render(); break;
+    case "pm-del": {
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
+      const nm = app.productions.find(x => x.id === id)?.name || "Production";
+      closeModal(); deleteProductions([id]); render(); toast(`${nm} deleted`);
+      break;
+    }
+    case "pick-prod": { if (!app.sel) break; if (app.sel.has(id)) app.sel.delete(id); else app.sel.add(id); rerenderKeepScroll(); break; }
+    case "sel-cancel": app.sel = null; rerenderKeepScroll(); break;
+    case "sel-dup": {
+      const ids = [...(app.sel || [])]; if (!ids.length) break;
+      for (const sid of ids) { const src = app.productions.find(x => x.id === sid); if (!src) continue; const c = copyProduction(src, { name: (src.name || "Production") + " (copy)" }); app.productions.push(c); touch(c); }
+      app.sel = null; rerenderKeepScroll(); toast(`Duplicated ${ids.length} production${ids.length === 1 ? "" : "s"}`);
+      break;
+    }
+    case "sel-del": {
+      const ids = [...(app.sel || [])]; if (!ids.length) break;
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = `Tap again to delete ${ids.length}`; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete"; } }, 4000); break; }
+      deleteProductions(ids); app.sel = null; rerenderKeepScroll(); toast(`Deleted ${ids.length} production${ids.length === 1 ? "" : "s"}`);
+      break;
+    }
+    /* the shoot dates calendar */
+    case "cal-open": calOpen(); break;
+    case "cal-day": calPick(b.dataset.d); break;
+    case "cal-prev": case "cal-next": { const d = act === "cal-next" ? 1 : -1; cal.m += d; if (cal.m < 1) { cal.m = 12; cal.y--; } if (cal.m > 12) { cal.m = 1; cal.y++; } calRefresh(); document.querySelector(`#cal [data-act="${act}"]`)?.focus(); break; }
+    case "cal-clear": cal.start = ""; cal.end = ""; cal.days = {}; cal.stage = "start"; calRefresh(); break;
+    case "cal-done": calDone(); break;
+    /* Cam list sections: close and open */
+    case "sec-toggle": {
+      if (e.target.closest(".pen")) break;
+      const k = "secx/" + b.dataset.k;
+      if (app.open.has(k)) app.open.delete(k); else app.open.add(k);
+      rerenderKeepScroll(); break;
+    }
+    case "sec-all": {
+      const open = b.dataset.open === "1";
+      for (const s of allSections()) { if (open) app.open.delete("secx/" + s.id); else app.open.add("secx/" + s.id); }
+      rerenderKeepScroll(); break;
+    }
+    /* catalog: open or close everything inside a subcategory */
+    case "sub-all": {
+      const sub = b.closest("details.sub"); if (!sub) break;
+      const open = b.dataset.open === "1", m = app.settings.closedBrands || (app.settings.closedBrands = {});
+      sub.querySelectorAll("details[data-k]").forEach(d => { if (open) app.open.add(d.dataset.k); else app.open.delete(d.dataset.k); });
+      sub.querySelectorAll("li.mfr-head[data-k]").forEach(li => { if (open) delete m[li.dataset.k]; else m[li.dataset.k] = true; });
+      touchSettings(); rerenderKeepScroll(); break;
+    }
+    case "dup-line": {
+      const l = p.items[id]; if (!l) break;
+      const e0 = ITEM.get(id), nid = uid("custom-"), c = JSON.parse(JSON.stringify(l));
+      Object.assign(c, { custom: true, added: Date.now(), sku: l.sku || (e0 && e0.it.sku) || "", brand: l.brand || "", auto: 0, url: l.url || (e0 && e0.it.url) || "" });
+      delete c.autoWhy; delete c.orig; delete c.pos;
+      (c.children || []).forEach(k => { k.id = uid("k"); });
+      p.items[nid] = c; moveLine(p, nid, l.section, id, true);
+      app.editing = nid; touch(p); rerenderKeepScroll(); document.getElementById("en-" + nid)?.select();
+      toast("Duplicated. Rename the copy if you like.");
+      break;
+    }
+    case "send-open": sendDialog(p); break;
     case "delete": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete production"; } }, 4000); break; }
       const delId = app.formFor;
@@ -2723,14 +3230,7 @@ document.addEventListener("click", e => {
       app.view = "home"; app.pid = null; render(); toast("Production deleted");
       break;
     }
-    case "dup": {
-      const copy = JSON.parse(JSON.stringify(p));
-      Object.assign(copy, { id: uid("p"), name: (p.name || "Production") + " (copy)", createdAt: Date.now() });
-      app.productions.push(copy); touch(copy);
-      app.pid = copy.id; app.formFor = copy.id; app.view = "form"; render(); window.scrollTo(0, 0);
-      toast("Copied with all items. Update the details.");
-      break;
-    }
+    case "dup": startDuplicate(id || app.pid); break;
     case "tab": app.tab = b.dataset.tab; app.editing = null; render(); window.scrollTo(0, 0); break;
     case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; }
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
@@ -2805,6 +3305,20 @@ document.addEventListener("click", e => {
       removeCatItem(h, id); closeModal(); rerenderKeepScroll(); toast(`Removed ${name}. Bring it back from Removed items.`);
       break;
     }
+    case "cat-item-dup": {
+      const h = houseById(p.houseId), nid = duplicateCatItem(h, id);
+      if (!nid) break;
+      rerenderKeepScroll(); catEditDialog(h, nid); document.getElementById("ci-name")?.select();
+      toast("Copy made. Rename it here.");
+      break;
+    }
+    case "ci-listonly": {  // a typed-in item that stays off the catalog
+      const f2 = document.getElementById("catItemForm"), nm = (f2?.elements.name.value || "").trim();
+      if (!nm) { f2?.elements.name.focus(); break; }
+      addCustomLine(p, nm, b.dataset.to); closeModal(); rerenderKeepScroll(); toast("Added to this list only");
+      document.querySelector(`form[data-custom="${CSS.escape(b.dataset.to)}"] input`)?.focus();
+      break;
+    }
     case "removed-list": removedDialog(houseById(p.houseId)); break;
     case "cat-item-restore": {
       const h = houseById(p.houseId); restoreCatItem(h, id);
@@ -2863,7 +3377,6 @@ document.addEventListener("click", e => {
       const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
       break;
     }
-    case "preview-zoom": fitPreview.zoom = !fitPreview.zoom; b.setAttribute("aria-pressed", String(fitPreview.zoom)); b.textContent = fitPreview.zoom ? "Fit" : "Zoom"; fitPreview(); break;
   }
 });
 document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
@@ -2877,6 +3390,7 @@ document.addEventListener("input", e => {
   if (t.name === "colorHex" && t.form) { const r = t.form.querySelector('input[name="color"][value="custom"]'); if (r) r.checked = true; t.closest(".sw")?.style.setProperty("--sw", t.value); return; }
   if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.value.trim(); fin().more = {}; refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
+  if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
   if (!p) return;
   if (t.dataset.note) { const l = p.items[t.dataset.note]; if (l) { l.note = t.value.slice(0, 200); touch(p); } return; }
   if (t.dataset.ename) { const l = p.items[t.dataset.ename]; if (l) { l.name = t.value.slice(0, 160) || l.orig || l.name; touch(p); } return; }
@@ -2889,21 +3403,18 @@ document.addEventListener("change", e => {
     const f = t.form, isNew = t.value === "__new";
     f.elements.name.hidden = !isNew;
     const col = document.getElementById("nh-color"); if (col) col.hidden = !isNew;
-    f.elements.sub.placeholder = isNew ? "Optional: leave empty for none" : "e.g. Director's monitors";
+    f.elements.sub.placeholder = isNew ? "Optional: leave empty for none" : "";
     if (isNew) f.elements.name.focus(); else f.elements.sub.focus();
     return;
   }
   if (t.dataset.rqty) { const r = app.settings.rules.find(x => x.id === t.dataset.rqty); if (r) { r.qty = Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)); touchSettings(); } return; }
-  if (!p) {
-    if (t.id === "f-start" || t.id === "f-end") document.getElementById("f-days").placeholder = daysBetween(document.getElementById("f-start").value, document.getElementById("f-end").value) || "Auto";
-    return;
-  }
+  if (t.form && t.form.id === "sendForm" && t.name === "fmt") { if (p) sendPrep(p, t.value); return; }
+  if (!p) return;
   const f = t.dataset.f;
   if (t.dataset.cqty) { const ids = setQty(p, t.dataset.cqty, t.value, p.items[t.dataset.cqty] ? f : undefined); if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids); return; }
   if (t.dataset.lqty) { setQty(p, t.dataset.lqty, t.value, f); rerenderKeepScroll(); return; }
   if (t.dataset.kqty) { const { l, c } = kidRef(p, t.dataset.kqty); if (c) { c.qty = clampQ(t.value); if (!c.qty) l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); } return; }
   if (t.dataset.sec) { const l = p.items[t.dataset.sec]; if (l) { l.section = t.value; delete l.pos; touch(p); rerenderKeepScroll(); } return; }
-  if (t.id === "f-start" || t.id === "f-end") document.getElementById("f-days").placeholder = daysBetween(document.getElementById("f-start").value, document.getElementById("f-end").value) || "Auto";
 });
 document.addEventListener("submit", e => {
   e.preventDefault();
@@ -2923,9 +3434,12 @@ document.addEventListener("submit", e => {
     if (id) setNote(id, v.note);
     const e2 = id && ITEM.get(id);
     if (e2) { app.open.add(e2.c.id); app.open.add(e2.s.key); app.open.add(e2.s.key + "/" + grpOf(e2.it, e2.s)); }
+    const addTo = f.dataset.addto;
+    if (addTo && e2) { setQty(p, id, 1); if (p.items[id]) p.items[id].section = addTo; touch(p); }  // typed into the Cam list: it goes on the list too
     closeModal(); rerenderKeepScroll();
-    if (e2) document.querySelector(`[data-row="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "center" });
-    toast(e2 ? `${f.dataset.mode === "new" ? "Added" : "Saved"} in ${e2.c.name}${e2.s.direct ? "" : " › " + e2.s.name}` : "Saved");
+    if (e2 && !addTo) document.querySelector(`[data-row="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "center" });
+    if (addTo) document.querySelector(`form[data-custom="${CSS.escape(addTo)}"] input`)?.focus();
+    toast(e2 ? `${f.dataset.mode === "new" ? "Added" : "Saved"} in ${e2.c.name}${e2.s.direct ? "" : " › " + e2.s.name}${addTo ? ", and on the list" : ""}` : "Saved");
     return;
   }
   if (f.id === "newHeadForm") {
@@ -3005,18 +3519,24 @@ document.addEventListener("submit", e => {
   }
   if (f.id === "prodForm") {
     const v = Object.fromEntries(new FormData(f).entries());
+    let days = {}; try { days = JSON.parse(v.days || "{}") || {}; } catch (err) {}
     const fields = { name: v.name.trim(), company: v.company.trim(), dp: v.dp.trim(), ac: v.ac.trim(), acPhone: v.acPhone.trim(),
       prep: v.prep, shootStart: v.shootStart, shootEnd: v.shootEnd && v.shootEnd >= v.shootStart ? v.shootEnd : v.shootStart,
-      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", notes: v.notes.trim(),
+      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days, notes: v.notes.trim(),
       houseId: document.getElementById("housePick").dataset.value };
     if (!fields.name) { document.getElementById("f-name").focus(); return; }
+    if (!houseById(fields.houseId)) { const err = document.getElementById("houseErr"); if (err) err.hidden = false; document.querySelector("#housePick .house-opt")?.focus(); return; }
     let p = app.formFor && app.productions.find(x => x.id === app.formFor);
+    const src = !p && app.dupFrom && app.productions.find(x => x.id === app.dupFrom);
     if (p) { Object.assign(p, fields); toast("Details saved"); }
+    else if (src) { p = copyProduction(src, fields); app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
     else { p = newProduction(fields); app.productions.push(p); app.tab = "add"; }
+    app.dupFrom = null;
     touch(p);
-    app.pid = p.id; app.view = "production"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
+    app.pid = p.id; app.view = "production"; app.q = ""; app.lq = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
     return;
   }
+  if (f.id === "sendForm") { const p = cur(); if (p) sendNow(p, f); return; }
   if (f.id === "ruleForm") {
     const cam = f.elements.cam.value, bat = f.elements.bat.value, qty = Math.max(1, Math.min(99, parseInt(f.elements.qty.value, 10) || 1));
     const label = cam.startsWith("brand:") ? `All ${cam.slice(6)} cameras` : f.elements.cam.selectedOptions[0].textContent;
@@ -3029,12 +3549,27 @@ document.addEventListener("submit", e => {
   const p = cur();
   if (!p) return;
   if (f.dataset.custom) {
-    const name = (f.elements.name.value || "").trim();
+    const name = (f.elements.name.value || "").trim().slice(0, 120), sec = f.dataset.custom, h = houseById(p.houseId);
     if (!name) return;
-    const id = uid("custom-");
-    p.items[id] = { qty: 1, note: "", name: name.slice(0, 120), brand: "", section: f.dataset.custom, cat: "", sub: "", custom: true, added: Date.now(), children: [] };
-    touch(p); rerenderKeepScroll();
-    document.querySelector(`form[data-custom="${CSS.escape(f.dataset.custom)}"] input`)?.focus();
+    const g = h ? catalogGuess(h, name, sec) : { none: true };
+    if (g.match) {  // it's already in the catalog: add that item
+      const had = p.items[g.match];
+      setQty(p, g.match, (had ? lineQty(had) : 0) + 1);
+      if (!had && p.items[g.match]) p.items[g.match].section = sec;
+      touch(p); rerenderKeepScroll(); toast(`Added ${ITEM.get(g.match).it.name} from ${h.name}'s catalog`);
+    } else if (g.sub && g.sure) {  // a clear home in the catalog: save it there and add it
+      const id = createOwnItem(h, { name, brand: g.brand || "", s: g.sub.key, g: g.group, section: sec });
+      if (!id) return;
+      setQty(p, id, 1); if (p.items[id]) p.items[id].section = sec;
+      touch(p); rerenderKeepScroll();
+      const e2 = ITEM.get(id); toast(`Added, and saved in ${h.name}'s catalog › ${e2 ? e2.c.name + (e2.s.direct ? "" : " › " + e2.s.name) : g.sub.name}`);
+    } else if (g.sub || (!g.none && h)) {  // not sure where it goes in the catalog: ask, with a best guess picked
+      catEditDialog(h, null, g.sub ? g.sub.key + (g.group ? "/" + g.group : "") : null, { name, addTo: sec, brand: g.brand });
+      return;
+    } else {  // nothing like it in the catalog (AKS…): just a line on this list
+      addCustomLine(p, name, sec); rerenderKeepScroll();
+    }
+    document.querySelector(`form[data-custom="${CSS.escape(sec)}"] input`)?.focus();
     return;
   }
   if (f.dataset.kadd) {
