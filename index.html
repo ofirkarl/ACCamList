@@ -262,6 +262,7 @@ h2.page { font-family: var(--font-display); font-weight: 800; font-size: 40px; l
 /* production header */
 .prod-head { padding-block: 10px 6px; display: grid; gap: 6px; }
 .prod-head .back { justify-self: start; }
+.set-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .prod-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .prod-title h2 { font-family: var(--font-display); font-weight: 800; font-size: 36px; line-height: 1; margin: 0; text-transform: uppercase; overflow-wrap: anywhere; }
 .prod-meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
@@ -804,6 +805,18 @@ details.more > summary::-webkit-details-marker { display: none; }
 .rule small { color: var(--muted); }
 fieldset.pk { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 12px; margin: 0; display: grid; gap: 10px; min-width: 0; }
 fieldset.pk legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
+fieldset.pk legend small { font-weight: 400; color: var(--muted); }
+.cx-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cx-chips:empty { display: none; }
+.cx-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 4px 4px 12px; font-size: 13px; font-weight: 600; max-width: 100%; }
+.cx-x { border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; flex: none; }
+.cx-x:hover { background: var(--line); color: var(--fg); }
+.rule.clash .txt { display: grid; gap: 3px; text-align: left; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; cursor: pointer; min-width: 0; }
+.rule.clash .txt b { display: inline; }
+.rule.clash .c-a { font-weight: 600; font-size: 14px; color: var(--fg); }
+.rule.clash .c-b, .rule.clash .c-sw { font-size: 13px; color: var(--muted); }
+.rule.clash .c-sw b { color: var(--fg); }
+.wb-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 #pk-when, #pk-add { display: grid; gap: 10px; }
 .notice { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 10px); z-index: 45; width: min(420px, calc(100% - 24px)); box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; background: var(--surface); color: var(--fg); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 10px 6px 10px 12px; box-shadow: 0 10px 30px rgba(0,0,0,.18); transform: translate(-50%, -140%); opacity: 0; transition: transform .35s cubic-bezier(.2, .8, .2, 1), opacity .25s; }
 .notice.in { transform: translate(-50%, 0); opacity: 1; }
@@ -1792,6 +1805,57 @@ function notifyDefaults(adds) {
   clearTimeout(notifyDefaults._t); notifyDefaults._t = setTimeout(() => { n.classList.remove("in"); setTimeout(() => { if (!n.classList.contains("in")) n.hidden = true; }, 320); }, 4200);
 }
 
+/* two items that don't work together (an ARRI Amira has no radio inside, so its cforce mini has to be the RF one):
+   when a list has one of each you're told why, and can swap in what works or keep both */
+const clashRules = () => app.settings.clashes || (app.settings.clashes = []);
+const itName = id => { const e = ITEM.get(id); return e ? e.it.name : "(no longer in the catalog)"; };
+function clashIssues(p) {
+  const out = [], ok = p.clashOk || {};
+  for (const r of app.settings.clashes || []) {
+    const a = r.a.filter(id => p.items[id]), b = r.b.filter(id => p.items[id]);
+    if (a.length && b.length && !ok[r.id]) out.push({ r, a, b });
+  }
+  return out;
+}
+/* "keep both" lasts while both stay on the list: take one off and add it again, and you're told again */
+function clashSettle(p) {
+  if (!p.clashOk) return;
+  for (const rid of Object.keys(p.clashOk)) { const r = (app.settings.clashes || []).find(x => x.id === rid); if (!r || !(r.a.some(x => p.items[x]) && r.b.some(x => p.items[x]))) delete p.clashOk[rid]; }
+}
+const clashPair = i => `<strong>${esc(i.a.map(itName).join(", "))}</strong> + <strong>${esc(i.b.map(itName).join(", "))}</strong>`;
+function clashActs(i, inModal) {
+  const sw = i.r.swap && ITEM.has(i.r.swap)
+    ? `<button class="btn ${inModal ? "primary" : "sm"}" type="button" data-act="clash-swap" data-rid="${esc(i.r.id)}">Swap for ${esc(shortName(itName(i.r.swap)))}</button>`
+    : `<button class="btn ${inModal ? "primary" : "sm"}" type="button" data-act="clash-drop" data-rid="${esc(i.r.id)}">Remove ${esc(i.b.map(x => shortName(itName(x))).join(", "))}</button>`;
+  const keep = `<button class="btn${inModal ? "" : " ghost sm"}" type="button" data-act="clash-keep" data-rid="${esc(i.r.id)}">Keep both</button>`;
+  return inModal ? `<div class="modal-actions">${keep}<span class="grow"></span>${sw}</div>` : `<div class="wb-acts">${sw}${keep}</div>`;
+}
+/* just added something that clashes with what's on the list: say so */
+function clashPrompt(p, ids) {
+  const i = clashIssues(p).find(x => ids.some(id => x.a.includes(id) || x.b.includes(id)));
+  if (!i) return false;
+  showModal(`<h3>Doesn't work together</h3><p>${clashPair(i)}</p>${i.r.why ? `<p>${esc(i.r.why)}</p>` : ""}${clashActs(i, true)}`);
+  return true;
+}
+/* swap: the other item goes, what works comes in at the same quantity, with its note */
+function clashSwap(p, rid) {
+  const r = (app.settings.clashes || []).find(x => x.id === rid);
+  if (!r || !ITEM.has(r.swap)) return [];
+  let n = 0, note = "";
+  for (const id of r.b) { const l = p.items[id]; if (!l) continue; n += lineQty(l); if (!note && l.note) note = l.note; delete p.items[id]; }
+  const had = p.items[r.swap];
+  const ids = [...r.b, ...setQty(p, r.swap, (had ? lineQty(had) : 0) + Math.max(1, n))];
+  if (!had && note && p.items[r.swap] && !p.items[r.swap].note) p.items[r.swap].note = note;
+  return ids;
+}
+function clashDrop(p, rid) {
+  const r = (app.settings.clashes || []).find(x => x.id === rid);
+  if (!r) return [];
+  for (const id of r.b) delete p.items[id];
+  const ids = [...r.b, ...applyDefaults(p)]; clashSettle(p); touch(p);
+  return ids;
+}
+
 /* coverage check */
 function coverageIssues(p) {
   const cams = [], lenses = [];
@@ -1927,6 +1991,7 @@ function setQty(p, id, qty, field) {
   if (p.items[id]) p.items[id].qty = lineQty(p.items[id]);
   const changed = [id];
   changed.push(...applyDefaults(p));
+  clashSettle(p);
   const adds = lastAutoAdds;
   touch(p);
   const cov = wasNew && p.items[id] ? coverageAlert(p, id) : "";
@@ -1934,10 +1999,11 @@ function setQty(p, id, qty, field) {
     const e = ITEM.get(id);
     showModal(cov + `<div class="modal-actions"><button class="btn" type="button" data-act="modal-undo" data-id="${esc(id)}">Remove ${esc(shortName(e.it.name))}</button><button class="btn primary" type="button" data-act="modal-close">Keep it</button></div>`);
   }
+  const clash = !cov && wasNew && !!p.items[id] && typeof document !== "undefined" && !document.getElementById("modal") ? clashPrompt(p, [id]) : false;
   delete p._w;
   notifyDefaults(adds);
   // an ARRI hand unit (Hi-5, WCU-4) needs motors: ask which ones
-  if (wasNew && p.items[id] && !cov && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
+  if (wasNew && p.items[id] && !cov && !clash && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
   return changed;
 }
 
@@ -2071,11 +2137,12 @@ function startDuplicate(id) {
   document.getElementById("f-name")?.select();
 }
 /* the standalone app's account line: who is signed in, or why to sign in (inside Claude there is nothing to show) */
+/* the account, as one button in the corner of Settings: Sign out, or Sign in once signed out */
 function accountHtml() {
   const a = window.AC_AUTH; if (!a) return "";
   const u = a.user();
-  return u ? `<div class="acct"><span><b>${esc(u.name || u.email || "Signed in")}</b><span class="hint">Your lists are saved to your Google account, on every device.</span></span><button class="btn sm" type="button" data-act="acct-out">Sign out</button></div>`
-    : `<div class="acct"><span><b>Saved on this device</b><span class="hint">Sign in with Google to keep your lists safe and use them on your phone and computer.</span></span><button class="btn sm" type="button" data-act="acct-in">Sign in with Google</button></div>`;
+  return u ? `<button class="btn sm" type="button" data-act="acct-out" title="${esc("Signed in as " + (u.name || u.email || "you"))}">Sign out</button>`
+    : `<button class="btn sm" type="button" data-act="acct-in" title="Sign in with Google to keep your lists on every device">Sign in</button>`;
 }
 
 const findProd = id => id ? app.productions.find(p => p.id === id) || null : null;
@@ -2276,12 +2343,17 @@ function ruleParts(r) {
 }
 function viewSettings() {
   const rules = app.settings.rules.map(r => { const x = ruleParts(r); return `<div class="rule"><div class="txt"><span>When you add <b>${esc(x.when)}</b>${x.house ? ` <small>· ${esc(x.house)}</small>` : ""}</span><span class="r-add"><b class="num">${r.qty}×</b> ${esc(x.add)} <small>for each one</small></span></div>
-      <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="How many for each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
+      <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="Quantity, for each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
       <button class="x" type="button" data-act="rdel" data-rid="${esc(r.id)}" aria-label="Delete this default">×</button></div>`; }).join("");
+  const clashRows = (app.settings.clashes || []).map(r => `<div class="rule clash"><button class="txt" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule">
+      <span class="c-a">${esc(r.a.map(itName).join(", "))}${HOUSES.length > 1 && houseById(r.house) ? ` <small>· ${esc(houseById(r.house).name)}</small>` : ""}</span>
+      <span class="c-b">doesn't work with <b>${esc(r.b.map(itName).join(", "))}</b></span>
+      ${r.swap ? `<span class="c-sw">Use instead: <b>${esc(itName(r.swap))}</b></span>` : ""}${r.why ? `<small>${esc(r.why)}</small>` : ""}</button>
+      <button class="x" type="button" data-act="clash-del" data-rid="${esc(r.id)}" aria-label="Delete this rule">×</button></div>`).join("");
   const me = app.settings.me || {}, acct = accountHtml();
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
-    <div class="prod-head">${app.setFrom && app.productions.some(x => x.id === app.setFrom) ? `<button class="btn ghost back" type="button" data-act="open" data-id="${esc(app.setFrom)}" data-keep="1">← Back to the list</button>` : `<button class="btn ghost back" type="button" data-act="home">← Productions</button>`}<h2 class="page">Settings</h2></div>
+    <div class="prod-head">${app.setFrom && app.productions.some(x => x.id === app.setFrom) ? `<button class="btn ghost back" type="button" data-act="open" data-id="${esc(app.setFrom)}" data-keep="1">← Back to the list</button>` : `<button class="btn ghost back" type="button" data-act="home">← Productions</button>`}<div class="set-title"><h2 class="page">Settings</h2>${acct}</div></div>
     <div class="set-group"><h3>Your details</h3>
       <form class="form tight" id="meForm" autocomplete="off"><div class="row2">
         <div class="field"><label for="me-name">Your name (1st AC)</label><input id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
@@ -2291,11 +2363,14 @@ function viewSettings() {
       return rows ? `<div class="set-group"><h3>Catalog</h3>${rows}<span class="hint">Edit the catalog with the pencil in Add gear.</span></div>` : ""; })()}
     <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span></div>
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
-    ${acct ? `<div class="set-group"><h3>Account</h3>${acct}<span class="hint store-line"><span class="dot" aria-hidden="true"></span><span id="storeLine">${app.saveKind === "offline" ? "Can't reach your account yet" : storageText()}</span></span></div>` : ""}
     <div class="set-group"><h3>Defaults</h3>
       <p class="hint" style="margin:0">Pick an item and what comes with it. When you add that item to a list, these are added too and follow its quantity, and a notice tells you.</p>
       <div class="rules">${rules || `<p class="hint">No defaults yet.</p>`}</div>
       <div><button class="btn" type="button" data-act="rule-new">+ New default</button></div></div>
+    <div class="set-group"><h3>Doesn't work together</h3>
+      <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
+      <div class="rules">${clashRows || `<p class="hint">No rules yet.</p>`}</div>
+      <div><button class="btn" type="button" data-act="clash-new">+ New rule</button></div></div>
   </section>`;
 }
 
@@ -2312,14 +2387,34 @@ function pickerHtml(key) {
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
     <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${sub ? "" : "disabled"}><option value="">Choose…</option>${items}</select></div>`;
 }
+/* a new "doesn't work together" rule: one or more items, what they don't work with, and what to use instead */
+const cx = { id: "", a: [], b: [] };
+const pickOf = id => { const e = ITEM.get(id); return e ? { c: e.c.id, s: e.s.key, id } : {}; };
+const cxChips = k => cx[k].map(id => `<span class="cx-chip">${esc(itName(id))}<button type="button" class="cx-x" data-act="cx-x" data-k="${k}" data-id="${esc(id)}" aria-label="Take off ${esc(itName(id))}">×</button></span>`).join("");
+function clashDialog(rid) {
+  const r = rid && (app.settings.clashes || []).find(x => x.id === rid);
+  const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
+  dd.house = r && houseById(r.house) ? r.house : cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id;
+  dd.ca = {}; dd.cb = {}; dd.cc = r && r.swap ? pickOf(r.swap) : {};
+  cx.id = r ? r.id : ""; cx.a = r ? [...r.a] : []; cx.b = r ? [...r.b] : [];
+  showModal(`<form class="form dialog" id="clashForm" autocomplete="off"><h3 class="plain">${r ? "Edit rule" : "Doesn't work together"}</h3>
+    ${HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
+    <fieldset class="pk"><legend>This item</legend><div class="cx-chips" id="cx-a">${cxChips("a")}</div><div id="pk-ca">${pickerHtml("ca")}</div><span class="hint">Pick one or more, for example every camera without a radio inside.</span></fieldset>
+    <fieldset class="pk"><legend>Doesn't work with</legend><div class="cx-chips" id="cx-b">${cxChips("b")}</div><div id="pk-cb">${pickerHtml("cb")}</div></fieldset>
+    <fieldset class="pk"><legend>Use instead <small>(optional)</small></legend><div id="pk-cc">${pickerHtml("cc")}</div></fieldset>
+    <div class="field"><label for="cx-why">Why <small>(optional)</small></label><input id="cx-why" name="why" maxlength="120" placeholder="e.g. No radio inside the camera" value="${esc(r ? r.why || "" : "")}"></div>
+    <span class="err" id="rdErr" hidden></span>
+    <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save rule</button></div></form>`);
+  if (!r) document.getElementById("pk-ca-c")?.focus();
+}
 function ruleDialog() {
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
   dd.house = (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id); dd.when = {}; dd.add = {};
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">New default</h3>
     ${HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
     <fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>
-    <fieldset class="pk"><legend>Add with it</legend><div id="pk-add">${pickerHtml("add")}</div></fieldset>
-    <div class="field"><label for="rd-qty">How many, for each one</label><input id="rd-qty" name="qty" type="number" min="1" max="99" value="1" inputmode="numeric"></div>
+    <fieldset class="pk"><legend>Add with it</legend><div id="pk-add">${pickerHtml("add")}</div>
+      <div class="field"><label for="rd-qty">Quantity</label><input id="rd-qty" name="qty" type="number" min="1" max="99" value="1" inputmode="numeric" style="max-width:120px"><span class="hint">For each one you add.</span></div></fieldset>
     <span class="err" id="rdErr" hidden></span>
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save default</button></div></form>`);
   document.getElementById("pk-when-c")?.focus();
@@ -3054,7 +3149,7 @@ function lineHtml(p, id, l) {
 const SEC_CAT = { camera: "camera", lens: "lenses", filters: "filters", accessories: "camera_accessories" };
 const secTape = s => SEC_CAT[s.id] && (app.settings.catColors || {})[SEC_CAT[s.id]] ? catTape({ id: SEC_CAT[s.id] }) : `var(--sec-${s.custom ? "custom" : s.id}, var(--pal-slate))`;
 function viewList(p, h) {
-  const t = totals(p), by = linesBySection(p), issues = coverageIssues(p);
+  const t = totals(p), by = linesBySection(p), issues = coverageIssues(p), clashes = clashIssues(p);
   const secs = allSections(), closed = s => app.open.has("secx/" + s.id);
   const anyOpen = secs.some(s => by[s.id].length && !closed(s));
   const sections = secs.map(s => {
@@ -3073,6 +3168,7 @@ function viewList(p, h) {
         ${t.lines ? `<button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button>` : ""}</div></div>
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
+    ${clashes.map(i => `<div class="warnbox" role="alert"><b>Doesn't work together</b><p>${clashPair(i)}${i.r.why ? ` · ${esc(i.r.why)}` : ""}</p>${clashActs(i, false)}</div>`).join("")}
     ${t.lines ? "" : `<div class="empty-state"><h3>The list is empty</h3><p>Open Add gear to pick items from ${esc(h.name)}'s catalog, or type items into any section below.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
     <p class="empty" id="lqNone" hidden>Nothing on the list matches. Try another word.</p>
     <div id="listSecs">${sections}</div>
@@ -3813,6 +3909,19 @@ document.addEventListener("click", e => {
     case "rinc": case "rdec": { const r = app.settings.rules.find(x => x.id === b.dataset.rid); if (r) { r.qty = Math.max(0, Math.min(99, r.qty + (act === "rinc" ? 1 : -1))); touchSettings(); rerenderKeepScroll(); } break; }
     case "rdel": app.settings.rules = app.settings.rules.filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
     case "rule-new": ruleDialog(); break;
+    case "clash-new": clashDialog(); break;
+    case "clash-edit": clashDialog(b.dataset.rid); break;
+    case "clash-del": app.settings.clashes = clashRules().filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
+    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); document.getElementById("cx-" + k).innerHTML = cxChips(k); break; }
+    case "clash-swap": case "clash-drop": case "clash-keep": {
+      const q = cur(); closeModal(); if (!q) break;
+      const rid = b.dataset.rid, r = clashRules().find(x => x.id === rid); let ids = [];
+      if (act === "clash-keep") { (q.clashOk || (q.clashOk = {}))[rid] = true; touch(q); }
+      else if (act === "clash-swap") { ids = clashSwap(q, rid); if (r) toast(`Swapped for ${shortName(itName(r.swap))}`); }
+      else { ids = clashDrop(q, rid); toast("Removed"); }
+      if (app.tab === "add" && !(app.q || "").trim()) refreshRows(q, Object.keys(q.items).concat(ids)); else rerenderKeepScroll();
+      break;
+    }
     case "share-app": shareApp(); break;
     case "notice-close": { const n = document.getElementById("notice"); if (n) { n.classList.remove("in"); n.hidden = true; } break; }
     /* exports */
@@ -3875,12 +3984,23 @@ document.addEventListener("change", e => {
     ta.className = "nt-" + (f2.querySelector('input[name="notesSize"]:checked')?.value || "m") + (f2.elements.notesBold.checked ? " nt-b" : ""); return;
   }
   if (t.dataset.settitle) { app.settings.docTitle = t.value.trim().slice(0, 60); touchSettings(); toast("Title saved"); return; }
-  if (t.dataset.rdhouse) { dd.house = t.value; dd.when = {}; dd.add = {}; ["when", "add"].forEach(k => { document.getElementById("pk-" + k).innerHTML = pickerHtml(k); }); return; }
+  if (t.dataset.rdhouse) {
+    dd.house = t.value; cx.a = []; cx.b = [];
+    ["when", "add", "ca", "cb", "cc"].forEach(k => { dd[k] = {}; const box = document.getElementById("pk-" + k); if (box) box.innerHTML = pickerHtml(k); });
+    ["a", "b"].forEach(k => { const box = document.getElementById("cx-" + k); if (box) box.innerHTML = ""; });
+    return;
+  }
   if (t.dataset.pkc || t.dataset.pks || t.dataset.pki) {
     const k = t.dataset.pkc || t.dataset.pks || t.dataset.pki, v = dd[k];
     if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
     else if (t.dataset.pks) { v.s = t.value; v.id = ""; }
     else v.id = t.value;
+    if (t.dataset.pki && (k === "ca" || k === "cb") && t.value) {  // picked: it joins the list above, and the picker is ready for another
+      const list = cx[k[1]]; if (!list.includes(t.value)) list.push(t.value);
+      v.id = ""; document.getElementById("cx-" + k[1]).innerHTML = cxChips(k[1]);
+      document.getElementById("pk-" + k).innerHTML = pickerHtml(k); document.getElementById("pk-" + k + "-i")?.focus();
+      return;
+    }
     if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); box.querySelector(t.dataset.pkc ? "[data-pks]" : "[data-pki]")?.focus(); }
     return;
   }
@@ -3963,6 +4083,7 @@ document.addEventListener("submit", e => {
     closeModal();
     if (app.tab === "add" && !app.q.trim()) refreshRows(p, ids); else rerenderKeepScroll();
     if (n) toast(`Added ${n} motor${n === 1 ? "" : "s"}`);
+    clashPrompt(p, ids);
     return;
   }
   if (f.id === "mfrForm") {
@@ -4048,6 +4169,19 @@ document.addEventListener("submit", e => {
     return;
   }
   if (f.id === "sendForm") { const p = cur(); if (p) sendNow(p, f); return; }
+  if (f.id === "clashForm") {
+    const err = document.getElementById("rdErr"), say = m => { err.textContent = m; err.hidden = false; };
+    if (!cx.a.length) return say("Choose the item.");
+    if (!cx.b.length) return say("Choose what it doesn't work with.");
+    if (cx.a.some(x => cx.b.includes(x))) return say("An item can't be on both sides.");
+    const swap = (dd.cc && dd.cc.id) || "";
+    if (swap && (cx.b.includes(swap) || cx.a.includes(swap))) return say("Choose a different item to use instead.");
+    const why = (f.elements.why.value || "").trim().slice(0, 120), list = clashRules(), r = cx.id && list.find(x => x.id === cx.id);
+    const v = { house: dd.house, a: [...cx.a], b: [...cx.b], swap, why };
+    if (r) Object.assign(r, v); else list.push({ id: uid("x-"), ...v });
+    touchSettings(); closeModal(); rerenderKeepScroll(); toast("Rule saved");
+    return;
+  }
   if (f.id === "ruleForm") {
     const err = document.getElementById("rdErr"), qty = Math.max(1, Math.min(99, parseInt(f.elements.qty.value, 10) || 1));
     const say = m => { err.textContent = m; err.hidden = false; };
