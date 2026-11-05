@@ -808,6 +808,30 @@ fieldset.pk legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
 .notice > div { flex: 1; min-width: 0; }
 .cat-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
 .cat-tools b { min-width: 70px; }
+.u2 { display: grid; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+.u2-on { font-size: 15px; }
+.u2-body { display: grid; gap: 12px; }
+label.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+label.check input { width: 18px; height: 18px; accent-color: var(--accent); margin: 0; }
+.note-tools { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.tog-b { position: relative; display: inline-flex; }
+.tog-b input { position: absolute; opacity: 0; pointer-events: none; }
+.tog-b span[aria-hidden] { width: 34px; height: 32px; display: inline-grid; place-items: center; border: 1px solid var(--line); border-radius: 7px; font-weight: 800; cursor: pointer; background: var(--surface); }
+.tog-b input:checked + span { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.tog-b input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#f-notes.nt-s { font-size: 13px; } #f-notes.nt-l { font-size: 18px; } #f-notes.nt-b { font-weight: 700; }
+#f-notes { unicode-bidi: plaintext; }
+.unit-sw { justify-self: center; margin-top: 4px; }
+.f-pick { width: 100%; min-width: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunken); padding: 10px 10px; font-size: 15px; text-align: start; color: var(--fg); }
+.f-pick > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-pick:focus-visible { border-color: var(--accent); }
+.bpick { display: grid; gap: 10px; }
+.bp-list { list-style: none; margin: 0; padding: 0; max-height: min(52vh, 420px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 10px; }
+.bp-list li + li { border-top: 1px solid var(--line); }
+.bp-list button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 0; background: transparent; padding: 11px 14px; text-align: start; font-size: 15px; color: var(--fg); }
+.bp-list button .num { color: var(--muted); font-size: 13px; }
+.bp-list button[aria-pressed="true"] { background: var(--picked); font-weight: 600; box-shadow: inset 3px 0 0 var(--accent); }
 .ph-unit { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; color: var(--accent); border: 1px solid currentColor; border-radius: 4px; padding: 1px 6px; align-self: center; }
 .unit-tag { font-weight: 600; color: var(--accent); }
 details.more > summary .chev { transform: none; }
@@ -1983,7 +2007,7 @@ function render() {
 }
 
 function viewHome() {
-  const list = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
   const sel = app.sel;
   if (sel) for (const id of [...sel]) if (!app.productions.some(p => p.id === id)) sel.delete(id);
   const cards = list.map(p => {
@@ -1991,7 +2015,7 @@ function viewHome() {
     const when = fmtRange(p.shootStart, p.shootEnd), on = !!(sel && sel.has(p.id));
     return `<li><button class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}" type="button" data-act="${sel ? "pick-prod" : "open"}" data-lp="prod" data-id="${esc(p.id)}"${sel ? ` aria-pressed="${on}"` : ""}>
       ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<b>${esc(p.name || "Untitled production")}</b>
-      <span class="meta">${p.unit ? `<span class="unit-tag">${esc(p.unit)}</span>` : ""}<span>${esc(h ? h.name : "")}</span>${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
+      <span class="meta">${unit2Of(p) ? `<span class="unit-tag">+ 2nd Unit</span>` : ""}<span>${esc(h ? h.name : "")}</span>${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
     </button></li>`;
   }).join("");
   const n = sel ? sel.size : 0;
@@ -2010,15 +2034,30 @@ function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
   try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
   showModal(`<div class="sheet"><h3 class="plain">${esc(p.name || "Untitled production")}</h3>
-    <div class="sheet-acts"><button class="btn" type="button" data-act="pm-dup" data-id="${esc(id)}">Duplicate</button>
+    <div class="sheet-acts"><button class="btn" type="button" data-act="pm-edit" data-id="${esc(id)}">Edit details</button><button class="btn" type="button" data-act="pm-dup" data-id="${esc(id)}">Duplicate</button>
       <button class="btn" type="button" data-act="pm-select" data-id="${esc(id)}">Select several</button>
       <button class="btn danger" type="button" data-act="pm-del" data-id="${esc(id)}">Delete</button>
       <button class="btn ghost" type="button" data-act="modal-close">Cancel</button></div></div>`);
 }
 function deleteProductions(ids) {
   const set = new Set(ids);
+  for (const id of ids) { const x = findProd(id); if (x && x.unit2) set.add(x.unit2); }  // a production goes with its 2nd Unit
   app.productions = app.productions.filter(x => !set.has(x.id));
   lsSave(); for (const id of set) removeRemote(id);
+}
+/* a copy of a production, and of its 2nd Unit when it has one */
+function dupWithUnit(src, fields) {
+  const c = copyProduction(src, fields); delete c.unit2; app.productions.push(c); touch(c);
+  const q = unit2Of(src);
+  if (q) { const cq = copyProduction(q, { name: c.name, company: c.company, mainOf: c.id }); app.productions.push(cq); c.unit2 = cq.id; touch(cq); }
+  return c;
+}
+/* the 2nd Unit's list: a copy of the main one, or empty */
+function unit2StartDialog(p) {
+  const n = totals(p).lines;
+  showModal(`<div class="sheet"><h3 class="plain">Start the 2nd Unit list</h3><p class="hint">The main list has ${n} item${n === 1 ? "" : "s"}. The 2nd Unit's list is often close to it.</p>
+    <div class="sheet-acts"><button class="btn primary" type="button" data-act="u2-copy" data-id="${esc(p.id)}">Copy the Main Unit list</button>
+      <button class="btn" type="button" data-act="u2-empty" data-id="${esc(p.id)}">Start empty</button></div></div>`);
 }
 function startDuplicate(id) {
   if (!app.productions.some(x => x.id === id)) return;
@@ -2033,8 +2072,13 @@ function accountHtml() {
     : `<div class="acct"><span><b>Saved on this device</b><span class="hint">Sign in with Google to keep your lists safe and use them on your phone and computer.</span></span><button class="btn sm" type="button" data-act="acct-in">Sign in with Google</button></div>`;
 }
 
+const findProd = id => id ? app.productions.find(p => p.id === id) || null : null;
+/* a production with a 2nd Unit is two lists: the main one (p.unit2 points to the other) and the 2nd Unit's (q.mainOf points back) */
+const mainOf = p => (p && p.mainOf && findProd(p.mainOf)) || p;
+const unit2Of = p => { const m = mainOf(p); return m && m.unit2 ? findProd(m.unit2) : null; };
+const otherUnit = p => !p ? null : p.mainOf ? findProd(p.mainOf) : p.unit2 ? findProd(p.unit2) : null;
 function viewForm() {
-  const editing = app.formFor ? app.productions.find(p => p.id === app.formFor) : null;
+  const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
   const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
   const me = app.settings.me || {};
   const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "" }));
@@ -2042,7 +2086,8 @@ function viewForm() {
   const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
   // an old list with a typed-in day count keeps it until its dates are picked again
   const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
-  const back = editing ? `data-act="open" data-id="${esc(editing.id)}"` : `data-act="home" data-id=""`;
+  const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;
+  const u2 = unit2Of(editing || src), u2same = u2 ? u2.sameDates !== false : true, u2days = u2 && u2.days || {};
   return `<section class="pad">
     <div class="prod-head"><button class="btn ghost back" type="button" ${back}>← ${editing ? "Back to list" : "Productions"}</button>
     <h2 class="page">${editing ? "Production details" : src ? "Duplicate production" : "New production"}</h2>
@@ -2069,15 +2114,35 @@ function viewForm() {
           <input type="hidden" name="shootStart" id="f-start" value="${esc(p.shootStart)}"><input type="hidden" name="shootEnd" id="f-end" value="${esc(p.shootEnd)}">
           <input type="hidden" name="days" id="f-days" value="${esc(days ? JSON.stringify(days) : "")}"><input type="hidden" name="shootDays" id="f-ndays" value="${esc(days ? "" : p.shootDays)}"></div>
       </div>
-      <div class="row2">
-        <div class="field"><span class="lbl" id="unit-lbl">Unit</span><div class="seg" role="radiogroup" aria-labelledby="unit-lbl">${[["", "None"], ...UNITS.map(u => [u, u])].map(([v, t]) => `<label><input type="radio" name="unit" value="${esc(v)}" ${(p.unit || "") === v ? "checked" : ""}><span>${esc(t)}</span></label>`).join("")}</div></div>
-        <div class="field"><label for="f-title">Title on the list</label><input id="f-title" name="docTitle" maxlength="60" value="${esc(p.docTitle || "")}" placeholder="${esc(app.settings.docTitle || "Camera List")}"></div>
+      <div class="u2">
+        <label class="check u2-on"><input type="checkbox" name="u2on" id="f-u2on" ${u2 ? "checked" : ""}><b>Add 2nd Unit</b></label>
+        <div class="u2-body" id="u2Body" ${u2 ? "" : "hidden"}>
+          <span class="hint">A second list for this production, with its own camera crew. You can start it as a copy of the main list.</span>
+          <div class="row3">
+            <div class="field"><label for="f-u2dp">2nd Unit DP</label><input id="f-u2dp" name="u2_dp" value="${esc(u2 ? u2.dp : "")}"></div>
+            <div class="field"><label for="f-u2ac">2nd Unit 1st AC</label><input id="f-u2ac" name="u2_ac" value="${esc(u2 ? u2.ac : "")}"></div>
+            <div class="field"><label for="f-u2acphone">1st AC phone</label><input id="f-u2acphone" name="u2_acPhone" type="tel" inputmode="tel" value="${esc(u2 ? u2.acPhone : "")}"></div>
+          </div>
+          <label class="check"><input type="checkbox" name="u2_same" id="f-u2same" ${u2same ? "checked" : ""}>Same dates as the Main Unit</label>
+          <div class="row-dates" id="u2Dates" ${u2same ? "hidden" : ""}>
+            <div class="field"><span class="lbl" id="u2prep-lbl">2nd Unit prep day</span>
+              <button class="date-btn" type="button" data-act="cal-open" data-mode="prep" data-target="u2" id="f-u2-prepbtn" aria-labelledby="u2prep-lbl f-u2-prepbtn">${prepBtnHtml(u2 && !u2same ? u2.prep : "")}</button>
+              <input type="hidden" name="u2_prep" value="${esc(u2 && !u2same ? u2.prep : "")}"></div>
+            <div class="field"><span class="lbl" id="u2dates-lbl">2nd Unit shoot days</span>
+              <button class="date-btn" type="button" data-act="cal-open" data-mode="shoot" data-target="u2" id="f-u2-dates" aria-labelledby="u2dates-lbl f-u2-dates">${datesBtnHtml(u2 && !u2same ? u2.shootStart : "", u2 && !u2same ? u2.shootEnd : "", u2days)}</button>
+              <input type="hidden" name="u2_shootStart" value="${esc(u2 && !u2same ? u2.shootStart : "")}"><input type="hidden" name="u2_shootEnd" value="${esc(u2 && !u2same ? u2.shootEnd : "")}">
+              <input type="hidden" name="u2_days" value="${esc(JSON.stringify(u2 && !u2same ? u2days : {}))}"></div>
+          </div>
+          <span class="err" id="u2Err" hidden></span>
+        </div>
       </div>
-      <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" rows="3" placeholder="Anything the rental house should know">${esc(p.notes)}</textarea></div>
+      <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" rows="3" class="nt-${p.notesSize || "m"}${p.notesBold ? " nt-b" : ""}" placeholder="Anything the rental house should know. Shown at the bottom of the details on the list.">${esc(p.notes)}</textarea>
+        <div class="note-tools"><label class="tog-b" title="Bold"><input type="checkbox" name="notesBold" ${p.notesBold ? "checked" : ""}><span aria-hidden="true">B</span><span class="sr">Bold</span></label>
+          <div class="seg sm" role="radiogroup" aria-label="Text size">${[["s", "Small"], ["m", "Normal"], ["l", "Large"]].map(([v, t]) => `<label><input type="radio" name="notesSize" value="${v}" ${(p.notesSize || "m") === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div></div></div>
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
         <button class="btn" type="button" ${back}>Cancel</button></div>
-        ${editing ? `<button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production</button>` : ""}
+        ${editing ? `<button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production${u2 ? " (both units)" : ""}</button>` : ""}
       </div>
     </form>
   </section>`;
@@ -2098,11 +2163,14 @@ function prepBtnHtml(d) {
    Fridays and Saturdays start off; tap a day in the range to switch it on or off. Switching every day off clears the range. */
 const cal = { mode: "shoot", start: "", end: "", days: {}, prep: "", y: 0, m: 0, stage: "start" };
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-function calOpen(mode) {
+/* the form's date fields: the production's own, or (target "u2") the 2nd Unit's */
+const calField = (f, name) => f.elements[(cal.target ? cal.target + "_" : "") + name];
+const calBtnId = kind => "f-" + (cal.target ? cal.target + "-" : "") + kind;
+function calOpen(mode, target) {
   const f = document.getElementById("prodForm"); if (!f) return;
-  cal.mode = mode === "prep" ? "prep" : "shoot";
-  cal.start = f.elements.shootStart.value; cal.end = f.elements.shootEnd.value || cal.start; cal.prep = f.elements.prep.value;
-  try { cal.days = JSON.parse(f.elements.days.value || "{}") || {}; } catch (e) { cal.days = {}; }
+  cal.mode = mode === "prep" ? "prep" : "shoot"; cal.target = target || "";
+  cal.start = calField(f, "shootStart").value; cal.end = calField(f, "shootEnd").value || cal.start; cal.prep = calField(f, "prep").value;
+  try { cal.days = JSON.parse(calField(f, "days").value || "{}") || {}; } catch (e) { cal.days = {}; }
   const now = new Date(), base = parseDate(cal.mode === "prep" ? cal.prep || cal.start : cal.start || cal.prep) || { y: now.getFullYear(), m: now.getMonth() + 1 };
   cal.y = base.y; cal.m = base.m; cal.stage = cal.start ? "done" : "start";
   showModal(`<div class="cal" id="cal">${calHtml()}</div>`);
@@ -2171,16 +2239,17 @@ function calPick(s) {
 function calDone() {
   const f = document.getElementById("prodForm");
   if (f && cal.mode === "prep") {
-    f.elements.prep.value = cal.prep;
-    document.getElementById("f-prepbtn").innerHTML = prepBtnHtml(cal.prep);
+    calField(f, "prep").value = cal.prep;
+    document.getElementById(calBtnId("prepbtn")).innerHTML = prepBtnHtml(cal.prep);
   } else if (f) {
     // keep only the real shoot days: the range starts and ends on days that are on
     const r = cal.start ? shootTrim(cal.start, cal.end || cal.start, cal.days) : { a: "", b: "" };
     const days = {}; for (const d of rangeDates(r.a, r.b)) if (cal.days[d] !== undefined) days[d] = cal.days[d];
-    f.elements.shootStart.value = r.a; f.elements.shootEnd.value = r.b; f.elements.days.value = JSON.stringify(days); f.elements.shootDays.value = "";
-    document.getElementById("f-dates").innerHTML = datesBtnHtml(r.a, r.b, days);
+    calField(f, "shootStart").value = r.a; calField(f, "shootEnd").value = r.b; calField(f, "days").value = JSON.stringify(days);
+    if (calField(f, "shootDays")) calField(f, "shootDays").value = "";
+    document.getElementById(calBtnId("dates")).innerHTML = datesBtnHtml(r.a, r.b, days);
   }
-  const back = cal.mode === "prep" ? "f-prepbtn" : "f-dates";
+  const back = cal.mode === "prep" ? calBtnId("prepbtn") : calBtnId("dates");
   closeModal(); document.getElementById(back)?.focus();
 }
 
@@ -2247,7 +2316,7 @@ function viewProduction() {
   const facts = [["Production company", esc(p.company || "")], ["Rental house", h ? esc(h.name) : ""], ["DP", esc(p.dp || "")],
     ["1st AC", p.ac || p.acPhone ? esc(p.ac || "") + (p.acPhone ? `<small>${esc(p.acPhone)}</small>` : "") : ""],
     ["Prep", p.prep ? esc(fmtShort(p.prep)) : ""], ["Shoot", shootDates ? esc(shootDates) + (days ? `<small>${days} shoot day${days === 1 ? "" : "s"}</small>` : "") : ""]].filter(([, v]) => v);
-  if (p.unit) facts.splice(1, 0, ["Unit", esc(p.unit)]);
+  if (unitLine(p)) facts.splice(1, 0, ["Unit", esc(unitLine(p))]);
   if (p.notes) facts.push(["Notes", `<span class="pf-notes">${esc(p.notes)}</span>`]);
   const missing = !p.dp && !p.ac && !p.shootStart;
   const fv = favoritesFor(p), nFav = fv.starred.length + fv.custom.length;
@@ -2262,8 +2331,9 @@ function viewProduction() {
   const head = finder ? "" : `<div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
       <h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>
+      ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
       <button class="ph-row" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Production details">
-        <span class="ph-dates">${p.unit ? `<span class="ph-it ph-unit">${esc(p.unit)}</span>` : ""}${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<span class="ph-it ph-k">No dates yet</span>`}</span></button>
+        <span class="ph-dates">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<span class="ph-it ph-k">No dates yet</span>`}</span></button>
       <button class="ph-tab" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo">Info${CHEV}</button>
       <div class="pinfo${infoOpen ? " open" : ""}" id="pinfo"><div class="pinfo-in"><div class="pinfo-card">
         <dl class="prod-facts">${facts.map(([k, v]) => `<div${k === "Notes" ? ` class="pf-wide"` : ""}><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
@@ -2600,8 +2670,6 @@ function finderHtml(p, h) {
   const sel = (key, v) => s[key] === v ? " selected" : "";
   const kinds = `<option value=""${sel("kind", "")}>Any lens (${all.length})</option>` + KINDS.map(([grp, opts]) => `<optgroup label="${grp}">${opts.map(([k, label, fn]) => { const n = count(fn); return n || s.kind === k ? `<option value="${k}"${sel("kind", k)}>${esc(label)} (${n})</option>` : ""; }).join("")}</optgroup>`).join("");
   const mounts = `<option value=""${sel("mount", "")}>Any mount</option>` + MOUNTS.map(([k, label]) => { const n = count(sp => sp.mounts.includes(k)); return n || s.mount === k ? `<option value="${k}"${sel("mount", k)}>${esc(label)} (${n})</option>` : ""; }).join("");
-  const bn = new Map(); for (const [, e] of all) bn.set(e.it.brand || "Generic", (bn.get(e.it.brand || "Generic") || 0) + 1);
-  const brands = `<option value=""${sel("brand", "")}>Any manufacturer</option>` + [...bn.entries()].sort((a, b) => brandSort(a[0], b[0])).map(([b, n]) => `<option value="${esc(b)}"${sel("brand", b)}>${esc(b)} (${n})</option>`).join("");
   const covs = [["", "Any format"], ["S16", "S16 and up"], ["S35", "S35 and up"], ["FF", "Full frame and up"], ["LF", "Large format"]].map(([k, label]) => `<option value="${k}"${sel("cov", k)}>${label}</option>`).join("");
   return `<div class="pad finder" style="--tape: ${lens ? catTape(lens) : "var(--pal-amber)"}">
     <div class="f-head"><div><h3 class="f-title">Find a lens</h3><p class="hint">The exact match sits in the middle of the ruler. Shorter lenses are to the left, longer to the right.</p></div>
@@ -2613,7 +2681,7 @@ function finderHtml(p, h) {
       </div>
       <div class="f-fields">
         <label class="f-field"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
-        <label class="f-field"><span>Manufacturer</span><select data-fin="brand">${brands}</select></label>
+        <div class="f-field"><span id="fb-lbl">Manufacturer</span><button class="f-pick" type="button" data-act="fin-brand" aria-labelledby="fb-lbl fb-val" aria-haspopup="dialog"><span id="fb-val">${esc(s.brand || "Any manufacturer")}</span>${CHEV}</button></div>
       </div>
       <div class="f-fields">
         <label class="f-field"><span>Mount</span><select data-fin="mount">${mounts}</select></label>
@@ -2622,6 +2690,19 @@ function finderHtml(p, h) {
     </div>
     <div id="fRes" class="f-res">${finderResults(p, h)}</div>
   </div>`;
+}
+/* the lens search's manufacturer: a list with a search field on top */
+function finBrandDialog() {
+  const p = cur(), h = p && houseById(p.houseId); if (!h) return;
+  const bn = new Map(); for (const [, e] of houseLenses(h)) bn.set(e.it.brand || "Generic", (bn.get(e.it.brand || "Generic") || 0) + 1);
+  const cur0 = fin().brand || "";
+  const row = (b, label, n) => `<li data-b="${esc(norm(label))}"><button type="button" data-act="fin-brand-pick" data-b="${esc(b)}" aria-pressed="${b === cur0}"><span>${esc(label)}</span>${n != null ? `<span class="num">${n}</span>` : ""}</button></li>`;
+  showModal(`<div class="bpick"><h3 class="plain">Manufacturer</h3>
+    <label class="search" for="bq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg><input id="bq" type="search" placeholder="Search manufacturers" autocomplete="off" aria-label="Search manufacturers"></label>
+    <ul class="bp-list" id="bpList">${row("", "Any manufacturer", null)}${[...bn.entries()].sort((a, b) => brandSort(a[0], b[0])).map(([b, n]) => row(b, b, n)).join("")}</ul>
+    <p class="hint" id="bpNone" hidden>No manufacturer by that name.</p>
+    <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button></div></div>`);
+  document.getElementById("bq")?.focus();
 }
 function centerFinder(k, smooth) {
   const r = document.getElementById("fRuler"); if (!r) return;
@@ -3044,7 +3125,7 @@ function catalogGuess(h, name, sec) {
 function headerParts(p) {
   const days = shootDays(p), L = [];
   const seg = (lbl, v) => v ? [{ lbl, v }] : [];
-  const a = [...seg("Production", p.name), ...seg("Unit", p.unit), ...seg("Production company", p.company)];
+  const a = [...seg("Production", p.name), ...seg("Production company", p.company)];
   if (a.length) L.push({ big: true, segs: a });
   const b = [...seg("DP", p.dp), ...seg("1st AC", p.ac && p.ac + (p.acPhone ? " " + p.acPhone : ""))];
   if (b.length) L.push({ segs: b });
@@ -3053,6 +3134,7 @@ function headerParts(p) {
     const range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)}–${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart);
     L.push({ plain: `- Shoot: ${range}${days ? ` // ${days} shoot day${days === 1 ? "" : "s"} total` : ""}` });
   }
+  if (unitLine(p)) L.push({ plain: unitLine(p) });
   return L;
 }
 const headerLines = p => headerParts(p).map(l => l.plain || l.segs.map(s => `${s.lbl}: ${s.v}`).join(" // "));
@@ -3093,27 +3175,35 @@ function csvText(p) {
     rows.push([secName(s.id), r.qty, r.name, r.extra.join("; "), r.kids.join("; "), r.sku, l.brand || "", l.cat || "", l.sub || ""]);
   return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
 }
-function fileBase(p) { return ("Camera list - " + (p.name || "production") + (p.unit ? " " + p.unit : "") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "")).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
+function fileBase(p) { return ("Camera list - " + (p.name || "production") + (unitLine(p) ? " " + unitLine(p) : "") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "")).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
 
 /* ----- the clean layout (default), after the camlist look: the production's name with "Camera List" across from it on every page,
    a short block of details, then each section between two thin rules: "2 x" and the item in bold, its sub-items and notes under it,
    the SKU in its own column on the right ----- */
 const layoutOf = () => app.settings.exportLayout === "table" ? "table" : "clean";
-/* the title at the top of the list ("Camera List", or your own), and the unit next to the production's name */
+/* the title at the top of the list ("Camera List", or the one set in Settings) */
 const docTitle = p => String((p && p.docTitle) || app.settings.docTitle || "Camera List").slice(0, 60);
-const UNITS = ["Main Unit", "2nd Unit"];
-const nameLine = p => (p.name || "Production") + (p.unit ? " – " + p.unit : "");
 const CLEAN_FONT = "Futura, 'Century Gothic', 'Avenir Next', 'IBM Plex Sans', Arial, Helvetica, sans-serif";
 function shootRangeText(p) {
   if (!p.shootStart) return "";
   const days = shootDays(p), range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)} – ${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart);
   return range + (days ? ` · ${days} shoot day${days === 1 ? "" : "s"}` : "");
 }
-/* the details block: label and value; the rental house is not printed */
-const infoRows = p => [["Production company", p.company], ["DP", p.dp], ["1st AC", [p.ac, p.acPhone].filter(Boolean).join("   ")], ["Prep", p.prep ? fmtShort(p.prep) : ""], ["Shoot", shootRangeText(p)]].filter(r => r[1]);
+/* the details block, one centered line each: label, value, and with a 2nd Unit the other unit's camera crew on the same line,
+   quieter ("DP: Damian · 2nd Unit: Yossi"). Then the unit, then the notes. The rental house is not printed. */
+const acText = p => p ? [p.ac, p.acPhone].filter(Boolean).join("  ") : "";
+function infoRows(p) {
+  const o = otherUnit(p), ou = o ? (p.mainOf ? "Main Unit" : "2nd Unit") : "";
+  const pair = (k, mine, theirs) => ({ k, v: mine, x: o && theirs && theirs !== mine ? `${ou}: ${theirs}` : "" });
+  return [{ k: "Production company", v: p.company }, pair("DP", p.dp, o && o.dp), pair("1st AC", acText(p), acText(o)), { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }]
+    .filter(r => r.v || r.x);
+}
+const unitLine = p => otherUnit(p) ? (p.mainOf ? "2nd Unit" : "Main Unit") : "";
+const NOTE_PX = { s: 10.5, m: 12, l: 14.5 }, NOTE_SZ = { s: 19, m: 22, l: 28 };
+const hasHebrew = t => /[\u0590-\u05FF]/.test(String(t || ""));
 function cleanTitleHtml(p, page) {
   return `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;font-family:${CLEAN_FONT};color:#111">
-    <div style="font-size:25px;line-height:1.15;min-width:0"><b>${esc(p.name || "Production")}</b>${p.unit ? `<span style="font-weight:400"> – ${esc(p.unit)}</span>` : ""}${page ? ` <span style="font-weight:400">(${esc(page)})</span>` : ""}</div>
+    <div style="font-size:25px;line-height:1.15;min-width:0"><b><bdi>${esc(p.name || "Production")}</bdi></b>${page ? ` <span style="font-weight:400">(${esc(page)})</span>` : ""}</div>
     <div style="font-size:20px;white-space:nowrap">${esc(docTitle(p))}</div></div>`;
 }
 function exportHtmlClean(p, o = {}) {
@@ -3124,24 +3214,26 @@ function exportHtmlClean(p, o = {}) {
     if (!rows.length) continue;
     body += `<div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty} x</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("");
   }
-  const info = infoRows(p);
+  const info = infoRows(p), unit = unitLine(p);
+  const infoHtml = info.length || unit || p.notes ? `<div class="cl-inf" data-break>${info.map(r => `<div class="cl-i"><b>${esc(r.k)}:</b> <bdi>${esc(r.v || "–")}</bdi>${r.x ? `<span class="cl-mut"> · <bdi>${esc(r.x)}</bdi></span>` : ""}</div>`).join("")}
+      ${unit ? `<div class="cl-i cl-unit">${esc(unit)}</div>` : ""}
+      ${p.notes ? `<div class="cl-i cl-notes" dir="auto" style="font-size:${NOTE_PX[p.notesSize] || 12}px;font-weight:${p.notesBold ? 700 : 400}">${esc(p.notes)}</div>` : ""}</div>` : "";
   return `<div class="cl" style="width:794px;box-sizing:border-box;padding:0 56px;background:#fff">
-    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:12px;line-height:1.35}.cl .cl-inf{border-collapse:collapse;margin:12px 0 0}.cl .cl-inf td{padding:1px 0;vertical-align:top;font-size:11.5px;color:#111}.cl .cl-inf td:first-child{font-weight:700;width:140px;padding-right:12px}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:18px;padding:5px 0 4px;font-weight:700;font-size:11.5px}.cl .cl-r{display:flex;padding-top:7px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:12px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:11px;padding-top:1px}.cl .cl-x{font-size:11px;font-style:italic;color:#555;padding-top:1px}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:18px;border-top:1px solid #111;padding-top:6px}</style>
+    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:12px;line-height:1.35}.cl .cl-inf{margin:14px 0 0;text-align:center}.cl .cl-i{font-size:11.5px;line-height:1.45;color:#111}.cl .cl-i b{font-weight:700}.cl .cl-mut{color:#777}.cl .cl-unit{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-top:3px}.cl .cl-notes{white-space:pre-wrap;margin-top:5px;unicode-bidi:plaintext}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:18px;padding:5px 0 4px;font-weight:700;font-size:11.5px}.cl .cl-r{display:flex;padding-top:7px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:12px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:11px;padding-top:1px}.cl .cl-x{font-size:11px;font-style:italic;color:#555;padding-top:1px}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:18px;border-top:1px solid #111;padding-top:6px}</style>
     ${o.pdf ? "" : `<div style="padding-top:4px">${cleanTitleHtml(p)}</div>`}
-    ${info.length ? `<table class="cl-inf" data-break>${info.map(([k, v]) => `<tr><td>${esc(k)}:</td><td>${esc(v)}</td></tr>`).join("")}</table>` : ""}
+    ${infoHtml}
     ${body}
-    ${p.notes ? `<div class="cl-nt" data-break><b>Notes</b><div style="white-space:pre-wrap">${esc(p.notes)}</div></div>` : ""}
     <div style="height:8px"></div>
   </div>`;
 }
 const exportHtml = (p, o) => layoutOf() === "table" ? exportHtmlTable(p) : exportHtmlClean(p, o);
 /* Word, clean: the same, with the title line as the page header ("Mizrahi (1 out of 3)" … "Camera List") */
 const xmlEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const wRun = (t, o = {}) => `<w:r><w:rPr>${o.b ? "<w:b/>" : ""}${o.i ? "<w:i/>" : ""}${o.color ? `<w:color w:val="${o.color}"/>` : ""}${o.mono ? '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/>' : ""}<w:sz w:val="${o.sz || 20}"/><w:szCs w:val="${o.sz || 20}"/></w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
+const wRun = (t, o = {}) => `<w:r><w:rPr>${o.b ? "<w:b/><w:bCs/>" : ""}${o.i ? "<w:i/>" : ""}${o.color ? `<w:color w:val="${o.color}"/>` : ""}${o.mono ? '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/>' : ""}${o.caps ? "<w:caps/>" : ""}<w:sz w:val="${o.sz || 20}"/><w:szCs w:val="${o.sz || 20}"/>${hasHebrew(t) ? "<w:rtl/>" : ""}</w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
 const W_TEXT = 9638;
 function docxHeaderClean(p) {
   const fld = (code, sz) => `<w:fldSimple w:instr="${code}"><w:r><w:rPr><w:sz w:val="${sz}"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>`;
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="160"/></w:pPr>${wRun(p.name || "Production", { b: true, sz: 36 })}${p.unit ? wRun(" – " + p.unit, { sz: 30 }) : ""}${wRun(" (", { sz: 28 })}${fld("PAGE", 28)}${wRun(" out of ", { sz: 28 })}${fld("NUMPAGES", 28)}${wRun(")", { sz: 28 })}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 30 })}</w:p></w:hdr>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:tabs><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="160"/></w:pPr>${wRun(p.name || "Production", { b: true, sz: 36 })}${wRun(" (", { sz: 28 })}${fld("PAGE", 28)}${wRun(" out of ", { sz: 28 })}${fld("NUMPAGES", 28)}${wRun(")", { sz: 28 })}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 30 })}</w:p></w:hdr>`;
 }
 function docxXmlClean(p) {
   const by = linesBySection(p), sku = skuOn();
@@ -3149,8 +3241,10 @@ function docxXmlClean(p) {
   const noBorders = `<w:tblBorders>${["top", "left", "bottom", "right", "insideH", "insideV"].map(v => `<w:${v} w:val="nil"/>`).join("")}</w:tblBorders>`;
   const cell = (w, content) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${content || para("")}</w:tc>`;
   const table = (cols, rows) => `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/>${noBorders}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${cols.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows.join("")}</w:tbl>`;
-  const info = infoRows(p);
-  let body = info.length ? table([2100, W_TEXT - 2100], info.map(([k, v]) => `<w:tr>${cell(2100, para(wRun(k + ":", { b: true, sz: 19 })))}${cell(W_TEXT - 2100, para(wRun(v, { sz: 19 })))}</w:tr>`)) : "";
+  const info = infoRows(p), unit = unitLine(p), center = runs => `<w:p><w:pPr><w:spacing w:before="0" w:after="20"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
+  let body = info.map(r => center(wRun(r.k + ": ", { b: true, sz: 19 }) + wRun(r.v || "–", { sz: 19 }) + (r.x ? wRun("  ·  " + r.x, { sz: 19, color: "777777" }) : ""))).join("")
+    + (unit ? center(wRun(unit, { b: true, caps: true, sz: 18 })) : "")
+    + (p.notes ? p.notes.split(/\n/).map(t => `<w:p><w:pPr>${hasHebrew(t) ? "<w:bidi/>" : ""}<w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${wRun(t, { sz: NOTE_SZ[p.notesSize] || 22, b: !!p.notesBold })}</w:p>`).join("") : "");
   const S = sku ? 1500 : 0, Q = 640, N = W_TEXT - Q - S;
   for (const s of allSections()) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
@@ -3158,7 +3252,6 @@ function docxXmlClean(p) {
     body += para(wRun(secName(s.id), { b: true, sz: 20 }), { bdr: true, keep: true, before: 300, after: 40 });
     body += table(sku ? [Q, N, S] : [Q, N], rows.map(r => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty + " x", { b: true, sz: 20 })))}${cell(N, para(wRun(r.name, { b: true, sz: 20 })) + r.kids.map(t => para(wRun(t, { sz: 18 }))).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 18 }))).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`));
   }
-  if (p.notes) body += para(wRun("Notes", { b: true, sz: 20 }), { before: 300, after: 40 }) + p.notes.split(/\n/).map(t => para(wRun(t, { sz: 19 }))).join("");
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1250" w:right="1134" w:bottom="1134" w:left="1134" w:header="560" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 }
 const docxXml = p => layoutOf() === "table" ? docxXmlTable(p) : docxXmlClean(p);
@@ -3451,6 +3544,15 @@ document.addEventListener("click", e => {
     }
     /* home: press-and-hold menu and selecting several */
     case "pm-dup": closeModal(); startDuplicate(id); break;
+    case "pm-edit": closeModal(); app.pid = id; app.formFor = id; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
+    case "unit-sw": if (findProd(id) && id !== app.pid) { app.pid = id; app.editing = null; rerenderKeepScroll(); toast(findProd(id).mainOf ? "2nd Unit list" : "Main Unit list"); } break;
+    case "u2-copy": case "u2-empty": {
+      const m = findProd(id), q = unit2Of(m); closeModal(); if (!m || !q) break;
+      if (act === "u2-copy") { q.items = clone(m.items); applyDefaults(q); touch(q); }
+      app.pid = q.id; app.tab = "list"; render(); window.scrollTo(0, 0);
+      toast(act === "u2-copy" ? `2nd Unit list: a copy of the main list (${totals(q).lines} items)` : "2nd Unit list: empty");
+      break;
+    }
     case "pm-select": closeModal(); app.sel = new Set([id]); render(); break;
     case "pm-del": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
@@ -3462,7 +3564,7 @@ document.addEventListener("click", e => {
     case "sel-cancel": app.sel = null; rerenderKeepScroll(); break;
     case "sel-dup": {
       const ids = [...(app.sel || [])]; if (!ids.length) break;
-      for (const sid of ids) { const src = app.productions.find(x => x.id === sid); if (!src) continue; const c = copyProduction(src, { name: (src.name || "Production") + " (copy)" }); app.productions.push(c); touch(c); }
+      for (const sid of ids) { const src = findProd(sid); if (src) dupWithUnit(src, { name: (src.name || "Production") + " (copy)" }); }
       app.sel = null; rerenderKeepScroll(); toast(`Duplicated ${ids.length} production${ids.length === 1 ? "" : "s"}`);
       break;
     }
@@ -3473,7 +3575,7 @@ document.addEventListener("click", e => {
       break;
     }
     /* the shoot dates calendar */
-    case "cal-open": calOpen(b.dataset.mode); break;
+    case "cal-open": calOpen(b.dataset.mode, b.dataset.target); break;
     case "cal-day": calPick(b.dataset.d); break;
     case "cal-prev": case "cal-next": { const d = act === "cal-next" ? 1 : -1; cal.m += d; if (cal.m < 1) { cal.m = 12; cal.y--; } if (cal.m > 12) { cal.m = 1; cal.y++; } calRefresh(); document.querySelector(`#cal [data-act="${act}"]`)?.focus(); break; }
     case "cal-clear": calClear(); calRefresh(); break;
@@ -3512,9 +3614,8 @@ document.addEventListener("click", e => {
     case "send-open": sendDialog(p); break;
     case "delete": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete production"; } }, 4000); break; }
-      const delId = app.formFor;
-      app.productions = app.productions.filter(x => x.id !== delId);
-      lsSave(); removeRemote(delId);
+      const delId = mainOf(findProd(app.formFor))?.id || app.formFor;
+      deleteProductions([delId]);
       app.view = "home"; app.pid = null; render(); toast("Production deleted");
       break;
     }
@@ -3523,6 +3624,8 @@ document.addEventListener("click", e => {
     case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; s.brand = ""; }
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
     case "fin-close": fin().on = false; render(); break;
+    case "fin-brand": finBrandDialog(); break;
+    case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
     case "fin-more": fin().more[b.dataset.mm] = true; refreshFinder(b.dataset.mm); break;
     case "chip": app.cat = b.dataset.cat; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId));
@@ -3675,7 +3778,7 @@ document.addEventListener("click", e => {
     }
   }
 });
-document.addEventListener("keydown", e => { if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
 document.addEventListener("toggle", e => {
   const k = e.target && e.target.dataset && e.target.dataset.k;
   if (!k || app.q.trim()) return;
@@ -3687,6 +3790,7 @@ document.addEventListener("input", e => {
   if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.value.trim(); fin().more = {}; refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
+  if (t.id === "bq") { const q = norm(t.value.trim()); let n = 0; document.querySelectorAll("#bpList li").forEach(li => { const hit = !q || li.dataset.b.includes(q); li.hidden = !hit; if (hit) n++; }); const none = document.getElementById("bpNone"); if (none) none.hidden = n > 0; return; }
   if (!p) return;
   if (t.dataset.note) { const l = p.items[t.dataset.note]; if (l) { l.note = t.value.slice(0, 200); touch(p); } return; }
   if (t.dataset.ename) { const l = p.items[t.dataset.ename]; if (l) { l.name = t.value.slice(0, 160) || l.orig || l.name; touch(p); } return; }
@@ -3705,6 +3809,12 @@ document.addEventListener("change", e => {
   }
   if (t.dataset.rqty) { const r = app.settings.rules.find(x => x.id === t.dataset.rqty); if (r) { r.qty = Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)); touchSettings(); } return; }
   if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
+  if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
+  if (t.id === "f-u2same") { document.getElementById("u2Dates").hidden = t.checked; return; }
+  if (t.form && t.form.id === "prodForm" && (t.name === "notesBold" || t.name === "notesSize")) {
+    const ta = document.getElementById("f-notes"), f2 = t.form;
+    ta.className = "nt-" + (f2.querySelector('input[name="notesSize"]:checked')?.value || "m") + (f2.elements.notesBold.checked ? " nt-b" : ""); return;
+  }
   if (t.dataset.settitle) { app.settings.docTitle = t.value.trim().slice(0, 60); touchSettings(); toast("Title saved"); return; }
   if (t.dataset.rdhouse) { dd.house = t.value; dd.when = {}; dd.add = {}; ["when", "add"].forEach(k => { document.getElementById("pk-" + k).innerHTML = pickerHtml(k); }); return; }
   if (t.dataset.pkc || t.dataset.pks || t.dataset.pki) {
@@ -3835,22 +3945,47 @@ document.addEventListener("submit", e => {
   }
   if (f.id === "prodForm") {
     const v = Object.fromEntries(new FormData(f).entries());
-    let days = {}; try { days = JSON.parse(v.days || "{}") || {}; } catch (err) {}
+    const json = t => { try { return JSON.parse(t || "{}") || {}; } catch (err) { return {}; } };
     const fields = { name: v.name.trim(), company: v.company.trim(), dp: v.dp.trim(), ac: v.ac.trim(), acPhone: v.acPhone.trim(),
       prep: v.prep, shootStart: v.shootStart, shootEnd: v.shootEnd && v.shootEnd >= v.shootStart ? v.shootEnd : v.shootStart,
-      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days, notes: v.notes.trim(),
-      unit: UNITS.includes(v.unit) ? v.unit : "", docTitle: String(v.docTitle || "").trim().slice(0, 60),
+      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days: json(v.days), notes: v.notes.trim(),
+      notesBold: !!v.notesBold, notesSize: ["s", "m", "l"].includes(v.notesSize) ? v.notesSize : "m",
       houseId: document.getElementById("housePick").dataset.value };
     if (!fields.name) { document.getElementById("f-name").focus(); return; }
     if (!houseById(fields.houseId)) { const err = document.getElementById("houseErr"); if (err) err.hidden = false; document.querySelector("#housePick .house-opt")?.focus(); return; }
-    let p = app.formFor && app.productions.find(x => x.id === app.formFor);
-    const src = !p && app.dupFrom && app.productions.find(x => x.id === app.dupFrom);
+    let p = app.formFor ? mainOf(findProd(app.formFor)) : null;
+    const src = !p && app.dupFrom && findProd(app.dupFrom);
+    const u2on = !!v.u2on, oldQ = p ? unit2Of(p) : null;
+    // switching the 2nd Unit off takes its list away: ask first when it has items
+    if (!u2on && oldQ && totals(oldQ).lines && f.dataset.u2drop !== "1") {
+      f.dataset.u2drop = "1"; const err = document.getElementById("u2Err");
+      if (err) { err.textContent = `Tap Save again to remove the 2nd Unit and its ${totals(oldQ).lines} items.`; err.hidden = false; document.getElementById("u2Body").hidden = false; }
+      return;
+    }
+    const was = app.pid;
     if (p) { Object.assign(p, fields); toast("Details saved"); }
-    else if (src) { p = copyProduction(src, fields); app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
+    else if (src) { p = copyProduction(src, fields); delete p.unit2; app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
     else { p = newProduction(fields); app.productions.push(p); app.tab = "add"; }
+    // the 2nd Unit: the same production and house; its own camera crew, and the main dates or its own
+    let ask = false;
+    if (u2on) {
+      const same = !!v.u2_same, sd = json(v.u2_days);
+      const qf = { name: p.name, company: p.company, houseId: p.houseId, dp: (v.u2_dp || "").trim(), ac: (v.u2_ac || "").trim(), acPhone: (v.u2_acPhone || "").trim(),
+        unit: "2nd Unit", mainOf: p.id, sameDates: same, notes: p.notes, notesBold: p.notesBold, notesSize: p.notesSize,  // the notes are the production's, on both lists
+        ...(same ? { prep: p.prep, shootStart: p.shootStart, shootEnd: p.shootEnd, days: clone(p.days), shootDays: p.shootDays }
+          : { prep: v.u2_prep || "", shootStart: v.u2_shootStart || "", shootEnd: v.u2_shootEnd && v.u2_shootEnd >= v.u2_shootStart ? v.u2_shootEnd : v.u2_shootStart || "", days: sd, shootDays: "" }) };
+      let q = oldQ;
+      const srcQ = src ? unit2Of(src) : null;
+      if (q) Object.assign(q, qf);
+      else { q = srcQ ? copyProduction(srcQ, qf) : newProduction(qf); app.productions.push(q); ask = !srcQ && totals(p).lines > 0; }
+      p.unit2 = q.id; p.unit = "Main Unit"; touch(q);
+    } else if (oldQ) { deleteProductions([oldQ.id]); delete p.unit2; p.unit = ""; toast("2nd Unit removed"); }
+    else if (p.unit && !p.mainOf) p.unit = "";
     app.dupFrom = null;
     touch(p);
-    app.pid = p.id; app.view = "production"; app.q = ""; app.lq = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
+    const stay = was && findProd(was) && mainOf(findProd(was)) === p ? was : p.id;
+    app.pid = stay; app.view = "production"; app.q = ""; app.lq = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
+    if (ask) unit2StartDialog(p);
     return;
   }
   if (f.id === "sendForm") { const p = cur(); if (p) sendNow(p, f); return; }
