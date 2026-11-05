@@ -689,6 +689,7 @@ label.check input { width: 18px; height: 18px; accent-color: var(--accent); marg
 #f-notes.nt-s { font-size: 13px; } #f-notes.nt-l { font-size: 18px; } #f-notes.nt-b { font-weight: 700; }
 #f-notes { unicode-bidi: plaintext; }
 .unit-sw { justify-self: center; margin-top: 4px; }
+.pv-units { display: flex; justify-content: center; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .f-pick { width: 100%; min-width: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--sunken); padding: 10px 10px; font-size: 15px; text-align: start; color: var(--fg); }
 .f-pick > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .f-pick:focus-visible { border-color: var(--accent); }
@@ -3065,14 +3066,18 @@ function shootRangeText(p) {
   const days = shootDays(p), range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)} – ${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart);
   return range + (days ? ` · ${days} shoot day${days === 1 ? "" : "s"}` : "");
 }
-/* the details block, one centered line each: label, value, and with a 2nd Unit the other unit's camera crew on the same line,
-   quieter ("DP: Damian · 2nd Unit: Yossi"). Then the unit, then the notes. The rental house is not printed. */
+/* the details block, one centered line each. With a 2nd Unit, both units' camera crew, each role by unit:
+   DP Main Unit, DP 2nd Unit, 1st AC Main Unit, 1st AC 2nd Unit; this list's unit reads in full, the other one quieter.
+   Then the unit, then the notes. The rental house is not printed. */
 const acText = p => p ? [p.ac, p.acPhone].filter(Boolean).join("  ") : "";
 function infoRows(p) {
-  const o = otherUnit(p), ou = o ? (p.mainOf ? "Main Unit" : "2nd Unit") : "";
-  const pair = (k, mine, theirs) => ({ k, v: mine, x: o && theirs && theirs !== mine ? `${ou}: ${theirs}` : "" });
-  return [{ k: "Production company", v: p.company }, pair("DP", p.dp, o && o.dp), pair("1st AC", acText(p), acText(o)), { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }]
-    .filter(r => r.v || r.x);
+  const o = otherUnit(p);
+  if (!o) return [{ k: "Production company", v: p.company }, { k: "DP", v: p.dp }, { k: "1st AC", v: acText(p) }, { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }].filter(r => r.v);
+  const m = p.mainOf ? o : p, q = p.mainOf ? p : o, onMain = !p.mainOf;
+  return [{ k: "Production company", v: p.company },
+    { k: "DP Main Unit", v: m.dp, dim: !onMain }, { k: "DP 2nd Unit", v: q.dp, dim: onMain },
+    { k: "1st AC Main Unit", v: acText(m), dim: !onMain }, { k: "1st AC 2nd Unit", v: acText(q), dim: onMain },
+    { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }].filter(r => r.v);
 }
 const unitLine = p => otherUnit(p) ? (p.mainOf ? "2nd Unit" : "Main Unit") : "";
 const NOTE_PX = { s: 10.5, m: 12, l: 14.5 }, NOTE_SZ = { s: 19, m: 22, l: 28 };
@@ -3091,11 +3096,11 @@ function exportHtmlClean(p, o = {}) {
     body += `<div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty} x</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("");
   }
   const info = infoRows(p), unit = unitLine(p);
-  const infoHtml = info.length || unit || p.notes ? `<div class="cl-inf" data-break>${info.map(r => `<div class="cl-i"><b>${esc(r.k)}:</b> <bdi>${esc(r.v || "–")}</bdi>${r.x ? `<span class="cl-mut"> · <bdi>${esc(r.x)}</bdi></span>` : ""}</div>`).join("")}
+  const infoHtml = info.length || unit || p.notes ? `<div class="cl-inf" data-break>${info.map(r => `<div class="cl-i${r.dim ? " cl-dim" : ""}"><b>${esc(r.k)}:</b> <bdi>${esc(r.v)}</bdi></div>`).join("")}
       ${unit ? `<div class="cl-i cl-unit">${esc(unit)}</div>` : ""}
       ${p.notes ? `<div class="cl-i cl-notes" dir="auto" style="font-size:${NOTE_PX[p.notesSize] || 12}px;font-weight:${p.notesBold ? 700 : 400}">${esc(p.notes)}</div>` : ""}</div>` : "";
   return `<div class="cl" style="width:794px;box-sizing:border-box;padding:0 56px;background:#fff">
-    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:12px;line-height:1.35}.cl .cl-inf{margin:14px 0 0;text-align:center}.cl .cl-i{font-size:11.5px;line-height:1.45;color:#111}.cl .cl-i b{font-weight:700}.cl .cl-mut{color:#777}.cl .cl-unit{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-top:3px}.cl .cl-notes{white-space:pre-wrap;margin-top:5px;unicode-bidi:plaintext}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:18px;padding:5px 0 4px;font-weight:700;font-size:11.5px}.cl .cl-r{display:flex;padding-top:7px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:12px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:11px;padding-top:1px}.cl .cl-x{font-size:11px;font-style:italic;color:#555;padding-top:1px}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:18px;border-top:1px solid #111;padding-top:6px}</style>
+    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:12px;line-height:1.35}.cl .cl-inf{margin:14px 0 0;text-align:center}.cl .cl-i{font-size:11.5px;line-height:1.45;color:#111}.cl .cl-i b{font-weight:700}.cl .cl-dim{color:#9a9a9a}.cl .cl-dim b{font-weight:600}.cl .cl-unit{font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:11px;margin-top:3px}.cl .cl-notes{white-space:pre-wrap;margin-top:5px;unicode-bidi:plaintext}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:18px;padding:5px 0 4px;font-weight:700;font-size:11.5px}.cl .cl-r{display:flex;padding-top:7px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:12px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:11px;padding-top:1px}.cl .cl-x{font-size:11px;font-style:italic;color:#555;padding-top:1px}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:18px;border-top:1px solid #111;padding-top:6px}</style>
     ${o.pdf ? "" : `<div style="padding-top:4px">${cleanTitleHtml(p)}</div>`}
     ${infoHtml}
     ${body}
@@ -3118,7 +3123,7 @@ function docxXmlClean(p) {
   const cell = (w, content) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${content || para("")}</w:tc>`;
   const table = (cols, rows) => `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/>${noBorders}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="70" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${cols.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows.join("")}</w:tbl>`;
   const info = infoRows(p), unit = unitLine(p), center = runs => `<w:p><w:pPr><w:spacing w:before="0" w:after="20"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
-  let body = info.map(r => center(wRun(r.k + ": ", { b: true, sz: 19 }) + wRun(r.v || "–", { sz: 19 }) + (r.x ? wRun("  ·  " + r.x, { sz: 19, color: "777777" }) : ""))).join("")
+  let body = info.map(r => center(wRun(r.k + ": ", { b: true, sz: 19, color: r.dim ? "9A9A9A" : "" }) + wRun(r.v, { sz: 19, color: r.dim ? "9A9A9A" : "" }))).join("")
     + (unit ? center(wRun(unit, { b: true, caps: true, sz: 18 })) : "")
     + (p.notes ? p.notes.split(/\n/).map(t => `<w:p><w:pPr>${hasHebrew(t) ? "<w:bidi/>" : ""}<w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${wRun(t, { sz: NOTE_SZ[p.notesSize] || 22, b: !!p.notesBold })}</w:p>`).join("") : "");
   const S = sku ? 1500 : 0, Q = 640, N = W_TEXT - Q - S;
@@ -3206,6 +3211,7 @@ function openPreview(p) {
   o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
       <span class="seg sm" role="group" aria-label="Layout">${[["clean", "Clean"], ["table", "Table"]].map(([v, t]) => `<button type="button" data-act="preview-layout" data-v="${v}" aria-pressed="${lay === v}">${t}</button>`).join("")}</span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
+    ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
     <div class="pv-actions"><button class="btn primary" type="button" data-act="send-open">${SEND_ICON}<span>Send</span></button><button class="btn" type="button" data-act="export-pdf">${FILE_ICON}<span>PDF</span></button><button class="btn" type="button" data-act="export-docx">${FILE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="copy">${COPY_ICON}<span>Text</span></button></div>`;
   document.body.appendChild(o);
@@ -3646,6 +3652,7 @@ document.addEventListener("click", e => {
       const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
       break;
     }
+    case "pv-unit": if (findProd(id) && id !== app.pid) { closePreview(); app.pid = id; app.editing = null; render(); openPreview(cur()); } break;
     case "preview-layout": {
       app.settings.exportLayout = b.dataset.v === "table" ? "table" : "clean"; touchSettings();
       document.querySelectorAll('[data-act="preview-layout"]').forEach(x => x.setAttribute("aria-pressed", String(x === b)));
