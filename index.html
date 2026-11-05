@@ -2868,7 +2868,7 @@ function viewSettings() {
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
-      return rows ? `<div class="set-group"><h3>Catalog</h3>${rows}<span class="hint">Edit the catalog with the pencil in Add gear.</span></div>` : ""; })()}
+      return `<div class="set-group"><h3>Catalog</h3>${rows}<div><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button></div><span class="hint">Your catalog as it is now: its order, names, colors and the items you added. Edit it with the pencil in Add gear.</span></div>`; })()}
     <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span>
       ${canBuzz() ? `<label class="check"><input type="checkbox" name="haptics" ${app.settings.haptics === false ? "" : "checked"}> Vibrate lightly on taps</label>` : ""}</div>
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
@@ -4562,6 +4562,12 @@ document.addEventListener("click", e => {
       break;
     }
     case "share-app": shareApp(); break;
+    case "cat-export": {  // the same shape as the app's built-in starting catalog
+      const d = new Date(), two = n => String(n).padStart(2, "0");
+      const data = { catalog: app.settings.catalog || {}, closedBrands: app.settings.closedBrands || {}, catColors: app.settings.catColors || {}, savedAt: d.toISOString() };
+      saveFile(`AC Cam List catalog ${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}.json`, JSON.stringify(data)).then(ok => { if (ok) toast("Catalog saved to your Downloads"); });
+      break;
+    }
     case "notice-close": { const n = document.getElementById("notice"); if (n) { n.classList.remove("in"); n.hidden = true; } break; }
     /* exports */
     case "export-docx": buildDocx(p).then(blob => saveFile(fileBase(p) + ".docx", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The Word file couldn't be built. Use PDF or Text.")); break;
