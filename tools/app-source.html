@@ -636,17 +636,21 @@ details.more > summary::-webkit-details-marker { display: none; }
 .seg button { border: 0; background: transparent; padding: 6px 11px; font-weight: 500; font-size: 13px; color: var(--fg); }
 .seg button + button { border-inline-start: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
-.pv-actions { display: grid; grid-template-columns: minmax(0, 380px) auto; justify-content: center; align-items: end; gap: 14px; }
+.pv-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); justify-content: center; align-items: end; gap: 14px; }
 .pv-actions .btn { justify-content: center; gap: 6px; padding-inline: 6px; min-height: 44px; }
 .pv-save, .pv-send { display: grid; gap: 5px; min-width: 0; }
 .pv-lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-inline-start: 2px; white-space: nowrap; }
-.pv-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pv-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pv-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .pv-seg .btn { border-radius: 0; }
 .pv-seg .btn + .btn { margin-inline-start: -1px; }
 .pv-seg .btn:first-child { border-start-start-radius: 8px; border-end-start-radius: 8px; }
 .pv-seg .btn:last-child { border-start-end-radius: 8px; border-end-end-radius: 8px; }
 .pv-send { padding-inline-start: 14px; border-inline-start: 1px solid var(--line); }
-.pv-send .btn { min-width: 96px; padding-inline: 14px; }
+.toast.with-undo { width: max-content; display: flex; align-items: center; gap: 14px; padding: 6px 6px 6px 14px; font-size: 14px; }
+.toast[hidden] { display: none; }
+.undo-btn { border: 0; border-inline-start: 1px solid rgba(127, 127, 127, .45); border-radius: 0 6px 6px 0; background: none; color: inherit; font-weight: 700; font-size: 14px; padding: 8px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
+.undo-btn:hover { background: rgba(127, 127, 127, .2); }
 @media (max-width: 560px) { .pv-bar .hint { display: none; } .pv-bar > b { flex: 1; } }
 .set-group { display: grid; gap: 10px; padding-block: 16px; border-top: 1px solid var(--line); }
 .set-group:first-of-type { border-top: 0; }
@@ -795,8 +799,32 @@ const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(
 const clampQ = v => Math.max(0, Math.min(999, Math.floor(Number(v) || 0)));
 function toast(msg) {
   const t = document.getElementById("toast");
-  t.textContent = msg; t.hidden = false;
+  t.textContent = msg; t.hidden = false; t.classList.remove("with-undo"); undoFn = null;
   clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; }, 2600);
+}
+/* undo: something just deleted can be taken back from the bar at the bottom, for a few seconds */
+let undoFn = null;
+function undoable(msg, fn) {
+  const t = document.getElementById("toast"); if (!t) return;
+  t.innerHTML = `<span>${esc(msg)}</span><button class="undo-btn" type="button" data-act="undo">Undo</button>`;
+  t.hidden = false; t.classList.add("with-undo"); undoFn = fn;
+  clearTimeout(toast._t); toast._t = setTimeout(() => { t.hidden = true; t.classList.remove("with-undo"); undoFn = null; }, 8000);
+}
+/* a list's lines as they are now, to put back */
+function snapItems(p) {
+  const id = p.id, items = clone(p.items), ok = clone(p.clashOk);
+  return () => { const q = findProd(id); if (!q) return; q.items = items; q.clashOk = ok; touch(q); rerenderKeepScroll(); };
+}
+/* productions about to be deleted (with their 2nd Units), to put back where they were */
+function snapProds(ids) {
+  const before = app.productions.slice(), beforeIds = new Set(before.map(x => x.id)), home = app.view === "home";
+  return () => {
+    const now = new Set(app.productions.map(x => x.id));
+    const back = before.filter(x => !now.has(x.id));
+    app.productions = [...before.filter(x => now.has(x.id) || back.includes(x)), ...app.productions.filter(x => !beforeIds.has(x.id))];
+    back.forEach(x => touch(x));
+    if (home || app.view === "home") rerenderKeepScroll(); else render();
+  };
 }
 
 /* a lens's name without what its spec line already says (mount, stop, format, squeeze, the set's focal list),
@@ -1481,8 +1509,9 @@ function flush(id) {
 }
 async function removeRemote(id) {
   if (!COL) return;
-  await (chains.get(id) || Promise.resolve());
-  try { await COL.doc(id).delete(); } catch (e) {}
+  const run = (chains.get(id) || Promise.resolve()).then(() => COL.doc(id).delete()).catch(() => {});
+  chains.set(id, run);
+  await run;
 }
 function typing() { const a = document.activeElement; return !!(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")); }
 async function initAccount() {
@@ -1842,6 +1871,7 @@ function motorPicker(p, hostId) {
 function setQty(p, id, qty, field) {
   qty = clampQ(qty);
   const wasNew = !p.items[id];
+  const und = !wasNew && qty === 0 && !field ? snapItems(p) : null, gone = und ? p.items[id].name : "";
   let l = p.items[id];
   if (!l) {
     if (qty === 0 || !ITEM.has(id)) return [];
@@ -1874,6 +1904,7 @@ function setQty(p, id, qty, field) {
   notifyDefaults(adds);
   // an ARRI hand unit (Hi-5, WCU-4) needs motors: ask which ones
   if (wasNew && p.items[id] && !cov && !clash && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
+  if (und && !p.items[id]) undoable(`Removed ${gone}`, und);
   return changed;
 }
 
@@ -3025,7 +3056,7 @@ function viewList(p, h) {
   const sections = secs.map(s => {
     const rows = by[s.id], shut = closed(s);
     const pcs = rows.reduce((a, [, l]) => a + lineQty(l), 0);
-    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span><span class="tape" aria-hidden="true"></span>${esc(secName(s.id))}<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button></span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
+    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span><span class="tape" aria-hidden="true"></span>${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
       <div class="sec-body">${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
       <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
     </div>`;
@@ -3340,8 +3371,9 @@ function openPreview(p) {
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
     <div class="pv-actions">
       <div class="pv-save" role="group" aria-labelledby="pv-save-l"><span class="pv-lbl" id="pv-save-l">Save to this ${isTouch() ? "phone" : "computer"}</span>
-        <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button><button class="btn" type="button" data-act="export-txt" aria-label="Save as text">${SAVE_ICON}<span>Text</span></button></div></div>
-      <div class="pv-send"><span class="pv-lbl">Send</span><button class="btn primary" type="button" data-act="send-open">${SEND_ICON}<span>Send</span></button></div></div>`;
+        <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button></div></div>
+      <div class="pv-send" role="group" aria-labelledby="pv-send-l"><span class="pv-lbl" id="pv-send-l">Send</span>
+        <div class="pv-two"><button class="btn" type="button" data-act="copy" aria-label="Copy the list as text">${COPY_ICON}<span>Copy</span></button><button class="btn primary" type="button" data-act="send-open">${SEND_ICON}<span>Send</span></button></div></div></div>`;
   document.body.appendChild(o);
   document.body.style.overflow = "hidden";
   fitPreview();
@@ -3514,14 +3546,14 @@ async function saveFile(filename, data) {
     return false;
   }
 }
-function copyText(text) {
+function copyText(text, done) {
   const fallback = () => {
     const box = document.getElementById("copyFallback");
     if (!box) return;
     box.innerHTML = `<div class="field" style="padding-bottom:12px"><label for="copyArea">Copy this text</label><textarea class="copybox" id="copyArea" readonly></textarea></div>`;
     const ta = document.getElementById("copyArea"); ta.value = text; ta.focus(); ta.select();
   };
-  try { navigator.clipboard.writeText(text).then(() => toast("List copied"), fallback); } catch (e) { fallback(); }
+  try { navigator.clipboard.writeText(text).then(() => done ? done() : toast("List copied"), fallback); } catch (e) { fallback(); }
 }
 
 /* ---------- events ---------- */
@@ -3601,7 +3633,7 @@ document.addEventListener("click", e => {
     case "pm-del": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
       const nm = app.productions.find(x => x.id === id)?.name || "Production";
-      closeModal(); deleteProductions([id]); render(); toast(`${nm} deleted`);
+      const und = snapProds([id]); closeModal(); deleteProductions([id]); render(); undoable(`${nm} deleted`, und);
       break;
     }
     case "pick-prod": { if (!app.sel) break; if (app.sel.has(id)) app.sel.delete(id); else app.sel.add(id); rerenderKeepScroll(); break; }
@@ -3615,7 +3647,7 @@ document.addEventListener("click", e => {
     case "sel-del": {
       const ids = [...(app.sel || [])]; if (!ids.length) break;
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = `Tap again to delete ${ids.length}`; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete"; } }, 4000); break; }
-      deleteProductions(ids); app.sel = null; rerenderKeepScroll(); toast(`Deleted ${ids.length} production${ids.length === 1 ? "" : "s"}`);
+      const und = snapProds(ids); deleteProductions(ids); app.sel = null; rerenderKeepScroll(); undoable(`Deleted ${ids.length} production${ids.length === 1 ? "" : "s"}`, und);
       break;
     }
     /* the shoot dates calendar */
@@ -3658,9 +3690,9 @@ document.addEventListener("click", e => {
     case "send-open": sendDialog(p); break;
     case "delete": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete production"; } }, 4000); break; }
-      const delId = mainOf(findProd(app.formFor))?.id || app.formFor;
+      const delId = mainOf(findProd(app.formFor))?.id || app.formFor, und = snapProds([delId]);
       deleteProductions([delId]);
-      app.view = "home"; app.pid = null; render(); toast("Production deleted");
+      app.view = "home"; app.pid = null; render(); undoable("Production deleted", und);
       break;
     }
     case "dup": startDuplicate(id || app.pid); break;
@@ -3711,9 +3743,9 @@ document.addEventListener("click", e => {
       break;
     }
     case "remove": {
-      const name = p.items[id]?.name; delete p.items[id];
+      const und = snapItems(p), name = p.items[id]?.name; delete p.items[id];
       if (app.editing === id) app.editing = null;
-      applyDefaults(p); touch(p); rerenderKeepScroll(); toast(`Removed ${name}`);
+      applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable(`Removed ${name}`, und);
       break;
     }
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
@@ -3721,11 +3753,13 @@ document.addEventListener("click", e => {
     case "rename-reset": { const l = p.items[id]; if (l && l.orig) { l.name = l.orig; touch(p); rerenderKeepScroll(); } break; }
     case "kinc": case "kdec": {
       const { l, c } = kidRef(p, id); if (!c) break;
+      const und = snapItems(p);
       c.qty = clampQ(c.qty + (act === "kinc" ? 1 : -1));
       if (!c.qty) l.children = l.children.filter(k => k !== c);
-      touch(p); rerenderKeepScroll(); break;
+      touch(p); rerenderKeepScroll(); if (!c.qty) undoable(`Removed ${c.name}`, und); break;
     }
-    case "krm": { const { l, c } = kidRef(p, id); if (c) { l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); } break; }
+    case "krm": { const { l, c } = kidRef(p, id); if (c) { const und = snapItems(p); l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); undoable(`Removed ${c.name}`, und); } break; }
+    case "undo": { const fn = undoFn; undoFn = null; const t = document.getElementById("toast"); if (t) { t.hidden = true; t.classList.remove("with-undo"); } if (fn) { fn(); toast("Back as it was"); } break; }
     /* editing the catalog and headings */
     case "cat-editmode": app.editCat = !app.editCat; rerenderKeepScroll(); break;
     case "cat-edit": catEditDialog(houseById(p.houseId), id); break;
@@ -3809,7 +3843,7 @@ document.addEventListener("click", e => {
       const rid = b.dataset.rid, r = clashRules().find(x => x.id === rid); let ids = [];
       if (act === "clash-keep") { (q.clashOk || (q.clashOk = {}))[rid] = true; touch(q); }
       else if (act === "clash-swap") { ids = clashSwap(q, rid); if (r) toast(`Swapped for ${shortName(itName(r.swap))}`); }
-      else { ids = clashDrop(q, rid); toast("Removed"); }
+      else { const und = snapItems(q); ids = clashDrop(q, rid); undoable("Removed", und); }
       if (app.tab === "add" && !(app.q || "").trim()) refreshRows(q, Object.keys(q.items).concat(ids)); else rerenderKeepScroll();
       break;
     }
@@ -3819,7 +3853,7 @@ document.addEventListener("click", e => {
     case "export-docx": buildDocx(p).then(blob => saveFile(fileBase(p) + ".docx", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The Word file couldn't be built. Use PDF or Text.")); break;
     case "export-csv": saveFile(fileBase(p) + ".csv", csvText(p)); break;
     case "export-pdf": toast("Building the PDF…"); buildPdf(p).then(blob => saveFile(fileBase(p) + ".pdf", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The PDF couldn't be built here. Use Word or Text.")); break;
-    case "copy": copyText(listText(p)); break;
+    case "copy": copyText(listText(p), () => { commitVer(p); toast(`List copied · version ${p.docVer}`); }); break;
     case "export-txt": saveFile(fileBase(p) + ".txt", listText(p)).then(ok => { if (ok) savedVer(p); }); break;
     case "preview": openPreview(p); break;
     case "preview-close": closePreview(); break;
@@ -4051,7 +4085,10 @@ document.addEventListener("submit", e => {
       if (q) Object.assign(q, qf);
       else { q = srcQ ? copyProduction(srcQ, qf) : newProduction(qf); app.productions.push(q); ask = !srcQ && totals(p).lines > 0; }
       p.unit2 = q.id; p.unit = "Main Unit"; touch(q);
-    } else if (oldQ) { deleteProductions([oldQ.id]); delete p.unit2; p.unit = ""; toast("2nd Unit removed"); }
+    } else if (oldQ) {
+      const unitWas = p.unit; deleteProductions([oldQ.id]); delete p.unit2; p.unit = "";
+      undoable("2nd Unit removed", () => { if (!findProd(oldQ.id)) app.productions.push(oldQ); p.unit2 = oldQ.id; p.unit = unitWas || "Main Unit"; touch(oldQ); touch(p); render(); });
+    }
     else if (p.unit && !p.mainOf) p.unit = "";
     app.dupFrom = null;
     touch(p);
