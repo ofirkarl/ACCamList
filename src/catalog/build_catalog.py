@@ -176,7 +176,8 @@ import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from brands import brand_of
 from meta import (title_case, filter_sub, filter_group, filter_sort_key, FILTER_SUBS, FILTER_GROUP_BY, SIZE_ORDER, FILTER_WORDS,
-                  is_txrx, camera_meta, lens_meta, MEDIA_SUBS, MEDIA_ORDER, media_kind, media_group, FF_ORDER, ff_group, POWER_ORDER, power_group)
+                  is_txrx, camera_meta, lens_meta, MEDIA_SUBS, MEDIA_ORDER, media_kind, media_group, FF_ORDER, ff_group, POWER_ORDER, power_group,
+                  FUNC_GROUPS, func_group)
 
 EXCLUDE = {"sound", "logistics"}  # user asked for camera dept only: no lighting, grip, sound, logistics
 
@@ -392,6 +393,18 @@ def build(houses):
                     present = {i["group"] for i in sub["items"]}
                     sub["groups"] = [g for g in POWER_ORDER if g in present]
                     sub["brandSplit"] = list(sub["groups"])  # each type is divided by manufacturer
+                elif cat_id == "camera_accessories" and sub_id in FUNC_GROUPS:  # by what it's for: Laptops & Tablets, Gimbals, Fluid Heads...
+                    for item, nm in zip(sub["items"], names):
+                        item["group"] = func_group(sub_id, nm)
+                    present = {i["group"] for i in sub["items"]}
+                    if len(present) > 1:
+                        sub["groupBy"] = "type"
+                        sub["groups"] = [g for g in FUNC_GROUPS[sub_id][0] if g in present]
+                        sub["groupDefault"] = FUNC_GROUPS[sub_id][2]  # where an item moved in from elsewhere lands
+                        # a big group with several makers is divided by manufacturer inside (Fluid Heads: Cartoni, O'Connor, Sachtler...)
+                        sub["brandSplit"] = [g for g in sub["groups"] if sum(1 for i in sub["items"] if i["group"] == g) >= 7 and len({i["brand"] for i in sub["items"] if i["group"] == g}) >= 3]
+                    else:
+                        for item in sub["items"]: item.pop("group", None)
                 cat["subcategories"].append(sub)
             if cat["subcategories"]:
                 h["categories"].append(cat)

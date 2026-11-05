@@ -423,3 +423,53 @@ def lens_meta(house, cat_id, sub_id, n):
     if sq: m["squeeze"] = sq.group(1) + "x"
     elif re.search(r"Atlas Orion|S6i Anamorphic|Optimo Anamorphic", n, re.I): m["squeeze"] = "2x"
     return m or None
+
+
+# Camera accessories by what they're for, not by who makes them: the subcategories that were only split by manufacturer.
+# Each rule is (pattern, group), tried in order; the first group listed for a subcategory is also the order they show in.
+FUNC_GROUPS = {
+    "general": (["Slates & Timecode", "Laptops & Tablets", "GoPro & Action Cams", "Remotes & Motion Control", "Carts", "On-set Tools"], [
+        (r"clapper|\bslate|time-?code|\btc\b|syncbox|denecke", "Slates & Timecode"),
+        (r"macbook|ipad|laptop|vostro|tablet", "Laptops & Tablets"),
+        (r"gopro|go pro|osmo action|insta360", "GoPro & Action Cams"),
+        (r"remote control unit|\brcu-|giga t|motion control|\bbolt\b|rotating platform|motori[sz]ed", "Remotes & Motion Control"),
+        (r"\bcart\b|magliner|dolly", "Carts"),
+    ], "On-set Tools"),
+    "rigs_stabilizers": (["Gimbals", "Gimbal Accessories", "Easyrig & Support Vests", "Steadicam", "Shoulder & Handheld", "Bridge Plates & Lens Supports", "Vertical Format", "Other Rigs"], [
+        (r"vertical", "Vertical Format"),
+        (r"bridge plate|\bc?bp-\d|lens support|\bls-1\d", "Bridge Plates & Lens Supports"),
+        (r"for (dji )?(rs|ronin)\b|for ronin|gimbal control wheels|\bmimic\b|4d flex", "Gimbal Accessories"),
+        (r"easy ?rig|flowcine|serene|stabil\b|mantis|armor man|flota|ready rig|puppeteer|gravity one", "Easyrig & Support Vests"),
+        (r"steadicam|glidecam", "Steadicam"),
+        (r"ronin|\bmovi\b|maxima|\brs ?\d", "Gimbals"),
+        (r"shoulder|hand ?grip|handle|eng rig|fig rig|dslr rig|cinesaddle|steady bag|helmet|hermit|\bs-4\b", "Shoulder & Handheld"),
+    ], "Other Rigs"),
+    "car_mounts": (["Suction Mounts", "Magnet Mounts", "Car Rigs & Hard Mounts"], [
+        (r"suction|hydra alien", "Suction Mounts"),
+        (r"magnet|androokie", "Magnet Mounts"),
+    ], "Car Rigs & Hard Mounts"),
+    "tripods": (["Fluid Heads", "Geared Heads", "Tripod Kits", "Tripod Legs", "Baby Legs", "Hi-Hats", "Monopods", "Pedestals"], [
+        (r"pedestal|pro ped", "Pedestals"),
+        (r"monopod", "Monopods"),
+        (r"high hat|hi-?hat", "Hi-Hats"),
+        (r"\bbaby\b", "Baby Legs"),
+        (r"with .*\blegs\b|tripod with|\bkit\b|compact advanced|secced|sachtler ace|\bsvt\d", "Tripod Kits"),
+        (r"\blegs\b|\btripod\b", "Tripod Legs"),
+        (r"arri head|geared|arrihead", "Geared Heads"),
+    ], "Fluid Heads"),
+    "underwater": (["Cinema Camera Housings", "Mirrorless Housings", "Action Cam Housings"], [
+        (r"gopro|go pro|insta360", "Action Cam Housings"),
+        (r"alexa|\bz7\b|\bex3\b|scubacam", "Cinema Camera Housings"),
+    ], "Mirrorless Housings"),
+    "recorders": (["Recorders", "Tape Decks"], [
+        (r"betacam|\bhvr-|\bbr-hd|\bj-30", "Tape Decks"),
+    ], "Recorders"),
+}
+
+
+def func_group(sub_id, n):
+    order, rules, default = FUNC_GROUPS[sub_id]
+    for pat, g in rules:
+        if re.search(pat, n, re.I):
+            return g
+    return default

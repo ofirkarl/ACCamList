@@ -200,9 +200,9 @@ A.applyCatalog();
 ok(U.categories[0].id === "filters" && U.categories.find(c => c.id === "camera").subcategories[0].key === "camera_accessories/wireless_video", "order and moves survive a rebuild");
 A.moveSub(U, "camera_accessories/wireless_video", "camera_accessories", "camera_accessories/follow_focus", true);
 ok(!A.app.settings.catalog.utopia.subMoves["camera_accessories/wireless_video"] && U.categories.find(c => c.id === "camera_accessories").subcategories.findIndex(x => x.id === "wireless_video") === U.categories.find(c => c.id === "camera_accessories").subcategories.findIndex(x => x.id === "follow_focus") + 1, "dragged back home, after Follow Focus");
-const nid = A.createOwnItem(U, { name: "Tilta Nucleus-M Kit #2", brand: "Tilta", sku: "MY-01", s: "camera_accessories/rigs_stabilizers", g: "__brand", section: "accessories" });
+const nid = A.createOwnItem(U, { name: "Tilta Nucleus-M Kit #2", brand: "Tilta", sku: "MY-01", s: "camera_accessories/mattebox", g: "__brand", section: "accessories" });  // a subcategory still split by manufacturer
 const ne = A.ITEM.get(nid);
-ok(ne && ne.it.own && ne.s.id === "rigs_stabilizers" && A.grpOf(ne.it, ne.s) === "Tilta" && ne.it.sku === "MY-01", "new item of your own, grouped under its brand");
+ok(ne && ne.it.own && ne.s.id === "mattebox" && A.grpOf(ne.it, ne.s) === "Tilta" && ne.it.sku === "MY-01", "new item of your own, grouped under its brand");
 A.setQty(p, nid, 2);
 ok(p.items[nid].qty === 2 && /2x Tilta Nucleus-M Kit #2 \[MY-01\]/.test(A.listText(p)), "your own item goes on the list with its SKU");
 A.moveCatItem(U, nid, "filters/diffusers/Black Pro-Mist");
@@ -572,3 +572,9 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(["Grip", "AKS", "Display"].every(c => cats.includes(c)) && ["Danna Dolly", "Orca bag 132", "Mafer", "ARRI LMB 4x5 Matte Box"].every(n => names.includes(n)) && u.subMoves["camera_accessories/monitors"] === u.cats.find(c => c.name === "Display").id,
     "starting catalog: Grip, AKS and Display; the added items; monitors under Display"); }
 
+// --- Camera Accessories by what they're for
+{ const H = A.houseById("utopia"), sub = id => H.categories.flatMap(c => c.subcategories).find(s => s.id === id);
+  const gen = sub("general"), grp = (s, re) => { const it = s.items.find(i => re.test(i.name)); return it ? A.grpOf(it, s) : null; };
+  ok(gen.groupBy === "type" && grp(gen, /MacBook Pro/) === "Laptops & Tablets" && grp(gen, /GoPro Max Lens/) === "GoPro & Action Cams" && grp(gen, /Clapper/) === "Slates & Timecode", "General: Laptops & Tablets, GoPro & Action Cams, Slates & Timecode");
+  ok(grp(sub("rigs_stabilizers"), /RS 4 Pro/) === "Gimbals" && grp(sub("rigs_stabilizers"), /Easyrig Vario 5$/) === "Easyrig & Support Vests" && grp(sub("tripods"), /Baby Legs 100mm/) === "Baby Legs" && grp(sub("car_mounts"), /Androokie Pro Magnet Kit #1/) === "Magnet Mounts", "rigs, tripods and car mounts by function");
+  const rcu = gen.items.find(i => /RCU-4/.test(i.name)); ok(!rcu || A.grpOf(rcu, gen) !== "ARRI", "an item once filed under a manufacturer doesn't leave a stray maker folder"); }

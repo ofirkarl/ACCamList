@@ -354,6 +354,12 @@ function applyCatalog() {
         if (o.g) it.grp = o.g;
         if (o.g && !o.brand && !dest.groupBy && (makers.get(dest.key) || new Set()).has(o.g)) it.brand = o.g;
       }
+      // a subcategory now grouped by what things are for: an item still filed under a manufacturer, or brought in from
+      // another subcategory with that one's group, goes to this subcategory's catch-all group instead of a stray folder
+      if (dest.groupDefault) {
+        const g = it.grp || it.group, mine = ((ed.groups || {})[dest.key] || []);
+        if (g && !(dest.groups || []).includes(g) && !mine.includes(g)) it.grp = dest.groupDefault;
+      }
       dest.items.push(it);
     }
     // the user's own items
