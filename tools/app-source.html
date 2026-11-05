@@ -1100,6 +1100,25 @@ button.ph-chip:active { transform: scale(.97); }
 .f-narrow .chip { padding: 6px 10px; font-size: 12.5px; }
 .f-nm .u { display: inline; }
 
+/* ---- the lens search: in the Lenses color (the finder takes the category's tape), actions stay indigo ---- */
+.finder .f-title { display: flex; align-items: center; gap: 12px; }
+.finder .f-title .tape { width: 34px; height: 34px; border-radius: 11px; }
+.finder .f-title .tape svg { width: 19px; height: 19px; }
+.finder .f-form { position: relative; overflow: hidden; gap: 14px; padding: 20px 16px 16px; border-radius: 20px;
+  background: color-mix(in srgb, var(--tape) 11%, var(--surface)); border: 1px solid color-mix(in srgb, var(--tape) 32%, var(--line));
+  box-shadow: 0 1px 2px rgba(48, 40, 28, .05), 0 10px 28px -14px color-mix(in srgb, var(--tape) 60%, transparent); }
+.finder .f-form::before { content: ""; position: absolute; inset: 0 0 auto; height: 4px; background: var(--bars); }
+.finder .f-fields { gap: 12px; }
+.finder .f-field > span:first-child { color: color-mix(in srgb, var(--tape) 45%, var(--fg)); font-weight: 500; }
+.finder .f-inp, .finder .f-field select, .finder .f-pick { background: var(--surface); border-color: color-mix(in srgb, var(--tape) 28%, var(--line)); min-height: 48px; }
+.finder .f-inp input { font-size: 24px; font-weight: 600; }
+.finder .f-inp i { color: color-mix(in srgb, var(--tape) 60%, var(--fg)); font-weight: 600; }
+.finder .f-inp:focus-within, .finder .f-field select:focus, .finder .f-pick:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+/* a filter that's on: tinted, so you see at a glance what narrows the results */
+.finder .f-field.set select, .finder .f-field.set .f-pick { background: color-mix(in srgb, var(--tape) 22%, var(--surface)); border-color: color-mix(in srgb, var(--tape) 60%, var(--line)); font-weight: 500; }
+.finder .f-field.set > span:first-child::after { content: " ●"; color: var(--tape); font-size: 9px; vertical-align: 2px; }
+.finder .f-sum { padding-inline: 2px; }
+
 /* nothing moves for people who asked their phone for less motion */
 @media (prefers-reduced-motion: reduce) {
   .modal, .modal-card, .toast, .bump, .pop, .ph-status.live::before { animation: none !important; }
@@ -3127,7 +3146,6 @@ if (typeof addEventListener === "function") addEventListener("scroll", () => {
     for (const c of r.querySelectorAll(".f-col")) { const bx = c.getBoundingClientRect(); if (bx.top <= 28 && bx.bottom > 28) { here = c; break; } }
     const k = here ? here.dataset.col : null;
     if (k === rulerKey) return;
-    if (rulerKey !== null && k !== null) buzz("tick");
     rulerKey = k;
     r.querySelectorAll(".f-col.here").forEach(c => c.classList.remove("here")); if (here) here.classList.add("here");
   });
@@ -3176,9 +3194,9 @@ function finderHtml(p, h) {
   const sel = (key, v) => s[key] === v ? " selected" : "";
   const kinds = `<option value=""${sel("kind", "")}>Any lens (${all.length})</option>` + KINDS.map(([grp, opts]) => `<optgroup label="${grp}">${opts.map(([k, label, fn]) => { const n = count(fn); return n || s.kind === k ? `<option value="${k}"${sel("kind", k)}>${esc(label)} (${n})</option>` : ""; }).join("")}</optgroup>`).join("");
   const mounts = `<option value=""${sel("mount", "")}>Any mount</option>` + MOUNTS.map(([k, label]) => { const n = count(sp => sp.mounts.includes(k)); return n || s.mount === k ? `<option value="${k}"${sel("mount", k)}>${esc(label)} (${n})</option>` : ""; }).join("");
-  const covs = [["", "Any format"], ["S16", "S16 and up"], ["S35", "S35 and up"], ["FF", "Full frame and up"], ["LF", "Large format"]].map(([k, label]) => `<option value="${k}"${sel("cov", k)}>${label}</option>`).join("");
+  const covs = [["", "Any format"], ["S16", "S16 and up"], ["S35", "S35 and up"], ["FF", "FF and up"], ["LF", "Large format"]].map(([k, label]) => `<option value="${k}"${sel("cov", k)}>${label}</option>`).join("");
   return `<div class="pad finder" style="--tape: ${lens ? catTape(lens) : "var(--pal-amber)"}">
-    <div class="f-head"><div><h3 class="f-title">Find a lens</h3><p class="hint">The exact match sits in the middle of the ruler. Shorter lenses are to the left, longer to the right.</p></div>
+    <div class="f-head"><div><h3 class="f-title">${tapeIcon("lenses")}Find a lens</h3><p class="hint">Your focal length opens first. Shorter lenses sit above it on the ruler, longer ones below.</p></div>
       <button class="btn sm" type="button" data-act="fin-close">Done</button></div>
     <div class="f-form">
       <div class="f-fields">
@@ -3186,12 +3204,12 @@ function finderHtml(p, h) {
         <label class="f-field"><span>Stop</span><span class="f-inp"><i>f/</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="Stop (f-number or T-stop)"></span></label>
       </div>
       <div class="f-fields">
-        <label class="f-field"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
-        <div class="f-field"><span id="fb-lbl">Manufacturer</span><button class="f-pick" type="button" data-act="fin-brand" aria-labelledby="fb-lbl fb-val" aria-haspopup="dialog"><span id="fb-val">${esc(s.brand || "Any manufacturer")}</span>${CHEV}</button></div>
+        <label class="f-field${s.kind ? " set" : ""}"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
+        <div class="f-field${s.brand ? " set" : ""}"><span id="fb-lbl">Manufacturer</span><button class="f-pick" type="button" data-act="fin-brand" aria-labelledby="fb-lbl fb-val" aria-haspopup="dialog"><span id="fb-val">${esc(s.brand || "Any manufacturer")}</span>${CHEV}</button></div>
       </div>
       <div class="f-fields">
-        <label class="f-field"><span>Mount</span><select data-fin="mount">${mounts}</select></label>
-        <label class="f-field"><span>Covers</span><select data-fin="cov">${covs}</select></label>
+        <label class="f-field${s.mount ? " set" : ""}"><span>Mount</span><select data-fin="mount">${mounts}</select></label>
+        <label class="f-field${s.cov ? " set" : ""}"><span>Covers</span><select data-fin="cov">${covs}</select></label>
       </div>
     </div>
     <div id="fRes" class="f-res">${finderResults(p, h)}</div>
@@ -3255,7 +3273,8 @@ function refreshRows(p, ids) {
    removed or needs a look, and a tiny tick as the lens ruler passes each focal length. Off in Settings. */
 const HAPTIC = { tap: 8, tick: 5, add: [10, 35, 12], warn: [18, 60, 18], done: [8, 45, 18] };
 const canBuzz = () => typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
-function buzz(kind) { if (app.settings.haptics === false || !canBuzz()) return; try { navigator.vibrate(HAPTIC[kind] || 8); } catch (e) {} }
+const inFinder = () => app.view === "production" && app.tab === "add" && !!(app.finder && app.finder.on);
+function buzz(kind) { if (app.settings.haptics === false || !canBuzz() || inFinder()) return; /* the lens finder stays quiet */ try { navigator.vibrate(HAPTIC[kind] || 8); } catch (e) {} }
 /* restart a short CSS animation on an element */
 function replay(el, cls) { if (!el || !el.classList) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function popQty(kind, id, f) { if (typeof document === "undefined") return; document.querySelectorAll(`[data-${kind}qty="${CSS.escape(id)}"]${f ? `[data-f="${f}"]` : ""}`).forEach(el => replay(el, "pop")); }
@@ -4202,9 +4221,9 @@ document.addEventListener("click", e => {
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
     case "fin-close": fin().on = false; render(); break;
     case "fin-brand": finBrandDialog(); break;
-    case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
+    case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); v?.closest(".f-field")?.classList.toggle("set", !!s2.brand); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
-    case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) v.textContent = s3.brand; refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
+    case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) { v.textContent = s3.brand; v.closest(".f-field")?.classList.add("set"); } refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
     case "fv-row": {
       const rows = fin().rows || (fin().rows = {}), on = rows[id] = !rows[id], li = b.closest(".f-card");
       if (li) { li.classList.toggle("open", on); b.setAttribute("aria-expanded", String(on)); b.setAttribute("aria-label", b.getAttribute("aria-label").replace(/^(More|Less)/, on ? "Less" : "More")); }
@@ -4390,7 +4409,7 @@ document.addEventListener("toggle", e => {
 document.addEventListener("input", e => {
   const t = e.target, p = cur();
   if (t.name === "colorHex" && t.form) { const r = t.form.querySelector('input[name="color"][value="custom"]'); if (r) r.checked = true; t.closest(".sw")?.style.setProperty("--sw", t.value); return; }
-  if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.value.trim(); fin().more = {}; refreshFinder(); return; }
+  if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!t.value); refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
   if (t.id === "bq") { const q = norm(t.value.trim()); let n = 0; document.querySelectorAll("#bpList li").forEach(li => { const hit = !q || li.dataset.b.includes(q); li.hidden = !hit; if (hit) n++; }); const none = document.getElementById("bpNone"); if (none) none.hidden = n > 0; return; }
