@@ -667,6 +667,8 @@ fieldset.pk legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
 .notice ul { list-style: none; margin: 3px 0 0; padding: 0; font-size: 13px; display: grid; gap: 1px; }
 .notice .nt-ico { color: var(--accent); font-size: 16px; line-height: 1.3; }
 .notice > div { flex: 1; min-width: 0; }
+.cat-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.cat-tools b { min-width: 70px; }
 .ph-unit { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; color: var(--accent); border: 1px solid currentColor; border-radius: 4px; padding: 1px 6px; align-self: center; }
 .unit-tag { font-weight: 600; color: var(--accent); }
 details.more > summary .chev { transform: none; }
@@ -2061,6 +2063,8 @@ function viewSettings() {
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
     <div class="set-group"><h3>The final list</h3>
       <div class="field"><label for="set-title">Title at the top</label><input id="set-title" data-settitle="1" maxlength="60" value="${esc(app.settings.docTitle || "")}" placeholder="Camera List"><span class="hint">Shown across from the production's name on every page. A production can have its own, in its details.</span></div></div>
+    ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length, any = hasEdits(h); return n || any ? `<div class="cat-tools"><b>${esc(h.name)}</b>${n ? `<button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button>` : ""}${any ? `<button class="btn ghost sm" type="button" data-act="cat-reset-all" data-house="${h.id}">Undo all edits</button>` : ""}</div>` : ""; }).join("");
+      return rows ? `<div class="set-group"><h3>Catalog</h3>${rows}<span class="hint">Edit the catalog with the pencil in Add gear.</span></div>` : ""; })()}
     <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span></div>
     ${acct ? `<div class="set-group"><h3>Account</h3>${acct}<span class="hint store-line"><span class="dot" aria-hidden="true"></span><span id="storeLine">${app.saveKind === "offline" ? "Can't reach your account yet" : storageText()}</span></span></div>` : ""}
     <div class="set-group"><h3>Defaults</h3>
@@ -2163,21 +2167,13 @@ function viewCatalog(p, h) {
       <div class="search-row"><label class="search" for="q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
       <input id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
       <button class="btn spec-btn" type="button" data-act="fin-open" aria-label="Advanced search: find a lens by focal length and stop">${RULER_ICON}<span>Advanced</span></button>
-      <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${app.editCat ? "✓" : PEN_ICON}</button></div>
+      <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
       <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
     </div>
-    ${app.editCat ? `<div class="pad edit-row">${editRowBar(h)}</div>` : ""}
+
     <div class="pad" id="tree">${treeHtml(p, h)}</div>`;
 }
 const PEN_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>`;
-/* editing the catalog: only while it's on, a slim row with what goes with it */
-function editRowBar(h) {
-  const any = hasEdits(h);
-  return `<span class="hint">Editing · drag ${GRIP} or press and hold to move</span>
-    ${hiddenItems(h).length ? `<button class="btn ghost sm" type="button" data-act="removed-list">Removed items (${hiddenItems(h).length})</button>` : ""}
-    ${any ? `<button class="btn ghost sm" type="button" data-act="cat-reset-all">Undo all edits</button>` : ""}
-    <button class="btn sm primary" type="button" data-act="cat-editmode" aria-pressed="true">Done</button>`;
-}
 function selCount(p, pred) { let n = 0; for (const id of Object.keys(p.items)) { const e = ITEM.get(id); if (e && pred(e)) n++; } return n; }
 function selBadge(n, key) { return `<span class="sel" data-sel="${esc(key)}" ${n ? "" : "hidden"}>${n}</span>`; }
 const NOFOLDER = "__none";
@@ -2689,7 +2685,7 @@ function mfrDialog(h, gkey, brand) {
 function removedDialog(h) {
   const list = hiddenItems(h).sort((a, b) => BLOC.get(a.id).ord - BLOC.get(b.id).ord);
   showModal(`<div class="form dialog"><h3 class="plain">Removed from ${esc(h.name)}'s catalog</h3>
-    ${list.length ? `<ul class="pick-list">${list.map(it => `<li><span class="info"><span class="nm">${esc(it.name)}</span></span><button class="btn sm" type="button" data-act="cat-item-restore" data-id="${esc(it.id)}">Bring back</button></li>`).join("")}</ul>` : `<p class="hint">Nothing removed.</p>`}
+    ${list.length ? `<ul class="pick-list">${list.map(it => `<li><span class="info"><span class="nm">${esc(it.name)}</span></span><button class="btn sm" type="button" data-act="cat-item-restore" data-id="${esc(it.id)}" data-house="${esc(h.id)}">Bring back</button></li>`).join("")}</ul>` : `<p class="hint">Nothing removed.</p>`}
     <div class="modal-actions"><span class="grow"></span><button class="btn primary" type="button" data-act="modal-close">Done</button></div></div>`);
 }
 function headDialog(scope, h, k) {
@@ -3460,9 +3456,9 @@ document.addEventListener("click", e => {
       document.querySelector(`form[data-custom="${CSS.escape(b.dataset.to)}"] input`)?.focus();
       break;
     }
-    case "removed-list": removedDialog(houseById(p.houseId)); break;
+    case "removed-list": removedDialog(houseById(b.dataset.house || p.houseId)); break;
     case "cat-item-restore": {
-      const h = houseById(p.houseId); restoreCatItem(h, id);
+      const h = houseById(b.dataset.house || p.houseId); restoreCatItem(h, id);
       if (hiddenItems(h).length) removedDialog(h); else closeModal();
       rerenderKeepScroll(); toast("Back in the catalog");
       break;
@@ -3475,7 +3471,7 @@ document.addEventListener("click", e => {
     case "cat-item-reset": { const h = houseById(p.houseId); resetCatItem(h, id); closeModal(); rerenderKeepScroll(); toast("Back to the rental house's version"); break; }
     case "cat-reset-all": {
       if (!b.classList.contains("armed")) { b.classList.add("armed", "danger"); b.textContent = "Tap again to undo all"; setTimeout(() => { if (b.isConnected) rerenderKeepScroll(); }, 4000); break; }
-      const all = app.settings.catalog || (app.settings.catalog = {}); if (STARTER.catalog[p.houseId]) all[p.houseId] = clone(STARTER.catalog[p.houseId]); else delete all[p.houseId];
+      const hid = b.dataset.house || p.houseId, all = app.settings.catalog || (app.settings.catalog = {}); if (STARTER.catalog[hid]) all[hid] = clone(STARTER.catalog[hid]); else delete all[hid];
       applyCatalog(); touchSettings(); rerenderKeepScroll(); toast("Catalog back to the starting version");
       break;
     }
