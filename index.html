@@ -3414,8 +3414,7 @@ function refreshRows(p, ids) {
    removed or needs a look, and a tiny tick as the lens ruler passes each focal length. Off in Settings. */
 const HAPTIC = { tap: 8, tick: 5, add: [10, 35, 12], warn: [18, 60, 18], done: [8, 45, 18] };
 const canBuzz = () => typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
-const inFinder = () => app.view === "production" && app.tab === "add" && !!(app.finder && app.finder.on);
-function buzz(kind) { if (app.settings.haptics === false || !canBuzz() || inFinder()) return; /* the lens finder stays quiet */ try { navigator.vibrate(HAPTIC[kind] || 8); } catch (e) {} }
+function buzz(kind) { if (app.settings.haptics === false || !canBuzz()) return; try { navigator.vibrate(HAPTIC[kind] || 8); } catch (e) {} }
 /* restart a short CSS animation on an element */
 function replay(el, cls) { if (!el || !el.classList) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function popQty(kind, id, f) { if (typeof document === "undefined") return; document.querySelectorAll(`[data-${kind}qty="${CSS.escape(id)}"]${f ? `[data-f="${f}"]` : ""}`).forEach(el => replay(el, "pop")); }
@@ -3826,7 +3825,7 @@ function exportRows(id, l) {
 }
 function listText(p, o = {}) {
   const by = linesBySection(p);
-  const out = [docTitle(p).toUpperCase() + (o.noVer ? "" : ` · VERSION ${docVer(p)}`), ...headerLines(p), ""];
+  const out = [docTitle(p).toUpperCase() + (o.noVer ? "" : ` · VERSION ${docVer(p)} · ${verStamp()}`), ...headerLines(p), ""];
   for (const s of allSections()) {
     if (!by[s.id].length) continue;
     out.push(secName(s.id).toUpperCase());
@@ -3854,7 +3853,7 @@ function fileBase(p) { return ("Camera list - " + (p.name || "production") + (un
 const layoutOf = () => app.settings.exportLayout === "table" ? "table" : "clean";
 /* the list's version: one more each time a changed list is saved (Word, PDF or Send); saving the same list again keeps its number */
 function docSigOf(p) {
-  const o = otherUnit(p), t = JSON.stringify([listText(p, { noVer: true }), p.notesBold, p.notesSize, o ? [o.dp, acText(o), o.prep, o.shootStart, o.shootEnd] : 0]);
+  const o = otherUnit(p), t = JSON.stringify([listText(p, { noVer: true }), p.notesBold, p.notesSize, o && p.mainOf ? [o.dp, acText(o), o.prep, o.shootStart, o.shootEnd] : 0]);
   let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
   return String(h >>> 0);
 }
@@ -3874,14 +3873,14 @@ function shootRangeText(p) {
 const acText = p => p ? [p.ac, p.acPhone].filter(Boolean).join("  ") : "";
 function infoRows(p) {
   const o = otherUnit(p);
-  if (!o) return [{ k: "Production company", v: p.company }, { k: "DP", v: p.dp }, { k: "1st AC", v: acText(p) }, { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }].filter(r => r.v);
+  if (!o || !p.mainOf) return [{ k: "Production company", v: p.company }, { k: "DP", v: p.dp }, { k: "1st AC", v: acText(p) }, { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }].filter(r => r.v);
   const sameDates = (o.prep || "") === (p.prep || "") && shootRangeText(o) === shootRangeText(p);
   return [{ k: "Production company", v: p.company }, ...(sameDates ? [{ k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }] : [])].filter(r => r.v);
 }
 /* with a 2nd Unit: each unit's crew in its own column, 2nd Unit on the left and Main Unit on the right. This list's unit reads in full, the other quieter.
    Each column also has its unit's dates when the two units' dates differ. */
 function crewCols(p) {
-  const o = otherUnit(p); if (!o) return null;
+  const o = otherUnit(p); if (!o || !p.mainOf) return null;  // only the 2nd Unit's list shows both crews
   const m = p.mainOf ? o : p, q = p.mainOf ? p : o;
   const sameDates = (o.prep || "") === (p.prep || "") && shootRangeText(o) === shootRangeText(p);
   const col = (x, name) => ({ name, dim: x !== p, rows: [{ k: "DP", v: x.dp }, { k: "1st AC", v: acText(x) }, ...(sameDates ? [] : [{ k: "Prep", v: x.prep ? fmtShort(x.prep) : "" }, { k: "Shoot", v: shootRangeText(x) }])].filter(r => r.v) });
@@ -3890,12 +3889,16 @@ function crewCols(p) {
 const unitLine = p => otherUnit(p) ? (p.mainOf ? "2nd Unit" : "Main Unit") : "";
 const NOTE_PX = { s: 10.5, m: 12, l: 14.5 }, NOTE_SZ = { s: 19, m: 22, l: 28 };
 const hasHebrew = t => /[\u0590-\u05FF]/.test(String(t || ""));
-function cleanTitleHtml(p, page) {
+/* when the file is saved: "5.11.26 · 23:40" */
+function verStamp(d = new Date()) { const two = n => String(n).padStart(2, "0"); return `${d.getDate()}.${d.getMonth() + 1}.${String(d.getFullYear()).slice(2)} · ${two(d.getHours())}:${two(d.getMinutes())}`; }
+function cleanTitleHtml(p, page, stamp = verStamp()) {
   const unit = unitLine(p);
-  return `<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:16px;font-family:${CLEAN_FONT};color:#111">
-    <div style="font-size:11px;color:#777;padding-top:9px">${page ? esc(page) : ""}</div>
-    <div style="text-align:center;min-width:0"><div style="font-size:25px;line-height:1.15;font-weight:700"><bdi>${esc(p.name || "Production")}</bdi></div>${unit ? `<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:3px">${esc(unit)}</div>` : ""}</div>
-    <div style="text-align:right;padding-top:4px"><div style="font-size:18px;white-space:nowrap">${esc(docTitle(p))}</div><div style="font-size:10.5px;color:#777;margin-top:3px">Version ${docVer(p)}</div></div></div>`;
+  return `<div style="font-family:${CLEAN_FONT};color:#111">
+    <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:16px">
+      <div style="font-size:11px;color:#777;padding-top:4px">${page ? esc(page) : ""}</div>
+      <div style="font-size:18px;line-height:1.2;white-space:nowrap;text-align:center">${esc(docTitle(p))}</div>
+      <div style="text-align:right;font-size:10.5px;line-height:1.45;color:#8a8a8a;white-space:nowrap">Version ${docVer(p)}<br>${esc(stamp)}</div></div>
+    <div style="text-align:center;margin-top:6px"><div style="font-size:25px;line-height:1.15;font-weight:700"><bdi>${esc(p.name || "Production")}</bdi></div>${unit ? `<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:3px">${esc(unit)}</div>` : ""}</div></div>`;
 }
 function exportHtmlClean(p, o = {}) {
   const by = linesBySection(p), sku = skuOn();
@@ -3927,7 +3930,9 @@ const W_TEXT = 9638;
 function docxHeaderClean(p) {
   const fld = (code, sz) => `<w:fldSimple w:instr="${code}"><w:r><w:rPr><w:sz w:val="${sz}"/></w:rPr><w:t>1</w:t></w:r></w:fldSimple>`;
   const unit = unitLine(p);
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="0"/></w:pPr>${fld("PAGE", 17)}${wRun(" / ", { sz: 17, color: "777777" })}${fld("NUMPAGES", 17)}<w:r><w:tab/></w:r>${wRun(p.name || "Production", { b: true, sz: 36 })}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 28 })}</w:p><w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs><w:spacing w:before="0" w:after="160"/></w:pPr><w:r><w:tab/></w:r>${unit ? wRun(unit, { b: true, caps: true, sz: 17 }) : ""}<w:r><w:tab/></w:r>${wRun("Version " + docVer(p), { sz: 16, color: "777777" })}</w:p></w:hdr>`;
+  const tabs = `<w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs>`, gray = { sz: 16, color: "8A8A8A" };
+  // "Camera List" centered on top, the version and the save time in gray at the top right, then the production, then the unit
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="0"/></w:pPr>${fld("PAGE", 17)}${wRun(" / ", { sz: 17, color: "777777" })}${fld("NUMPAGES", 17)}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 28 })}<w:r><w:tab/></w:r>${wRun("Version " + docVer(p), gray)}</w:p><w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="${unit ? 0 : 160}"/></w:pPr><w:r><w:tab/></w:r>${wRun(p.name || "Production", { b: true, sz: 36 })}<w:r><w:tab/></w:r>${wRun("\u200E" + verStamp() + "\u200E", gray)}</w:p>${unit ? `<w:p><w:pPr><w:spacing w:before="0" w:after="160"/><w:jc w:val="center"/></w:pPr>${wRun(unit, { b: true, caps: true, sz: 17 })}</w:p>` : ""}</w:hdr>`;
 }
 function docxXmlClean(p) {
   const by = linesBySection(p), sku = skuOn();
@@ -4153,7 +4158,7 @@ async function buildPdf(p) {
   const mk = html => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:-12000px;top:0;width:794px;background:#fff"; d.innerHTML = html; document.body.appendChild(d); return d; };
   const host = mk(exportHtml(p, { pdf: true }));
   // the clean layout repeats its title line at the top of every page: "Mizrahi (1 out of 3)" … "Camera List"
-  const head = clean ? mk(`<div style="box-sizing:border-box;width:794px;padding:0 56px;background:#fff">${cleanTitleHtml(p, "9 out of 9")}</div>`) : null;
+  const stamp = verStamp(), head = clean ? mk(`<div style="box-sizing:border-box;width:794px;padding:0 56px;background:#fff">${cleanTitleHtml(p, "9 out of 9", stamp)}</div>`) : null;
   try {
     const node = host.firstElementChild;
     const PAGE_PX = 1123, TOP = 40, BOTTOM = 44, headH = head ? head.firstElementChild.offsetHeight : 0;
@@ -4181,7 +4186,7 @@ async function buildPdf(p) {
       ctx.drawImage(canvas, 0, Math.round(s0 * SCALE), canvas.width, c2.height, 0, 0, canvas.width, c2.height);
       if (i) pdf.addPage();
       if (head) {
-        head.firstElementChild.innerHTML = cleanTitleHtml(p, n > 1 ? `${i + 1} out of ${n}` : "");
+        head.firstElementChild.innerHTML = cleanTitleHtml(p, n > 1 ? `${i + 1} out of ${n}` : "", stamp);
         const hc = await window.html2canvas(head.firstElementChild, { scale: 2, backgroundColor: "#ffffff" });
         pdf.addImage(hc.toDataURL("image/jpeg", 0.92), "JPEG", 0, TOP * k, pw, head.firstElementChild.offsetHeight * k);
       }
