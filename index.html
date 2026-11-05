@@ -1161,13 +1161,13 @@ button.ph-chip:active { transform: scale(.97); }
 .fv { position: relative; display: grid; gap: 2px; padding-bottom: 8px; }
 .fv::before { content: ""; position: absolute; top: 4px; bottom: 4px; inset-inline-start: 0; width: 12px; pointer-events: none;
   background: linear-gradient(var(--line), var(--line)) left / 2px 100% no-repeat, repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 10px) left / 8px 100% no-repeat; }
-.fv .f-col { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: start; padding: 0; flex: none; gap: 0; }
-.fv-mark { position: sticky; top: 12px; display: flex; align-items: baseline; gap: 2px; padding: 10px 0 0 16px; color: var(--muted); font-family: var(--font-mono); }
+.fv .f-col { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: start; padding: 0; flex: none; gap: 0; }
+.fv-mark { position: sticky; top: 12px; display: grid; justify-items: start; line-height: 1.1; padding: 10px 0 0 13px; color: var(--muted); font-family: var(--font-mono); }
 .fv-mark::before { content: ""; position: absolute; inset-inline-start: -4px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); box-sizing: border-box; }
-.fv-mark b { font-size: 15px; font-weight: 600; color: var(--fg); }
+.fv-mark b { font-size: 14px; font-weight: 600; color: var(--fg); }
 .fv-mark small { font-size: 10px; }
 .f-col.center .fv-mark { color: var(--accent); }
-.f-col.center .fv-mark b { color: var(--accent); font-size: 18px; }
+.f-col.center .fv-mark b { color: var(--accent); font-size: 16px; }
 .f-col.center .fv-mark::before { width: 14px; height: 14px; inset-inline-start: -6px; top: 15px; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
 .f-col.open .fv-mark::before { border-color: var(--accent); }
 .fv-body { display: grid; gap: 8px; min-width: 0; padding-bottom: 6px; }
@@ -1180,21 +1180,47 @@ button.ph-chip:active { transform: scale(.97); }
 .fv-head .chev { margin-inline-start: auto; color: var(--muted); transition: transform .2s var(--ease); }
 .fv-head[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .fv .f-cards { gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--frame-shadow); }
-.fv .f-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 4px; padding: 14px 14px 13px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+/* one lens: [name | link] [stop | Add] [format · mount] [its set]; the link and Add are pinned top right and never move, even when the line opens */
+.fv .f-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 96px; grid-template-rows: auto auto; column-gap: 12px; row-gap: 6px; align-items: start;
+  padding: 16px 14px 16px 16px; border: 0; border-radius: 0; box-shadow: none; background: transparent; transition: background-color .2s; }
 .fv .f-card + .f-card { border-top: 1px solid var(--hair); }
 .fv .f-card.exact { background: color-mix(in srgb, var(--ok) 5%, var(--surface)); }
 .fv .f-card.on { box-shadow: inset 3px 0 0 var(--accent); }
-.fv .f-nm { grid-column: 1; font-weight: 500; font-size: 15px; line-height: 1.3; padding: 0; display: block; overflow: visible; -webkit-line-clamp: none; }
-.fv .ctl { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-.fv .f-stopline { grid-column: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 0; }
-.fv .f-stop { font-size: 13px; padding: 2px 7px; border-radius: 7px; background: var(--sunken); }
+.fv .f-card.open { background: color-mix(in srgb, var(--accent) 4%, var(--surface)); }
+.fv-tap { position: absolute; inset: 0; z-index: 0; width: 100%; border: 0; padding: 0; margin: 0; background: transparent; cursor: pointer; border-radius: 0; }
+.fv-tap:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fv .f-card > :not(.fv-tap) { position: relative; z-index: 1; pointer-events: none; }
+.fv .f-card .f-ext, .fv .f-card .ctl { pointer-events: auto; }
+.fv .f-nm { grid-column: 1 / -1; grid-row: 1; padding-inline-end: 40px !important; align-self: center; font-weight: 500; font-size: 15px; line-height: 1.3; padding: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.fv .f-card.open .f-nm { -webkit-line-clamp: unset; display: block; }
+.fv .f-ext { grid-column: 2; grid-row: 1; justify-self: end; display: grid; place-items: center; width: 34px; height: 34px; margin: -6px -6px -6px 0; }
+.fv .f-ext .ext { margin: 0; }
+.fv .f-stopline { grid-column: 1; grid-row: 2; align-self: center; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 34px; }
+.fv .ctl { grid-column: 2; grid-row: 2; justify-self: end; align-self: center; }
+.fv .f-stop { font-size: 13px; padding: 3px 8px; border-radius: 7px; background: var(--sunken); }
 .fv .f-stop.hit { background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
 .fv .f-gap { font-size: 12.5px; white-space: normal; overflow: visible; }
-.fv .f-meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; white-space: normal; overflow: visible; }
-.fv .f-meta .ext { margin: -6px 0; }
-.fv .lens-line { grid-column: 1 / -1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
-.fv .f-card .add { height: 34px; width: auto; padding-inline: 14px; }
-.fv .f-card .stepper { width: auto; }
+.fv .f-meta { grid-column: 1 / -1; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fv .f-meta:empty { display: none; }
+.fv .f-per { grid-column: 1 / -1; min-width: 0; }
+.fv .f-per .lens-line { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.fv .f-card.open .f-meta { white-space: normal; }
+.fv .f-card.open .f-per { display: none; }
+.fv .f-info { grid-column: 1 / -1; display: none; gap: 10px; padding-top: 4px; font-size: 13px; }
+.fv .f-card.open .f-info { display: grid; animation: info-in .22s var(--ease); }
+@keyframes info-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.f-full { color: var(--muted); }
+.f-info dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--hair); }
+.f-info dt { font-size: 12px; color: var(--muted); }
+.f-info dd { margin: 2px 0 0; font-weight: 500; }
+.f-set { display: grid; gap: 4px; }
+.f-set-h { font-size: 12px; color: var(--muted); }
+.f-set .lens-line { display: block; white-space: normal; line-height: 1.7; font-size: 13px; color: var(--fg); }
+.fv .f-card .add { height: 34px; width: 96px; padding-inline: 0; justify-content: center; }
+.fv .f-card .stepper { width: 96px; }
+.fv .f-card .stepper button { width: 30px; height: 30px; }
+.fv .f-card .stepper input { width: 30px; }
+@media (prefers-reduced-motion: reduce) { .fv .f-card.open .f-info { animation: none; } }
 .f-more { border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; padding: 11px; cursor: pointer; }
 .f-more span { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); font-weight: 400; }
 .f-narrow { display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--line); }
@@ -3196,12 +3222,26 @@ function finderCard(p, m, T) {
   const sc = T == null || m.g == null ? "" : m.hit ? " hit" : Math.abs(m.g) <= 0.7 ? " near" : "";
   const gap = T != null && m.g != null ? gapText(m.g, m.ssp) : "";
   const meta = [m.type === "set" ? `${m.pos}mm from a ${sp.focals.length}-lens set` : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
-  return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}" data-fcard="${esc(m.id)}">
+  // a tap anywhere on the line opens it to everything about the lens; the link and Add stay where they are
+  const open = !!(fin().rows || {})[m.id];
+  const facts = [["Covers", COV_LABEL[sp.cov] || sp.cov], ["Mount", sp.mounts.filter(x => x !== "Other").join(", ")],
+    ["Stop", sp.label ? sp.label + (sp.per && m.type === "set" ? " (the set)" : "") : ""],
+    ["Focal length", sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`],
+    ["Type", [sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", sp.probe ? "probe" : sp.tilt ? "tilt and shift" : sp.macro ? "macro" : sp.fisheye ? "fisheye" : ""].filter(Boolean).join(", ")]].filter(([, v]) => v);
+  return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}${open ? " open" : ""}" data-fcard="${esc(m.id)}">
+    <button class="fv-tap" type="button" data-act="fv-row" data-id="${esc(m.id)}" aria-expanded="${open}" aria-label="${open ? "Less" : "More"} about ${esc(it.name)}"></button>
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
-    <span class="ctl">${ctlHtml(p, m.id)}</span>
+    <span class="f-ext">${linkHtml(it, m.e.h)}</span>
     <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
-    <span class="f-meta">${meta.map(esc).join(" · ")}${linkHtml(it, m.e.h)}</span>
-    ${sp.per ? perHtml(sp.per, m.pos, 2) : ""}
+    <span class="ctl">${ctlHtml(p, m.id)}</span>
+    <span class="f-meta">${meta.map(esc).join(" · ")}</span>
+    ${sp.per ? `<span class="f-per">${perHtml(sp.per, m.pos, 2)}</span>` : ""}
+    <span class="f-info">
+      ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
+      <dl>${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
+      ${sp.per ? `<span class="f-set"><span class="f-set-h">Lens by lens</span>${perHtml(sp.per, m.pos)}</span>` : ""}
+      ${noteOf(m.id) ? `<span class="inote">${esc(noteOf(m.id))}</span>` : ""}
+    </span>
   </li>`;
 }
 /* a long column: the makers in it, one tap to see only theirs */
@@ -4271,6 +4311,11 @@ document.addEventListener("click", e => {
     case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
     case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) v.textContent = s3.brand; refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
+    case "fv-row": {
+      const rows = fin().rows || (fin().rows = {}), on = rows[id] = !rows[id], li = b.closest(".f-card");
+      if (li) { li.classList.toggle("open", on); b.setAttribute("aria-expanded", String(on)); b.setAttribute("aria-label", b.getAttribute("aria-label").replace(/^(More|Less)/, on ? "Less" : "More")); }
+      break;
+    }
     case "fv-toggle": { const mo = fin().more, kk = "o" + b.dataset.mm; mo[kk] = !mo[kk]; refreshFinder(); break; }
     case "fin-more": { const mo = fin().more; mo[b.dataset.mm] = (+mo[b.dataset.mm] || 0) + 1; refreshFinder(b.dataset.mm); break; }
     case "chip": app.cat = b.dataset.cat; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId));
