@@ -1270,6 +1270,8 @@ button.ph-chip:active { transform: scale(.97); }
 /* the switch is a soft fade, not a jump */
 .btn, .tab, .tabs, .add, .stepper button, .ph-chip, .house-opt, .fv-head, .f-more, .tab .num { transition: background-color .35s ease, color .35s ease, border-color .35s ease, box-shadow .35s ease, transform .12s var(--ease); }
 
+.cat-io { display: flex; flex-wrap: wrap; gap: 8px; }
+.cat-io label.btn { cursor: pointer; }
 /* nothing moves for people who asked their phone for less motion */
 @media (prefers-reduced-motion: reduce) {
   .modal, .modal-card, .toast, .bump, .pop, .ph-status.live::before { animation: none !important; }
@@ -2868,7 +2870,9 @@ function viewSettings() {
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
-      return `<div class="set-group"><h3>Catalog</h3>${rows}<div><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button></div><span class="hint">Your catalog as it is now: its order, names, colors and the items you added. Edit it with the pencil in Add gear.</span></div>`; })()}
+      return `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
+        <label class="btn"><input type="file" accept=".json,application/json" data-catimport="1" hidden>${LOAD_ICON}<span>Load a catalog file</span></label></div>
+      <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add gear.</span></div>`; })()}
     <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span>
       ${canBuzz() ? `<label class="check"><input type="checkbox" name="haptics" ${app.settings.haptics === false ? "" : "checked"}> Vibrate lightly on taps</label>` : ""}</div>
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
@@ -4108,6 +4112,19 @@ async function shareApp() {
 }
 function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; navSync(); } }
 /* Send: the file goes out through the phone's share menu (Gmail, WhatsApp…) with a subject and message the user can edit */
+const LOAD_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 20h14"/></svg>`;
+/* a catalog file (Settings → Catalog → Save my catalog as a file) loaded on another phone, in the Claude version, or by a colleague */
+async function importCatalog(file) {
+  let d = null;
+  try { d = JSON.parse(await file.text()); } catch (e) {}
+  if (!d || typeof d.catalog !== "object" || Array.isArray(d.catalog) || !Object.keys(d.catalog).some(hid => houseById(hid))) { toast("That isn't an AC Cam List catalog file."); return; }
+  const houses = Object.keys(d.catalog).filter(hid => houseById(hid)).map(hid => houseById(hid).name).join(" and ");
+  const when = d.savedAt && !isNaN(Date.parse(d.savedAt)) ? verStamp(new Date(d.savedAt)) : "";
+  pendingCatalog = d;
+  showModal(`<div class="sheet"><h3 class="plain">Load this catalog?</h3><p class="hint">${esc(houses)} catalog${when ? `, saved ${esc(when)}` : ""}. It replaces your catalog for ${Object.keys(d.catalog).length > 1 ? "these houses" : "this house"}: order, names, colors and added items. Your lists stay as they are.</p>
+    <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cat-import-go">Load catalog</button></div></div>`);
+}
+let pendingCatalog = null;
 const SAVE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></svg>`;
 const FILE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M12 11v6M9 14l3 3 3-3"/></svg>`;
 const COPY_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4H4v13h4"/></svg>`;
@@ -4562,6 +4579,17 @@ document.addEventListener("click", e => {
       break;
     }
     case "share-app": shareApp(); break;
+    case "cat-import-go": {
+      const d = pendingCatalog; pendingCatalog = null; closeModal(); if (!d) break;
+      const was = clone({ catalog: app.settings.catalog || {}, closedBrands: app.settings.closedBrands || {}, catColors: app.settings.catColors || {} });
+      const all = app.settings.catalog || (app.settings.catalog = {});
+      for (const hid of Object.keys(d.catalog)) if (houseById(hid)) all[hid] = clone(d.catalog[hid]);
+      if (d.closedBrands && typeof d.closedBrands === "object") app.settings.closedBrands = clone(d.closedBrands);
+      if (d.catColors && typeof d.catColors === "object") app.settings.catColors = { ...(app.settings.catColors || {}), ...clone(d.catColors) };
+      applyCatalog(); touchSettings(); rerenderKeepScroll(); toast("Catalog loaded");
+      undoable("Loaded", "a catalog", () => { Object.assign(app.settings, was); applyCatalog(); touchSettings(); rerenderKeepScroll(); });
+      break;
+    }
     case "cat-export": {  // the same shape as the app's built-in starting catalog
       const d = new Date(), two = n => String(n).padStart(2, "0");
       const data = { catalog: app.settings.catalog || {}, closedBrands: app.settings.closedBrands || {}, catColors: app.settings.catColors || {}, savedAt: d.toISOString() };
@@ -4611,6 +4639,7 @@ document.addEventListener("input", e => {
   if (t.dataset.kname) { const { c } = kidRef(p, t.dataset.kname); if (c) { c.name = t.value.slice(0, 120); touch(p); } return; }
 });
 document.addEventListener("change", e => {
+  if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
   if (t.form && t.form.id === "catItemForm" && ["c", "s", "g"].includes(t.name)) { catDialogSync(t.name); return; }
   if (t.id === "nh-cat") {
