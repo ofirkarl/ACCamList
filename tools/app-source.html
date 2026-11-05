@@ -573,6 +573,11 @@ body.finder-on .app > main > .pad:first-child .tabs { margin-top: 12px; }
 .cal-day.start.off, .cal-day.end.off { color: var(--accent-fg); opacity: .75; }
 .cal-day:focus-visible { outline-offset: -2px; z-index: 1; }
 .cal-sum { font-size: 15px; }
+.cal-day.ref { box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--fg) 30%, transparent); }
+.cal-day.refprep::before { content: "P"; position: absolute; top: 3px; left: 6px; font: 600 9px/1 var(--font-body); color: var(--muted); }
+.cal-legend { margin: 0; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cal-legend .lg-ref { display: inline-block; width: 16px; height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--fg) 30%, transparent); }
+.cal-legend .lg-p { font: 600 10px/1 var(--font-body); }
 .cal-tip { margin: 0; }
 /* Cam list: search, and sections that close */
 .list-tools { display: grid; gap: 8px; padding-block: 12px 4px; }
@@ -2031,7 +2036,15 @@ function calOpen(mode, target) {
   cal.mode = mode === "prep" ? "prep" : "shoot"; cal.target = target || "";
   cal.start = calField(f, "shootStart").value; cal.end = calField(f, "shootEnd").value || cal.start; cal.prep = calField(f, "prep").value;
   try { cal.days = JSON.parse(calField(f, "days").value || "{}") || {}; } catch (e) { cal.days = {}; }
-  const now = new Date(), base = parseDate(cal.mode === "prep" ? cal.prep || cal.start : cal.start || cal.prep) || { y: now.getFullYear(), m: now.getMonth() + 1 };
+  // for the 2nd Unit, the Main Unit's prep and shoot days (as they are in the form now) show alongside
+  cal.ref = null;
+  if (cal.target === "u2") {
+    let rd = {}; try { rd = JSON.parse(f.elements.days.value || "{}") || {}; } catch (e) {}
+    const ra = f.elements.shootStart.value, rb = f.elements.shootEnd.value || ra;
+    cal.ref = { on: new Set(rangeDates(ra, rb).filter(d => dayOn(rd, d))), prep: f.elements.prep.value, start: ra };
+    if (!cal.ref.on.size && !cal.ref.prep) cal.ref = null;
+  }
+  const now = new Date(), base = parseDate(cal.mode === "prep" ? cal.prep || cal.start : cal.start || cal.prep) || parseDate(cal.ref && (cal.ref.start || cal.ref.prep)) || { y: now.getFullYear(), m: now.getMonth() + 1 };
   cal.y = base.y; cal.m = base.m; cal.stage = cal.start ? "done" : "start";
   showModal(`<div class="cal" id="cal">${calHtml()}</div>`);
   document.querySelector("#modal .modal-card")?.classList.add("cal-card");
@@ -2052,7 +2065,9 @@ function calHtml() {
     const cls = prep
       ? ["cal-day", wk ? "wknd" : "", on ? "ctx" : "", s === cal.prep ? "start end pick on" : "", s === today ? "today" : ""]
       : ["cal-day", wk ? "wknd" : "", inR ? "in" : "", inR && !on ? "off" : "", on ? "on" : "", s === cal.start ? "start" : "", end && s === end ? "end" : "", s === today ? "today" : "", s === cal.prep ? "prepday" : ""];
-    const lbl = `${d} ${MONTHS[cal.m - 1]}${prep ? s === cal.prep ? ", prep day" : on ? ", shoot day" : "" : inR ? on ? ", shoot day" : ", day off" : ""}`;
+    const ref = cal.ref && cal.ref.on.has(s), refPrep = cal.ref && cal.ref.prep === s;
+    if (ref) cls.push("ref"); if (refPrep) cls.push("refprep");
+    const lbl = `${d} ${MONTHS[cal.m - 1]}${prep ? s === cal.prep ? ", prep day" : on ? ", shoot day" : "" : inR ? on ? ", shoot day" : ", day off" : ""}${ref ? ", Main Unit shoot day" : refPrep ? ", Main Unit prep day" : ""}`;
     cells += `<button class="${cls.filter(Boolean).join(" ")}" type="button" data-act="cal-day" data-d="${s}" aria-pressed="${prep ? s === cal.prep : on}" aria-label="${lbl}">${d}</button>`;
   }
   let sum, tip, any;
@@ -2068,6 +2083,7 @@ function calHtml() {
   return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${prep ? "Prep day · " : "Shoot days · "}${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
     <div class="cal-grid${prep ? " prep" : ""}" role="group" aria-label="${prep ? "Prep day" : "Shoot days"}">${WEEKDAYS.map((w, i) => `<span class="cal-wd${i >= 5 ? " wknd" : ""}">${w}</span>`).join("")}${cells}</div>
     <p class="cal-sum" aria-live="polite">${sum}</p>
+    ${cal.ref ? `<p class="cal-legend"><span class="lg lg-ref" aria-hidden="true"></span>Main Unit shoot days${cal.ref.prep ? ` · <span class="lg-p" aria-hidden="true">P</span> Main Unit prep` : ""}</p>` : ""}
     <p class="hint cal-tip">${tip}</p>
     <div class="modal-actions">${any ? `<button class="btn ghost" type="button" data-act="cal-clear">Clear</button>` : ""}<span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cal-done">Done</button></div>`;
 }
