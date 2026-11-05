@@ -1,0 +1,187 @@
+{
+ "fitussi:zeiss-high-speed-mkiii-s-s-tls": {
+  "18": "T1.3",
+  "25": "T1.3",
+  "28": "T2.1",
+  "35": "T1.3",
+  "40": "T2.1",
+  "50": "T1.3",
+  "85": "T1.3",
+  "100": "T2.1"
+ },
+ "fitussi:sigma-ff-high-speed-prime-t1-5-set": {
+  "14": "T2",
+  "20": "T1.5",
+  "24": "T1.5",
+  "35": "T1.5",
+  "50": "T1.5",
+  "85": "T1.5",
+  "105": "T1.5",
+  "135": "T2",
+  "65": "T1.5"
+ },
+ "fitussi:nisi-athena-prime-t2-4-1-9-ff-8-lens-set-pl": {
+  "14": "T2.4",
+  "18": "T2.2",
+  "25": "T1.9",
+  "35": "T1.9",
+  "40": "T1.9",
+  "50": "T1.9",
+  "85": "T1.9",
+  "135": "T2.2"
+ },
+ "utopia:zeiss-compact-prime-cp-3-lens-set-pl-ef-e-mount": {
+  "18": "T2.9",
+  "25": "T2.1",
+  "35": "T2.1",
+  "50": "T2.1",
+  "85": "T2.1"
+ },
+ "utopia:zeiss-compact-prime-cp-3-xd-lens-set-pl-mount": {
+  "18": "T2.9",
+  "25": "T2.1",
+  "35": "T2.1",
+  "50": "T2.1",
+  "85": "T2.1"
+ },
+ "utopia:zeiss-compact-prime-cp-2-lens-set-pl-mount": {
+  "18": "T3.6",
+  "35": "T2.1",
+  "50": "T2.1",
+  "85": "T2.1",
+  "25": "T2.9"
+ },
+ "utopia:leica-cine-m-0-8-7-lens-set-m-mount": {
+  "21": "f/1.4",
+  "24": "f/1.4",
+  "28": "f/1.4",
+  "35": "f/1.4",
+  "50": "f/1.4",
+  "75": "f/2",
+  "90": "f/2"
+ },
+ "utopia:cinescope-leica-r-prime-ff-pl-mount-lens-set-of-10": {
+  "19": "T2.9",
+  "24": "T2.9",
+  "28": "T2.9",
+  "35": "T1.5",
+  "50": "T1.5",
+  "60": "T2.9",
+  "80": "T1.5",
+  "90": "T2.1",
+  "100": "T2.8",
+  "135": "T2.9"
+ },
+ "utopia:sigma-cine-ff-high-speed-prime-pl-mount-lens-set": {
+  "14": "T2",
+  "20": "T1.5",
+  "24": "T1.5",
+  "28": "T1.5",
+  "35": "T1.5",
+  "40": "T1.5",
+  "50": "T1.5",
+  "85": "T1.5",
+  "105": "T1.5",
+  "135": "T2"
+ },
+ "utopia:nisi-athena-prime-t2-4-1-9-full-frame-8-lens-set-pl-mount": {
+  "14": "T2.4",
+  "18": "T2.2",
+  "25": "T1.9",
+  "35": "T1.9",
+  "40": "T1.9",
+  "50": "T1.9",
+  "85": "T1.9",
+  "135": "T2.2"
+ },
+ "utopia:dzofilm-set-of-8-vespid-ff-pl-mount-prime-lenses": {
+  "16": "T2.8",
+  "25": "T2.1",
+  "35": "T2.1",
+  "50": "T2.1",
+  "75": "T2.1",
+  "90": "T2.8",
+  "100": "T2.1",
+  "125": "T2.1"
+ },
+ "utopia:iron-glass-mkii-ff-8-lens-prime-set": {
+  "16": "T2.9",
+  "20": "T3.6",
+  "28": "T3.6",
+  "37": "T2.9",
+  "50": "T2.1",
+  "58": "T2.1",
+  "85": "T2.1",
+  "135": "T2.9"
+ },
+ "utopia:dulens-apo-mini-prime-t2-4-t2-6-set": {
+  "21": "T2.6",
+  "31": "T2.4",
+  "43": "T2.4",
+  "58": "T2.4",
+  "85": "T2.4"
+ },
+ "utopia:blazar-cato-full-frame-2x-anamorphic-4-lens-set-pl-mount": {
+  "40": "T2",
+  "55": "T2",
+  "85": "T2.8",
+  "125": "T4"
+ },
+ "utopia:blazer-lens-remus-full-frame-1-5x-anamorphic-full-lens-set-pl-mount": {
+  "33": "T1.8",
+  "45": "T2",
+  "50": "T2",
+  "65": "T2",
+  "100": "T2.8",
+  "85": "T2.8",
+  "125": "T4"
+ },
+ "utopia:sirui-anamorphic-prime-lenses-1-33x-24-35-50-75mm-t1-8-2-8-e-mount": {
+  "24": "f/2.8",
+  "35": "f/1.8",
+  "50": "f/1.8",
+  "75": "f/1.8"
+ },
+ "utopia:cooke-panchro-prime-lens-set": {
+  "18": "T2.2",
+  "25": "T2.2",
+  "32": "T2.2",
+  "40": "T2.2",
+  "50": "T2.2",
+  "75": "T2.2",
+  "100": "T2.6"
+ },
+ "utopia:canon-fd-prime-9-lens-set": {
+  "14": "T2.8",
+  "24": "T1.5",
+  "28": "T2.1",
+  "35": "T1.5",
+  "55": "T1.3",
+  "85": "T1.3",
+  "100": "T2.1",
+  "135": "T2.1"
+ },
+ "utopia:canon-v35-prime-7-lens-set": {
+  "14": "T3.1",
+  "20": "T1.5",
+  "24": "T1.5",
+  "35": "T1.5",
+  "50": "T1.3",
+  "85": "T1.3",
+  "135": "T2.2"
+ },
+ "utopia:laowa-nanomorph-s35-anamorphic-prime-5-lens-kit": {
+  "27": "T2.8",
+  "35": "T2.4",
+  "50": "T2.4",
+  "65": "T2.4",
+  "80": "T2.4"
+ },
+ "utopia:century-swing-shift-lens-set-pl-mount": {
+  "24": "T4",
+  "35": "T2.8",
+  "55": "T2.8",
+  "75": "T2.8",
+  "105": "T2.4"
+ }
+}

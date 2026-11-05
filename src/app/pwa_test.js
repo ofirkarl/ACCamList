@@ -1,0 +1,33 @@
+// Standalone app, on-device mode: loads, keeps a production across reloads, exports CSV, registers the service worker
+const { chromium } = require("playwright");
+(async () => {
+  const out = process.argv[2], base = process.argv[3];
+  const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome", args: ["--no-sandbox"] });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 800 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true, serviceWorkers: process.env.NOSW ? "block" : "allow" });
+  const page = await ctx.newPage(); const errors = [];
+  page.on("pageerror", e => errors.push(String(e))); page.on("console", m => { if (m.type() === "error") errors.push("console: " + m.text()); });
+  await page.route(/^https:\/\/(cdnjs|fonts|www\.gstatic)\./, r => r.abort());
+  await page.route(/jszip/, r => r.fulfill({ body: require("fs").readFileSync("/opt/npm-tools/node_modules/jszip/dist/jszip.min.js"), contentType: "text/javascript" }));
+  await page.goto(base + "index.html");
+  await page.waitForTimeout(800);
+  console.log("title:", await page.title(), "| manifest:", await page.evaluate(() => document.querySelector('link[rel=manifest]').href.split("/").pop()), "| claude shim:", await page.evaluate(() => typeof window.claude.use));
+  console.log("starter catalog applied:", await page.evaluate(() => !!(app.settings.catalog && app.settings.catalog.utopia) && !hasEdits(houseById("utopia"))));
+  await page.click('[data-act="new"]');
+  await page.fill("#f-name", "Live test");
+  await page.click('#housePick [data-house="utopia"]');
+  await page.click('#prodForm button[type="submit"]');
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { const p = cur(); for (const [id, e] of ITEM) if (e.h.id === "utopia" && /^ARRI Alexa Mini$/.test(e.it.name)) { setQty(p, id, 1); break; } render(); });
+  console.log("save state:", await page.locator("#saveState").innerText());
+  await page.reload(); await page.waitForTimeout(600);
+  console.log("after reload:", await page.evaluate(() => app.productions.map(p => p.name + " (" + Object.keys(p.items).length + " lines)").join(", ")));
+  await page.evaluate(() => { app.view = "production"; app.pid = app.productions[0].id; app.tab = "list"; render(); });
+  await page.click('[data-act="preview"]');
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 5000 }).catch(() => null), page.click('[data-act="export-docx"]')]);
+  console.log("word download:", dl ? dl.suggestedFilename() : "none");
+  console.log("service worker:", await page.evaluate(async () => { const r = await navigator.serviceWorker.getRegistration(); return r ? "registered" : "none"; }));
+  await page.evaluate(() => { closePreview(); app.view = "home"; render(); });
+  await page.screenshot({ path: out + "/pwa_home.png" });
+  console.log("errors:", errors.filter(e => !/net::ERR_FAILED|Failed to load resource/.test(e)).length ? errors : "none");
+  await browser.close();
+})();

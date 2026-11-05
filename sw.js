@@ -1,5 +1,5 @@
 /* AC Cam List service worker: opens offline, picks up new versions on the next visit. */
-const CACHE = 'accam-202611052231';
+const CACHE = 'accam-202611052234';
 const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/favicon-32.png'];
 
 self.addEventListener('install', e => {
