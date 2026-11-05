@@ -2432,7 +2432,7 @@ function treeHtml(p, h) {
 /* a cine lens from the side: mount, barrel with its focus and iris rings, wider front */
 const LENS_ICON = `<svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="1.8" y="9.2" width="2.7" height="5.6" rx=".5"/><rect x="4.5" y="7" width="10.5" height="10" rx="1"/><path d="M7.6 7v10M10.2 7v10M7.6 5.6v1.4M8.9 5.6v1.4M10.2 5.6v1.4"/><path d="M15 5.2h5.6a1 1 0 0 1 1 1v11.6a1 1 0 0 1-1 1H15z"/><path d="M18.3 8.2v7.6"/></svg>`;
 const RULER_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 18h18M5 18v-4M9 18v-7M12 18v-4M15 18v-7M19 18v-4"/></svg>`;
-const fin = () => app.finder || (app.finder = { on: false, f: "50", t: "", kind: "", mount: "", cov: "", more: {} });
+const fin = () => app.finder || (app.finder = { on: false, f: "50", t: "", kind: "", mount: "", cov: "", brand: "", more: {} });
 const numIn = s => parseFloat(String(s || "").replace(",", "."));
 const fmtN = x => String(Math.round(x * 10) / 10);
 const COVER = { "2/3": 0, S16: 1, MFT: 2, "APS-C": 3, S35: 4, FF: 5, LF: 6, MF: 7 };
@@ -2505,10 +2505,11 @@ function lensSpec(it, sub) {
 const lensType = sp => sp.zoom ? "zoom" : sp.set ? "set" : "prime";
 /* the Lens type menu: spherical and anamorphic, each as primes, sets or zooms, then the specialty lenses */
 const KINDS = [
-  ["Spherical", [["sph", "All spherical", sp => !sp.ana], ["sph-prime", "Spherical primes", sp => !sp.ana && lensType(sp) === "prime"], ["sph-set", "Spherical prime sets", sp => !sp.ana && lensType(sp) === "set"], ["sph-zoom", "Spherical zooms", sp => !sp.ana && lensType(sp) === "zoom"]]],
-  ["Anamorphic", [["ana", "All anamorphic", sp => sp.ana], ["ana-prime", "Anamorphic primes", sp => sp.ana && lensType(sp) === "prime"], ["ana-set", "Anamorphic sets", sp => sp.ana && lensType(sp) === "set"], ["ana-zoom", "Anamorphic zooms", sp => sp.ana && lensType(sp) === "zoom"]]],
+  ["Spherical", [["sph", "All spherical", sp => !sp.ana], ["sph-prime", "Spherical primes", sp => !sp.ana && lensType(sp) !== "zoom"], ["sph-zoom", "Spherical zooms", sp => !sp.ana && lensType(sp) === "zoom"]]],
+  ["Anamorphic", [["ana", "All anamorphic", sp => sp.ana], ["ana-prime", "Anamorphic primes", sp => sp.ana && lensType(sp) !== "zoom"], ["ana-zoom", "Anamorphic zooms", sp => sp.ana && lensType(sp) === "zoom"]]],
   ["Specialty", [["probe", "Probe lenses", sp => sp.probe], ["macro", "Macro", sp => sp.macro], ["tilt", "Tilt & shift", sp => sp.tilt], ["fisheye", "Fisheye", sp => sp.fisheye]]]];
-const kindTest = v => { for (const [, opts] of KINDS) for (const [k, , fn] of opts) if (k === v) return fn; return () => true; };
+/* primes cover single lenses and the lenses in sets alike (an older "sets" choice reads as primes) */
+const kindTest = v => { v = v === "sph-set" ? "sph-prime" : v === "ana-set" ? "ana-prime" : v; for (const [, opts] of KINDS) for (const [k, , fn] of opts) if (k === v) return fn; return () => true; };
 const houseLenses = h => { const out = []; for (const [id, e] of ITEM) if (e.h.id === h.id) { const sp = lensSpec(e.it, e.s.id); if (sp) out.push([id, e, sp]); } return out; };
 /* stops between two apertures: + means a is slower than b */
 const stopsBetween = (a, b) => 2 * Math.log2(a / b);
@@ -2539,6 +2540,7 @@ function finderMatches(h) {
   for (const [id, e, sp] of houseLenses(h)) {
     if (!okKind(sp)) continue;
     if (s.mount && !sp.mounts.includes(s.mount)) continue;
+    if (s.brand && (e.it.brand || "Generic") !== s.brand) continue;
     if (s.cov && !((COVER[sp.cov] ?? -1) >= COVER[s.cov])) continue;
     const type = lensType(sp), { pos, d } = focalFit(sp, F);
     if (d > Math.log(2.05)) continue;
@@ -2546,7 +2548,7 @@ function finderMatches(h) {
     const lens = sp.per ? sp.per.find(x => x.f === pos) : null, one = lens && lens.n ? { stop: [lens.n, lens.n] } : null;
     const g = stopGap(one || sp, T), ranged = !one && !!(sp.stop && stopsBetween(sp.stop[1], sp.stop[0]) > 0.34);
     const hit = T != null && g != null && !ranged && Math.abs(g) < 0.08, exactF = d < 0.006;
-    const score = d * 4 + (T == null ? 0 : g == null ? 1.2 : Math.abs(g) + (ranged ? 0.3 : 0)) + (type === "zoom" ? 0.35 : type === "set" ? 0.1 : 0);
+    const score = d * 4 + (T == null ? 0 : g == null ? 1.2 : Math.abs(g) + (ranged ? 0.3 : 0)) + (type === "zoom" ? 0.35 : 0);  // a lens in a set counts like a single prime
     list.push({ id, e, sp, type, pos, d, g, hit, exact: exactF && (T == null || hit) && type !== "zoom", score, label: one ? lens.label : sp.label, ssp: one || sp });
   }
   return { F, T, list };
@@ -2558,7 +2560,7 @@ function finderCard(p, m, T) {
   const it = m.e.it, sp = m.sp, on = !!p.items[m.id];
   const sc = T == null || m.g == null ? "" : m.hit ? " hit" : Math.abs(m.g) <= 0.7 ? " near" : "";
   const gap = T != null && m.g != null ? gapText(m.g, m.ssp) : "";
-  const meta = [sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
+  const meta = [m.type === "set" ? `${m.pos}mm from a ${sp.focals.length}-lens set` : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}" data-fcard="${esc(m.id)}">
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
     <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
@@ -2575,7 +2577,9 @@ function finderResults(p, h) {
   for (const m of list) { const k = colKey(m.pos); if (!by.has(k)) by.set(k, []); by.get(k).push(m); }
   let keys = [...by.keys()].sort((a, b) => a - b);
   const ci = keys.indexOf(ck); keys = keys.slice(Math.max(0, ci - 5), ci + 6);
-  for (const k of keys) by.get(k).sort((a, b) => a.score - b.score);
+  // best first; where matches are as good, single primes and lenses from sets take turns
+  const mix = ms => { ms.sort((a, b) => a.score - b.score); const n = {}; for (const m of ms) m.rk = n[m.type] = (n[m.type] ?? -1) + 1; return ms.sort((a, b) => Math.round(a.score * 20) - Math.round(b.score * 20) || a.rk - b.rk || (a.type === "set") - (b.type === "set")); };
+  for (const k of keys) mix(by.get(k));
   const shown = keys.flatMap(k => by.get(k)), nExact = shown.filter(m => m.exact).length;
   if (!shown.length) return `<p class="f-none">No lenses between ${fmtN(F / 2)} and ${fmtN(F * 2)}mm at ${esc(h.name)} with these filters.</p>`;
   const cols = keys.map(k => {
@@ -2596,6 +2600,8 @@ function finderHtml(p, h) {
   const sel = (key, v) => s[key] === v ? " selected" : "";
   const kinds = `<option value=""${sel("kind", "")}>Any lens (${all.length})</option>` + KINDS.map(([grp, opts]) => `<optgroup label="${grp}">${opts.map(([k, label, fn]) => { const n = count(fn); return n || s.kind === k ? `<option value="${k}"${sel("kind", k)}>${esc(label)} (${n})</option>` : ""; }).join("")}</optgroup>`).join("");
   const mounts = `<option value=""${sel("mount", "")}>Any mount</option>` + MOUNTS.map(([k, label]) => { const n = count(sp => sp.mounts.includes(k)); return n || s.mount === k ? `<option value="${k}"${sel("mount", k)}>${esc(label)} (${n})</option>` : ""; }).join("");
+  const bn = new Map(); for (const [, e] of all) bn.set(e.it.brand || "Generic", (bn.get(e.it.brand || "Generic") || 0) + 1);
+  const brands = `<option value=""${sel("brand", "")}>Any manufacturer</option>` + [...bn.entries()].sort((a, b) => brandSort(a[0], b[0])).map(([b, n]) => `<option value="${esc(b)}"${sel("brand", b)}>${esc(b)} (${n})</option>`).join("");
   const covs = [["", "Any format"], ["S16", "S16 and up"], ["S35", "S35 and up"], ["FF", "Full frame and up"], ["LF", "Large format"]].map(([k, label]) => `<option value="${k}"${sel("cov", k)}>${label}</option>`).join("");
   return `<div class="pad finder" style="--tape: ${lens ? catTape(lens) : "var(--pal-amber)"}">
     <div class="f-head"><div><h3 class="f-title">Find a lens</h3><p class="hint">The exact match sits in the middle of the ruler. Shorter lenses are to the left, longer to the right.</p></div>
@@ -2605,7 +2611,10 @@ function finderHtml(p, h) {
         <label class="f-field"><span>Focal length</span><span class="f-inp"><input data-fin="f" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.f)}" placeholder="50" aria-label="Focal length in mm"><i>mm</i></span></label>
         <label class="f-field"><span>Stop</span><span class="f-inp"><i>f/</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="Stop (f-number or T-stop)"></span></label>
       </div>
-      <label class="f-field"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
+      <div class="f-fields">
+        <label class="f-field"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
+        <label class="f-field"><span>Manufacturer</span><select data-fin="brand">${brands}</select></label>
+      </div>
       <div class="f-fields">
         <label class="f-field"><span>Mount</span><select data-fin="mount">${mounts}</select></label>
         <label class="f-field"><span>Covers</span><select data-fin="cov">${covs}</select></label>
@@ -3511,7 +3520,7 @@ document.addEventListener("click", e => {
     }
     case "dup": startDuplicate(id || app.pid); break;
     case "tab": app.tab = b.dataset.tab; app.editing = null; render(); window.scrollTo(0, 0); break;
-    case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; }
+    case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; s.brand = ""; }
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
     case "fin-close": fin().on = false; render(); break;
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
