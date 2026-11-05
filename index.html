@@ -1139,44 +1139,63 @@ button.ph-chip:active { transform: scale(.97); }
 .ph-info[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .ph-info .chev { transition: transform .2s var(--ease); }
 
-/* ---- the three tabs: an icon over each name, in its own color (add green, favorites amber, the list indigo) ---- */
-.tabs { --t-add: #1e9e5a; --t-fav: #e08a00; --t-list: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); padding: 5px; border-radius: 18px; gap: 5px; }
-.tab { display: grid; justify-items: center; align-content: center; gap: 3px; padding: 8px 4px 7px; border-radius: 14px; font-size: 12.5px; color: var(--muted); }
-.tab-i { position: relative; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; color: var(--tc); transition: background-color .2s, color .2s, transform .2s var(--ease); }
-.tab-ico { width: 20px; height: 20px; }
-.tab-l { line-height: 1.2; white-space: nowrap; }
-.t-add { --tc: var(--t-add); } .t-fav { --tc: var(--t-fav); } .t-list { --tc: var(--t-list); }
-.tab[aria-selected="true"] { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .08), 0 4px 12px -4px color-mix(in srgb, var(--tc) 35%, transparent); }
-.tab[aria-selected="true"] .tab-i { background: var(--tc); color: #fff; }
-.tab[aria-selected="true"] .tab-l { color: color-mix(in srgb, var(--tc) 70%, var(--fg)); font-weight: 500; }
-.tab:not([aria-selected="true"]):hover .tab-i { background: color-mix(in srgb, var(--tc) 12%, transparent); }
-.tab .num, .tab[aria-selected="true"] .num { position: absolute; top: -6px; inset-inline-end: -12px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 10.5px; font-weight: 600;
-  background: var(--tc); color: #fff; border: 2px solid var(--seg-on); vertical-align: 0; }
-.tab:not([aria-selected="true"]) .num { border-color: color-mix(in srgb, var(--accent) 6%, var(--bg)); }
-:root[data-theme="dark"] .tabs { --t-add: #4ade80; --t-fav: #f7ba4d; }
-:root[data-theme="dark"] .tab[aria-selected="true"] .tab-i, :root[data-theme="dark"] .tab .num { color: #111015; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs { --t-add: #4ade80; --t-fav: #f7ba4d; } :root:not([data-theme="light"]) .tab[aria-selected="true"] .tab-i, :root:not([data-theme="light"]) .tab .num { color: #111015; } }
+/* ---- the three tabs: words only, in one color and its shades ---- */
+.tabs { background: color-mix(in srgb, var(--accent) 8%, var(--bg)); padding: 4px; border-radius: 14px; gap: 4px; }
+.tab { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 6px; border-radius: 11px; font-size: 14px; font-weight: 500;
+  color: color-mix(in srgb, var(--accent) 50%, var(--muted)); transition: background-color .2s, color .2s, box-shadow .2s; }
+.tab:not([aria-selected="true"]):hover { background: color-mix(in srgb, var(--accent) 6%, transparent); color: var(--accent); }
+.tab[aria-selected="true"] { background: var(--seg-on); color: var(--accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 14%, transparent), 0 4px 12px -4px color-mix(in srgb, var(--accent) 32%, transparent); }
+.tab .num { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; font-size: 11px; font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); vertical-align: 0; position: static; border: 0; }
+.tab[aria-selected="true"] .num { background: var(--accent); color: var(--accent-fg); }
+.tab .num:empty { display: none; }
+:root[data-theme="dark"] .tabs { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); } }
 
 /* the buttons next to the search: tinted, like the other quiet actions */
 .btn.icon-btn:not(.primary), .btn.spec-btn:not(.primary) { background: var(--accent-soft); border-color: transparent; color: var(--accent); box-shadow: none; }
 .btn.icon-btn:not(.primary):hover { background: color-mix(in srgb, var(--accent) 15%, var(--surface)); }
 
-/* ---- the lens finder: shorter cards, a few at a time ---- */
-.f-cards { gap: 8px; }
-.f-card { position: relative; gap: 4px; padding: 11px 12px; border-radius: 14px; }
-.f-nm { font-weight: 500; font-size: 14px; line-height: 1.3; padding-inline-end: 26px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.f-card .ext.corner { position: absolute; top: 8px; inset-inline-end: 6px; margin: 0; }
-.f-stopline { align-items: center; flex-wrap: nowrap; gap: 8px; min-height: 32px; margin-top: 0; }
-.f-stop { font-size: 14px; padding: 3px 8px; border-radius: 8px; background: var(--sunken); flex: none; }
-.f-stop.hit { background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
-.f-stop.hit::before { font-size: 12px; }
-.f-gap { font-size: 12px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.f-stopline .ctl { margin-inline-start: auto; flex: none; }
-.f-card .add { height: 32px; width: auto; padding-inline: 14px; }
-.f-card .stepper { width: auto; }
-.f-meta { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.f-card .lens-line { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
-.f-more { border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; padding: 10px; cursor: pointer; }
+/* ---- the lens finder: a ruler down the left, one spacious line per lens ---- */
+.fv { position: relative; display: grid; gap: 2px; padding-bottom: 8px; }
+.fv::before { content: ""; position: absolute; top: 4px; bottom: 4px; inset-inline-start: 0; width: 12px; pointer-events: none;
+  background: linear-gradient(var(--line), var(--line)) left / 2px 100% no-repeat, repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px 10px) left / 8px 100% no-repeat; }
+.fv .f-col { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: start; padding: 0; flex: none; gap: 0; }
+.fv-mark { position: sticky; top: 12px; display: flex; align-items: baseline; gap: 2px; padding: 10px 0 0 16px; color: var(--muted); font-family: var(--font-mono); }
+.fv-mark::before { content: ""; position: absolute; inset-inline-start: -4px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); box-sizing: border-box; }
+.fv-mark b { font-size: 15px; font-weight: 600; color: var(--fg); }
+.fv-mark small { font-size: 10px; }
+.f-col.center .fv-mark { color: var(--accent); }
+.f-col.center .fv-mark b { color: var(--accent); font-size: 18px; }
+.f-col.center .fv-mark::before { width: 14px; height: 14px; inset-inline-start: -6px; top: 15px; background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.f-col.open .fv-mark::before { border-color: var(--accent); }
+.fv-body { display: grid; gap: 8px; min-width: 0; padding-bottom: 6px; }
+.fv-head { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--fg); font: inherit; font-size: 14px; text-align: start; cursor: pointer; }
+.fv-head:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.fv-head:disabled { cursor: default; padding-inline-start: 2px; }
+.fv-diff { font-weight: 500; }
+.f-col.center .fv-diff { color: var(--accent); }
+.fv-n { color: var(--muted); font-size: 13px; }
+.fv-head .chev { margin-inline-start: auto; color: var(--muted); transition: transform .2s var(--ease); }
+.fv-head[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.fv .f-cards { gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--frame-shadow); }
+.fv .f-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 4px; padding: 14px 14px 13px; border: 0; border-radius: 0; box-shadow: none; background: transparent; }
+.fv .f-card + .f-card { border-top: 1px solid var(--hair); }
+.fv .f-card.exact { background: color-mix(in srgb, var(--ok) 5%, var(--surface)); }
+.fv .f-card.on { box-shadow: inset 3px 0 0 var(--accent); }
+.fv .f-nm { grid-column: 1; font-weight: 500; font-size: 15px; line-height: 1.3; padding: 0; display: block; overflow: visible; -webkit-line-clamp: none; }
+.fv .ctl { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.fv .f-stopline { grid-column: 1; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 0; }
+.fv .f-stop { font-size: 13px; padding: 2px 7px; border-radius: 7px; background: var(--sunken); }
+.fv .f-stop.hit { background: color-mix(in srgb, var(--ok) 12%, var(--surface)); }
+.fv .f-gap { font-size: 12.5px; white-space: normal; overflow: visible; }
+.fv .f-meta { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; white-space: normal; overflow: visible; }
+.fv .f-meta .ext { margin: -6px 0; }
+.fv .lens-line { grid-column: 1 / -1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--muted); }
+.fv .f-card .add { height: 34px; width: auto; padding-inline: 14px; }
+.fv .f-card .stepper { width: auto; }
+.f-more { border: 0; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 500; padding: 11px; cursor: pointer; }
 .f-more span { color: color-mix(in srgb, var(--accent) 55%, var(--muted)); font-weight: 400; }
 .f-narrow { display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px dashed var(--line); }
 .f-narrow > span { font-size: 12px; color: var(--muted); }
@@ -2854,12 +2873,6 @@ function prodStatus(p, today = todayIso()) {
 const CHIP_CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>`;
 const PREP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.2L4 17v3h3l5.3-5.2a4 4 0 0 0 5.2-5.3l-2.5 2.5-2.5-2.5z"/></svg>`;
 const INFO_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>`;
-const TAB_ICONS = {
-  add: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
-  fav: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
-  list: '<path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" stroke-width="3"/>'
-};
-const tabIcon = k => `<svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TAB_ICONS[k]}</svg>`;
 function viewProduction() {
   const p = cur(), h = houseById(p.houseId), t = totals(p);
   const when = fmtRange(p.shootStart, p.shootEnd), days = shootDays(p);
@@ -2894,9 +2907,9 @@ function viewProduction() {
   return `<section class="pad">
     ${head}
     <div class="tabs" role="tablist"${finder ? " hidden" : ""}>
-      <button class="tab t-add" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}"><span class="tab-i">${tabIcon("add")}</span><span class="tab-l">Add gear</span></button>
-      <button class="tab t-fav" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}"><span class="tab-i">${tabIcon("fav")}<span class="num">${nFav || ""}</span></span><span class="tab-l">Favorites</span></button>
-      <button class="tab t-list" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}"><span class="tab-i">${tabIcon("list")}<span class="num" id="tabCount">${t.lines || ""}</span></span><span class="tab-l">Camera List</span></button>
+      <button class="tab" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}">Add gear</button>
+      <button class="tab" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}">Favorites <span class="num">${nFav || ""}</span></button>
+      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Camera List <span class="num" id="tabCount">${t.lines || ""}</span></button>
     </div>
   </section>
   ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : viewList(p, h)}`;
@@ -3185,9 +3198,9 @@ function finderCard(p, m, T) {
   const meta = [m.type === "set" ? `${m.pos}mm from a ${sp.focals.length}-lens set` : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}" data-fcard="${esc(m.id)}">
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
-    ${linkHtml(it, m.e.h).replace('class="ext"', 'class="ext corner"')}
-    <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}<span class="ctl">${ctlHtml(p, m.id)}</span></span>
-    ${meta.length ? `<span class="f-meta">${meta.map(esc).join(" · ")}</span>` : ""}
+    <span class="ctl">${ctlHtml(p, m.id)}</span>
+    <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
+    <span class="f-meta">${meta.map(esc).join(" · ")}${linkHtml(it, m.e.h)}</span>
     ${sp.per ? perHtml(sp.per, m.pos, 2) : ""}
   </li>`;
 }
@@ -3203,24 +3216,31 @@ function finderResults(p, h) {
   const { F, T, list } = r, ck = colKey(F), by = new Map([[ck, []]]);
   for (const m of list) { const k = colKey(m.pos); if (!by.has(k)) by.set(k, []); by.get(k).push(m); }
   let keys = [...by.keys()].sort((a, b) => a - b);
-  const ci = keys.indexOf(ck); keys = keys.slice(Math.max(0, ci - 5), ci + 6);
+  const ci = keys.indexOf(ck); keys = keys.slice(Math.max(0, ci - 4), ci + 6);
   // best first; where matches are as good, single primes and lenses from sets take turns
   const mix = ms => { ms.sort((a, b) => a.score - b.score); const n = {}; for (const m of ms) m.rk = n[m.type] = (n[m.type] ?? -1) + 1; return ms.sort((a, b) => Math.round(a.score * 20) - Math.round(b.score * 20) || a.rk - b.rk || (a.type === "set") - (b.type === "set")); };
   for (const k of keys) mix(by.get(k));
   const shown = keys.flatMap(k => by.get(k)), nExact = shown.filter(m => m.exact).length;
   if (!shown.length) return `<p class="f-none">No lenses between ${fmtN(F / 2)} and ${fmtN(F * 2)}mm at ${esc(h.name)} with these filters.</p>`;
+  // a ruler down the left: shorter at the top, longer further down; your focal length open, the others one line each until you open them
+  const mo = fin().more;
   const cols = keys.map(k => {
-    const ms = by.get(k), center = k === ck, lim = (center ? 5 : 3) + 5 * (fin().more[k] || 0), left = ms.length - lim;
-    const sub = center ? (ms.some(m => m.exact) ? "exact" : "your search") : `${k < F ? "−" : "+"}${fmtN(Math.abs(k - F))}mm`;
-    return `<section class="f-col${center ? " center" : ""}" data-col="${k}" aria-label="${fmtN(k)}mm">
-      <button class="f-tick" type="button" data-act="fin-recenter" data-mm="${k}" ${center ? "disabled" : `title="Search ${fmtN(k)}mm instead"`}><b>${fmtN(k)}mm</b><small>${sub}</small></button>
-      ${ms.length ? `<ul class="f-cards">${ms.slice(0, lim).map(m => finderCard(p, m, T)).join("")}</ul>` : `<p class="f-none">No ${fmtN(F)}mm${T ? " T" + fmtN(T) : ""} with these filters. Swipe for the closest.</p>`}
-      ${left > 0 ? `<button class="f-more" type="button" data-act="fin-more" data-mm="${k}">Show ${Math.min(5, left)} more <span>· ${left} left at ${fmtN(k)}mm</span></button>` : ""}
-      ${center && left > 5 && !fin().brand ? narrowHtml(ms) : ""}
+    const ms = by.get(k), center = k === ck, open = center || !!mo["o" + k];
+    const lim = (center ? 5 : 3) + 5 * (mo[k] || 0), left = ms.length - lim;
+    const diff = center ? (ms.some(m => m.exact) ? "Exact" : "Your search") : `${k < F ? "−" : "+"}${fmtN(Math.abs(k - F))}mm`;
+    const count = ms.length ? `${ms.length} lens${ms.length === 1 ? "" : "es"}` : "none";
+    return `<section class="f-col${center ? " center" : ""}${open ? " open" : ""}" data-col="${k}" aria-label="${fmtN(k)}mm">
+      <span class="fv-mark" aria-hidden="true"><b>${fmtN(k)}</b><small>mm</small></span>
+      <div class="fv-body">
+        <button class="fv-head" type="button" data-act="fv-toggle" data-mm="${k}" aria-expanded="${open}"${center ? " disabled" : ""}><span class="fv-diff">${diff}</span><span class="fv-n">${count}</span>${center ? "" : CHEV}</button>
+        ${open ? (ms.length ? `<ul class="f-cards">${ms.slice(0, lim).map(m => finderCard(p, m, T)).join("")}</ul>` : `<p class="f-none">No ${fmtN(F)}mm${T ? " T" + fmtN(T) : ""} with these filters. The closest are just above and below.</p>`) : ""}
+        ${open && left > 0 ? `<button class="f-more" type="button" data-act="fin-more" data-mm="${k}">Show ${Math.min(5, left)} more <span>· ${left} left at ${fmtN(k)}mm</span></button>` : ""}
+        ${center && left > 5 && !fin().brand ? narrowHtml(ms) : ""}
+      </div>
     </section>`;
   }).join("");
   return `<p class="f-sum"><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close · ${esc(h.name)}</p>
-    <div class="f-ruler-wrap"><div class="f-ruler" id="fRuler" role="region" aria-label="Lenses by focal length: shorter to the left, longer to the right">${cols}</div></div>`;
+    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${cols}</div>`;
 }
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);
@@ -3262,13 +3282,7 @@ function finBrandDialog() {
     <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button></div></div>`);
   document.getElementById("bq")?.focus();
 }
-function centerFinder(k, smooth) {
-  const r = document.getElementById("fRuler"); if (!r) return;
-  const col = k == null ? r.querySelector(".f-col.center") : r.querySelector(`.f-col[data-col="${CSS.escape(String(k))}"]`);
-  if (!col) return;
-  r.dataset.c = "1";
-  r.scrollTo({ left: col.offsetLeft - (r.clientWidth - col.offsetWidth) / 2, behavior: smooth ? "smooth" : "auto" });
-}
+function centerFinder() { const r = document.getElementById("fRuler"); if (r) r.dataset.c = "1"; }  // the ruler runs down the page now: nothing to center
 function refreshFinder(keepKey) {
   const p = cur(), el = document.getElementById("fRes"); if (!p || !el) return;
   el.innerHTML = finderResults(p, houseById(p.houseId));
@@ -4257,6 +4271,7 @@ document.addEventListener("click", e => {
     case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
     case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) v.textContent = s3.brand; refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
+    case "fv-toggle": { const mo = fin().more, kk = "o" + b.dataset.mm; mo[kk] = !mo[kk]; refreshFinder(); break; }
     case "fin-more": { const mo = fin().more; mo[b.dataset.mm] = (+mo[b.dataset.mm] || 0) + 1; refreshFinder(b.dataset.mm); break; }
     case "chip": app.cat = b.dataset.cat; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId));
       document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === b))); break;
