@@ -123,6 +123,7 @@ h2.page { font-family: var(--font-display); font-weight: 800; font-size: 40px; l
 /* production header */
 .prod-head { padding-block: 10px 6px; display: grid; gap: 6px; }
 .prod-head .back { justify-self: start; }
+.send-how.warn { color: var(--warn); font-weight: 600; }
 .set-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .prod-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .prod-title h2 { font-family: var(--font-display); font-weight: 800; font-size: 36px; line-height: 1; margin: 0; text-transform: uppercase; overflow-wrap: anywhere; }
@@ -3383,13 +3384,17 @@ function sendDialog(p) {
 }
 /* can this browser put a file of this kind in the share menu? Chrome on Android shares PDFs but not Word files */
 const SEND_MIME = { pdf: "application/pdf", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+/* some phones say they can share a Word file and then refuse when asked (Chrome on Android): once that happens, this phone saves it instead */
+const LS_NODOCX = "accam-no-docx-share";
+const noDocxShare = () => { try { return localStorage.getItem(LS_NODOCX) === "1"; } catch (e) { return false; } };
 function canShareKind(fmt) {
+  if (fmt === "docx" && noDocxShare()) return false;
   try { return typeof File === "function" && !!navigator.canShare && navigator.canShare({ files: [new File(["x"], "x." + fmt, { type: SEND_MIME[fmt] })] }); } catch (e) { return false; }
 }
 const isTouch = () => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } };
 function sendHowText(fmt) {
   if (canShareKind(fmt)) return "This opens your phone's share menu with the file attached: pick Gmail, WhatsApp or any other app.";
-  if (fmt === "docx" && canShareKind("pdf")) return "This phone can't attach Word files through the share menu (PDF works). Tap Send to save the Word file and open an email with your message; attach the file there.";
+  if (fmt === "docx" && canShareKind("pdf")) return "This phone can't attach Word files to the share menu (PDF can). Save & email puts the Word file in Downloads and opens an email: attach it there. In WhatsApp: attach › Document, it's first in the list.";
   return "Sending with the file attached works from your phone. Here, Send saves the file and copies the message for you to paste.";
 }
 /* the file is built as soon as the dialog opens, so tapping Send shares it straight away (phones only open the share menu right after a tap) */
@@ -3397,23 +3402,34 @@ function sendPrep(p, fmt) {
   const key = p.id + ":" + p.updatedAt + ":" + fmt + ":" + skuOn() + ":" + layoutOf();
   const how = document.getElementById("sendHow"); if (how) how.textContent = sendHowText(fmt);
   const go = document.getElementById("sendGo");
-  const ready = () => { const g = document.getElementById("sendGo"); if (g && sendJob.key === key) { g.disabled = false; g.textContent = "Send…"; } };
+  const ready = () => { const g = document.getElementById("sendGo"); if (g && sendJob.key === key) { g.disabled = false; g.textContent = sendLabel(fmt); } };
   if (sendJob.key === key && sendJob.blob) { ready(); return; }
   if (go) { go.disabled = true; go.textContent = fmt === "pdf" ? "Preparing the PDF…" : "Preparing…"; }
   sendJob.key = key; sendJob.blob = null;
   sendJob.wait = (fmt === "pdf" ? buildPdf(p) : buildDocx(p)).then(b => { if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
     .catch(() => { if (sendJob.key === key) { sendJob.key = ""; const g = document.getElementById("sendGo"); if (g) g.textContent = "Couldn't build the file"; } });
 }
+const sendLabel = fmt => canShareKind(fmt) ? "Send…" : isTouch() ? "Save & email" : "Save file";
 async function sendNow(p, f) {
   const fmt = f.elements.fmt.value || "pdf", subject = f.elements.subject.value.trim(), message = f.elements.message.value;
   app.settings.send = { subject: sendUnfill(subject, p), message: sendUnfill(message, p), fmt }; touchSettings();
   const blob = sendJob.blob; if (!blob) return;
   const name = fileBase(p) + (fmt === "pdf" ? ".pdf" : ".docx");
   const file = typeof File === "function" ? new File([blob], name, { type: blob.type || (fmt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document") }) : null;
-  let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+  let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })) && !(fmt === "docx" && noDocxShare()); } catch (e) {}
   if (can) {
     try { await navigator.share({ files: [file], title: subject, text: message }); closeModal(); savedVer(p); }
-    catch (e) { if (!e || e.name !== "AbortError") toast("The share menu didn't open. Try again."); }
+    catch (e) {
+      if (e && e.name === "AbortError") return;  // you closed the share menu
+      if (fmt === "docx") {  // the phone won't attach Word files: remember it, and offer to save it instead (the next tap)
+        try { localStorage.setItem(LS_NODOCX, "1"); } catch (x) {}
+        const how = document.getElementById("sendHow"), go = document.getElementById("sendGo");
+        if (how) { how.textContent = sendHowText("docx"); how.classList.add("warn"); }
+        if (go) go.textContent = sendLabel("docx");
+        return;
+      }
+      toast("The share menu didn't open. Try again.");
+    }
     return;
   }
   // no sharing for this file here: save it, copy the message, and on a phone open an email with the subject and message filled in
