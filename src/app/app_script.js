@@ -991,6 +991,17 @@ const XAVC_S = (si, dci = si) => [...(si ? [{ n: "XAVC S-I 4K", t: "M24", m: [m(
   ...(si ? [{ n: "XAVC HS 4K", t: "Mfix", m: [m(UHD, 120, [[30, 100], [60, 200], [120, 280]])] }] : []),
   { n: si ? "XAVC S 4K (4:2:2 10-bit)" : "XAVC S 4K", t: "Mfix", m: [m(UHD, si ? 120 : 30, si ? [[24, 100], [30, 140], [60, 200], [120, 280]] : [[30, 100]])] },
   { n: "XAVC S HD", t: "Mfix", m: [m(HD, si ? 120 : 60, [[60, 50], [120, 100]])] }];
+/* Sony FX9, by Sony's brochure: imager scan modes Full-Frame (6K), Super 35 and Super 16 (firmware 3), what each records and how fast;
+   rates are the effective ones behind Sony's recording-time table (QD-G128A) */
+const FX9M = (sn, out, w, h, fps) => [`${sn} → ${out}`, w, h, fps];
+const FX9_4K = [FX9M("Full-Frame", "DCI 4K", 4096, 2160, 60), FX9M("Full-Frame", "UHD", 3840, 2160, 60), FX9M("Super 35", "DCI 4K", 4096, 2160, 60), FX9M("Super 35", "UHD", 3840, 2160, 60)];
+const FX9_UHD = FX9_4K.filter(x => / UHD$/.test(x[0])).map(x => [...x.slice(0, 3), 60]);
+const FX9_HD = cap => [FX9M("Full-Frame", "HD", 1920, 1080, Math.min(cap, 180)), FX9M("Super 35", "HD", 1920, 1080, Math.min(cap, 120)), FX9M("Super 16", "HD", 1920, 1080, Math.min(cap, 180))];
+const withV = (modes, v) => modes.map(x => [...x, v]);
+const FX9 = [{ n: "XAVC-I 4K", t: "M24", m: withV(FX9_4K, 297) }, { n: "XAVC-I HD", t: "Mfix", m: withV(FX9_HD(180), [[24, 123], [30, 152], [60, 280], [100, 467], [120, 560], [150, 700], [180, 840]]) },
+  { n: "XAVC-L 4K", t: "Mfix", m: withV(FX9_UHD, [[30, 128], [60, 186]]) }, { n: "XAVC-L HD 50", t: "Mfix", m: withV(FX9_HD(60), [[60, 71]]) },
+  { n: "XAVC-L HD 35", t: "Mfix", m: withV(FX9_HD(60), [[60, 52]]) }, { n: "XAVC-L HD 25", t: "Mfix", m: withV(FX9_HD(30), [[30, 39]]) },
+  { n: "MPEG HD422", t: "Mfix", m: withV(FX9_HD(30), [[30, 73]]) }];
 /* RED */
 const KOMODO = [["6K 17:9", 6144, 3240, 40], ["6K 2.4:1", 6144, 2592, 50], ["6K 2:1", 6144, 3072, 40], ["6K 16:9", 5760, 3240, 40], ["5K 17:9", 5120, 2700, 48], ["4K 17:9", 4096, 2160, 60], ["4K 16:9", 3840, 2160, 60], ["2K 17:9", 2048, 1080, 120]];
 const HELIUM = [["8K FF", 8192, 4320, 60], ["8K 2.4:1", 8192, 3456, 75], ["8K 16:9", 7680, 4320, 60], ["8K 6:5", 5184, 4320, 60], ["7K FF", 7168, 3780, 60], ["6K FF", 6144, 3240, 75], ["6K 2.4:1", 6144, 2592, 100], ["6K 16:9", 5760, 3240, 75], ["5K FF", 5120, 2700, 96], ["4K FF", 4096, 2160, 120], ["4K 16:9", 3840, 2160, 120]];
@@ -1014,7 +1025,7 @@ const REC = {
   venice: [...xocn(["X-OCN XT", "X-OCN ST", "X-OCN LT"], VENICE6K), ...pr(["ProRes 4444", "ProRes 422 HQ", "ProRes 422"], [HD]), { n: "XAVC-I Class 480 4K", t: "M24", m: [m(DCI, 60, 476), m(UHD, 60, 476)] }, ...XAVC_I(60, 120).slice(0, 1)],
   venice2: [...xocn(["X-OCN XT", "X-OCN ST", "X-OCN LT"], VENICE8K), ...pr(["ProRes 4444", "ProRes 422 HQ"], [DCI, UHD, HD]), { n: "XAVC-I Class 480 4K", t: "M24", m: [m(DCI, 60, 476), m(UHD, 60, 476)] }, ...XAVC_I(60, 120).slice(0, 1)],
   burano: [...xocn(["X-OCN ST", "X-OCN LT"], BURANO), ...XAVC_I(120, 240), ...XAVC_L],
-  fx9: [...XAVC_I(60, 180), ...XAVC_L], fx6: [...XAVC_I(120, 240), ...XAVC_L], fs7: [...XAVC_I(60, 180), ...XAVC_L],
+  fx9: FX9, fx6: [...XAVC_I(120, 240), ...XAVC_L], fs7: [...XAVC_I(60, 180), ...XAVC_L],
   fs5: [{ n: "XAVC-L 4K", t: "Mfix", m: [m(UHD, 30, [[30, 100]])] }, { n: "XAVC-L HD", t: "Mfix", m: [m(HD, 60, [[60, 50]])] }],
   sonySI: XAVC_S(true), sonySI4K: XAVC_S(true, false), sonyS: XAVC_S(false),
   komodo: redQ([["HQ", 2], ["MQ", 5], ["LQ", 8]], KOMODO),
@@ -1077,8 +1088,8 @@ function csOf(codec, cam) {
   if (/RAW/.test(n)) return "RAW · 12-bit";
   if (/ProRes 4444/.test(n)) return "4:4:4 · 12-bit";
   if (/ProRes/.test(n)) return "4:2:2 · 10-bit";
-  if (/XAVC-L 4K|XAVC S 4K$|XAVC S HD/.test(n)) return "4:2:0 · 8-bit";
-  if (/MPEG-2/.test(n)) return "4:2:2 · 8-bit";
+  if (/XAVC-L 4K|XAVC-L HD (35|25)|XAVC S 4K$|XAVC S HD/.test(n)) return "4:2:0 · 8-bit";
+  if (/MPEG-2|MPEG HD422/.test(n)) return "4:2:2 · 8-bit";
   return "4:2:2 · 10-bit";
 }
 const REC_FPS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 72, 75, 90, 96, 100, 120, 150, 180, 200, 240];

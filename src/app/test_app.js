@@ -683,6 +683,18 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(/<span class="t-l"><span>Camera<\/span><\/span><span class="t-v">ARRI Alexa 35<\/span>/.test(h1) && /data-id="free" data-d="1"/.test(h1) && /<b>3<\/b>/.test(h1) && /<span class="t-l">Total<\/span><b>(?!–)/.test(h1) && !Object.keys(pf.items).length, "...then the whole calculator for it, with its own card count, and nothing added to the list");
   delete A.app.settings.mcFree; }
 
+// --- Sony FX9, as Sony's brochure has it
+{ const pf = A.newProduction({ name: "FX9", houseId: "utopia" }); A.app.productions.push(pf);
+  const fx9 = find("utopia", /fx9/i); A.setQty(pf, fx9, 1); const l = pf.items[fx9], e = A.ITEM.get(fx9);
+  const names = A.REC.fx9.map(c => c.n), modes = [...new Set(A.REC.fx9.flatMap(c => c.m.map(x => x[0])))];
+  ok(["XAVC-I 4K", "XAVC-I HD", "XAVC-L 4K", "XAVC-L HD 50", "XAVC-L HD 35", "XAVC-L HD 25", "MPEG HD422"].every(n => names.includes(n)), "FX9: every format in Sony's brochure, XAVC-L HD 35 and 25 and MPEG HD422 too");
+  ok(["Full-Frame → DCI 4K", "Super 35 → UHD", "Super 16 → HD"].every(m => modes.includes(m)) && A.REC.fx9.find(c => c.n === "XAVC-I HD").m.find(x => x[0] === "Full-Frame → HD")[3] === 180 && A.REC.fx9.find(c => c.n === "XAVC-I HD").m.find(x => x[0] === "Super 35 → HD")[3] === 120, "FX9: the imager scan modes (Full-Frame, Super 35, Super 16) and their top speeds (FF HD 180, S35 HD 120)");
+  l.rec = { codec: "XAVC-I 4K", mode: "Full-Frame → DCI 4K", fps: 23.976 }; const qd = find("utopia", /128GB XQD/); l.rec.card = qd;
+  const per = A.recResult(l, e).per / 60; ok(per >= 52 && per <= 56, `FX9 XAVC-I DCI 4K 23.98p on 128GB: about 54 min, as Sony's table (${Math.round(per)})`);
+  for (const [fps, want] of [[23.976, 130], [25, 105], [59.94, 57]]) { l.rec = { codec: "XAVC-I HD", mode: "Full-Frame → HD", fps, card: qd }; const m = A.recResult(l, e).per / 60; ok(Math.abs(m - want) <= 3, `FX9 XAVC-I HD ${fps}p on 128GB: about ${want} min, as Sony's table (${Math.round(m)})`); }
+  for (const [c, want] of [["XAVC-L 4K", 125], ["XAVC-L HD 35", 305], ["MPEG HD422", 220]]) { l.rec = { codec: c, mode: c === "XAVC-L 4K" ? "Full-Frame → UHD" : "Full-Frame → HD", fps: 25, card: qd }; const m = A.recResult(l, e).per / 60; ok(Math.abs(m - want) <= want * 0.03, `FX9 ${c} 25p on 128GB: about ${want} min, as Sony's table (${Math.round(m)})`); }
+  ok(A.csOf("XAVC-L HD 35") === "4:2:0 · 8-bit" && A.csOf("MPEG HD422") === "4:2:2 · 8-bit", "FX9 sampling for XAVC-L HD 35 and MPEG HD422"); }
+
 // --- a matching card reader for each kind of card on the list
 { const keepRules = A.app.settings.rules; A.app.settings.rules = []; A.app.settings.readers = true;
   const pr = A.newProduction({ name: "Readers", houseId: "utopia" }); A.app.productions.push(pr);
