@@ -1561,6 +1561,9 @@ body.kb-room .app { padding-bottom: 70vh; }
 .form .stepper input, .dialog .stepper input { height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; width: 34px; }
 .pk-q { align-items: flex-end; justify-content: space-between; }
 .pk-q > .btn.ghost { min-height: 34px; }
+/* the Media Calculator keeps the room for itself: no unit switch, dates or details above it */
+.prod-head.ph-media .unit-sw, .prod-head.ph-media .ph-chips, .prod-head.ph-media .pinfo { display: none; }
+.mc-name .mc-unit { display: inline-block; margin-inline-start: 8px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 500; vertical-align: middle; }
 .pk-q .field { gap: 6px; }
 </style>
 </head>
@@ -3645,9 +3648,9 @@ function viewProduction() {
   const prepTxt = p.prep ? `<span class="ph-chip">${PREP_ICON}<span class="ph-n">Prep</span><span>${esc(fmtDM(p.prep))}</span></span>` : "";
   // the lens finder gets the whole screen: nothing above the tabs
   const finder = app.tab === "add" && fin().on;
-  const head = finder ? "" : `<div class="prod-head">
+  const head = finder ? "" : `<div class="prod-head${app.tab === "media" ? " ph-media" : ""}">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
-      ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
+      ${app.tab === "media" ? "" : st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       <h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
       <div class="ph-chips">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
@@ -4457,6 +4460,12 @@ let mcOpen = null;   // the tile whose choices are open: { id, k }
 const splitTail = s => { const i = s.lastIndexOf(" · "); return i > 0 ? [s.slice(0, i), s.slice(i + 3)] : [s, ""]; };
 /* "Any camera": a camera from the house's catalog that needn't be on the list, with its own card count (kept per house, apart from the list) */
 const isFree = id => /^free\d+$/.test(id || "");
+/* with a 2nd unit the calculator shows both units' cameras: "m~<item>" is the main unit's, "u2~<item>" the 2nd unit's */
+function mcRoute(p, key) {
+  if (/^m~/.test(key || "")) return { p: mainOf(p), id: key.slice(2) };
+  if (/^u2~/.test(key || "")) return { p: unit2Of(p) || p, id: key.slice(3) };
+  return { p, id: key };
+}
 function mcFreeList(p) {
   const all = app.settings.mcFree || (app.settings.mcFree = {});
   let list = all[p.houseId];
@@ -4472,6 +4481,8 @@ const mcFreeHead = (list, id) => list.length > 1 ? `<div class="mc-head"><span>C
 const mcCamList = (p, F, fid) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="${fid}" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
 const mcFreeCams = houseId => [...ITEM.keys()].filter(k => { const x = ITEM.get(k); return x.h.id === houseId && hasRec(x) && !/\bfor\b/i.test(x.it.name); }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name));
 function mediaCamHtml(p, id) {
+  const key = id; ({ p, id } = mcRoute(p, id));
+  const unitTag = key !== id ? (/^u2~/.test(key) ? "2nd Unit" : "Main Unit") : "";
   const free = isFree(id), F = free ? mcFreeOf(p, id) : null, list = free ? mcFreeList(p) : null;
   const l = free ? F : p.items[id], e = ITEM.get(free ? F.id : id);
   if (free && !e) {  // no camera chosen yet: only the Camera tile, and its list
@@ -4481,7 +4492,7 @@ function mediaCamHtml(p, id) {
   if (!l || !e) return "";
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = free ? F.n : card && p.items[card] ? lineQty(p.items[card]) : 0;
-  const c = r.c, md = r.md, u = esc(id), open = mcOpen && mcOpen.id === id ? mcOpen.k : "";
+  const c = r.c, md = r.md, u = esc(key), open = mcOpen && mcOpen.id === key ? mcOpen.k : "";
   const cardName = card ? ITEM.get(card)?.it.name || "" : "", sizeUnknown = card && !cardBytes(cardName);
   const lab = (label, x) => `<span class="t-l"><span>${label}</span>${x ? `<span class="t-x">${x}</span>` : ""}</span>`;
   const val = a => `<span class="t-v">${a}</span>`;
@@ -4535,7 +4546,7 @@ function mediaCamHtml(p, id) {
   }
   const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
-    ${free ? mcFreeHead(list, id) : `<h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>`}
+    ${free ? mcFreeHead(list, id) : `<h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}${unitTag ? `<span class="mc-unit">${unitTag}</span>` : ""}</h3>`}
     <div class="mc-set">${free ? pair(tap("cam", "Camera", esc(e.it.name)), "", "cam") : ""}${set}</div>
     <div class="mc-media">${media}<div class="mc-res" aria-live="polite"><div><span class="t-l">Per card</span><b>${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="t-l">Total</span><b>${total}</b></div></div></div>
   </div>`;
@@ -4668,19 +4679,21 @@ function mcSegHtml(id) {
 }
 function viewMedia(p, h) {
   const freeMode = app.mcMode === "free";
-  if (mcOpen && (freeMode ? !isFree(mcOpen.id) : !p.items[mcOpen.id])) mcOpen = null;
-  const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
+  if (mcOpen && (freeMode ? !isFree(mcOpen.id) : (() => { const R = mcRoute(p, mcOpen.id); return !R.p.items[R.id]; })())) mcOpen = null;
+  const m = mainOf(p), u2 = unit2Of(p), camsOf = (q, pre) => Object.entries(q.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => pre + id);
+  const cams = u2 ? [...camsOf(m, "m~"), ...camsOf(u2, "u2~")] : camsOf(p, "");
   const body = freeMode ? mcFreeList(p).map((f, i) => mediaCamHtml(p, "free" + i)).join("") + `<button type="button" class="mc-add" data-act="mc-add"><span aria-hidden="true">+</span> Add camera to compare</button>`
     : cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`;
   return `<section class="pad media-tab">${body}</section>`;
 }
 /* a change in the Media tab: kept on the camera's line, and that camera's card redrawn in place */
 function recApply(p, id, fn) {
+  const home = p; ({ p, id } = mcRoute(p, id));
   if (isFree(id)) { const F = mcFreeOf(p, id), e = ITEM.get(F.id); if (e) { recEnsure(F, e, p); fn(F, e); } touchSettings(); mediaRedraw(p); return; }
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return;
   recEnsure(l, e, p); fn(l, e);
   if (l.rec && l.rec.codec) { const k = recKey(e.it.name); if (k) { (app.settings.recLast || (app.settings.recLast = {}))[k] = { codec: l.rec.codec, mode: l.rec.mode, fps: l.rec.fps }; app.settings.recFps = l.rec.fps; touchSettings(); } }
-  touch(p); mediaRedraw(p);
+  touch(p); mediaRedraw(home);
 }
 function mediaRedraw(p) {
   if (app.tab !== "media") return;
@@ -5482,7 +5495,7 @@ document.addEventListener("click", e => {
       if (isFree(id) && k === "cam") { const F = mcFreeOf(p, id); if (F.id !== v) { F.id = v; F.rec = {}; } touchSettings(); mediaRedraw(p); document.getElementById("mc-" + id)?.scrollIntoView({ block: "nearest" }); break; }
       recApply(p, id, (l, e) => recSet(l, e, p, k, v)); document.getElementById("mc-" + id)?.querySelector(`[data-k="${k}"]`)?.scrollIntoView({ block: "nearest" }); } break;
     case "mq": if (p && isFree(id)) { const F = mcFreeOf(p, id); F.n = Math.max(0, Math.min(99, (F.n || 0) + Number(b.dataset.d))); touchSettings(); mediaRedraw(p); break; }
-      if (p) { const l = p.items[id], c = l && l.rec && l.rec.card; if (c) { const now = p.items[c] ? lineQty(p.items[c]) : 0; setQty(p, c, Math.max(0, now + Number(b.dataset.d))); closeModal(); mediaRedraw(p); } } break;
+      if (p) { const R = mcRoute(p, id), q = R.p, l = q.items[R.id], c = l && l.rec && l.rec.card; if (c) { const now = q.items[c] ? lineQty(q.items[c]) : 0; setQty(q, c, Math.max(0, now + Number(b.dataset.d))); if (q !== p) touch(q); closeModal(); mediaRedraw(p); } } break;
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
     case "edit-done": app.editing = null; rerenderKeepScroll(); break;
     case "rename-reset": { const l = p.items[id]; if (l && l.orig) { l.name = l.orig; touch(p); rerenderKeepScroll(); } break; }
