@@ -604,8 +604,8 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(Math.floor(A.recResult(l, e).per / 60) === 28, "ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min");
   l.rec.card = cdx2; ok(Math.floor(A.recResult(l, e).per / 60) === 56, "on a 2TB drive: 56 min");
   const html = A.mediaCamHtml(pc, a35);
-  ok(/data-act="rec-card"/.test(html) && /data-act="rec-fps"/.test(html) && /data-act="mq"/.test(html) && /On the list/.test(html), "a camera in the Media tab: card, format, frame rate, and the cards on the list");
-  A.setQty(pc, cdx2, 8); ok(/on the 8 on the list/.test(A.mediaCamHtml(pc, a35)) && /7 h 28 min/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
+  ok(/data-act="rec-card"/.test(html) && /data-act="rec-fps"/.test(html) && /data-act="mq"/.test(html) && /on the list/.test(html) && html.indexOf("mc-out") > html.indexOf("rec-fps"), "Media Calculator: card, format, frame rate, and at the bottom the result and the cards on the list");
+  A.setQty(pc, cdx2, 8); ok(/<b class="num">8<\/b>/.test(A.mediaCamHtml(pc, a35)) && /on the list · <b>7 h 28 min<\/b>/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
   ok(/No cameras on the list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
   const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
   ok(Math.floor(A.recResult(ll, A.ITEM.get(lf)).per / 60) === 121, "Mini LF ProRes 4444 UHD 24 fps: 2 h 1 min on 1TB, as ARRI's sheet says");
@@ -625,15 +625,27 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- packages: an item and what comes with it; media from a tick box
 { const keepRules = A.app.settings.rules; A.app.settings.rules = [];
   const a35 = find("utopia", /^ARRI Alexa 35$/), cdx1 = find("utopia", /Codex Compact Drive 1TB/), b250 = find("utopia", /FXLion 250Wh V-Mount/);
-  A.dd.house = "utopia"; A.dd.when = { id: a35 }; A.dd.media = { on: false, id: "", qty: 4 }; A.dd.adds = ["add0"]; A.dd.add0 = {}; A.dd.q = { add0: 1 };
-  ok(/Media for this camera/.test(A.pkgMediaHtml()) && A.dd.media.id === cdx1, "a camera's package offers its media, the card picked already");
-  A.dd.media.on = true; ok(/<select id="pk-mid"/.test(A.pkgMediaHtml()) && /value="4"/.test(A.pkgMediaHtml()), "ticked: the card and how many (4)");
+  A.dd.house = "utopia"; A.dd.when = { id: a35 }; A.dd.media = {}; A.dd.adds = []; A.dd.q = {};
+  ok(/data-type="Codex Compact Drive"/.test(A.pkgMediaHtml()) && A.dd.media["Codex Compact Drive"].id === cdx1, "a camera's package offers its media, the card picked already");
+  A.dd.media["Codex Compact Drive"].on = true; ok(/data-pkmedia="id"/.test(A.pkgMediaHtml()) && /value="4"/.test(A.pkgMediaHtml()), "ticked: the size (1TB or 2TB) and how many (4)");
+  const fx3 = find("utopia", /^Sony ILME-FX3$/); A.dd.when = { id: fx3 }; A.dd.media = {};
+  ok(/data-type="CFexpress Type A"/.test(A.pkgMediaHtml()) && /data-type="SD"/.test(A.pkgMediaHtml()), "a camera that takes two kinds of card: a line for each");
   A.dd.when = { id: b250 }; ok(A.pkgMediaHtml() === "", "no media box for an item that isn't a camera");
   A.app.settings.rules.push({ id: "r-a", kind: "item", house: "utopia", when: a35, add: cdx1, qty: 4 }, { id: "r-b", kind: "item", house: "utopia", when: a35, add: b250, qty: 6 });
   const vs = A.viewSettings();
   ok(/<h3>Packages<\/h3>/.test(vs) && (vs.match(/class="package"/g) || []).length === 1 && /data-act="pkg-add" data-id="[^"]+"/.test(vs) && /\+ New package/.test(vs), "Settings: one Alexa 35 package with both items, and + to add another");
   const pp = A.newProduction({ name: "Pkg", houseId: "utopia" }); A.app.productions.push(pp); A.setQty(pp, a35, 2);
   ok(pp.items[cdx1]?.qty === 8 && pp.items[b250]?.qty === 12, "adding two Alexa 35 brings the package: 8 cards, 12 batteries");
+  A.app.settings.rules = keepRules; }
+
+// --- a matching card reader for each kind of card on the list
+{ const keepRules = A.app.settings.rules; A.app.settings.rules = []; A.app.settings.readers = true;
+  const pr = A.newProduction({ name: "Readers", houseId: "utopia" }); A.app.productions.push(pr);
+  const cdx1 = find("utopia", /Codex Compact Drive 1TB/), cdx2 = find("utopia", /Codex Compact Drive 2TB/), dock = find("utopia", /Codex Compact Drive Dock/), sd = find("utopia", /SanDisk 64GB SD Card/), sdr = find("utopia", /Lexar SD\/CF Card Reader/);
+  A.setQty(pr, cdx1, 4); A.setQty(pr, cdx2, 2); A.setQty(pr, sd, 3);
+  ok(pr.items[dock]?.qty === 1 && pr.items[sdr]?.qty === 1, "one Codex dock for both Codex drives, one SD reader");
+  A.setQty(pr, sd, 0); ok(!pr.items[sdr], "the SD cards go, and so does their reader");
+  A.app.settings.readers = false; A.applyDefaults(pr); ok(!pr.items[dock], "switched off: the readers come off");
   A.app.settings.rules = keepRules; }
 
 // --- a file once built is used again while the list stays the same

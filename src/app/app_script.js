@@ -67,7 +67,7 @@ function undoable(verb, what, fn) {
   // just a small faded undo arrow in the bottom corner, with a thin ring running down the seconds left
   const label = `Undo: ${verb.toLowerCase()} ${what || ""}`.trim();
   u.innerHTML = `<span class="sr">${esc(verb)} ${esc(what || "")}</span><button class="ub-btn" type="button" data-act="undo" aria-label="${esc(label)}" title="${esc(label)}">${UNDO_ICON}<svg class="ub-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16.5"/></svg></button>`;
-  u.classList.toggle("over-dock", !!document.querySelector(".dock:not([hidden])"));
+  u.classList.toggle("over-dock", !!document.querySelector(".dock:not([hidden]), .navbar:not([hidden])"));
   u.hidden = false; u.classList.remove("in"); void u.offsetWidth; u.classList.add("in");
   clearTimeout(undoT); undoT = setTimeout(hideUndo, UNDO_MS);
 }
@@ -1108,6 +1108,16 @@ function applyDefaults(p) {
       if (r.kind === "media") { const rd = resolveReader(t.type, p.houseId); if (rd && !want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${t.type} cards`], label: rd.label }); }
     }
   }
+  // a matching card reader for each kind of card on the list, once (unless taken off this list)
+  if (app.settings.readers) {
+    const kinds = new Set();
+    for (const id of new Set([...Object.keys(p.items), ...want.keys()])) { const e = ITEM.get(id); if (e && e.s.id === "media" && ((p.items[id] && lineQty(p.items[id]) > 0) || (want.get(id) || {}).qty > 0)) kinds.add(grpOf(e.it, e.s)); }
+    for (const type of kinds) {
+      if (!type || (p.readerOff || {})[type]) continue;
+      const rd = resolveReader(type, p.houseId) || { id: "auto-reader-" + flat(type), label: type + " card reader" };
+      if (!want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${type} cards`], label: rd.label });
+    }
+  }
   const changed = [];
   for (const [id, l] of Object.entries(p.items)) if (l.auto && !want.has(id)) {
     l.qty = Math.max(0, l.qty - l.auto); l.auto = 0; delete l.autoWhy; changed.push(id);
@@ -1116,7 +1126,7 @@ function applyDefaults(p) {
   for (const [id, w] of want) {
     let l = p.items[id];
     if (!l) {
-      l = ITEM.has(id) ? { ...lineFromCatalog(id), qty: 0 } : { qty: 0, note: "", name: w.label, brand: "", section: id.startsWith("auto-card-") ? "media" : "power", cat: "", sub: "", custom: true, added: Date.now(), children: [] };
+      l = ITEM.has(id) ? { ...lineFromCatalog(id), qty: 0 } : { qty: 0, note: "", name: w.label, brand: "", section: id.startsWith("auto-card-") || id.startsWith("auto-reader-") ? "media" : "power", cat: "", sub: "", custom: true, added: Date.now(), children: [] };
       p.items[id] = l;
     }
     const old = l.auto || 0;
@@ -1236,6 +1246,7 @@ function fitToKeyboard() {
   m.style.top = vv.offsetTop + "px"; m.style.height = vv.height + "px"; m.style.bottom = "auto";
   m.classList.toggle("kb", window.innerHeight - vv.height > 120);
 }
+if (window.visualViewport) window.visualViewport.addEventListener("resize", () => document.body.classList.toggle("kb-up", window.innerHeight - window.visualViewport.height > 120));
 if (window.visualViewport) { window.visualViewport.addEventListener("resize", fitToKeyboard); window.visualViewport.addEventListener("scroll", fitToKeyboard); }
 document.addEventListener("focusin", e => {
   const t = e.target;
@@ -1418,6 +1429,7 @@ function render() {
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
+  document.body.classList?.toggle("nav-on", app.view === "production");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
   houseTheme(app.view === "production" && cur() ? cur().houseId : hp ? hp.dataset.value : "");
@@ -1762,8 +1774,8 @@ function viewSettings() {
       <span class="hint">Once downloaded, open the file to install it. Android asks once to allow installs from your browser.</span></div>` : ""}
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
     <div class="set-group"><h3>Packages</h3>
-      <p class="hint" style="margin:0">An item and what comes with it. Add the item to a list and the rest comes too, as many for each one, and a notice tells you.</p>
       <div class="packages">${rules || `<p class="hint">No packages yet.</p>`}</div>
+      <label class="check pk-readers"><input type="checkbox" name="readers" ${app.settings.readers ? "checked" : ""}> A card reader for each kind of card on the list</label>
       <div><button class="btn" type="button" data-act="rule-new">+ New package</button></div></div>
     <div class="set-group"><h3>Doesn't work together</h3>
       <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
@@ -1810,7 +1822,8 @@ function ruleDialog(whenId) {
   const fixed = whenId && ITEM.get(whenId);
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
   dd.house = fixed ? fixed.h.id : (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id);
-  dd.when = fixed ? pickOf(whenId) : {}; dd.adds = ["add0"]; dd.add0 = {}; dd.q = { add0: 1 }; dd.media = { on: false, id: "", qty: 4 }; dd.fixed = fixed ? whenId : "";
+  dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {};
+  dd.adds = []; if (!fixed || !pkgKinds().length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">${fixed ? "Add to the package" : "New package"}</h3>
     ${!fixed && HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
     ${fixed ? `<p class="pk-fixed">When you add <b>${esc(fixed.it.name)}</b></p>` : `<fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>`}
@@ -1822,18 +1835,28 @@ function ruleDialog(whenId) {
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
   if (!fixed) document.getElementById("pk-when-c")?.focus();
 }
-function pkgMediaHtml() {
+/* a camera's media in its package: one line for each kind of card it takes, the card already picked; tick, and set how many */
+function pkgKinds() {
   const e = ITEM.get(dd.when.id), ch = e && e.it.camera && !e.it.camera.film ? cardChoices(e, dd.house) : [];
-  if (!ch.length) return "";
-  const m = dd.media; if (!ch.some(c => c.id === m.id)) m.id = pickCard(e, dd.house);
-  return `<label class="check"><input type="checkbox" data-pkmedia="on" ${m.on ? "checked" : ""}> Media for this camera</label>
-    ${m.on ? `<div class="row2 pk-mrow"><div class="field"><label for="pk-mid">Card</label><select id="pk-mid" data-pkmedia="id">${ch.map(c => `<option value="${esc(c.id)}" ${c.id === m.id ? "selected" : ""}>${esc(shortCard(c.name))}</option>`).join("")}</select></div>
-      <div class="field"><label for="pk-mqty">Quantity</label><input id="pk-mqty" type="number" min="1" max="99" inputmode="numeric" data-pkmedia="qty" value="${m.qty}"></div></div>` : ""}`;
+  const kinds = [];
+  for (const c of ch) { let k = kinds.find(x => x.type === c.type); if (!k) kinds.push(k = { type: c.type, cards: [] }); k.cards.push(c); }
+  return kinds;
+}
+function pkgMediaHtml() {
+  const kinds = pkgKinds(); if (!kinds.length) return "";
+  const e = ITEM.get(dd.when.id), size = c => cardBytes(c.name) || 1;
+  return `<div class="pk-media"><span class="lbl">Media</span>${kinds.map(k => {
+    const m = dd.media[k.type] || (dd.media[k.type] = { on: false, qty: 4, id: "" });
+    if (!k.cards.some(c => c.id === m.id)) m.id = (k.cards.filter(c => size(c) <= 1.01e12).sort((a, b) => size(b) - size(a))[0] || k.cards.slice().sort((a, b) => size(a) - size(b))[0]).id;
+    const t = esc(k.type);
+    return `<div class="pk-kind${m.on ? " on" : ""}"><label class="check"><input type="checkbox" data-pkmedia="on" data-type="${t}" ${m.on ? "checked" : ""}> ${t}</label>
+      ${m.on ? `<div class="pk-kq">${k.cards.length > 1 ? `<select aria-label="${t} card" data-pkmedia="id" data-type="${t}">${k.cards.map(c => `<option value="${esc(c.id)}" ${c.id === m.id ? "selected" : ""}>${esc(shortCard(c.name))}</option>`).join("")}</select>` : `<span class="pk-card">${esc(shortCard(k.cards[0].name))}</span>`}
+        <input type="number" min="1" max="99" inputmode="numeric" aria-label="How many ${t} cards" data-pkmedia="qty" data-type="${t}" value="${m.qty}"></div>` : ""}</div>`; }).join("")}</div>`;
 }
 function pkgAddsHtml() {
   return dd.adds.map(k => `<div class="pk-add" id="pa-${k}"><div id="pk-${k}">${pickerHtml(k)}</div>
     <div class="pk-q"><div class="field"><label for="rd-q-${k}">Quantity</label><input id="rd-q-${k}" type="number" min="1" max="99" inputmode="numeric" data-pkq="${k}" value="${dd.q[k] || 1}"></div>
-    ${dd.adds.length > 1 ? `<button class="btn ghost sm" type="button" data-act="pk-less" data-k="${k}">Remove</button>` : ""}</div></div>`).join("");
+    ${dd.adds.length > 1 || pkgKinds().length ? `<button class="btn ghost sm" type="button" data-act="pk-less" data-k="${k}">Remove</button>` : ""}</div></div>`).join("");
 }
 
 /* where the production stands today, in a few words: "Shoot starts in 6 days", "Shoot day 3 of 6", "Wrapped 18 Nov" */
@@ -1900,14 +1923,12 @@ function viewProduction() {
     </div>`;
   return `<section class="pad">
     ${head}
-    <div class="tabs" role="tablist"${finder ? " hidden" : ""}>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}">Add gear</button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}">Favorites <span class="num">${nFav || ""}</span></button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Camera List <span class="num" id="tabCount">${t.lines || ""}</span></button>
-      <button class="tab" role="tab" type="button" data-act="tab" data-tab="media" aria-selected="${app.tab === "media"}">Media</button>
-    </div>
   </section>
-  ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}`;
+  ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}
+  <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
+    ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
+      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-l">${label}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span></button>`).join("")}
+  </div></nav>`;
 }
 
 /* ----- shared row for catalog and favorites ----- */
@@ -2668,27 +2689,27 @@ function mediaCamHtml(p, id) {
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || "");
-  const result = r.per ? `<div class="rs-res"><div><b>${fmtDur(r.per)}</b><span>on one card</span></div>${onList ? `<div><b>${fmtDur(r.per * onList)}</b><span>on the ${onList} on the list</span></div>` : ""}<small>about ${r.rate >= 1e8 ? Math.round(r.rate / 1e6) : (r.rate / 1e6).toFixed(1)} MB/s</small></div>`
-    : `<div class="rs-res empty"><span>${!card ? "Pick a card to see how long it lasts." : sizeUnknown ? "Pick the card's size to see how long it lasts." : r.prof ? "Pick the format to see how long a card lasts." : "Type the data rate to see how long a card lasts."}</span></div>`;
   const fmtPart = r.prof ? `<div class="mc-fmt"><div class="field"><label for="rs-codec-${esc(id)}">Format</label><select id="rs-codec-${esc(id)}" data-rec="codec" data-id="${esc(id)}">${r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join("")}</select></div>
       <div class="field"><label for="rs-mode-${esc(id)}">Resolution</label><select id="rs-mode-${esc(id)}" data-rec="mode" data-id="${esc(id)}">${(c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])} · ${x[1]}×${x[2]}</option>`).join("")}</select></div></div>
-      <div class="field"><span class="lbl" id="rs-fps-${esc(id)}">Frame rate</span><div class="chips fps" role="group" aria-labelledby="rs-fps-${esc(id)}">${REC_FPS.filter(f => !md || f <= md[3]).map(f => `<button type="button" class="chip" data-act="rec-fps" data-id="${esc(id)}" data-fps="${f}" aria-pressed="${l.rec.fps === f}">${fpsLabel(f)}</button>`).join("")}</div></div>`
-    : `<div class="field"><label for="rs-mbps-${esc(id)}">Data rate (Mbps)</label><input id="rs-mbps-${esc(id)}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${esc(id)}" value="${l.rec.mbps || ""}"><span class="hint">This camera's formats aren't in the app yet. Take the rate from its menu or manual.</span></div>`;
+      <div class="field"><span class="lbl" id="rs-fps-${esc(id)}">Frame rate</span><div class="chips wrap fps" role="group" aria-labelledby="rs-fps-${esc(id)}">${REC_FPS.filter(f => !md || f <= md[3]).map(f => `<button type="button" class="chip" data-act="rec-fps" data-id="${esc(id)}" data-fps="${f}" aria-pressed="${l.rec.fps === f}">${fpsLabel(f)}</button>`).join("")}</div></div>`
+    : `<div class="field"><label for="rs-mbps-${esc(id)}">Data rate (Mbps)</label><input id="rs-mbps-${esc(id)}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${esc(id)}" value="${l.rec.mbps || ""}"></div>`;
+  const rate = r.rate ? (r.rate >= 1e8 ? Math.round(r.rate / 1e6) : (r.rate / 1e6).toFixed(1)) + " MB/s" : "";
   return `<div class="media-cam" id="mc-${esc(id)}">
     <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
-    ${result}
-    <div class="field"><span class="lbl">Card</span>${choices.length ? `<div class="chips wrap">${choices.map(x => `<button type="button" class="chip" data-act="rec-card" data-id="${esc(id)}" data-card="${esc(x.id)}" aria-pressed="${card === x.id}">${esc(shortCard(x.name))}${p.items[x.id] ? ` <span class="num">${lineQty(p.items[x.id])}</span>` : ""}</button>`).join("")}</div>` : `<p class="hint">${esc(houseById(p.houseId)?.name || "This house")}'s catalog has no ${esc((e.it.camera.media || [])[0] || "cards")} for this camera.</p>`}</div>
+    <div class="field"><span class="lbl">Card</span>${choices.length ? `<div class="chips wrap">${choices.map(x => `<button type="button" class="chip" data-act="rec-card" data-id="${esc(id)}" data-card="${esc(x.id)}" aria-pressed="${card === x.id}">${esc(shortCard(x.name))}</button>`).join("")}</div>` : `<p class="hint">Not in ${esc(houseById(p.houseId)?.name || "the")} catalog</p>`}</div>
     ${sizeUnknown ? `<div class="field"><span class="lbl">Card size</span><div class="chips wrap">${[64, 128, 256, 512, 1000, 2000].map(g => `<button type="button" class="chip" data-act="rec-gb" data-id="${esc(id)}" data-gb="${g}" aria-pressed="${l.rec.gb === g}">${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</button>`).join("")}</div></div>` : ""}
     ${fmtPart}
-    ${card ? `<div class="mc-list"><span>On the list<small>${esc(shortCard(ITEM.get(card)?.it.name || ""))}</small></span><span class="stepper sm"><button type="button" data-act="mq" data-id="${esc(id)}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${esc(id)}" data-d="1" aria-label="One card more">+</button></span></div>` : ""}
+    <div class="mc-out">
+      <div class="mc-res"><div class="mc-big">${r.per ? fmtDur(r.per) : "–"}</div><div class="mc-sub">one card${rate ? ` · ${rate}` : ""}</div></div>
+      ${card ? `<div class="mc-list"><span class="stepper"><button type="button" data-act="mq" data-id="${esc(id)}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${esc(id)}" data-d="1" aria-label="One card more">+</button></span>
+        <div class="mc-sub">on the list${onList && r.per ? ` · <b>${fmtDur(r.per * onList)}</b>` : ""}</div></div>` : ""}
+    </div>
   </div>`;
 }
 function viewMedia(p, h) {
   const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
   return `<section class="pad media-tab">
-    <p class="hint mt-lead">How long each card records at the format you shoot. Add the cards to the list from here.</p>
-    ${cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><p>Add a camera from ${esc(h.name)}'s catalog, then work out its cards here.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
-    <p class="hint rs-note">From the camera makers' own figures. Real times run a little different with audio and the picture.</p>
+    ${cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
   </section>`;
 }
 /* a change in the Media tab: kept on the camera's line, and that camera's card redrawn in place */
@@ -3482,7 +3503,8 @@ document.addEventListener("click", e => {
       break;
     }
     case "remove": {
-      const und = snapItems(p), name = p.items[id]?.name;
+      const und = snapItems(p), name = p.items[id]?.name, gone = p.items[id];
+      if (gone && gone.auto && /^for the .* cards$/.test(gone.autoWhy || "")) (p.readerOff || (p.readerOff = {}))[gone.autoWhy.slice(8, -6)] = true;
       delete p.items[id];
       if (app.editing === id) app.editing = null;
       applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable("Removed", name, und);
@@ -3678,6 +3700,7 @@ document.addEventListener("change", e => {
     });
     return;
   }
+  if (t.name === "readers" && t.type === "checkbox") { app.settings.readers = t.checked; touchSettings(); for (const q of app.productions) { applyDefaults(q); touch(q); } toast(t.checked ? "Card readers added to your lists" : "Card readers taken off your lists"); return; }
   if (t.name === "helperOn" && t.type === "checkbox") { setHelper(t.checked); app.helperMissing = false; rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
   if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
@@ -3689,14 +3712,14 @@ document.addEventListener("change", e => {
   if (t.dataset.settitle) { app.settings.docTitle = t.value.trim().slice(0, 60); touchSettings(); toast("Title saved"); return; }
   if (t.dataset.pkq) { dd.q[t.dataset.pkq] = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); return; }
   if (t.dataset.pkmedia) {
-    const k = t.dataset.pkmedia, m = dd.media;
-    if (k === "on") { m.on = t.checked; document.getElementById("pk-media").innerHTML = pkgMediaHtml(); if (m.on) document.getElementById("pk-mqty")?.focus(); }
+    const k = t.dataset.pkmedia, m = dd.media[t.dataset.type]; if (!m) return;
+    if (k === "on") { m.on = t.checked; document.getElementById("pk-media").innerHTML = pkgMediaHtml(); }
     else if (k === "id") m.id = t.value; else m.qty = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1));
     return;
   }
   if (t.dataset.rdhouse) {
     dd.house = t.value; cx.a = []; cx.b = [];
-    if (dd.adds) { dd.adds.forEach(k => { dd[k] = {}; }); dd.media = { on: false, id: "", qty: 4 }; const ad = document.getElementById("pk-adds"); if (ad) ad.innerHTML = pkgAddsHtml(); const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
+    if (dd.adds) { dd.adds.forEach(k => { dd[k] = {}; }); dd.media = {}; const ad = document.getElementById("pk-adds"); if (ad) ad.innerHTML = pkgAddsHtml(); const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
     ["when", "add", "ca", "cb", "cc"].forEach(k => { dd[k] = {}; const box = document.getElementById("pk-" + k); if (box) box.innerHTML = pickerHtml(k); });
     ["a", "b"].forEach(k => { const box = document.getElementById("cx-" + k); if (box) box.innerHTML = ""; });
     return;
@@ -3713,7 +3736,12 @@ document.addEventListener("change", e => {
       return;
     }
     if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); box.querySelector(t.dataset.pkc ? "[data-pks]" : "[data-pki]")?.focus(); }
-    if (k === "when") { const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
+    if (k === "when") {
+      dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml();
+      const untouched = dd.adds.length === 1 && !(dd[dd.adds[0]] || {}).c;
+      if (pkgKinds().length && untouched) { dd.adds = []; document.getElementById("pk-adds").innerHTML = ""; }
+      else if (!pkgKinds().length && !dd.adds.length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); }
+    }
     return;
   }
   if (t.form && t.form.id === "meForm") {
@@ -3907,7 +3935,7 @@ document.addEventListener("submit", e => {
     const when = dd.when.id;
     if (!when) return say("Choose the item you add.");
     const items = [];
-    if (dd.media.on && dd.media.id) items.push([dd.media.id, dd.media.qty]);
+    for (const m of Object.values(dd.media || {})) if (m.on && m.id) items.push([m.id, m.qty]);
     for (const k of dd.adds) if (dd[k] && dd[k].id) items.push([dd[k].id, dd.q[k] || 1]);
     if (!items.length) return say("Choose what comes with it.");
     if (items.some(([id]) => id === when)) return say("Choose a different item to come with it.");
