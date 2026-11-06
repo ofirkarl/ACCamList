@@ -36,8 +36,8 @@ rep('<title>AC Cam List</title>\n<meta name="claude:viewport-fit-sides" content=
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>AC Cam List</title>
 <meta name="description" content="Camera equipment lists for camera assistants: pick the rental house, build the list, export to Word or PDF.">
-<meta name="theme-color" content="#e7eaee" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d0f12" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f4f0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f0f14" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="AC Cam List">

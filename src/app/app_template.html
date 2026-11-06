@@ -1145,6 +1145,61 @@ button.ph-chip:active { transform: scale(.97); }
   .btn, .chip, .tab, .add, .stepper button, .prod-card { transition: none; }
   .btn:active, .add:active, .stepper button:active, .tab:active, .chip:active, .prod-card:active { transform: none; }
 }
+
+/* ---- home: a greeting, then the productions with their status and rental house ---- */
+:root { --house-utopia: #cc4f0a; --house-fitussi: #7e3af2;
+  --b1: #e5484d; --b2: #f5a524; --b3: #22b45e; --b4: #1e9be8; --b5: #4f46e5; --b6: #d946ef; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --house-utopia: #ff9a5c; --house-fitussi: #b39dff;
+  --b1: #f2696d; --b2: #f7ba4d; --b3: #4ade80; --b4: #4cc2f1; --b5: #8b87ff; --b6: #e879f9; } }
+:root[data-theme="dark"] { --house-utopia: #ff9a5c; --house-fitussi: #b39dff;
+  --b1: #f2696d; --b2: #f7ba4d; --b3: #4ade80; --b4: #4cc2f1; --b5: #8b87ff; --b6: #e879f9; }
+.greet { padding-block: 16px 0; display: grid; gap: 4px; }
+.greet .gr-date { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); }
+.greet .gr-hi { overflow-wrap: anywhere; }
+.greet.hello .gr-hi { animation: wl-rise .6s var(--ease) both; }
+.greet + .home-head { padding-block: 24px 12px; }
+.greet + .empty-state { margin-top: 24px; }
+.home-sec { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -.01em; display: flex; align-items: baseline; gap: 8px; }
+.home-sec .num { font-size: 13px; font-weight: 500; color: var(--muted); }
+.prod-card .pc-status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--accent); }
+.prod-card .pc-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.prod-card .pc-status.live { color: var(--ok); }
+.prod-card .pc-status.done { color: var(--muted); font-weight: 400; }
+.pc-house { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; color: var(--hc, var(--muted)); }
+.pc-house::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: currentColor; }
+.pc-house[data-house="utopia"] { --hc: var(--house-utopia); }
+.pc-house[data-house="fitussi"] { --hc: var(--house-fitussi); }
+
+/* ---- the first open: color bars, what the app does, your name ---- */
+body.welcome-on { margin: 0; }
+body.welcome-on .topbar { display: none; }
+body.welcome-on .app { padding-bottom: 0; }
+.welcome { min-height: 100vh; min-height: 100dvh; box-sizing: border-box; max-width: 480px; margin: 0 auto; padding: max(32px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 24px; }
+.wl-bars { display: grid; gap: 4px; border-radius: 20px; overflow: hidden; box-shadow: 0 18px 40px -16px color-mix(in srgb, var(--b5) 45%, transparent); }
+.wl-top, .wl-low { display: flex; }
+.wl-bars i { flex: 1; display: block; background: var(--c); transform-origin: bottom; animation: wl-bar .7s var(--ease) both; animation-delay: calc(var(--i) * 60ms); }
+.wl-top i { height: clamp(104px, 22vh, 200px); }
+.wl-low i { height: 16px; opacity: .5; transform-origin: top; animation-delay: calc(380ms + var(--i) * 40ms); }
+.wl-text { animation: wl-rise .5s var(--ease) both; animation-delay: 300ms; }
+.wl-title { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.wl-lead { margin: 8px 0 0; font-size: 17px; line-height: 1.4; color: var(--muted); max-width: 30ch; }
+.wl-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.wl-steps li { display: flex; align-items: center; gap: 12px; animation: wl-rise .5s var(--ease) both; animation-delay: calc(420ms + var(--i) * 80ms); }
+.wl-n { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #fff; background: var(--tape); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 4px 10px -4px var(--tape); }
+.wl-steps b { display: block; font-size: 15px; font-weight: 500; }
+.wl-steps small { display: block; font-size: 13px; color: var(--muted); }
+.wl-form { margin-top: auto; display: grid; gap: 8px; animation: wl-rise .5s var(--ease) both; animation-delay: 680ms; }
+.wl-form .field { display: grid; gap: 8px; }
+.wl-form .field label { font-size: 15px; color: var(--fg); }
+.wl-form .hint { margin: 0; }
+.wl-go, .wl-in { width: 100%; justify-content: center; text-align: center; }
+.wl-go { min-height: 52px; font-size: 17px; margin-top: 8px; }
+.wl-in { min-height: 44px; }
+@keyframes wl-bar { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes wl-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .wl-bars i, .wl-text, .wl-steps li, .wl-form, .greet.hello .gr-hi { animation: none !important; }
+}
 </style>
 
 <div class="app">
@@ -1930,7 +1985,9 @@ const LS_KEY = "accam-productions-v1", LS_UI = "accam-ui-v1", LS_SET = "accam-se
 const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? d; } catch (e) { return d; } };
 const lsPut = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
 const lsSave = () => lsPut(LS_KEY, app.productions);
-const uiSave = () => lsPut(LS_UI, { view: ["production", "settings"].includes(app.view) ? app.view : "home", pid: app.pid, tab: app.tab });
+const uiSave = () => lsPut(LS_UI, { view: app.view === "production" ? "production" : "home", pid: app.pid, tab: app.tab, at: Date.now() });
+const RESUME_MS = 15 * 60 * 1000;  // back within 15 minutes (say, after sending the list on WhatsApp): the same list; later: the home page
+const needsWelcome = () => !app.settings.welcomed && !app.productions.length && !((app.settings.me || {}).name);
 
 let COL = null;
 const timers = new Map(), chains = new Map(), dirty = new Set();
@@ -1984,6 +2041,7 @@ async function initAccount() {
   let db, user;
   try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch (e) { return; }
   if (!db || !user) return;
+  if (app.view === "welcome" && !typing()) render();  // sign-in is ready now: the welcome can offer it
   const me = await user.id();
   if (!me) return;
   try { COL = db.collection("data/users/" + me); } catch (e) { COL = null; return; }
@@ -2278,7 +2336,7 @@ function closeModal() { const m = document.getElementById("modal"); if (m) { m.r
    an open line, selecting several, then up a screen. On the productions screen it leaves the app. */
 const NAV = { on: false, guard: false, skip: false };
 try { NAV.on = !!window.AC_CONFIG && !!window.history && typeof history.pushState === "function"; } catch (e) {}
-const navDeep = () => !!(document.getElementById("modal") || document.getElementById("preview") || app.sel || app.view !== "home");
+const navDeep = () => !!(document.getElementById("modal") || document.getElementById("preview") || app.sel || !["home", "welcome"].includes(app.view));
 function navSync() {
   if (!NAV.on || NAV.skip) return;
   const deep = navDeep();
@@ -2440,11 +2498,14 @@ function houseTheme(id) {
 }
 function render() {
   const v = document.getElementById("view");
-  if (app.view === "form") v.innerHTML = viewForm();
+  if (app.view === "welcome" && !needsWelcome()) app.view = "home";
+  if (app.view === "welcome") v.innerHTML = viewWelcome();
+  else if (app.view === "form") v.innerHTML = viewForm();
   else if (app.view === "settings") v.innerHTML = viewSettings();
   else if (app.view === "production" && cur()) v.innerHTML = viewProduction();
   else { app.view = "home"; v.innerHTML = viewHome(); }
-  if (app.view !== "home") app.sel = null;
+  if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
+  document.body.classList?.toggle("welcome-on", app.view === "welcome");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
   houseTheme(app.view === "production" && cur() ? cur().houseId : hp ? hp.dataset.value : "");
@@ -2459,6 +2520,32 @@ function mixBar(p) {
   if (!parts.length) return `<span class="mix none" aria-hidden="true"></span>`;
   return `<span class="mix" role="img" aria-label="${esc(parts.map(([s, n]) => `${n} ${secName(s.id)}`).join(", "))}">${parts.map(([s, n]) => `<i style="flex:${n};--tape:${secTape(s)}"></i>`).join("")}</span>`;
 }
+/* the home page opens with a greeting: the date, and hello by name */
+function greetHtml() {
+  const first = ((app.settings.me || {}).name || "").trim().split(/\s+/)[0] || "", d = new Date(), hr = d.getHours();
+  const hi = hr < 5 ? "Working late" : hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening";
+  const who = first ? `, <bdi>${esc(first)}</bdi>` : "";
+  const text = app.justWelcomed ? (first ? `Nice to meet you${who}` : "Welcome") : hi + who;
+  const date = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  return `<div class="greet${app.justWelcomed ? " hello" : ""}"><p class="gr-date">${esc(date)}</p><h2 class="page gr-hi">${text}</h2></div>`;
+}
+/* the first open: what the app does, and your name for the lists */
+const WELCOME_STEPS = [["camera", "Pick the rental house", "Utopia or Fitussi, with its whole catalog"], ["lenses", "Add the gear", "Search, tap, set how many"], ["camera_accessories", "Send the list", "As a PDF or a Word file"]];
+function viewWelcome() {
+  const a = window.AC_AUTH, u = a && a.user ? a.user() : null, name = (app.settings.me || {}).name || (u && u.name) || "";
+  return `<section class="welcome">
+    <div class="wl-bars" aria-hidden="true"><div class="wl-top">${[1, 2, 3, 4, 5, 6].map(n => `<i style="--c:var(--b${n});--i:${n - 1}"></i>`).join("")}</div><div class="wl-low">${[6, 5, 4, 3, 2, 1].map((n, i) => `<i style="--c:var(--b${n});--i:${i}"></i>`).join("")}</div></div>
+    <div class="wl-text"><h1 class="wl-title">AC Cam List</h1>
+    <p class="wl-lead">Camera gear lists from the rental house catalog, ready to send.</p></div>
+    <ol class="wl-steps">${WELCOME_STEPS.map(([k, t, s], i) => `<li style="--tape:var(--tape-${k});--i:${i}"><span class="wl-n">${i + 1}</span><span><b>${t}</b><small>${s}</small></span></li>`).join("")}</ol>
+    <form class="wl-form" id="welcomeForm" autocomplete="off">
+      <div class="field"><label for="wl-name">What's your name?</label><input id="wl-name" name="name" maxlength="80" autocomplete="name" enterkeyhint="go" value="${esc(name)}"></div>
+      <span class="hint">It goes on your lists as 1st AC.</span>
+      <button class="btn primary wl-go" type="submit">Get started</button>
+      ${a && !u ? `<button class="btn ghost wl-in" type="button" data-act="acct-in">Have lists already? Sign in</button>` : ""}
+    </form>
+  </section>`;
+}
 function viewHome() {
   const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
   const sel = app.sel;
@@ -2466,9 +2553,10 @@ function viewHome() {
   const cards = list.map(p => {
     const t = totals(p), h = houseById(p.houseId);
     const when = fmtRange(p.shootStart, p.shootEnd), on = !!(sel && sel.has(p.id));
+    const st = prodStatus(p) || (unit2Of(p) && prodStatus(unit2Of(p)));
     return `<li><button class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}" type="button" data-act="${sel ? "pick-prod" : "open"}" data-lp="prod" data-id="${esc(p.id)}"${sel ? ` aria-pressed="${on}"` : ""}>
       ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<span class="pc-top"><b>${esc(p.name || "Untitled production")}</b>${p.docVer ? `<span class="pc-ver">Version ${p.docVer}</span>` : ""}</span>
-      <span class="meta">${unit2Of(p) ? `<span class="unit-tag">+ 2nd Unit</span>` : ""}<span>${esc(h ? h.name : "")}</span>${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
+      ${st ? `<span class="pc-status ${st.k}">${esc(st.t)}</span>` : ""}<span class="meta">${h ? `<span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span>` : ""}${unit2Of(p) ? `<span class="unit-tag">+ 2nd Unit</span>` : ""}${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
       ${mixBar(p)}
     </button></li>`;
   }).join("");
@@ -2476,7 +2564,8 @@ function viewHome() {
   const selDock = sel ? `<div class="dock pad sel-dock"><div class="dock-in"><span class="summary-line"><b class="num">${n}</b> selected</span>
     <span class="grp"><button class="btn" type="button" data-act="sel-dup" ${n ? "" : "disabled"}>Duplicate</button><button class="btn danger" type="button" data-act="sel-del" ${n ? "" : "disabled"}>Delete</button><button class="btn ghost" type="button" data-act="sel-cancel">Cancel</button></span></div></div>` : "";
   return `<section class="pad">
-    <div class="home-head"><h2 class="page">Productions</h2>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>
+    ${greetHtml()}
+    ${list.length ? `<div class="home-head"><h3 class="home-sec">Productions <span class="num">${list.length}</span></h3>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>` : ""}
     ${list.length ? `<ul class="prod-list">${cards}</ul>${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
@@ -4578,6 +4667,11 @@ document.addEventListener("change", e => {
 document.addEventListener("submit", e => {
   e.preventDefault();
   const f = e.target;
+  if (f.id === "welcomeForm") {
+    const nm = f.elements.name.value.trim().slice(0, 80);
+    app.settings.me = { ...(app.settings.me || {}), name: nm }; app.settings.welcomed = true; touchSettings();
+    buzz("done"); app.view = "home"; app.justWelcomed = true; render(); window.scrollTo(0, 0); return;
+  }
   if (f.id === "catItemForm") {
     const p = cur(), h = p && houseById(p.houseId);
     if (!h) return;
@@ -5106,10 +5200,11 @@ if (!Array.isArray(app.productions)) app.productions = [];
   else Object.assign(app.settings, { catalog: clone(STARTER.catalog), closedBrands: clone(STARTER.closedBrands), catColors: clone(STARTER.catColors) });  // first open: the starting catalog
   if (!app.settings.mediaSeeded) { app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); }
   applyCatalog();
-  const ui = lsGet(LS_UI, {});
-  if (ui.view === "production" && app.productions.some(p => p.id === ui.pid)) { app.view = "production"; app.pid = ui.pid; app.tab = ["add", "fav", "list"].includes(ui.tab) ? ui.tab : "add"; }
-  else if (ui.view === "settings") app.view = "settings";
+  const ui = lsGet(LS_UI, {}), recent = ui.at && Date.now() - ui.at < RESUME_MS;
+  if (recent && ui.view === "production" && app.productions.some(p => p.id === ui.pid)) { app.view = "production"; app.pid = ui.pid; app.tab = ["add", "fav", "list"].includes(ui.tab) ? ui.tab : "add"; }
+  else if (needsWelcome()) app.view = "welcome";
 }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(); });
 render();
 initAccount();
 </script>
