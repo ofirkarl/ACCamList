@@ -1165,7 +1165,8 @@ function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span cl
 function nselSync(w) {
   const sel = w.querySelector("select"), btn = w.querySelector(".nsel-btn"); if (!sel || !btn) return;
   const o = sel.options[sel.selectedIndex];
-  btn.innerHTML = nselText(o ? o.text : ""); btn.disabled = sel.disabled; btn.classList.toggle("ph", !o || !o.value || /^Choose/.test(o.text));
+  const txt = o ? o.text : "", cut = sel.dataset.short ? txt.lastIndexOf(" · ") : -1;
+  btn.innerHTML = nselText(cut > 0 ? txt.slice(0, cut) : txt); btn.disabled = sel.disabled; btn.classList.toggle("ph", !o || !o.value || /^Choose/.test(o.text));
 }
 function niceSelect(sel) {
   if (sel.dataset.nice || sel.multiple || !sel.parentNode) return;
@@ -2769,7 +2770,7 @@ function mediaCamHtml(p, id) {
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || ""), u = esc(id);
-  const sel = (k, label, opts) => `<div class="field"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}">${opts}</select></div>`;
+  const sel = (k, label, opts, short) => `<div class="field"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}"${short ? ` data-short="1"` : ""}>${opts}</select></div>`;
   const cardOpts = choices.map(x => { const v = isSd(x.id) && sdClass(x.id); return `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(shortCard(x.name))}${v ? ` · V${v}` : ""}</option>`; }).join("");
   const sd = card && isSd(card), cls = sd ? sdClass(card) : 0;
   const mbps = r.rate ? r.rate * 8 / 1e6 : 0, need = sd && mbps ? sdNeed(mbps) : 0;
@@ -2779,10 +2780,9 @@ function mediaCamHtml(p, id) {
     if (!now) return "";
     const px = x => `${x.m[1]}×${x.m[2]}`;
     if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return sel("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
-    const sensors = [...new Set(parts.map(x => x.sensor))], files = parts.filter(x => x.sensor === now.sensor);
-    const file = files.length > 1 ? sel("mode", "File", files.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.out || sensorText(x.sensor).split(" · ")[0])} · ${px(x)}</option>`).join(""))
-      : `<div class="field"><span class="lbl">File</span><div class="nsel-static">${nselText(`${now.out || sensorText(now.sensor).split(" · ")[0]} · ${px(now)}`)}</div></div>`;
-    return `<div class="mc-fmt">${sel("sensor", "Sensor", sensors.map(sn => `<option value="${esc(sn)}" ${sn === now.sensor ? "selected" : ""}>${esc(sensorText(sn))}</option>`).join(""))}${file}</div>`;
+    // one menu of sensor modes, each with the file it records; beside it, that file as plain information
+    const opts = parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(sensorText(x.sensor))} · ${esc(x.out ? x.out + " " : "")}${px(x)}</option>`).join("");
+    return `<div class="mc-res-row">${sel("mode", "Sensor", opts, true)}<div class="mc-file"><span class="lbl">File</span><div class="mc-fv">${now.out ? `<b>${esc(now.out).replace(/ (Ana\.) /, " $1&nbsp;")}</b>` : ""}<span>${px(now)}</span></div></div></div>`;
   };
   const fmtPart = r.prof ? `${sel("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))}
       ${resPart()}
