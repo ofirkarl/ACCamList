@@ -1501,6 +1501,14 @@ body.kb-up .navbar { transform: translateY(110%); }
 .mc-mode button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color .15s, color .15s; }
 .mc-mode button[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .12), inset 0 0 0 1px var(--line); }
 .mc-opt.wrap .t-a { white-space: normal; overflow-wrap: anywhere; }
+/* the camera search, at the top of the camera list */
+.mc-search { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; height: 44px; margin: 0 0 4px; padding: 0 12px; border-radius: 8px; background: var(--sunken); color: var(--muted); }
+.mc-search svg { flex: none; width: 18px; height: 18px; }
+.mc-search input { flex: 1 1 auto; width: 0; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; font-size: 16px; outline: none; }
+.mc-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.mc-search:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mc-opt[hidden] { display: none; }
+.mc-none { margin: 0; padding: 12px; font-size: 15px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -4316,13 +4324,15 @@ function mcFreeOf(p) {
   if (f.id && !ITEM.has(f.id)) { f.id = ""; f.rec = {}; }
   return f;
 }
+/* the camera list for "Any camera": a search field over every camera of the house, one per line */
+const mcCamList = (p, F) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="free" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
 const mcFreeCams = houseId => [...ITEM.keys()].filter(k => { const x = ITEM.get(k); return x.h.id === houseId && hasRec(x) && !/\bfor\b/i.test(x.it.name); }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name));
 function mediaCamHtml(p, id) {
   const free = id === "free", F = free ? mcFreeOf(p) : null;
   const l = free ? F : p.items[id], e = ITEM.get(free ? F.id : id);
   if (free && !e) {  // no camera chosen yet: only the Camera tile, and its list
     const open = mcOpen && mcOpen.id === "free" ? mcOpen.k : "";
-    return `<div class="media-cam" id="mc-free"><div class="mc-set"><div class="mc-pair one"><button type="button" class="mc-tile tap${open === "cam" ? " on" : ""}" data-act="mc-open" data-id="free" data-k="cam" aria-expanded="${open === "cam"}"><span class="t-l"><span>Camera</span></span><span class="t-v">Choose a camera</span></button></div>${open === "cam" ? `<div class="mc-panel">${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap" data-act="mc-pick" data-id="free" data-k="cam" data-v="${esc(k)}" aria-pressed="false"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}</div>` : ""}</div></div>`;
+    return `<div class="media-cam" id="mc-free"><div class="mc-set"><div class="mc-pair one"><button type="button" class="mc-tile tap${open === "cam" ? " on" : ""}" data-act="mc-open" data-id="free" data-k="cam" aria-expanded="${open === "cam"}"><span class="t-l"><span>Camera</span></span><span class="t-v">Choose a camera</span></button></div>${open === "cam" ? mcCamList(p, F) : ""}</div></div>`;
   }
   if (!l || !e) return "";
   recEnsure(l, e, p);
@@ -4351,7 +4361,7 @@ function mediaCamHtml(p, id) {
       body = [...new Set(parts.map(x => x.sensor))].map(sn => opt(k, sn, sn === now.sensor, esc(sensorText(sn)))).join("");
     } else if (k === "mode") {  // the recording resolutions this sensor area makes
       body = parts.filter(x => x.sensor === now.sensor).map(x => opt(k, x.m[0], x === now, esc(x.out || kOf(x.sensor) || px(x)), px(x) + (note(x) ? ` · ${note(x)}` : ""))).join("");
-    } else if (k === "cam") body = mcFreeCams(p.houseId).map(x => opt(k, x, x === (F && F.id), esc(ITEM.get(x).it.name))).join("").replace(/class="mc-opt/g, 'class="mc-opt wrap');
+    } else if (k === "cam") return mcCamList(p, F);
     else if (k === "card") {
       const types = [...new Set(choices.map(x => x.type))];
       body = types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(cardOpt).join("")).join("") : choices.map(cardOpt).join("");
@@ -4390,8 +4400,15 @@ function mediaCamHtml(p, id) {
 function mcToggle(p, id, k) {
   mcOpen = mcOpen && mcOpen.id === id && mcOpen.k === k ? null : { id, k };
   mediaRedraw(p);
+  if (mcOpen && k === "cam") { requestAnimationFrame(() => document.querySelector("#mc-free [data-mcs]")?.focus({ preventScroll: true })); return; }
   if (mcOpen) requestAnimationFrame(() => { const pn = document.getElementById("mc-" + id)?.querySelector(".mc-panel"); (pn?.querySelector(".mc-opt.on") || pn)?.scrollIntoView({ block: "nearest", behavior: "smooth" }); });
 }
+document.addEventListener("input", e => {
+  const t = e.target; if (!t || !t.matches || !t.matches("[data-mcs]")) return;
+  const words = t.value.toLowerCase().split(/\s+/).filter(Boolean), list = t.closest(".mc-cams"); let shown = 0;
+  list.querySelectorAll(".mc-opt").forEach(o => { const hit = words.every(w => o.textContent.toLowerCase().includes(w)); o.hidden = !hit; shown += hit; });
+  list.querySelector(".mc-none").hidden = shown > 0;
+});
 function mcClose() { if (!mcOpen) return; mcOpen = null; const p = cur(); if (p) mediaRedraw(p); }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && mcOpen) { e.stopPropagation(); mcClose(); } }, true);
 /* the bottom bar's icons, in one line style */
