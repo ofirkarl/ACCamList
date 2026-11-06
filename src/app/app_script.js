@@ -2777,6 +2777,13 @@ function recSet(l, e, p, k, v) {
   if (k === "fps") { l.rec.fps = Number(v); return; }
   const prof = recProfile(e.it.name); if (!prof) return;
   if (k === "codec") { l.rec.codec = v; recEnsure(l, e, p); }
+  if (k === "sensor") {
+    const c = prof.find(x => x.n === l.rec.codec); if (!c) return;
+    const was = modeParts(l.rec.mode || "").out, opts = c.m.filter(x => modeParts(x[0]).sensor === v);
+    const md = opts.find(x => modeParts(x[0]).out === was) || opts[0]; if (!md) return;
+    l.rec.mode = md[0]; if (l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop();
+    return;
+  }
   if (k === "mode") { l.rec.mode = v; const c = prof.find(x => x.n === l.rec.codec), md = c && c.m.find(x => x[0] === v); if (md && l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop(); }
 }
 /* Media Calculator: each camera is one card of tiles, two to a row, a small label over its value.
@@ -2798,6 +2805,7 @@ function mediaCamHtml(p, id) {
   const grp = t => `<div class="mc-grp">${esc(t)}</div>`;
   const px = x => `${x.m[1]}×${x.m[2]}`, notes = REC_NOTE[recKey(e.it.name)] || {}, note = x => notes[x.m[0]] || "";
   const parts = (c ? c.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
+  const kOf = sn => (sn.match(/\b\d+(?:\.\d+)?K\b/) || [""])[0];
   const outOnly = parts.length && parts.every(x => !x.out && OUT_ONLY.test(x.sensor));
   const cardOpt = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)); return opt("card", x.id, card === x.id, esc(a), esc(b)); };
   // the choices of the open tile
@@ -2807,13 +2815,10 @@ function mediaCamHtml(p, id) {
     if (k === "codec") body = r.prof.map(x => opt(k, x.n, x === c, esc(x.n))).join("");
     else if (k === "fps") body = `<div class="mc-chips">${REC_FPS.filter(f => !md || f <= md[3]).map(f => opt(k, f, l.rec.fps === f, fpsLabel(f))).join("")}</div>`;
     else if (k === "mode" && outOnly) body = parts.map(x => opt(k, x.m[0], x === now, esc(x.sensor), px(x))).join("");
-    else if (k === "mode") {  // under each sensor area, the files it records
-      const groups = [];
-      for (const x of parts) { const g = groups.find(y => y.s === x.sensor); if (g) g.xs.push(x); else groups.push({ s: x.sensor, xs: [x] }); }
-      // a sensor area that records one file is one line (its name, its size); one that records several is a heading over them (ARRI: "4K 16:9: 4K, UHD, 2K, HD")
-      const kOf = sn => (sn.match(/\b\d+(?:\.\d+)?K\b/) || [""])[0], sz = x => px(x) + (note(x) ? ` · ${note(x)}` : "");
-      body = groups.map(g => g.xs.length === 1 && !g.xs[0].out ? opt(k, g.xs[0].m[0], g.xs[0] === now, esc(sensorText(g.s)), sz(g.xs[0]))
-        : grp(sensorText(g.s)) + g.xs.map(x => opt(k, x.m[0], x === now, esc(x.out || kOf(g.s) || sensorText(g.s)), sz(x))).join("")).join("");
+    else if (k === "sensor") {  // only the sensor areas, one line each
+      body = [...new Set(parts.map(x => x.sensor))].map(sn => opt(k, sn, sn === now.sensor, esc(sensorText(sn)))).join("");
+    } else if (k === "mode") {  // the recording resolutions this sensor area makes
+      body = parts.filter(x => x.sensor === now.sensor).map(x => opt(k, x.m[0], x === now, esc(x.out || kOf(x.sensor) || px(x)), px(x) + (note(x) ? ` · ${note(x)}` : ""))).join("");
     } else if (k === "card") {
       const types = [...new Set(choices.map(x => x.type))];
       body = types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(cardOpt).join("")).join("") : choices.map(cardOpt).join("");
@@ -2830,7 +2835,7 @@ function mediaCamHtml(p, id) {
     // the recording resolution: its size, and after it the file's name (UHD, 2K…) or a note on a size the maker doesn't give
     const rr = x => { const t = x.out ? esc(x.out) : note(x); return px(x) + (t ? ` <span class="t-b">${t}</span>` : ""); };
     if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("Recording resolution", px(now)), "mode")
-      : pair(tap("mode", "Sensor", esc(sensorText(now.sensor))), info("Recording resolution", rr(now)), "mode");
+      : pair(tap("sensor", "Sensor", esc(sensorText(now.sensor))), parts.filter(x => x.sensor === now.sensor).length > 1 ? tap("mode", "Recording resolution", rr(now)) : info("Recording resolution", rr(now)), "sensor", "mode");
     set += pair(tap("fps", "Frame rate", `${fpsLabel(l.rec.fps)} fps`), info("Bit rate", mbps ? `${Math.round(mbps).toLocaleString("en-US")} Mbps` : "–"), "fps");
   } else set += `<div class="mc-pair one"><label class="mc-tile tap mc-inp"><span class="t-l">Bit rate</span><span class="t-v"><input type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></label></div>`;
   // the card, how many of it, and what they come to
