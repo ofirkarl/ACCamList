@@ -1318,6 +1318,10 @@ body.kb-up .navbar { transform: translateY(110%); }
 @keyframes nsel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .nsel-list { animation: none; } }
 .mc-warn { font-size: 12px; font-weight: 600; color: var(--warn); }
+
+.nsel-static { display: flex; align-items: center; gap: 10px; min-height: 46px; box-sizing: border-box; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--r-ctl); font-size: 15px; color: var(--fg); }
+.nsel-static .ns-a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nsel-static .ns-b { flex: none; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 </style>
 
 <div class="app">
@@ -4089,6 +4093,15 @@ function recEnsure(l, e, p) {
   const fps = r.fps || last.fps || app.settings.recFps || 25, opts = REC_FPS.filter(f => f <= md[3]);
   r.fps = opts.includes(fps) ? fps : opts.filter(f => f <= fps).pop() || opts[0] || 24;
 }
+/* a recording mode, in its parts: the sensor area it uses (its width in K and its shape), and the file it records */
+const OUT_ONLY = /^(UHD|4K DCI|HD|C4K|2K)$/;
+function modeParts(label) { const i = label.indexOf(" → "); return i > 0 ? { sensor: label.slice(0, i), out: label.slice(i + 3) } : { sensor: label, out: "" }; }
+function sensorText(sn) {
+  const t = sn.split(/\s+/), cov = t.find(x => /^\d+(\.\d+)?K$/i.test(x));
+  if (!cov) return sn;
+  const rest = t.filter(x => x !== cov).join(" ").replace(/\bOG\b/, "Open Gate");
+  return rest ? `${cov} · ${rest}` : cov;
+}
 function mediaCamHtml(p, id) {
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return "";
   recEnsure(l, e, p);
@@ -4098,8 +4111,19 @@ function mediaCamHtml(p, id) {
   const cardOpts = choices.map(x => { const v = isSd(x.id) && sdClass(x.id); return `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(shortCard(x.name))}${v ? ` · V${v}` : ""}</option>`; }).join("");
   const sd = card && isSd(card), cls = sd ? sdClass(card) : 0;
   const mbps = r.rate ? r.rate * 8 / 1e6 : 0, need = sd && mbps ? sdNeed(mbps) : 0;
-  const fmtPart = r.prof ? `<div class="mc-fmt">${sel("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))}
-      ${sel("mode", "Resolution", (c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])} · ${x[1]}×${x[2]}</option>`).join(""))}</div>
+  // the resolution in its parts: the sensor area (width and shape), then the file it records
+  const resPart = () => {
+    const parts = (c ? c.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
+    if (!now) return "";
+    const px = x => `${x.m[1]}×${x.m[2]}`;
+    if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return sel("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
+    const sensors = [...new Set(parts.map(x => x.sensor))], files = parts.filter(x => x.sensor === now.sensor);
+    const file = files.length > 1 ? sel("mode", "File", files.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.out || sensorText(x.sensor).split(" · ")[0])} · ${px(x)}</option>`).join(""))
+      : `<div class="field"><span class="lbl">File</span><div class="nsel-static">${nselText(`${now.out || sensorText(now.sensor).split(" · ")[0]} · ${px(now)}`)}</div></div>`;
+    return `<div class="mc-fmt">${sel("sensor", "Sensor", sensors.map(sn => `<option value="${esc(sn)}" ${sn === now.sensor ? "selected" : ""}>${esc(sensorText(sn))}</option>`).join(""))}${file}</div>`;
+  };
+  const fmtPart = r.prof ? `${sel("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))}
+      ${resPart()}
       ${sel("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))}`
     : `<div class="field"><label for="rs-mbps-${u}">Data rate (Mbps)</label><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"></div>`;
   const sdWarn = sd && mbps ? (!need ? `<div class="mc-warn">Too fast for SD cards</div>` : cls && cls < need ? `<div class="mc-warn">Needs a V${need} card</div>` : !cls ? `<div class="mc-sub">Needs V${need} or faster</div>` : "") : "";
@@ -5102,6 +5126,13 @@ document.addEventListener("change", e => {
     recApply(p, id, (l, e) => {
       if (k === "mbps") { const v = Math.max(0, Math.min(20000, parseFloat(t.value) || 0)); if (v) l.rec.mbps = v; else delete l.rec.mbps; return; }
       if (k === "card") { l.rec.card = t.value; delete l.rec.gb; return; }
+      if (k === "sensor") {  // the same kind of file on the new sensor area, if it records one; else its first
+        const prof = recProfile(e.it.name), c = prof && prof.find(x => x.n === l.rec.codec); if (!c) return;
+        const was = modeParts(l.rec.mode || "").out, opts = c.m.filter(x => modeParts(x[0]).sensor === t.value);
+        const md = opts.find(x => modeParts(x[0]).out === was) || opts[0]; if (!md) return;
+        l.rec.mode = md[0]; if (l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop();
+        return;
+      }
       if (k === "gb") { const g = Number(t.value); if (g) l.rec.gb = g; else delete l.rec.gb; return; }
       if (k === "fps") { l.rec.fps = Number(t.value); return; }
       if (k === "sdc") { const m = app.settings.sdClass || (app.settings.sdClass = {}), v = Number(t.value); if (v) m[l.rec.card] = v; else delete m[l.rec.card]; touchSettings(); return; }
