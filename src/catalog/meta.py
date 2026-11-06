@@ -270,7 +270,7 @@ CAMERA_MEDIA = [  # (pattern, preferred card types in order)
     (r"PMW-F55|PMW-F5\b|PMW-F3", ["SxS", "AXS"]), (r"HELIUM|DRAGON", ["RED Mini-Mag"]), (r"KOMODO", ["CFast 2.0"]),
     (r"VARICAM|AG-HPX500", ["P2 / expressP2"]), (r"C300 Mark II", ["CFast 2.0"]), (r"EOS C300", ["CF"]),
     (r"C500 Mark II|C400", ["CFexpress Type B"]), (r"URSA MINI PRO|Pocket Cinema", ["CFast 2.0", "SD"]), (r"Micro Cinema", ["SD"]),
-    (r"PYXIS|GFX", ["CFexpress Type B"]), (r"Ronin 4D", ["DJI PROSSD", "SSD"]), (r"5D MARK|CANON D7", ["CF"]),
+    (r"PYXIS|GFX", ["CFexpress Type B"]), (r"Ronin 4D", ["DJI PROSSD", "CFexpress Type B", "SSD"]), (r"5D MARK|CANON D7", ["CF"]),
     (r"PXW-X400|PMW-400", ["SxS"]), (r"PMW-100", ["SxS", "SD"]),
     (r"PXW-X180|PXW-X70|Z90|Z150|CX350|PX270|UX180|DVX-200|AC160|HMC154|TM900|HC-", ["SD"]),
     (r"GOPRO|GoPro|INSTA360|Osmo|MISSION 1", ["microSD"]),

@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
+;return { getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, sdClass, sdNeed, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -604,7 +604,8 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(Math.floor(A.recResult(l, e).per / 60) === 28, "ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min");
   l.rec.card = cdx2; ok(Math.floor(A.recResult(l, e).per / 60) === 56, "on a 2TB drive: 56 min");
   const html = A.mediaCamHtml(pc, a35);
-  ok(/data-act="rec-card"/.test(html) && /data-act="rec-fps"/.test(html) && /data-act="mq"/.test(html) && /on the list/.test(html) && html.indexOf("mc-out") > html.indexOf("rec-fps"), "Media Calculator: card, format, frame rate, and at the bottom the result and the cards on the list");
+  ok(/data-rec="card"/.test(html) && /data-rec="fps"/.test(html) && /data-act="mq"/.test(html) && /on the list/.test(html) && html.indexOf("mc-out") > html.indexOf('data-rec="fps"'), "Media Calculator: card, format, frame rate as menus, and at the bottom the result and the cards on the list");
+  ok(/ Mbps · RAW · 13-bit/.test(html), "the result shows the bit rate and what the codec records (ARRIRAW on an Alexa 35: RAW, 13-bit)");
   A.setQty(pc, cdx2, 8); ok(/<b class="num">8<\/b>/.test(A.mediaCamHtml(pc, a35)) && /on the list · <b>7 h 28 min<\/b>/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
   ok(/No cameras on the list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
   const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
@@ -637,6 +638,20 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const pp = A.newProduction({ name: "Pkg", houseId: "utopia" }); A.app.productions.push(pp); A.setQty(pp, a35, 2);
   ok(pp.items[cdx1]?.qty === 8 && pp.items[b250]?.qty === 12, "adding two Alexa 35 brings the package: 8 cards, 12 batteries");
   A.app.settings.rules = keepRules; }
+
+// --- bit depth and sampling; SD speed classes
+{ ok(A.csOf("ProRes 4444 XQ") === "4:4:4 · 12-bit" && A.csOf("ProRes 422 HQ") === "4:2:2 · 10-bit" && A.csOf("XAVC-L 4K") === "4:2:0 · 8-bit" && A.csOf("X-OCN ST") === "RAW · 16-bit" && A.csOf("Cinema RAW Light HQ") === "RAW · 12-bit", "colour sampling and bit depth by codec");
+  ok(A.sdNeed(100) === 30 && A.sdNeed(240) === 60 && A.sdNeed(600) === 90 && A.sdNeed(1000) === 0, "the SD class a bit rate needs: 100 Mbps V30, 240 V60, 600 V90, faster: no SD");
+  const mk2 = find("utopia", /Av Pro Mk 2/), sd64 = find("utopia", /SanDisk 64GB SD Card/);
+  ok(A.sdClass(mk2) === 90 && A.sdClass(sd64) === 0, "an Angelbird AV PRO MK2 is V90; a card whose class isn't known asks");
+  const ps = A.newProduction({ name: "SD", houseId: "utopia" }); A.app.productions.push(ps);
+  const fx3 = find("utopia", /^Sony ILME-FX3$/); A.setQty(ps, fx3, 1); const lx = ps.items[fx3];
+  lx.rec = { card: sd64, codec: "XAVC S-I 4K", mode: "UHD", fps: 59.94 };
+  ok(/Needs V90 or faster/.test(A.mediaCamHtml(ps, fx3)) && /data-rec="sdc"/.test(A.mediaCamHtml(ps, fx3)), "XAVC S-I 4K 59.94p on an SD card of unknown class: needs V90");
+  A.app.settings.sdClass = { [sd64]: 30 }; ok(/Needs a V90 card/.test(A.mediaCamHtml(ps, fx3)), "...set as V30: a warning");
+  A.app.settings.sdClass = { [sd64]: 90 }; ok(!/Needs/.test(A.mediaCamHtml(ps, fx3)), "...V90: all good");
+  delete A.app.settings.sdClass;
+  const r4d = find("utopia", /Ronin 4D/); A.setQty(ps, r4d, 1); ok(A.ITEM.get(r4d).it.camera.media.includes("CFexpress Type B") && /CFexpress/.test(A.mediaCamHtml(ps, r4d)), "the Ronin 4D takes CFexpress Type B cards too"); }
 
 // --- a matching card reader for each kind of card on the list
 { const keepRules = A.app.settings.rules; A.app.settings.rules = []; A.app.settings.readers = true;

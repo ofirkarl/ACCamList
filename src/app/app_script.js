@@ -1063,6 +1063,27 @@ function cardBytes(name, gb) {
   const g = gb || capGB(name) || (/AXS-?A?(\d{3,4})/i.exec(name || "") || [])[1] * 1 || (/(\d{2,4})\s*G\b/i.exec(name || "") || [])[1] * 1 || 0;
   return g ? g * 1e9 * 0.94 : 0;
 }
+/* what a codec records: colour sampling and bit depth */
+function csOf(codec, cam) {
+  const n = codec || "";
+  if (/^ARRIRAW/.test(n)) return /alexa35/.test(cam) ? "RAW · 13-bit" : "RAW · 12-bit";
+  if (/^ARRICORE/.test(n)) return "RGB · LogC4";
+  if (/X-OCN|REDCODE/.test(n)) return "RAW · 16-bit";
+  if (/RAW/.test(n)) return "RAW · 12-bit";
+  if (/ProRes 4444/.test(n)) return "4:4:4 · 12-bit";
+  if (/ProRes/.test(n)) return "4:2:2 · 10-bit";
+  if (/XAVC-L 4K|XAVC S 4K$|XAVC S HD/.test(n)) return "4:2:0 · 8-bit";
+  if (/MPEG-2/.test(n)) return "4:2:2 · 8-bit";
+  return "4:2:2 · 10-bit";
+}
+/* SD cards: their speed class (V30, V60, V90), from the name or as set; and the class a data rate needs (Sony's card guidance) */
+function sdClass(id) {
+  const set = (app.settings.sdClass || {})[id]; if (set) return set;
+  const n = ITEM.get(id)?.it.name || "", m = /\bV(30|60|90)\b/i.exec(n);
+  return m ? Number(m[1]) : /av ?pro.*mk ?2/i.test(n) ? 90 : 0;
+}
+const isSd = id => { const e = ITEM.get(id); return !!e && /^(SD|microSD)$/.test(grpOf(e.it, e.s)); };
+const sdNeed = mbps => mbps <= 150 ? 30 : mbps <= 300 ? 60 : mbps <= 600 ? 90 : 0;
 const REC_FPS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 72, 75, 90, 96, 100, 120, 150, 180, 200, 240];
 const fpsLabel = f => f === 23.976 ? "23.98" : String(f);
 function fmtDur(sec) { const mins = Math.floor(sec / 60); if (mins < 60) return `${mins} min`; const h = Math.floor(mins / 60), r = mins % 60; return r ? `${h} h ${r} min` : `${h} h`; }
@@ -1084,7 +1105,7 @@ function recResult(l, e) {
     if (md) rate = recRate(c, md, r.fps);
   }
   const per = rate && bytes ? bytes / rate : 0;
-  return { prof, c, md, rate, bytes, per, card };
+  return { prof, c, md, rate, bytes, per, card, cs: c ? csOf(c.n, recKey(e ? e.it.name : "")) : "" };
 }
 function shortName(n) { return n.replace(/\s+(Digital Motion Picture Camera|Cinema Camera|Camera).*$/i, "").slice(0, 40); }
 /* what the defaults just added, for the notice: [{ label, qty, why }] */
@@ -1137,6 +1158,56 @@ function applyDefaults(p) {
     if (w.qty > old) lastAutoAdds.push({ label: w.label, qty: w.qty - old, why: w.why[0] || "" });
   }
   return changed;
+}
+/* menus: every list to choose from is a quiet field; it opens its choices in place, one line each, in the page's own scroll.
+   The real <select> stays underneath (hidden), so choosing still sends its usual change */
+function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span class="ns-a">${esc(t.slice(0, i))}</span><span class="ns-b">${esc(t.slice(i + 3))}</span>` : `<span class="ns-a">${esc(t)}</span>`; }
+function nselSync(w) {
+  const sel = w.querySelector("select"), btn = w.querySelector(".nsel-btn"); if (!sel || !btn) return;
+  const o = sel.options[sel.selectedIndex];
+  btn.innerHTML = nselText(o ? o.text : ""); btn.disabled = sel.disabled; btn.classList.toggle("ph", !o || !o.value || /^Choose/.test(o.text));
+}
+function niceSelect(sel) {
+  if (sel.dataset.nice || sel.multiple || !sel.parentNode) return;
+  sel.dataset.nice = "1";
+  const w = document.createElement("div"); w.className = "nsel";
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "nsel-btn"; btn.setAttribute("aria-haspopup", "listbox"); btn.setAttribute("aria-expanded", "false");
+  sel.parentNode.insertBefore(w, sel); w.append(btn, sel); sel.hidden = true; sel.tabIndex = -1;
+  sel.focus = o => btn.focus(o);  // code that focuses the list focuses its field
+  const lab = sel.id && document.querySelector(`label[for="${CSS.escape(sel.id)}"]`);
+  if (lab) { btn.id = sel.id + "-nb"; lab.htmlFor = btn.id; } else if (sel.getAttribute("aria-label")) btn.setAttribute("aria-label", sel.getAttribute("aria-label"));
+  nselSync(w);
+}
+function nselClose(except) { document.querySelectorAll(".nsel.open").forEach(w => { if (w === except) return; w.classList.remove("open"); w.querySelector(".nsel-btn")?.setAttribute("aria-expanded", "false"); w.querySelector(".nsel-list")?.remove(); }); }
+function nselOpen(w) {
+  nselClose(w);
+  if (w.classList.contains("open")) { nselClose(); return; }
+  const sel = w.querySelector("select"), list = document.createElement("div");
+  list.className = "nsel-list"; list.setAttribute("role", "listbox");
+  const opt = o => `<button type="button" class="nsel-opt" role="option" data-v="${esc(o.value)}" aria-selected="${o.selected}">${nselText(o.text)}</button>`;
+  list.innerHTML = [...sel.children].map(c => c.tagName === "OPTGROUP" ? `<div class="nsel-grp">${esc(c.label)}</div>${[...c.children].map(opt).join("")}` : opt(c)).join("");
+  w.append(list); w.classList.add("open"); w.querySelector(".nsel-btn").setAttribute("aria-expanded", "true");
+  const on = list.querySelector('[aria-selected="true"]');
+  requestAnimationFrame(() => { (on || list).scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+}
+function nselPick(w, v) {
+  const sel = w.querySelector("select"); nselClose();
+  if (sel.value !== v) { sel.value = v; nselSync(w); sel.dispatchEvent(new Event("change", { bubbles: true })); }
+  w.querySelector(".nsel-btn")?.focus({ preventScroll: true });
+}
+if (typeof document !== "undefined" && document.addEventListener && typeof MutationObserver !== "undefined") {
+  const enhance = root => { if (root.tagName === "SELECT") niceSelect(root); else if (root.querySelectorAll) root.querySelectorAll("select").forEach(niceSelect); };
+  new MutationObserver(ms => { for (const m of ms) m.addedNodes.forEach(n => { if (n.nodeType === 1) enhance(n); }); }).observe(document.body, { childList: true, subtree: true });
+  enhance(document.body);
+  document.addEventListener("click", e => {
+    const o = e.target.closest && e.target.closest(".nsel-opt");
+    if (o) { buzz("tap"); nselPick(o.closest(".nsel"), o.dataset.v); return; }
+    const b = e.target.closest && e.target.closest(".nsel-btn");
+    if (b) { buzz("tap"); nselOpen(b.closest(".nsel")); return; }
+    if (!(e.target.closest && e.target.closest(".nsel"))) nselClose();
+  }, true);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && document.querySelector(".nsel.open")) { e.stopPropagation(); nselClose(); } }, true);
+  document.addEventListener("change", e => { const w = e.target.closest && e.target.closest(".nsel"); if (w) nselSync(w); });
 }
 /* a notice slides in when defaults add something: what, and why */
 function notifyDefaults(adds) {
@@ -2688,20 +2759,25 @@ function mediaCamHtml(p, id) {
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return "";
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
-  const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || "");
-  const fmtPart = r.prof ? `<div class="mc-fmt"><div class="field"><label for="rs-codec-${esc(id)}">Format</label><select id="rs-codec-${esc(id)}" data-rec="codec" data-id="${esc(id)}">${r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join("")}</select></div>
-      <div class="field"><label for="rs-mode-${esc(id)}">Resolution</label><select id="rs-mode-${esc(id)}" data-rec="mode" data-id="${esc(id)}">${(c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])} · ${x[1]}×${x[2]}</option>`).join("")}</select></div></div>
-      <div class="field"><span class="lbl" id="rs-fps-${esc(id)}">Frame rate</span><div class="chips wrap fps" role="group" aria-labelledby="rs-fps-${esc(id)}">${REC_FPS.filter(f => !md || f <= md[3]).map(f => `<button type="button" class="chip" data-act="rec-fps" data-id="${esc(id)}" data-fps="${f}" aria-pressed="${l.rec.fps === f}">${fpsLabel(f)}</button>`).join("")}</div></div>`
-    : `<div class="field"><label for="rs-mbps-${esc(id)}">Data rate (Mbps)</label><input id="rs-mbps-${esc(id)}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${esc(id)}" value="${l.rec.mbps || ""}"></div>`;
-  const rate = r.rate ? (r.rate >= 1e8 ? Math.round(r.rate / 1e6) : (r.rate / 1e6).toFixed(1)) + " MB/s" : "";
-  return `<div class="media-cam" id="mc-${esc(id)}">
+  const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || ""), u = esc(id);
+  const sel = (k, label, opts) => `<div class="field"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}">${opts}</select></div>`;
+  const cardOpts = choices.map(x => { const v = isSd(x.id) && sdClass(x.id); return `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(shortCard(x.name))}${v ? ` · V${v}` : ""}</option>`; }).join("");
+  const sd = card && isSd(card), cls = sd ? sdClass(card) : 0;
+  const mbps = r.rate ? r.rate * 8 / 1e6 : 0, need = sd && mbps ? sdNeed(mbps) : 0;
+  const fmtPart = r.prof ? `<div class="mc-fmt">${sel("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))}
+      ${sel("mode", "Resolution", (c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])} · ${x[1]}×${x[2]}</option>`).join(""))}</div>
+      ${sel("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))}`
+    : `<div class="field"><label for="rs-mbps-${u}">Data rate (Mbps)</label><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"></div>`;
+  const sdWarn = sd && mbps ? (!need ? `<div class="mc-warn">Too fast for SD cards</div>` : cls && cls < need ? `<div class="mc-warn">Needs a V${need} card</div>` : !cls ? `<div class="mc-sub">Needs V${need} or faster</div>` : "") : "";
+  return `<div class="media-cam" id="mc-${u}">
     <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
-    <div class="field"><span class="lbl">Card</span>${choices.length ? `<div class="chips wrap">${choices.map(x => `<button type="button" class="chip" data-act="rec-card" data-id="${esc(id)}" data-card="${esc(x.id)}" aria-pressed="${card === x.id}">${esc(shortCard(x.name))}</button>`).join("")}</div>` : `<p class="hint">Not in ${esc(houseById(p.houseId)?.name || "the")} catalog</p>`}</div>
-    ${sizeUnknown ? `<div class="field"><span class="lbl">Card size</span><div class="chips wrap">${[64, 128, 256, 512, 1000, 2000].map(g => `<button type="button" class="chip" data-act="rec-gb" data-id="${esc(id)}" data-gb="${g}" aria-pressed="${l.rec.gb === g}">${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</button>`).join("")}</div></div>` : ""}
+    ${choices.length ? `<div class="mc-fmt">${sel("card", "Card", cardOpts)}${sd ? sel("sdc", "Speed class", `<option value="0" ${cls ? "" : "selected"}>Not set</option>${[30, 60, 90].map(v => `<option value="${v}" ${cls === v ? "selected" : ""}>V${v}</option>`).join("")}`) : ""}</div>` : `<p class="hint">Not in ${esc(houseById(p.houseId)?.name || "the")} catalog</p>`}
+    ${sizeUnknown ? sel("gb", "Card size", `<option value="0">Choose…</option>${[64, 128, 256, 512, 1000, 2000].map(g => `<option value="${g}" ${l.rec.gb === g ? "selected" : ""}>${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</option>`).join("")}`) : ""}
     ${fmtPart}
     <div class="mc-out">
-      <div class="mc-res"><div class="mc-big">${r.per ? fmtDur(r.per) : "–"}</div><div class="mc-sub">one card${rate ? ` · ${rate}` : ""}</div></div>
-      ${card ? `<div class="mc-list"><span class="stepper"><button type="button" data-act="mq" data-id="${esc(id)}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${esc(id)}" data-d="1" aria-label="One card more">+</button></span>
+      <div class="mc-res"><div class="mc-big">${r.per ? fmtDur(r.per) : "–"}</div>
+        <div class="mc-sub">one card${mbps ? ` · ${Math.round(mbps).toLocaleString("en-US")} Mbps` : ""}${r.cs ? ` · ${esc(r.cs)}` : ""}</div>${sdWarn}</div>
+      ${card ? `<div class="mc-list"><span class="stepper"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span>
         <div class="mc-sub">on the list${onList && r.per ? ` · <b>${fmtDur(r.per * onList)}</b>` : ""}</div></div>` : ""}
     </div>
   </div>`;
@@ -3510,9 +3586,6 @@ document.addEventListener("click", e => {
       applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable("Removed", name, und);
       break;
     }
-    case "rec-card": if (p) recApply(p, id, l => { l.rec.card = b.dataset.card; delete l.rec.gb; }); break;
-    case "rec-gb": if (p) recApply(p, id, l => { l.rec.gb = Number(b.dataset.gb); }); break;
-    case "rec-fps": if (p) recApply(p, id, l => { l.rec.fps = Number(b.dataset.fps); }); break;
     case "mq": if (p) { const l = p.items[id], c = l && l.rec && l.rec.card; if (c) { const now = p.items[c] ? lineQty(p.items[c]) : 0; setQty(p, c, Math.max(0, now + Number(b.dataset.d))); closeModal(); mediaRedraw(p); } } break;
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
     case "edit-done": app.editing = null; rerenderKeepScroll(); break;
@@ -3694,6 +3767,10 @@ document.addEventListener("change", e => {
     const id = t.dataset.id, k = t.dataset.rec;
     recApply(p, id, (l, e) => {
       if (k === "mbps") { const v = Math.max(0, Math.min(20000, parseFloat(t.value) || 0)); if (v) l.rec.mbps = v; else delete l.rec.mbps; return; }
+      if (k === "card") { l.rec.card = t.value; delete l.rec.gb; return; }
+      if (k === "gb") { const g = Number(t.value); if (g) l.rec.gb = g; else delete l.rec.gb; return; }
+      if (k === "fps") { l.rec.fps = Number(t.value); return; }
+      if (k === "sdc") { const m = app.settings.sdClass || (app.settings.sdClass = {}), v = Number(t.value); if (v) m[l.rec.card] = v; else delete m[l.rec.card]; touchSettings(); return; }
       const prof = recProfile(e.it.name); if (!prof) return;
       if (k === "codec") { l.rec.codec = t.value; recEnsure(l, e, p); }
       if (k === "mode") { l.rec.mode = t.value; const c = prof.find(x => x.n === l.rec.codec), md = c && c.m.find(x => x[0] === t.value); if (md && l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop(); }
