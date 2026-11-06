@@ -1076,14 +1076,6 @@ function csOf(codec, cam) {
   if (/MPEG-2/.test(n)) return "4:2:2 · 8-bit";
   return "4:2:2 · 10-bit";
 }
-/* SD cards: their speed class (V30, V60, V90), from the name or as set; and the class a data rate needs (Sony's card guidance) */
-function sdClass(id) {
-  const set = (app.settings.sdClass || {})[id]; if (set) return set;
-  const n = ITEM.get(id)?.it.name || "", m = /\bV(30|60|90)\b/i.exec(n);
-  return m ? Number(m[1]) : /av ?pro.*mk ?2/i.test(n) ? 90 : 0;
-}
-const isSd = id => { const e = ITEM.get(id); return !!e && /^(SD|microSD)$/.test(grpOf(e.it, e.s)); };
-const sdNeed = mbps => mbps <= 150 ? 30 : mbps <= 300 ? 60 : mbps <= 600 ? 90 : 0;
 const REC_FPS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 72, 75, 90, 96, 100, 120, 150, 180, 200, 240];
 const fpsLabel = f => f === 23.976 ? "23.98" : String(f);
 function fmtDur(sec) { const mins = Math.floor(sec / 60); if (mins < 60) return `${mins} min`; const h = Math.floor(mins / 60), r = mins % 60; return r ? `${h} h ${r} min` : `${h} h`; }
@@ -2739,13 +2731,14 @@ function lineHtml(p, id, l) {
 const CARD_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M10 3v4M13 3v4M16 4v3"/></svg>`;
 const hasRec = e => !!(e && e.it.camera && !e.it.camera.film && ((e.it.camera.media || []).length || recProfile(e.it.name)));
 const shortCard = n => String(n || "").replace(/\b(Memory Card|Card|Memory)\b/gi, "").replace(/\s{2,}/g, " ").trim();
-/* a card as a menu shows it: its name, then its size (and SD speed class) apart, so the size stays in view when a long name is cut */
-function cardLabel(name, v, camName) {
+/* a card as the Media Calculator shows it: its name, then its size apart, so the size stays in view when a long name is cut */
+function cardLabel(name, camName) {
   // a card of the camera's own make goes without the make: an ARRI camera's "Codex Compact Drive", a RED's "Mini-Mag SSD"
   const make = String(camName || "").split(/\s+/)[0], own = make && new RegExp(`^${make.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(?=\\S)`, "i");
-  const n = (own ? shortCard(name).replace(own, "") : shortCard(name)), m = n.match(/\b\d+(?:\.\d+)?\s?[TG]B\b/i);
-  const base = m ? n.replace(m[0], "").replace(/\s{2,}/g, " ").trim().replace(/[\s\-–]+$/, "") : n;
-  const tail = [m ? m[0].replace(/\s/g, "") : "", v ? `V${v}` : ""].filter(Boolean).join(" ");
+  // its size, and a speed class written in its name (V30, V60, V90), stand apart, so a long name never hides them
+  const n = (own ? shortCard(name).replace(own, "") : shortCard(name)), m = n.match(/\b\d+(?:\.\d+)?\s?[TG]B\b/i), v = n.match(/\bV(30|60|90)\b/i);
+  const base = [m, v].reduce((t, x) => x ? t.replace(x[0], "") : t, n).replace(/\s{2,}/g, " ").trim().replace(/[\s\-–]+$/, "");
+  const tail = [m ? m[0].replace(/\s/g, "") : "", v ? v[0].toUpperCase() : ""].filter(Boolean).join(" ");
   return tail && base ? `${base} · ${tail}` : base || tail;
 }
 const recKey = name => (REC_OF.find(([re]) => re.test(name || "")) || [])[1] || "";
@@ -2776,50 +2769,87 @@ function sensorText(sn) {
   const rest = t.filter(x => x !== cov).join(" ").replace(/\bOG\b/, "Open Gate");
   return rest ? `${cov} · ${rest}` : cov;
 }
+/* a Media Calculator value: the camera's format, sensor mode, frame rate, card, card size, or a typed bit rate */
+function recSet(l, e, p, k, v) {
+  if (k === "mbps") { const n = Math.max(0, Math.min(20000, parseFloat(v) || 0)); if (n) l.rec.mbps = n; else delete l.rec.mbps; return; }
+  if (k === "card") { l.rec.card = v; delete l.rec.gb; return; }
+  if (k === "gb") { const g = Number(v); if (g) l.rec.gb = g; else delete l.rec.gb; return; }
+  if (k === "fps") { l.rec.fps = Number(v); return; }
+  const prof = recProfile(e.it.name); if (!prof) return;
+  if (k === "codec") { l.rec.codec = v; recEnsure(l, e, p); }
+  if (k === "mode") { l.rec.mode = v; const c = prof.find(x => x.n === l.rec.codec), md = c && c.m.find(x => x[0] === v); if (md && l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop(); }
+}
+/* Media Calculator: each camera is one card of tiles, two to a row, a small label over its value.
+   A tile to change is filled; a tile that informs is outlined. A tile's choices open in the page, under its row, one line each.
+   Under the settings: the card with how many of it, then what they come to */
+let mcOpen = null;   // the tile whose choices are open: { id, k }
+const splitTail = s => { const i = s.lastIndexOf(" · "); return i > 0 ? [s.slice(0, i), s.slice(i + 3)] : [s, ""]; };
 function mediaCamHtml(p, id) {
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return "";
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
-  const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || ""), u = esc(id);
-  // every line is one even row: what it is on the left, its value on the right.
-  // A value to change sits in a pill (a menu, a number, the stepper); information is plain text
-  const row = (k, label, opts, short) => `<div class="mc-row"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}"${short ? ` data-short="1"` : ""}>${opts}</select></div>`;
-  const info = (label, a, b) => `<div class="mc-row mc-info"><span class="lbl">${label}</span><span class="mc-v"><span class="ns-a">${a}</span>${b ? `<span class="ns-b">${b}</span>` : ""}</span></div>`;
-  const types = [...new Set(choices.map(x => x.type))];
-  const cardOpt = x => `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(cardLabel(x.name, isSd(x.id) && sdClass(x.id), e.it.name))}</option>`;
-  const cardOpts = types.length > 1 ? types.map(t => `<optgroup label="${esc(t)}">${choices.filter(x => x.type === t).map(cardOpt).join("")}</optgroup>`).join("") : choices.map(cardOpt).join("");
-  const sd = card && isSd(card), cls = sd ? sdClass(card) : 0;
-  const mbps = r.rate ? r.rate * 8 / 1e6 : 0, need = sd && mbps ? sdNeed(mbps) : 0;
-  // the sensor mode as a short menu (its width in K and its shape), and under it the file it records, as information
-  const resPart = () => {
-    const parts = (c ? c.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
-    if (!now) return "";
-    const px = x => `${x.m[1]}×${x.m[2]}`;
-    if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return row("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
-    const opts = parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(sensorText(x.sensor))} · ${esc(x.out ? x.out + " " : "")}${px(x)}</option>`).join("");
-    return row("mode", "Sensor", opts, true) + info("File", now.out ? esc(now.out) : px(now), now.out ? px(now) : "");
+  const c = r.c, md = r.md, u = esc(id), open = mcOpen && mcOpen.id === id ? mcOpen.k : "";
+  const cardName = card ? ITEM.get(card)?.it.name || "" : "", sizeUnknown = card && !cardBytes(cardName);
+  const lab = (label, x) => `<span class="t-l"><span>${label}</span>${x ? `<span class="t-x">${x}</span>` : ""}</span>`;
+  const val = a => `<span class="t-v">${a}</span>`;
+  const tap = (k, label, a, x) => `<button type="button" class="mc-tile tap${open === k ? " on" : ""}" data-act="mc-open" data-id="${u}" data-k="${k}" aria-expanded="${open === k}">${lab(label, x)}${val(a)}</button>`;
+  const info = (label, a, x) => `<div class="mc-tile info">${lab(label, x)}${val(a)}</div>`;
+  const opt = (k, v, on, a, b) => `<button type="button" class="mc-opt${on ? " on" : ""}" data-act="mc-pick" data-id="${u}" data-k="${k}" data-v="${esc(String(v))}" aria-pressed="${on}"><span class="t-a">${a}</span>${b ? `<span class="t-b">${b}</span>` : ""}</button>`;
+  const grp = t => `<div class="mc-grp">${esc(t)}</div>`;
+  const px = x => `${x.m[1]}×${x.m[2]}`;
+  const parts = (c ? c.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
+  const outOnly = parts.length && parts.every(x => !x.out && OUT_ONLY.test(x.sensor));
+  const cardOpt = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)); return opt("card", x.id, card === x.id, esc(a), esc(b)); };
+  // the choices of the open tile
+  const panel = k => {
+    if (open !== k) return "";
+    let body = "";
+    if (k === "codec") body = r.prof.map(x => opt(k, x.n, x === c, esc(x.n))).join("");
+    else if (k === "fps") body = `<div class="mc-chips">${REC_FPS.filter(f => !md || f <= md[3]).map(f => opt(k, f, l.rec.fps === f, fpsLabel(f))).join("")}</div>`;
+    else if (k === "mode" && outOnly) body = parts.map(x => opt(k, x.m[0], x === now, esc(x.sensor), px(x))).join("");
+    else if (k === "mode") {  // under each sensor area, the files it records
+      const groups = [];
+      for (const x of parts) { const g = groups.find(y => y.s === x.sensor); if (g) g.xs.push(x); else groups.push({ s: x.sensor, xs: [x] }); }
+      body = groups.map(g => grp(sensorText(g.s)) + g.xs.map(x => opt(k, x.m[0], x === now, px(x), x.out ? esc(x.out) : "")).join("")).join("");
+    } else if (k === "card") {
+      const types = [...new Set(choices.map(x => x.type))];
+      body = types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(cardOpt).join("")).join("") : choices.map(cardOpt).join("");
+    } else if (k === "gb") body = `<div class="mc-chips three">${[64, 128, 256, 512, 1000, 2000].map(g => opt(k, g, l.rec.gb === g, g >= 1000 ? g / 1000 + "TB" : g + "GB")).join("")}</div>`;
+    return `<div class="mc-panel">${body}</div>`;
   };
-  const recRows = r.prof ? row("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))
-      + resPart()
-      + row("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))
-      + (mbps ? info("Bit rate", `${Math.round(mbps).toLocaleString("en-US")} Mbps`, r.cs ? esc(r.cs) : "") : "")
-    : `<div class="mc-row"><label for="rs-mbps-${u}">Bit rate</label><span class="mc-inp"><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></div>`;
-  const sdNote = sd && mbps ? (!need ? `<p class="mc-note warn">Too fast for SD cards</p>` : cls && cls < need ? `<p class="mc-note warn">Needs a V${need} card</p>` : !cls ? `<p class="mc-note">Needs V${need} or faster</p>` : "") : "";
-  const mediaRows = (choices.length ? row("card", "Card", cardOpts) : info("Card", `Not in ${esc(houseById(p.houseId)?.name || "the")} catalog`))
-    + (sd ? row("sdc", "Speed class", `<option value="0" ${cls ? "" : "selected"}>Not set</option>${[30, 60, 90].map(v => `<option value="${v}" ${cls === v ? "selected" : ""}>V${v}</option>`).join("")}`) + sdNote : "")
-    + (sizeUnknown ? row("gb", "Card size", `<option value="0">Choose…</option>${[64, 128, 256, 512, 1000, 2000].map(g => `<option value="${g}" ${l.rec.gb === g ? "selected" : ""}>${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</option>`).join("")}`) : "")
-    + (card ? `<div class="mc-row mc-cards"><span class="lbl">Cards</span><span class="stepper"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span></div>` : "");
-  // the result: one card on the left, all the cards on the list on the right
+  const pair = (a, b, ...ks) => `<div class="mc-pair${b ? "" : " one"}">${a}${b || ""}</div>${ks.map(panel).join("")}`;
+  // the settings
+  const mbps = r.rate ? r.rate * 8 / 1e6 : 0;
+  let set = "";
+  if (r.prof && c) {
+    set += pair(tap("codec", "Format", esc(c.n)), tap("fps", "Frame rate", `${fpsLabel(l.rec.fps)} fps`), "codec", "fps");
+    if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("File", px(now)), "mode")
+      : pair(tap("mode", "Sensor", esc(sensorText(now.sensor))), info("File", px(now), now.out ? esc(now.out) : ""), "mode");
+    if (mbps) set += pair(info("Bit rate", `${Math.round(mbps).toLocaleString("en-US")} Mbps`), info("Color", r.cs ? esc(r.cs) : "–"));
+  } else set += `<div class="mc-pair one"><label class="mc-tile tap mc-inp"><span class="t-l">Bit rate</span><span class="t-v"><input type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></label></div>`;
+  // the card, how many of it, and what they come to
+  let media = "";
+  if (!choices.length) media = pair(info("Card", `Not in ${esc(houseById(p.houseId)?.name || "the")} catalog`));
+  else {
+    const [ca, cb] = card ? splitTail(cardLabel(cardName, e.it.name)) : ["Choose", ""];
+    media = `<div class="mc-card${open === "card" ? " on" : ""}"><button type="button" class="mc-tile" data-act="mc-open" data-id="${u}" data-k="card" aria-expanded="${open === "card"}">${lab("Card", esc(cb))}${val(esc(ca))}</button>${card ? `<span class="mc-step"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b>${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span>` : ""}</div>${panel("card")}`;
+    if (sizeUnknown) media += pair(tap("gb", "Card size", l.rec.gb ? (l.rec.gb >= 1000 ? l.rec.gb / 1000 + "TB" : l.rec.gb + "GB") : "Choose"), "", "gb");
+  }
   const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
     <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
-    <div class="mc-rows">${recRows}</div>
-    <div class="mc-out">
-      <div class="mc-rows">${mediaRows}</div>
-      <div class="mc-res" aria-live="polite"><div><span class="lbl">Per card</span><b class="mc-big">${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="lbl">Total</span><b class="mc-big">${total}</b></div></div>
-    </div>
+    <div class="mc-set">${set}</div>
+    <div class="mc-media">${media}<div class="mc-res" aria-live="polite"><div><span class="t-l">Per card</span><b>${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="t-l">Total</span><b>${total}</b></div></div></div>
   </div>`;
 }
+/* a tile's choices: open and close them; a tap elsewhere, or Escape, closes them */
+function mcToggle(p, id, k) {
+  mcOpen = mcOpen && mcOpen.id === id && mcOpen.k === k ? null : { id, k };
+  mediaRedraw(p);
+  if (mcOpen) requestAnimationFrame(() => { const pn = document.getElementById("mc-" + id)?.querySelector(".mc-panel"); (pn?.querySelector(".mc-opt.on") || pn)?.scrollIntoView({ block: "nearest", behavior: "smooth" }); });
+}
+function mcClose() { if (!mcOpen) return; mcOpen = null; const p = cur(); if (p) mediaRedraw(p); }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && mcOpen) { e.stopPropagation(); mcClose(); } }, true);
 /* the bottom bar's icons, in one line style */
 const NAV_SVG = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const NAV_ICON = {
@@ -2829,6 +2859,7 @@ const NAV_ICON = {
   media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
 };
 function viewMedia(p, h) {
+  if (mcOpen && !p.items[mcOpen.id]) mcOpen = null;
   const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
   return `<section class="pad media-tab">
     ${cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
@@ -3450,6 +3481,7 @@ document.addEventListener("contextmenu", e => {
 document.addEventListener("click", e => {
   if (lp.fired && e.target.closest && e.target.closest("[data-lp]")) { lp.fired = false; e.preventDefault(); return; }
   const b = e.target.closest("[data-act]");
+  if (mcOpen && !(e.target.closest && e.target.closest(".mc-panel, [data-act='mc-open']"))) mcClose();
   if (!b || b.disabled) return;
   const act = b.dataset.act, id = b.dataset.id, f = b.dataset.f;
   buzz("tap");
@@ -3632,6 +3664,8 @@ document.addEventListener("click", e => {
       applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable("Removed", name, und);
       break;
     }
+    case "mc-open": if (p) mcToggle(p, id, b.dataset.k); break;
+    case "mc-pick": if (p) { const k = b.dataset.k, v = b.dataset.v; mcOpen = null; recApply(p, id, (l, e) => recSet(l, e, p, k, v)); document.getElementById("mc-" + id)?.querySelector(`[data-k="${k}"]`)?.scrollIntoView({ block: "nearest" }); } break;
     case "mq": if (p) { const l = p.items[id], c = l && l.rec && l.rec.card; if (c) { const now = p.items[c] ? lineQty(p.items[c]) : 0; setQty(p, c, Math.max(0, now + Number(b.dataset.d))); closeModal(); mediaRedraw(p); } } break;
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
     case "edit-done": app.editing = null; rerenderKeepScroll(); break;
@@ -3809,27 +3843,7 @@ document.addEventListener("change", e => {
   }
   if (t.dataset.rqty) { const r = app.settings.rules.find(x => x.id === t.dataset.rqty); if (r) { r.qty = Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)); touchSettings(); } return; }
   if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
-  if (t.dataset.rec && p) {
-    const id = t.dataset.id, k = t.dataset.rec;
-    recApply(p, id, (l, e) => {
-      if (k === "mbps") { const v = Math.max(0, Math.min(20000, parseFloat(t.value) || 0)); if (v) l.rec.mbps = v; else delete l.rec.mbps; return; }
-      if (k === "card") { l.rec.card = t.value; delete l.rec.gb; return; }
-      if (k === "sensor") {  // the same kind of file on the new sensor area, if it records one; else its first
-        const prof = recProfile(e.it.name), c = prof && prof.find(x => x.n === l.rec.codec); if (!c) return;
-        const was = modeParts(l.rec.mode || "").out, opts = c.m.filter(x => modeParts(x[0]).sensor === t.value);
-        const md = opts.find(x => modeParts(x[0]).out === was) || opts[0]; if (!md) return;
-        l.rec.mode = md[0]; if (l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop();
-        return;
-      }
-      if (k === "gb") { const g = Number(t.value); if (g) l.rec.gb = g; else delete l.rec.gb; return; }
-      if (k === "fps") { l.rec.fps = Number(t.value); return; }
-      if (k === "sdc") { const m = app.settings.sdClass || (app.settings.sdClass = {}), v = Number(t.value); if (v) m[l.rec.card] = v; else delete m[l.rec.card]; touchSettings(); return; }
-      const prof = recProfile(e.it.name); if (!prof) return;
-      if (k === "codec") { l.rec.codec = t.value; recEnsure(l, e, p); }
-      if (k === "mode") { l.rec.mode = t.value; const c = prof.find(x => x.n === l.rec.codec), md = c && c.m.find(x => x[0] === t.value); if (md && l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop(); }
-    });
-    return;
-  }
+  if (t.dataset.rec && p) { const k = t.dataset.rec, v = t.value; recApply(p, t.dataset.id, (l, e) => recSet(l, e, p, k, v)); return; }
   if (t.name === "readers" && t.type === "checkbox") { app.settings.readers = t.checked; touchSettings(); for (const q of app.productions) { applyDefaults(q); touch(q); } toast(t.checked ? "Card readers added to your lists" : "Card readers taken off your lists"); return; }
   if (t.name === "helperOn" && t.type === "checkbox") { setHelper(t.checked); app.helperMissing = false; rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
