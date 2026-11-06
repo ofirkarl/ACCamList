@@ -1523,6 +1523,45 @@ body.kb-room .app { padding-bottom: 70vh; }
 /* the page next door, shown beside the one being swiped */
 .swghost { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; overflow: hidden; background: var(--bg); pointer-events: none; will-change: transform; }
 .swghost .app { padding-bottom: 0; }
+/* a line: the name and its tools on top; under it the details on the left and how many on the right, so the card has no hole */
+.l-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; min-width: 0; }
+.l-row > .l-meta { flex: 1 1 auto; }
+.l-row > .l-bottom { flex: none; margin-inline-start: auto; }
+.line > .auto { font-size: 12px; color: var(--muted); }
+
+/* colour on every control that was grey */
+.iconbtn, .x, .star:not([aria-pressed="true"]) { color: var(--accent); }
+.iconbtn:hover, .x:hover { background: var(--accent-soft); }
+.stepper button:first-child { background: var(--accent-soft); color: var(--accent); }
+.stepper button:first-child:hover { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.mc-step button { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent); }
+.mc-step button:active { background: color-mix(in srgb, var(--accent) 16%, var(--surface)); }
+.nav-tab .num { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent); }
+.nav-tab[aria-selected="true"] .num { background: var(--accent); color: var(--accent-fg); box-shadow: none; }
+/* My list | Any camera: a pill that slides under the finger */
+.mc-segwrap { margin-bottom: 16px; position: relative; z-index: 16; background: var(--bg); }
+.mc-mode { position: relative; }
+.mc-mode .mc-pill { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 6px); border-radius: 9px; background: var(--surface); box-shadow: 0 1px 2px rgba(48, 40, 28, .12), inset 0 0 0 1px var(--line); transform: translateX(calc(var(--mcp, 0) * (100% + 4px))); transition: transform var(--mcd, 0s) cubic-bezier(.2,.8,.2,1); pointer-events: none; }
+.mc-mode button { position: relative; z-index: 1; }
+.mc-mode button[aria-selected="true"] { background: none; box-shadow: none; color: var(--accent); }
+
+/* packages and rules: edit in reach */
+.pk-head .pk-edit { margin-inline-start: 4px; align-self: center; width: 32px; height: 32px; display: grid; place-items: center; }
+.pk-head .pk-edit svg { width: 16px; height: 16px; }
+.rule.clash .txt { flex: 1; }
+.rule.clash .c-tools { display: flex; align-items: center; gap: 2px; margin-inline-start: auto; }
+.rule.clash .c-tools .iconbtn { display: grid; place-items: center; }
+.rule.clash .c-tools .iconbtn svg { width: 16px; height: 16px; }
+.pk-q .stepper, .pk-kq .stepper { flex: none; }
+.pk-q .field { max-width: none; }
+.pk-kq .stepper input { width: 34px; }
+.pk-head { flex-wrap: nowrap; align-items: center; gap: 8px; }
+.pk-head .pk-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pk-head .pk-edit { margin-inline-start: auto; }
+.form .stepper input, .dialog .stepper input { height: 30px; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; width: 34px; }
+.pk-q { align-items: flex-end; justify-content: space-between; }
+.pk-q > .btn.ghost { min-height: 34px; }
+.pk-q .field { gap: 6px; }
 </style>
 </head>
 <body>
@@ -3391,14 +3430,14 @@ function viewSettings() {
   const byWhen = new Map();
   for (const r of app.settings.rules) { const k = r.kind === "item" ? r.when : "rule:" + r.id; if (!byWhen.has(k)) byWhen.set(k, []); byWhen.get(k).push(r); }
   const rules = [...byWhen].map(([k, rs]) => { const x = ruleParts(rs[0]), item = rs[0].kind === "item";
-    return `<div class="package"><div class="pk-head"><b>${esc(x.when)}</b>${x.house && HOUSES.length > 1 ? `<small>${esc(x.house)}</small>` : ""}<span class="pk-each">with each one</span></div>
+    return `<div class="package"><div class="pk-head"><div class="pk-t"><b>${esc(x.when)}</b><small>${x.house && HOUSES.length > 1 ? `${esc(x.house)} · ` : ""}with each one</small></div>${item && ITEM.has(k) ? `<button class="iconbtn pk-edit" type="button" data-act="pkg-edit" data-id="${esc(k)}" aria-label="Edit this package" title="Edit">${PEN_ICON}</button>` : ""}</div>
       ${rs.map(pkRow).join("")}
       ${item && ITEM.has(k) ? `<button class="btn ghost sm pk-plus" type="button" data-act="pkg-add" data-id="${esc(k)}">+ Add an item</button>` : ""}</div>`; }).join("");
   const clashRows = (app.settings.clashes || []).map(r => `<div class="rule clash"><button class="txt" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule">
       <span class="c-a">${esc(r.a.map(itName).join(", "))}${HOUSES.length > 1 && houseById(r.house) ? ` <small>· ${esc(houseById(r.house).name)}</small>` : ""}</span>
       <span class="c-b">doesn't work with <b>${esc(r.b.map(itName).join(", "))}</b></span>
       ${r.swap ? `<span class="c-sw">Use instead: <b>${esc(itName(r.swap))}</b></span>` : ""}${r.why ? `<small>${esc(r.why)}</small>` : ""}</button>
-      <button class="x" type="button" data-act="clash-del" data-rid="${esc(r.id)}" aria-label="Delete this rule">×</button></div>`).join("");
+      <span class="c-tools"><button class="iconbtn" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule" title="Edit">${PEN_ICON}</button><button class="x" type="button" data-act="clash-del" data-rid="${esc(r.id)}" aria-label="Delete this rule">×</button></span></div>`).join("");
   const me = app.settings.me || {}, acct = accountHtml();
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
@@ -3466,11 +3505,12 @@ function clashDialog(rid) {
   if (!r) document.getElementById("pk-ca-c")?.focus();
 }
 /* a package: the item you add, and what comes with it. Its media come from a tick box: the right card for the camera, and how many */
-function ruleDialog(whenId) {
+function ruleDialog(whenId, edit) {
+  if (edit) return pkgEditDialog(whenId);
   const fixed = whenId && ITEM.get(whenId);
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
   dd.house = fixed ? fixed.h.id : (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id);
-  dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {};
+  dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {}; dd.edit = "";
   dd.adds = []; if (!fixed || !pkgKinds().length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">${fixed ? "Add to the package" : "New package"}</h3>
     ${!fixed && HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
@@ -3482,6 +3522,27 @@ function ruleDialog(whenId) {
     <span class="err" id="rdErr" hidden></span>
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
   if (!fixed) document.getElementById("pk-when-c")?.focus();
+}
+/* a package as it is, opened to change: what you add, and everything that comes with it */
+function pkgEditDialog(whenId) {
+  const e = ITEM.get(whenId); if (!e) return;
+  const rs = app.settings.rules.filter(r => r.kind === "item" && r.when === whenId);
+  dd.house = e.h.id; dd.when = pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = [];
+  const kinds = pkgKinds();
+  rs.forEach((r, i) => {
+    const kind = kinds.find(k => k.cards.some(c => c.id === r.add));
+    if (kind && !dd.media[kind.type]) { dd.media[kind.type] = { on: true, qty: r.qty, id: r.add }; return; }
+    const k = "add" + i; dd[k] = pickOf(r.add); dd.q[k] = r.qty; dd.adds.push(k);
+  });
+  if (!dd.adds.length && !kinds.length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
+  showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">Edit package</h3>
+    <fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>
+    <fieldset class="pk"><legend>Comes with</legend>
+      <div id="pk-media">${pkgMediaHtml()}</div>
+      <div id="pk-adds">${pkgAddsHtml()}</div>
+      <div><button class="btn sm" type="button" data-act="pk-more">+ Another item</button></div></fieldset>
+    <span class="err" id="rdErr" hidden></span>
+    <div class="modal-actions"><button class="btn ghost danger" type="button" data-act="pkg-del" data-id="${esc(whenId)}" aria-label="Delete this package">Delete</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
 }
 /* a camera's media in its package: one line for each kind of card it takes, the card already picked; tick, and set how many */
 function pkgKinds() {
@@ -3499,11 +3560,23 @@ function pkgMediaHtml() {
     const t = esc(k.type);
     return `<div class="pk-kind${m.on ? " on" : ""}"><label class="check"><input type="checkbox" data-pkmedia="on" data-type="${t}" ${m.on ? "checked" : ""}> ${t}</label>
       ${m.on ? `<div class="pk-kq">${k.cards.length > 1 ? `<select aria-label="${t} card" data-pkmedia="id" data-type="${t}">${k.cards.map(c => `<option value="${esc(c.id)}" ${c.id === m.id ? "selected" : ""}>${esc(shortCard(c.name))}</option>`).join("")}</select>` : `<span class="pk-card">${esc(shortCard(k.cards[0].name))}</span>`}
-        <input type="number" min="1" max="99" inputmode="numeric" aria-label="How many ${t} cards" data-pkmedia="qty" data-type="${t}" value="${m.qty}"></div>` : ""}</div>`; }).join("")}</div>`;
+        ${pkStep(`aria-label="How many ${t} cards" data-pkmedia="qty" data-type="${t}"`, m.qty, "pkmq", `data-type="${t}"`)}</div>` : ""}</div>`; }).join("")}</div>`;
+}
+/* a quantity in the package dialog: − number +, the same stepper as on the list */
+const pkStep = (attrs, v, act, data) => `<span class="stepper"><button type="button" data-act="${act}-dec" ${data} aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" ${attrs} value="${v}"><button type="button" data-act="${act}-inc" ${data} aria-label="More">+</button></span>`;
+/* open the next menu down, once the page has turned it into the app's own list */
+function pkOpen(el) {
+  if (!el || el.disabled || !el.id) return;
+  const id = el.id;
+  setTimeout(() => {
+    const s = document.getElementById(id); if (!s || s.disabled) return;
+    const w = s.closest(".nsel");
+    if (w) { nselOpen(w); w.querySelector(".nsel-btn")?.focus({ preventScroll: true }); } else s.focus();
+  }, 0);
 }
 function pkgAddsHtml() {
   return dd.adds.map(k => `<div class="pk-add" id="pa-${k}"><div id="pk-${k}">${pickerHtml(k)}</div>
-    <div class="pk-q"><div class="field"><label for="rd-q-${k}">Quantity</label><input id="rd-q-${k}" type="number" min="1" max="99" inputmode="numeric" data-pkq="${k}" value="${dd.q[k] || 1}"></div>
+    <div class="pk-q"><div class="field"><label for="rd-q-${k}">Quantity</label>${pkStep(`id="rd-q-${k}" data-pkq="${k}"`, dd.q[k] || 1, "pkq", `data-k="${k}"`)}</div>
     ${dd.adds.length > 1 || pkgKinds().length ? `<button class="btn ghost sm" type="button" data-act="pk-less" data-k="${k}">Remove</button>` : ""}</div></div>`).join("");
 }
 
@@ -3572,7 +3645,7 @@ function viewProduction() {
   return `<section class="pad">
     ${head}
   </section>
-  <div class="tabpane" id="tabpane">${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
+  ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
     ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
       `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
@@ -4303,9 +4376,9 @@ function lineHtml(p, id, l) {
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
       <div class="l-top"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
-      ${specs ? `<div class="l-meta">${specs}</div>` : ""}
+      <div class="l-row">${specs ? `<div class="l-meta">${specs}</div>` : `<span class="l-meta"></span>`}<div class="l-bottom">${qtys}</div></div>
+      ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
-      <div class="l-bottom">${qtys}${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}</div>
       ${editor}
     </li>`;
 }
@@ -4474,12 +4547,21 @@ const sw = { x: 0, y: 0, t: 0, ok: false, dir: 0, ghost: null, side: 0, gTop: 0 
 const swHere = () => SWIPE_STOPS.findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
 const swCalm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
 const swPane = () => document.getElementById("tabpane");
+const swSeg = () => document.getElementById("mcseg");
+/* what moves with the finger: the page, and the My list | Any camera bar only when leaving the Media tab */
+function swMove(x, how, side) {
+  const to = SWIPE_STOPS[swHere() + side], seg = swSeg(), inMedia = to && to[0] === "media" && app.tab === "media";
+  const els = [swPane()]; if (seg && to && to[0] !== "media") els.push(seg);
+  els.forEach(el => { if (!el) return; el.style.transition = how; el.style.transform = x ? `translateX(${x}px)` : ""; });
+  if (seg) { const m = seg.querySelector(".mc-mode"), base = (app.mcMode || "list") === "free" ? 1 : 0;
+    if (m) { m.style.setProperty("--mcd", how === "none" ? "0s" : ".2s"); m.style.setProperty("--mcp", inMedia ? Math.min(1, Math.max(0, base - x / innerWidth)) : base); } }
+}
 /* the next page, drawn beside the one under the finger, so it shows while the finger moves */
 function swPageHtml(stop) {
   const p = cur(), h = houseById(p.houseId), was = { tab: app.tab, mode: app.mcMode, open: mcOpen };
   app.tab = stop[0]; if (stop[1]) app.mcMode = stop[1]; mcOpen = null;
   let html = "";
-  try { html = stop[0] === "add" ? viewCatalog(p, h) : stop[0] === "fav" ? viewFavorites(p, h) : stop[0] === "media" ? viewMedia(p, h) : viewList(p, h); }
+  try { html = stop[0] === "add" ? viewCatalog(p, h) : stop[0] === "fav" ? viewFavorites(p, h) : stop[0] === "media" ? (was.tab === "media" ? "" : mcSegHtml(false)) + viewMedia(p, h) : viewList(p, h); }
   finally { app.tab = was.tab; app.mcMode = was.mode; mcOpen = was.open; }
   return html;  // a picture of it, drawn after the live page, so the live page's ids stay the ones found first
 }
@@ -4487,7 +4569,7 @@ function swGhost(side) {
   swDropGhost();
   const to = SWIPE_STOPS[swHere() + side], pane = swPane();
   if (!to || !pane) return;
-  const top = Math.max(0, pane.getBoundingClientRect().top);
+  const top = Math.max(0, (swSeg() && to[0] !== "media" ? swSeg() : pane).getBoundingClientRect().top);
   const g = document.createElement("div");
   g.className = "swghost"; g.setAttribute("aria-hidden", "true"); g.style.top = top + "px";
   g.innerHTML = `<div class="app"><div class="tabpane">${swPageHtml(to)}</div></div>`;
@@ -4515,12 +4597,12 @@ document.addEventListener("touchmove", e => {
   if (!edge && sw.side !== side) swGhost(side);
   if (edge) swDropGhost();
   const x = edge ? dx * 0.25 : dx;  // at the first or last page it gives a little, then springs back
-  pane.style.transition = "none"; pane.style.transform = `translateX(${x}px)`;
+  swMove(x, "none", side);
   if (sw.ghost) { sw.ghost.style.transition = "none"; sw.ghost.style.transform = `translateX(${x + side * innerWidth}px)`; }
 }, { passive: true });
 function swBack() {
   const pane = swPane(), g = sw.ghost, side = sw.side;
-  if (pane) { pane.style.transition = `transform .24s ${swEase}`; pane.style.transform = ""; setTimeout(() => { pane.style.transition = ""; }, 260); }
+  if (pane) { swMove(0, `transform .24s ${swEase}`, side || 1); setTimeout(() => { pane.style.transition = ""; const s2 = swSeg(); if (s2) s2.style.transition = ""; }, 260); }
   if (g) { g.style.transition = `transform .24s ${swEase}`; g.style.transform = `translateX(${side * innerWidth}px)`; setTimeout(() => { if (sw.ghost === g) swDropGhost(); else g.remove(); }, 260); }
 }
 function swGo(to, side) {
@@ -4532,13 +4614,13 @@ function swGo(to, side) {
     if (!sameTab) { app.tab = to[0]; app.editing = null; }
     render();
     // the new page where its picture was: its top where the picture's top was
-    const np = swPane();
+    const np = swSeg() || swPane();
     if (np) { const want = np.getBoundingClientRect().top + scrollY - gTop; window.scrollTo(0, g ? Math.max(0, want) : sameTab ? scrollY : 0); }
     requestAnimationFrame(() => { if (sw.ghost === g) swDropGhost(); else if (g) g.remove(); });
   };
   if (calm) { swDropGhost(); show(); return; }
   const d = ".2s";
-  pane.style.transition = `transform ${d} ${swEase}`; pane.style.transform = `translateX(${-side * innerWidth}px)`;
+  swMove(-side * innerWidth, `transform ${d} ${swEase}`, side);
   g.style.transition = `transform ${d} ${swEase}`; g.style.transform = "translateX(0)";
   setTimeout(show, 200);
 }
@@ -4565,14 +4647,18 @@ const NAV_ICON = {
   list: NAV_SVG(`<rect x="4.5" y="4.5" width="15" height="16" rx="3"/><path d="M9 3.5h6v2.5H9zM8.5 11h7M8.5 15h4.5"/>`),
   media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
 };
+/* My list | Any camera: drawn above the moving page, so a swipe between the two moves only the pill */
+function mcSegHtml(id) {
+  const on = (app.mcMode || "list") === "free" ? 1 : 0;
+  return `<section class="pad mc-segwrap"${id ? ` id="mcseg"` : ""}><div class="mc-mode" role="tablist" style="--mcp:${on}"><span class="mc-pill" aria-hidden="true"></span>${[["list", "My list"], ["free", "Any camera"]].map(([v, t]) => `<button type="button" role="tab" data-act="mc-mode" data-v="${v}" aria-selected="${(app.mcMode || "list") === v}">${t}</button>`).join("")}</div></section>`;
+}
 function viewMedia(p, h) {
   const freeMode = app.mcMode === "free";
   if (mcOpen && (freeMode ? !isFree(mcOpen.id) : !p.items[mcOpen.id])) mcOpen = null;
   const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
-  const seg = `<div class="mc-mode" role="tablist">${[["list", "My list"], ["free", "Any camera"]].map(([v, t]) => `<button type="button" role="tab" data-act="mc-mode" data-v="${v}" aria-selected="${(app.mcMode || "list") === v}">${t}</button>`).join("")}</div>`;
   const body = freeMode ? mcFreeList(p).map((f, i) => mediaCamHtml(p, "free" + i)).join("") + `<button type="button" class="mc-add" data-act="mc-add"><span aria-hidden="true">+</span> Add camera to compare</button>`
     : cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`;
-  return `<section class="pad media-tab">${seg}${body}</section>`;
+  return `<section class="pad media-tab">${body}</section>`;
 }
 /* a change in the Media tab: kept on the camera's line, and that camera's card redrawn in place */
 function recApply(p, id, fn) {
@@ -5377,7 +5463,7 @@ document.addEventListener("click", e => {
     case "mc-open": if (p) mcToggle(p, id, b.dataset.k); break;
     case "mc-add": if (p) { const list = mcFreeList(p); list.push({ id: "", rec: {}, n: 2 }); touchSettings(); const nid = "free" + (list.length - 1); mcOpen = null; rerenderKeepScroll(); mcToggle(p, nid, "cam"); document.getElementById("mc-" + nid)?.scrollIntoView({ block: "start", behavior: "smooth" }); } break;
     case "mc-del": if (p) { const list = mcFreeList(p), i = Number(id.slice(4)); if (list.length > 1) { const was = list.splice(i, 1)[0]; touchSettings(); mcOpen = null; rerenderKeepScroll(); undoable("Removed", was.id ? itName(was.id) : "a camera", () => { list.splice(i, 0, was); touchSettings(); rerenderKeepScroll(); }); } } break;
-    case "mc-mode": if (app.mcMode !== b.dataset.v) { app.mcMode = b.dataset.v; mcOpen = null; rerenderKeepScroll(); } break;
+    case "mc-mode": if (app.mcMode !== b.dataset.v) { const m = b.closest(".mc-mode"); if (m) { m.style.setProperty("--mcd", ".2s"); m.style.setProperty("--mcp", b.dataset.v === "free" ? 1 : 0); } app.mcMode = b.dataset.v; mcOpen = null; rerenderKeepScroll(); } break;
     case "mc-pick": if (p) { const k = b.dataset.k, v = b.dataset.v; mcOpen = null;
       if (isFree(id) && k === "cam") { const F = mcFreeOf(p, id); if (F.id !== v) { F.id = v; F.rec = {}; } touchSettings(); mediaRedraw(p); document.getElementById("mc-" + id)?.scrollIntoView({ block: "nearest" }); break; }
       recApply(p, id, (l, e) => recSet(l, e, p, k, v)); document.getElementById("mc-" + id)?.querySelector(`[data-k="${k}"]`)?.scrollIntoView({ block: "nearest" }); } break;
@@ -5470,7 +5556,14 @@ document.addEventListener("click", e => {
     case "rdel": app.settings.rules = app.settings.rules.filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
     case "rule-new": ruleDialog(); break;
     case "pkg-add": ruleDialog(id); break;
+    case "pkg-del": { const w = b.dataset.id, old = app.settings.rules; app.settings.rules = old.filter(r => !(r.kind === "item" && r.when === w)); touchSettings(); closeModal(); rerenderKeepScroll();
+      undoable("Deleted", "the package", () => { app.settings.rules = old; touchSettings(); rerenderKeepScroll(); }); break; }
     case "pk-more": { const k = "add" + Date.now().toString(36); dd[k] = {}; dd.q[k] = 1; dd.adds.push(k); document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); document.getElementById("pk-" + k + "-c")?.focus(); break; }
+    case "pkq-dec": case "pkq-inc": case "pkmq-dec": case "pkmq-inc": {
+      const inp = b.parentElement.querySelector("input"), n = Math.max(1, Math.min(99, (parseInt(inp.value, 10) || 1) + (act.endsWith("inc") ? 1 : -1)));
+      inp.value = n; if (act.startsWith("pkq")) dd.q[b.dataset.k] = n; else { const m = dd.media[b.dataset.type]; if (m) m.qty = n; }
+      break; }
+    case "pkg-edit": ruleDialog(b.dataset.id, true); break;
     case "pk-less": { dd.adds = dd.adds.filter(k => k !== b.dataset.k); delete dd[b.dataset.k]; document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); break; }
     case "clash-new": clashDialog(); break;
     case "clash-edit": clashDialog(b.dataset.rid); break;
@@ -5595,13 +5688,19 @@ document.addEventListener("change", e => {
       document.getElementById("pk-" + k).innerHTML = pickerHtml(k); document.getElementById("pk-" + k + "-i")?.focus();
       return;
     }
-    if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); box.querySelector(t.dataset.pkc ? "[data-pks]" : "[data-pki]")?.focus(); }
+    if (!t.dataset.pki && t.value) {  // chosen: the next menu opens by itself; a subcategory that's the only one is chosen too
+      const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k);
+      let next = box.querySelector(t.dataset.pkc ? "[data-pks]" : "[data-pki]");
+      if (next && next.dataset.pks && next.options.length === 2) { v.s = next.options[1].value; box.innerHTML = pickerHtml(k); next = box.querySelector("[data-pki]"); }
+      pkOpen(next);
+    } else if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); }
     if (k === "when") {
       dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml();
       const untouched = dd.adds.length === 1 && !(dd[dd.adds[0]] || {}).c;
       if (pkgKinds().length && untouched) { dd.adds = []; document.getElementById("pk-adds").innerHTML = ""; }
       else if (!pkgKinds().length && !dd.adds.length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); }
     }
+    if (t.dataset.pki && t.value && k === "when" && dd.adds.length && !(dd[dd.adds[0]] || {}).c) pkOpen(document.getElementById("pk-" + dd.adds[0] + "-c"));  // then on to what comes with it
     return;
   }
   if (t.form && t.form.id === "meForm") {
@@ -5799,11 +5898,12 @@ document.addEventListener("submit", e => {
     for (const k of dd.adds) if (dd[k] && dd[k].id) items.push([dd[k].id, dd.q[k] || 1]);
     if (!items.length) return say("Choose what comes with it.");
     if (items.some(([id]) => id === when)) return say("Choose a different item to come with it.");
+    if (dd.edit) app.settings.rules = app.settings.rules.filter(r => !(r.kind === "item" && r.when === dd.edit));  // the package as it now stands replaces the old one
     for (const [add, qty] of items) {
       const ex = app.settings.rules.find(r => r.kind === "item" && r.when === when && r.add === add);
       if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when, add, qty });
     }
-    touchSettings(); closeModal(); rerenderKeepScroll(); toast(dd.fixed ? "Added to the package" : "Package saved");
+    touchSettings(); closeModal(); rerenderKeepScroll(); toast(dd.edit ? "Package updated" : dd.fixed ? "Added to the package" : "Package saved"); dd.edit = "";
     return;
   }
   const p = cur();
