@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, REC, recRate, recResult, recProfile, cardBytes, defaultCard, recSheetHtml, recStripHtml, recEnsure, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
+;return { getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -28,7 +28,6 @@ A.app.settings.rules = [
 const find = (house, re) => { for (const [id, e] of A.ITEM) if (e.h.id === house && re.test(e.it.name)) return id; throw new Error("not found " + re); };
 const ok = (cond, msg) => { console.log((cond ? "PASS " : "FAIL ") + msg); if (!cond) process.exitCode = 1; };
 
-A.app.settings.autoCards = false;  // the camera-cards default is tested on its own, at the end
 // --- default batteries
 const p = A.newProduction({ name: "Mizrahi", company: "Keshet", houseId: "utopia", dp: "Damian Tsatskin", ac: "Ofir Karlstadt", acPhone: "0542405010", prep: "2026-03-16", shootStart: "2026-03-17", shootEnd: "2026-03-17" });
 A.app.productions.push(p); A.app.pid = p.id;
@@ -503,7 +502,7 @@ A.renameCatItem(U, rn, "ARRI Alexa Mini"); A.syncLineNames(rn, "Alexa Mini (body
 A.app.settings.me = { name: "Ofir K", phone: "050" }; A.app.formFor = null; A.app.dupFrom = null;
 ok(/value="Ofir K"/.test(A.viewForm()) && /value="050"/.test(A.viewForm()), "a new production starts with your name and phone");
 const vset = A.viewSettings();
-ok(/id="meForm"/.test(vset) && /name="theme"/.test(vset) && /data-act="rule-new"/.test(vset) && !/Add a battery rule/.test(vset), "settings: your details, light/dark, your own defaults (no battery form)");
+ok(/id="meForm"/.test(vset) && /name="theme"/.test(vset) && /data-act="rule-new"/.test(vset) && !/Add a battery rule/.test(vset), "settings: your details, light/dark, your own packages (no battery form)");
 // --- your own defaults: when you add X, N x Y come with it, following X's quantity
 const plate = find("utopia", /V-Mount Battery Plate|V-Mount Plate/i), dp = A.newProduction({ name: "d", houseId: "utopia" }); A.app.productions.push(dp);
 const keepRules = A.app.settings.rules; A.app.settings.rules = [{ id: "r-x", kind: "item", house: "utopia", when: mini, add: plate, qty: 2 }];
@@ -558,7 +557,7 @@ A.setQty(clp2, cfm, 0); ok(!clp2.clashOk["x-1"], "the cforce mini goes: keep-bot
 A.clashDrop(clp2, "x-1"); ok(!clp2.items[cfm] && clp2.items[amira], "no swap item: remove the one that doesn't work");
 ok(/data-act="clash-new"/.test(A.viewSettings()) && /doesn't work with <b>ARRI cforce Mini Motor/.test(A.viewSettings()) && /Use instead: <b>ARRI cforce Mini RF Motor/.test(A.viewSettings()), "settings list the rule");
 A.applyDefaults(clp2); ok(true, "defaults still run with rules of the new kind around");
-modals = []; A.ruleDialog(); ok(/Add with it<\/legend>.*<label for="rd-qty">Quantity<\/label>.*<\/fieldset>/s.test(modals.join("")) && !/How many/.test(modals.join("")), "new default: Quantity inside the Add with it box");
+modals = []; A.ruleDialog(); ok(/New package/.test(modals.join("")) && /Comes with<\/legend>.*<label for="rd-q-add0">Quantity<\/label>.*data-act="pk-more"/s.test(modals.join("")) && !/How many/.test(modals.join("")), "new package: Quantity with each item, and + Another item");
 A.app.settings.clashes = [];
 // --- undo: a line taken off, a production deleted
 const undoP = A.newProduction({ name: "undo", houseId: "utopia" }); A.app.productions.push(undoP); A.setQty(undoP, mini, 2); undoP.items[mini].note = "keep me";
@@ -592,38 +591,50 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(/class="pc-status soon">Prep in \d+ days</.test(A.viewHome()) && /class="pc-house" data-house="fitussi">/.test(A.viewHome()) && /Productions <span class="num">1</.test(A.viewHome()), "a production card: its status and its rental house's color");
   A.app.settings = keep.s; A.app.productions = keep.p; A.app.view = keep.v; }
 
-// --- a camera's cards and recording time
-{ const keepRules = A.app.settings.rules; A.app.settings.rules = [];  // only the cards, no other defaults
-  A.app.settings.autoCards = true; delete A.app.settings.cardsPer; delete A.app.settings.cardPick;
+// --- the Media tab: a camera's card, its format, how long a card lasts, and the cards on the list
+{ const keepRules = A.app.settings.rules; A.app.settings.rules = [];
   const pc = A.newProduction({ name: "Cards", houseId: "utopia" }); A.app.productions.push(pc);
   const a35 = find("utopia", /^ARRI Alexa 35$/), cdx1 = find("utopia", /Codex Compact Drive 1TB/), cdx2 = find("utopia", /Codex Compact Drive 2TB/);
   A.setQty(pc, a35, 2);
-  ok(pc.items[a35].cards && pc.items[a35].cards.id === cdx1 && pc.items[cdx1] && pc.items[cdx1].qty === 8, `2 Alexa 35 -> 8x Codex 1TB (4 a camera) (${pc.items[cdx1]?.qty})`);
+  ok(Object.keys(pc.items).length === 1, "adding a camera adds no cards by itself");
   const l = pc.items[a35], e = A.ITEM.get(a35);
-  l.rec = { codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
-  let r = A.recResult(l, e);
-  ok(Math.floor(r.per / 60) === 28 && r.n === 4, `ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min (${Math.floor(r.per / 60)})`);
-  l.cards = { id: cdx2, n: 2 }; A.applyDefaults(pc);
-  ok(!pc.items[cdx1] && pc.items[cdx2].qty === 4 && Math.floor(A.recResult(l, e).per / 60) === 56, "switching to 2TB drives, 2 a camera: 4 on the list, 56 min each");
-  ok(/rec-strip/.test(A.recStripHtml(pc, a35, l, e)) && /2×<\/b> ARRI Codex Compact Drive 2TB/.test(A.recStripHtml(pc, a35, l, e)) && /56 min a card · 1 h 52 min on 2/.test(A.recStripHtml(pc, a35, l, e)), "the camera's line shows its cards and how long they last");
-  ok(/Cards and recording time/.test(A.recSheetHtml(pc, a35)) && /data-act="rec-fps"/.test(A.recSheetHtml(pc, a35)) && /on 2 cards/.test(A.recSheetHtml(pc, a35)), "the sheet: cards, format, frame rate, and the result");
-  const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
+  A.recEnsure(l, e, pc);
+  ok(l.rec.card === cdx1 && l.rec.codec === "ARRIRAW", "the Media tab starts an Alexa 35 on a Codex 1TB, in ARRIRAW");
+  l.rec = { card: cdx1, codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
+  ok(Math.floor(A.recResult(l, e).per / 60) === 28, "ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min");
+  l.rec.card = cdx2; ok(Math.floor(A.recResult(l, e).per / 60) === 56, "on a 2TB drive: 56 min");
+  const html = A.mediaCamHtml(pc, a35);
+  ok(/data-act="rec-card"/.test(html) && /data-act="rec-fps"/.test(html) && /data-act="mq"/.test(html) && /On the list/.test(html), "a camera in the Media tab: card, format, frame rate, and the cards on the list");
+  A.setQty(pc, cdx2, 8); ok(/on the 8 on the list/.test(A.mediaCamHtml(pc, a35)) && /7 h 28 min/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
+  ok(/No cameras on the list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
+  const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
   ok(Math.floor(A.recResult(ll, A.ITEM.get(lf)).per / 60) === 121, "Mini LF ProRes 4444 UHD 24 fps: 2 h 1 min on 1TB, as ARRI's sheet says");
   const v2 = find("utopia", /^Sony Venice 2/), axs = find("utopia", /1TB AXS S66/);
-  A.setQty(pc, v2, 1); const lv = pc.items[v2]; lv.cards = { id: axs, n: 3 }; lv.rec = { codec: "X-OCN LT", mode: "8.6K 3:2", fps: 24 };
+  A.setQty(pc, v2, 1); const lv = pc.items[v2]; lv.rec = { card: axs, codec: "X-OCN LT", mode: "8.6K 3:2", fps: 24 };
   const mv = Math.floor(A.recResult(lv, A.ITEM.get(v2)).per / 60);
   ok(mv >= 57 && mv <= 58, `VENICE 2 X-OCN LT 8.6K 3:2 24 fps on AXS 1TB: about 58 min, as Sony's table (${mv})`);
-  const fx3 = find("utopia", /^Sony ILME-FX3$/); A.setQty(pc, fx3, 1);
-  ok(pc.items[fx3].cards && /CFexpress Type A/.test(A.ITEM.get(pc.items[fx3].cards.id).it.name), "an FX3 starts with CFexpress Type A cards");
-  const film = find("utopia", /Arriflex 416/); A.setQty(pc, film, 1); ok(!pc.items[film].cards, "a film camera gets no cards");
-  const old = A.newProduction({ name: "Old", houseId: "utopia" }); A.app.productions.push(old);
-  A.app.settings.autoCards = false; A.setQty(old, a35, 1); ok(!old.items[a35].cards && !old.items[cdx1], "with cards switched off, a camera comes alone");
-  A.app.settings.autoCards = true;
-  // a camera with no formats in the app: the data rate typed in
-  const gopro = find("utopia", /GoPro HERO13/); A.setQty(pc, gopro, 1); const lg = pc.items[gopro]; lg.rec = { mbps: 120 };
+  const gopro = find("utopia", /GoPro HERO13/); A.setQty(pc, gopro, 1); const lg = pc.items[gopro]; A.recEnsure(lg, A.ITEM.get(gopro), pc); lg.rec.mbps = 120;
   const rg = A.recResult(lg, A.ITEM.get(gopro)); ok(rg.card && Math.floor(rg.per / 60) === Math.floor(A.cardBytes(rg.card) / (120e6 / 8) / 60), "a typed data rate gives the card time too");
-  ok(/Data rate \(Mbps\)/.test(A.recSheetHtml(pc, gopro)), "...and the sheet asks for it");
-  A.app.settings.autoCards = false; A.app.settings.rules = keepRules; }
+  ok(/Data rate \(Mbps\)/.test(A.mediaCamHtml(pc, gopro)), "...and the Media tab asks for it");
+  // a list from the short-lived auto cards: they stay, as ordinary lines
+  const old = A.newProduction({ name: "Old", houseId: "utopia" }); A.app.productions.push(old);
+  old.items[a35] = { ...A.lineFromCatalog(a35), qty: 1, cards: { id: cdx1, n: 4 } }; old.items[cdx1] = { ...A.lineFromCatalog(cdx1), qty: 4, auto: 4, autoWhy: "4 per ARRI Alexa 35" };
+  A.applyDefaults(old); ok(old.items[cdx1] && old.items[cdx1].qty === 4 && !old.items[cdx1].auto && !old.items[a35].cards, "cards added with a camera earlier stay on the list as ordinary lines");
+  A.app.settings.rules = keepRules; }
+
+// --- packages: an item and what comes with it; media from a tick box
+{ const keepRules = A.app.settings.rules; A.app.settings.rules = [];
+  const a35 = find("utopia", /^ARRI Alexa 35$/), cdx1 = find("utopia", /Codex Compact Drive 1TB/), b250 = find("utopia", /FXLion 250Wh V-Mount/);
+  A.dd.house = "utopia"; A.dd.when = { id: a35 }; A.dd.media = { on: false, id: "", qty: 4 }; A.dd.adds = ["add0"]; A.dd.add0 = {}; A.dd.q = { add0: 1 };
+  ok(/Media for this camera/.test(A.pkgMediaHtml()) && A.dd.media.id === cdx1, "a camera's package offers its media, the card picked already");
+  A.dd.media.on = true; ok(/<select id="pk-mid"/.test(A.pkgMediaHtml()) && /value="4"/.test(A.pkgMediaHtml()), "ticked: the card and how many (4)");
+  A.dd.when = { id: b250 }; ok(A.pkgMediaHtml() === "", "no media box for an item that isn't a camera");
+  A.app.settings.rules.push({ id: "r-a", kind: "item", house: "utopia", when: a35, add: cdx1, qty: 4 }, { id: "r-b", kind: "item", house: "utopia", when: a35, add: b250, qty: 6 });
+  const vs = A.viewSettings();
+  ok(/<h3>Packages<\/h3>/.test(vs) && (vs.match(/class="package"/g) || []).length === 1 && /data-act="pkg-add" data-id="[^"]+"/.test(vs) && /\+ New package/.test(vs), "Settings: one Alexa 35 package with both items, and + to add another");
+  const pp = A.newProduction({ name: "Pkg", houseId: "utopia" }); A.app.productions.push(pp); A.setQty(pp, a35, 2);
+  ok(pp.items[cdx1]?.qty === 8 && pp.items[b250]?.qty === 12, "adding two Alexa 35 brings the package: 8 cards, 12 batteries");
+  A.app.settings.rules = keepRules; }
 
 // --- a file once built is used again while the list stays the same
 { const pf2 = A.newProduction({ name: "File cache", houseId: "utopia" }); A.app.productions.push(pf2);

@@ -961,8 +961,8 @@ function resolveBattery(r, houseId) {
   return { id: "auto-" + flat(b.label), label: b.label };
 }
 /* ---------- cards and recording time ----------
-   Each camera on a list can carry its cards (l.cards = { id, n }: which card, how many for each camera) and the format it records
-   (l.rec = { codec, mode, fps }). From these, how long one card lasts and how long the camera's cards last together.
+   Each camera on a list keeps, for the Media tab, the card its figures use and the format it records
+   (l.rec = { card, gb?, codec, mode, fps } or { card, mbps }): from these, how long one card lasts.
    Where the numbers come from:
    ARRI: ARRI's Formats & Data Rate Calculator (bytes per frame; Codex Compact Drive sizes as the camera sees them).
    RED: RED's recording-time tool (14-bit raw ÷ REDCODE ratio, held to the camera's write speed, + 5%).
@@ -1072,22 +1072,11 @@ function cardChoices(e, houseId) {
   for (const type of types) for (const [id, x] of ITEM) if (x.h.id === houseId && x.s.id === "media" && grpOf(x.it, x.s) === type) out.push({ id, name: x.it.name, type });
   return out;
 }
-/* the card a camera starts with: the one saved for this camera, else a 1TB one (or the biggest under that) of its first card type */
-function defaultCard(e, houseId) {
-  const saved = (app.settings.cardPick || {})[e.it.id], choices = cardChoices(e, houseId);
-  if (saved && (ITEM.has(saved.id) || !saved.id)) return { id: saved.id || "", n: saved.n ?? cardsPer() };
-  if (!choices.length) return null;
-  const first = choices.filter(c => c.type === choices[0].type), size = c => cardBytes(c.name) || 1;
-  const pick = first.filter(c => size(c) <= 1.01e12).sort((a, b) => size(b) - size(a))[0] || first.sort((a, b) => size(a) - size(b))[0];
-  return { id: pick.id, n: cardsPer() };
-}
-const cardsPer = () => app.settings.cardsPer ?? 4;
-const autoCardsOn = () => app.settings.autoCards !== false;
 /* what a camera's cards hold at its recording format: per card and all together */
 function recResult(l, e) {
   const prof = recProfile(e ? e.it.name : l.name), r = l.rec;
-  const card = l.cards && !l.cards.off && l.cards.id ? (ITEM.get(l.cards.id)?.it.name || "") : "";
-  const bytes = card ? cardBytes(card, l.cards.gb) : 0;
+  const card = r && r.card ? (ITEM.get(r.card)?.it.name || "") : "";
+  const bytes = card ? cardBytes(card, r.gb) : 0;
   let rate = 0, c = null, md = null;
   if (r && r.mbps) rate = r.mbps * 1e6 / 8;
   else if (prof && r) {
@@ -1095,24 +1084,20 @@ function recResult(l, e) {
     if (md) rate = recRate(c, md, r.fps);
   }
   const per = rate && bytes ? bytes / rate : 0;
-  return { prof, c, md, rate, bytes, per, n: l.cards && !l.cards.off ? l.cards.n || 0 : 0, card };
+  return { prof, c, md, rate, bytes, per, card };
 }
 function shortName(n) { return n.replace(/\s+(Digital Motion Picture Camera|Cinema Camera|Camera).*$/i, "").slice(0, 40); }
 /* what the defaults just added, for the notice: [{ label, qty, why }] */
 let lastAutoAdds = [];
 function applyDefaults(p) {
+  // cards added with a camera (a short-lived way of doing it) stay on the list as ordinary lines
+  for (const l of Object.values(p.items)) if (l.cards) { const c = l.cards.id && p.items[l.cards.id]; if (c && c.auto) { c.auto = 0; delete c.autoWhy; } delete l.cards; }
   const want = new Map();
   lastAutoAdds = [];
   for (const [id, l] of Object.entries(p.items)) {
     const e = ITEM.get(id);
     const manual = lineQty(l) - (l.auto || 0);  // only what you added yourself sets off defaults, never what they added
     if (!e || manual <= 0) continue;
-    // the camera's own cards: the kind it takes, as many for each camera as set on it
-    const cc = l.cards, ce = cc && !cc.off && cc.id && cc.n > 0 ? ITEM.get(cc.id) : null;
-    if (ce) {
-      const w = want.get(cc.id) || { qty: 0, why: [], label: ce.it.name };
-      w.qty += manual * cc.n; w.why.push(`${cc.n} per ${shortName(e.it.name)}`); want.set(cc.id, w);
-    }
     for (const r of app.settings.rules) if ((r.kind === "item" || l.section === "camera") && ruleMatches(r, e)) {
       const t = resolveTarget(r, e, p.houseId);
       const w = want.get(t.id) || { qty: 0, why: [], label: t.label };
@@ -1149,7 +1134,7 @@ function notifyDefaults(adds) {
   let n = document.getElementById("notice");
   if (!n || !n.classList || !document.body || !document.body.appendChild) return;
   const list = adds.slice(0, 4).map(a => `<li><b class="num">${a.qty}×</b> ${esc(a.label)}</li>`).join("") + (adds.length > 4 ? `<li>+ ${adds.length - 4} more</li>` : "");
-  n.innerHTML = `<span class="nt-ico" aria-hidden="true">✦</span><div><b>Added by your defaults</b><ul>${list}</ul></div><button class="x" type="button" data-act="notice-close" aria-label="Close">×</button>`;
+  n.innerHTML = `<span class="nt-ico" aria-hidden="true">✦</span><div><b>Added with the package</b><ul>${list}</ul></div><button class="x" type="button" data-act="notice-close" aria-label="Close">×</button>`;
   n.hidden = false; n.classList.remove("in"); void n.offsetWidth; n.classList.add("in");
   clearTimeout(notifyDefaults._t); notifyDefaults._t = setTimeout(() => { n.classList.remove("in"); setTimeout(() => { if (!n.classList.contains("in")) n.hidden = true; }, 320); }, 4200);
 }
@@ -1327,8 +1312,6 @@ function setQty(p, id, qty, field) {
   if (!l) {
     if (qty === 0 || !ITEM.has(id)) return [];
     l = p.items[id] = lineFromCatalog(id);
-    const ce = ITEM.get(id);
-    if (autoCardsOn() && ce.it.camera && !ce.it.camera.film) { const dc = defaultCard(ce, p.houseId); if (dc && dc.id) l.cards = dc; }
     if (l.tx !== undefined) { l.sets = qty; l.tx = qty; l.rx = qty; }
     else l.qty = qty;
   } else if (field && l.tx !== undefined) {
@@ -1742,9 +1725,15 @@ function ruleParts(r) {
   return { when: r.label, add: r.kind === "media" ? "memory cards to match the camera, and a card reader" : r.battery.label, house: "" };
 }
 function viewSettings() {
-  const rules = app.settings.rules.map(r => { const x = ruleParts(r); return `<div class="rule"><div class="txt"><span>When you add <b>${esc(x.when)}</b>${x.house ? ` <small>· ${esc(x.house)}</small>` : ""}</span><span class="r-add"><b class="num">${r.qty}×</b> ${esc(x.add)} <small>for each one</small></span></div>
-      <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="Quantity, for each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
-      <button class="x" type="button" data-act="rdel" data-rid="${esc(r.id)}" aria-label="Delete this default">×</button></div>`; }).join("");
+  const pkRow = r => { const x = ruleParts(r); return `<div class="pk-row"><span class="pk-nm">${esc(x.add)}</span>
+      <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="How many with each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
+      <button class="x" type="button" data-act="rdel" data-rid="${esc(r.id)}" aria-label="Take ${esc(x.add)} out of the package">×</button></div>`; };
+  const byWhen = new Map();
+  for (const r of app.settings.rules) { const k = r.kind === "item" ? r.when : "rule:" + r.id; if (!byWhen.has(k)) byWhen.set(k, []); byWhen.get(k).push(r); }
+  const rules = [...byWhen].map(([k, rs]) => { const x = ruleParts(rs[0]), item = rs[0].kind === "item";
+    return `<div class="package"><div class="pk-head"><b>${esc(x.when)}</b>${x.house && HOUSES.length > 1 ? `<small>${esc(x.house)}</small>` : ""}<span class="pk-each">with each one</span></div>
+      ${rs.map(pkRow).join("")}
+      ${item && ITEM.has(k) ? `<button class="btn ghost sm pk-plus" type="button" data-act="pkg-add" data-id="${esc(k)}">+ Add an item</button>` : ""}</div>`; }).join("");
   const clashRows = (app.settings.clashes || []).map(r => `<div class="rule clash"><button class="txt" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule">
       <span class="c-a">${esc(r.a.map(itName).join(", "))}${HOUSES.length > 1 && houseById(r.house) ? ` <small>· ${esc(houseById(r.house).name)}</small>` : ""}</span>
       <span class="c-b">doesn't work with <b>${esc(r.b.map(itName).join(", "))}</b></span>
@@ -1772,13 +1761,10 @@ function viewSettings() {
       <label class="check"><input type="checkbox" name="helperOn" ${helperOn() ? "checked" : ""}> The helper app is installed on this phone</label>
       <span class="hint">Once downloaded, open the file to install it. Android asks once to allow installs from your browser.</span></div>` : ""}
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
-    <div class="set-group"><h3>Defaults</h3>
-      <div class="cards-auto"><label class="check"><input type="checkbox" name="autoCards" ${autoCardsOn() ? "checked" : ""}> Add the right cards with each camera</label>
-        ${autoCardsOn() ? `<div class="rs-n"><span>Cards for each camera</span><span class="stepper sm"><button type="button" data-act="cper" data-d="-1" aria-label="Fewer cards">−</button><b class="num">${cardsPer()}</b><button type="button" data-act="cper" data-d="1" aria-label="More cards">+</button></span></div>` : ""}
-        <span class="hint">The card kind each camera takes, from its rental house. Change the card or how many on the camera's line in the list.</span></div>
-      <p class="hint" style="margin:0">Pick an item and what comes with it. When you add that item to a list, these are added too and follow its quantity, and a notice tells you.</p>
-      <div class="rules">${rules || `<p class="hint">No defaults yet.</p>`}</div>
-      <div><button class="btn" type="button" data-act="rule-new">+ New default</button></div></div>
+    <div class="set-group"><h3>Packages</h3>
+      <p class="hint" style="margin:0">An item and what comes with it. Add the item to a list and the rest comes too, as many for each one, and a notice tells you.</p>
+      <div class="packages">${rules || `<p class="hint">No packages yet.</p>`}</div>
+      <div><button class="btn" type="button" data-act="rule-new">+ New package</button></div></div>
     <div class="set-group"><h3>Doesn't work together</h3>
       <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
       <div class="rules">${clashRows || `<p class="hint">No rules yet.</p>`}</div>
@@ -1819,17 +1805,35 @@ function clashDialog(rid) {
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save rule</button></div></form>`);
   if (!r) document.getElementById("pk-ca-c")?.focus();
 }
-function ruleDialog() {
+/* a package: the item you add, and what comes with it. Its media come from a tick box: the right card for the camera, and how many */
+function ruleDialog(whenId) {
+  const fixed = whenId && ITEM.get(whenId);
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
-  dd.house = (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id); dd.when = {}; dd.add = {};
-  showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">New default</h3>
-    ${HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
-    <fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>
-    <fieldset class="pk"><legend>Add with it</legend><div id="pk-add">${pickerHtml("add")}</div>
-      <div class="field"><label for="rd-qty">Quantity</label><input id="rd-qty" name="qty" type="number" min="1" max="99" value="1" inputmode="numeric" style="max-width:120px"><span class="hint">For each one you add.</span></div></fieldset>
+  dd.house = fixed ? fixed.h.id : (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id);
+  dd.when = fixed ? pickOf(whenId) : {}; dd.adds = ["add0"]; dd.add0 = {}; dd.q = { add0: 1 }; dd.media = { on: false, id: "", qty: 4 }; dd.fixed = fixed ? whenId : "";
+  showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">${fixed ? "Add to the package" : "New package"}</h3>
+    ${!fixed && HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
+    ${fixed ? `<p class="pk-fixed">When you add <b>${esc(fixed.it.name)}</b></p>` : `<fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>`}
+    <fieldset class="pk"><legend>Comes with</legend>
+      <div id="pk-media">${pkgMediaHtml()}</div>
+      <div id="pk-adds">${pkgAddsHtml()}</div>
+      <div><button class="btn sm" type="button" data-act="pk-more">+ Another item</button></div></fieldset>
     <span class="err" id="rdErr" hidden></span>
-    <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save default</button></div></form>`);
-  document.getElementById("pk-when-c")?.focus();
+    <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
+  if (!fixed) document.getElementById("pk-when-c")?.focus();
+}
+function pkgMediaHtml() {
+  const e = ITEM.get(dd.when.id), ch = e && e.it.camera && !e.it.camera.film ? cardChoices(e, dd.house) : [];
+  if (!ch.length) return "";
+  const m = dd.media; if (!ch.some(c => c.id === m.id)) m.id = pickCard(e, dd.house);
+  return `<label class="check"><input type="checkbox" data-pkmedia="on" ${m.on ? "checked" : ""}> Media for this camera</label>
+    ${m.on ? `<div class="row2 pk-mrow"><div class="field"><label for="pk-mid">Card</label><select id="pk-mid" data-pkmedia="id">${ch.map(c => `<option value="${esc(c.id)}" ${c.id === m.id ? "selected" : ""}>${esc(shortCard(c.name))}</option>`).join("")}</select></div>
+      <div class="field"><label for="pk-mqty">Quantity</label><input id="pk-mqty" type="number" min="1" max="99" inputmode="numeric" data-pkmedia="qty" value="${m.qty}"></div></div>` : ""}`;
+}
+function pkgAddsHtml() {
+  return dd.adds.map(k => `<div class="pk-add" id="pa-${k}"><div id="pk-${k}">${pickerHtml(k)}</div>
+    <div class="pk-q"><div class="field"><label for="rd-q-${k}">Quantity</label><input id="rd-q-${k}" type="number" min="1" max="99" inputmode="numeric" data-pkq="${k}" value="${dd.q[k] || 1}"></div>
+    ${dd.adds.length > 1 ? `<button class="btn ghost sm" type="button" data-act="pk-less" data-k="${k}">Remove</button>` : ""}</div></div>`).join("");
 }
 
 /* where the production stands today, in a few words: "Shoot starts in 6 days", "Shoot day 3 of 6", "Wrapped 18 Nov" */
@@ -1900,9 +1904,10 @@ function viewProduction() {
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="add" aria-selected="${app.tab === "add"}">Add gear</button>
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="fav" aria-selected="${app.tab === "fav"}">Favorites <span class="num">${nFav || ""}</span></button>
       <button class="tab" role="tab" type="button" data-act="tab" data-tab="list" aria-selected="${app.tab === "list"}">Camera List <span class="num" id="tabCount">${t.lines || ""}</span></button>
+      <button class="tab" role="tab" type="button" data-act="tab" data-tab="media" aria-selected="${app.tab === "media"}">Media</button>
     </div>
   </section>
-  ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : viewList(p, h)}`;
+  ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}`;
 }
 
 /* ----- shared row for catalog and favorites ----- */
@@ -2631,91 +2636,72 @@ function lineHtml(p, id, l) {
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
       ${specs ? `<div class="l-meta">${specs}</div>` : ""}
       ${kids}
-      ${recStripHtml(p, id, l, e)}
       <div class="l-bottom">${qtys}${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}</div>
       ${editor}
     </li>`;
 }
-/* the camera's cards and recording time, under its line on the list: a tap opens the sheet to set them */
+/* ----- Media: for each camera on the list, how long a card records at the format it shoots, and how many cards go on the list ----- */
 const CARD_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M10 3v4M13 3v4M16 4v3"/></svg>`;
-const CLOCK_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
 const hasRec = e => !!(e && e.it.camera && !e.it.camera.film && ((e.it.camera.media || []).length || recProfile(e.it.name)));
 const shortCard = n => String(n || "").replace(/\b(Memory Card|Card|Memory)\b/gi, "").replace(/\s{2,}/g, " ").trim();
-function recStripHtml(p, id, l, e) {
-  if (!hasRec(e)) return "";
-  const r = recResult(l, e), on = l.cards && !l.cards.off && r.card;
-  const fmt = l.rec && (l.rec.mbps ? `${l.rec.mbps} Mbps` : l.rec.codec ? `${l.rec.codec} · ${l.rec.mode} · ${fpsLabel(l.rec.fps)} fps` : "");
-  const time = r.per ? `${fmtDur(r.per)} a card${r.n > 1 ? ` · ${fmtDur(r.per * r.n)} on ${r.n}` : ""}` : "";
-  const media = ((e.it.camera.media || [])[0]) || "";
-  return `<button class="rec-strip" type="button" data-act="rec-open" data-id="${esc(id)}" aria-label="Cards and recording time for ${esc(l.name)}">
-    <span class="rs-a">${CARD_ICON}${on ? `<span><b class="num">${r.n}×</b> ${esc(shortCard(r.card))}</span>` : `<span>${media ? esc(media) : "Cards"}</span>`}</span>
-    <span class="rs-b">${CLOCK_ICON}${fmt ? `<span>${esc(fmt)}</span>` : `<span class="rs-set">Recording time</span>`}</span>
-    ${time ? `<span class="rs-t">${esc(time)}</span>` : ""}
-  </button>`;
-}
-/* the sheet: the cards, the format, the resolution and the frame rate, and what they come to */
 const recKey = name => (REC_OF.find(([re]) => re.test(name || "")) || [])[1] || "";
-function recEnsure(l, e) {
-  const prof = recProfile(e.it.name); if (!prof) return;
-  const last = (app.settings.recLast || {})[recKey(e.it.name)] || {};
+/* the card a camera's figures use: the one picked, else one of its kind already on the list, else a 1TB one (or the biggest under that) */
+function pickCard(e, houseId) {
+  const choices = cardChoices(e, houseId); if (!choices.length) return "";
+  const first = choices.filter(c => c.type === choices[0].type), size = c => cardBytes(c.name) || 1;
+  return (first.filter(c => size(c) <= 1.01e12).sort((a, b) => size(b) - size(a))[0] || first.sort((a, b) => size(a) - size(b))[0]).id;
+}
+function recEnsure(l, e, p) {
   const r = l.rec || (l.rec = {});
-  if (r.mbps) return;
+  if (p && (!r.card || !ITEM.has(r.card))) { const ch = cardChoices(e, p.houseId); r.card = (ch.find(c => p.items[c.id]) || {}).id || pickCard(e, p.houseId); }
+  const prof = recProfile(e.it.name); if (!prof || r.mbps) return;
+  const last = (app.settings.recLast || {})[recKey(e.it.name)] || {};
   const c = prof.find(x => x.n === r.codec) || prof.find(x => x.n === last.codec) || prof[0];
   r.codec = c.n;
   const md = c.m.find(x => x[0] === r.mode) || c.m.find(x => x[0] === last.mode) || c.m[0];
   r.mode = md[0];
-  const fps = r.fps || last.fps || app.settings.recFps || 25;
-  const opts = REC_FPS.filter(f => f <= md[3]);
+  const fps = r.fps || last.fps || app.settings.recFps || 25, opts = REC_FPS.filter(f => f <= md[3]);
   r.fps = opts.includes(fps) ? fps : opts.filter(f => f <= fps).pop() || opts[0] || 24;
 }
-function recSheetHtml(p, id) {
+function mediaCamHtml(p, id) {
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return "";
-  recEnsure(l, e);
-  const r = recResult(l, e), choices = cardChoices(e, p.houseId), cc = l.cards || {}, off = !cc.id || cc.off;
-  const saved = (app.settings.cardPick || {})[e.it.id], isSaved = saved && saved.id === (off ? "" : cc.id) && (off || saved.n === cc.n);
-  const sizeUnknown = !off && r.card && !cardBytes(r.card);
-  const prof = r.prof, c = r.c, md = r.md;
-  const card = (x) => `<button type="button" class="chip${!off && cc.id === x.id ? " on" : ""}" data-act="rec-card" data-id="${esc(id)}" data-card="${esc(x.id)}" aria-pressed="${!off && cc.id === x.id}">${esc(shortCard(x.name))}</button>`;
-  const result = r.per ? `<div class="rs-res"><div><b class="num">${fmtDur(r.per)}</b><span>on one card</span></div>${r.n > 1 ? `<div><b class="num">${fmtDur(r.per * r.n)}</b><span>on ${r.n} cards</span></div>` : ""}<small class="num">about ${r.rate >= 1e8 ? Math.round(r.rate / 1e6) : (r.rate / 1e6).toFixed(1)} MB/s</small></div>`
-    : `<div class="rs-res empty"><span>${off ? "Pick a card to see how long it lasts." : sizeUnknown ? "Pick the card's size to see how long it lasts." : prof ? "Pick the format to see how long a card lasts." : "Type the data rate to see how long a card lasts."}</span></div>`;
-  const fmtPart = prof ? `<div class="field"><label for="rs-codec">Format</label><select id="rs-codec" data-rec="codec" data-id="${esc(id)}">${prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join("")}</select></div>
-      <div class="field"><label for="rs-mode">Resolution</label><select id="rs-mode" data-rec="mode" data-id="${esc(id)}">${(c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])}${/\d+ ?x ?\d+/.test(x[0]) ? "" : ` · ${x[1]}×${x[2]}`}</option>`).join("")}</select></div>
-      <div class="field"><span class="lbl" id="rs-fps-l">Frame rate</span><div class="chips fps" role="group" aria-labelledby="rs-fps-l">${REC_FPS.filter(f => !md || f <= md[3]).map(f => `<button type="button" class="chip${l.rec.fps === f ? " on" : ""}" data-act="rec-fps" data-id="${esc(id)}" data-fps="${f}" aria-pressed="${l.rec.fps === f}">${fpsLabel(f)}</button>`).join("")}</div></div>`
-    : `<div class="field"><label for="rs-mbps">Data rate (Mbps)</label><input id="rs-mbps" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${esc(id)}" value="${l.rec && l.rec.mbps ? l.rec.mbps : ""}"><span class="hint">This camera's formats aren't in the app yet. Take the rate from its menu or manual.</span></div>`;
-  return `<div class="sheet rec-sheet" id="recSheet" data-id="${esc(id)}">
-    <h3 class="plain">Cards and recording time</h3>
-    <p class="rs-cam">${esc(l.name)}</p>
+  recEnsure(l, e, p);
+  const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
+  const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || "");
+  const result = r.per ? `<div class="rs-res"><div><b>${fmtDur(r.per)}</b><span>on one card</span></div>${onList ? `<div><b>${fmtDur(r.per * onList)}</b><span>on the ${onList} on the list</span></div>` : ""}<small>about ${r.rate >= 1e8 ? Math.round(r.rate / 1e6) : (r.rate / 1e6).toFixed(1)} MB/s</small></div>`
+    : `<div class="rs-res empty"><span>${!card ? "Pick a card to see how long it lasts." : sizeUnknown ? "Pick the card's size to see how long it lasts." : r.prof ? "Pick the format to see how long a card lasts." : "Type the data rate to see how long a card lasts."}</span></div>`;
+  const fmtPart = r.prof ? `<div class="mc-fmt"><div class="field"><label for="rs-codec-${esc(id)}">Format</label><select id="rs-codec-${esc(id)}" data-rec="codec" data-id="${esc(id)}">${r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join("")}</select></div>
+      <div class="field"><label for="rs-mode-${esc(id)}">Resolution</label><select id="rs-mode-${esc(id)}" data-rec="mode" data-id="${esc(id)}">${(c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])} · ${x[1]}×${x[2]}</option>`).join("")}</select></div></div>
+      <div class="field"><span class="lbl" id="rs-fps-${esc(id)}">Frame rate</span><div class="chips fps" role="group" aria-labelledby="rs-fps-${esc(id)}">${REC_FPS.filter(f => !md || f <= md[3]).map(f => `<button type="button" class="chip" data-act="rec-fps" data-id="${esc(id)}" data-fps="${f}" aria-pressed="${l.rec.fps === f}">${fpsLabel(f)}</button>`).join("")}</div></div>`
+    : `<div class="field"><label for="rs-mbps-${esc(id)}">Data rate (Mbps)</label><input id="rs-mbps-${esc(id)}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${esc(id)}" value="${l.rec.mbps || ""}"><span class="hint">This camera's formats aren't in the app yet. Take the rate from its menu or manual.</span></div>`;
+  return `<div class="media-cam" id="mc-${esc(id)}">
+    <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
     ${result}
-    <fieldset class="rs-g"><legend>Cards</legend>
-      ${choices.length ? `<div class="chips">${choices.map(card).join("")}<button type="button" class="chip${off ? " on" : ""}" data-act="rec-card" data-id="${esc(id)}" data-card="" aria-pressed="${off}">No cards</button></div>` : `<p class="hint">${esc(houseById(p.houseId)?.name || "This house")}'s catalog has no ${esc((e.it.camera.media || [])[0] || "cards")} for this camera.</p>`}
-      ${sizeUnknown || cc.gb ? `<div class="field"><span class="lbl">Card size</span><div class="chips">${[64, 128, 256, 512, 1000, 2000].map(g => `<button type="button" class="chip${cc.gb === g ? " on" : ""}" data-act="rec-gb" data-id="${esc(id)}" data-gb="${g}">${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</button>`).join("")}</div></div>` : ""}
-      ${!off ? `<div class="rs-n"><span>For each camera</span><span class="stepper sm"><button type="button" data-act="rec-n" data-id="${esc(id)}" data-d="-1" aria-label="Fewer cards">−</button><b class="num">${cc.n}</b><button type="button" data-act="rec-n" data-id="${esc(id)}" data-d="1" aria-label="More cards">+</button></span></div>` : ""}
-      <label class="check"><input type="checkbox" data-rec="always" data-id="${esc(id)}" ${isSaved ? "checked" : ""}> Start every ${esc(shortName(e.it.name))} with ${off ? "no cards" : "these cards"}</label>
-    </fieldset>
-    <fieldset class="rs-g"><legend>Recording</legend>${fmtPart}</fieldset>
-    <p class="hint rs-note">From the camera makers' own figures. Real times run a little different with audio and the picture.</p>
-    <div class="modal-actions"><span class="grow"></span><button class="btn primary" type="button" data-act="modal-close">Done</button></div>
+    <div class="field"><span class="lbl">Card</span>${choices.length ? `<div class="chips wrap">${choices.map(x => `<button type="button" class="chip" data-act="rec-card" data-id="${esc(id)}" data-card="${esc(x.id)}" aria-pressed="${card === x.id}">${esc(shortCard(x.name))}${p.items[x.id] ? ` <span class="num">${lineQty(p.items[x.id])}</span>` : ""}</button>`).join("")}</div>` : `<p class="hint">${esc(houseById(p.houseId)?.name || "This house")}'s catalog has no ${esc((e.it.camera.media || [])[0] || "cards")} for this camera.</p>`}</div>
+    ${sizeUnknown ? `<div class="field"><span class="lbl">Card size</span><div class="chips wrap">${[64, 128, 256, 512, 1000, 2000].map(g => `<button type="button" class="chip" data-act="rec-gb" data-id="${esc(id)}" data-gb="${g}" aria-pressed="${l.rec.gb === g}">${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</button>`).join("")}</div></div>` : ""}
+    ${fmtPart}
+    ${card ? `<div class="mc-list"><span>On the list<small>${esc(shortCard(ITEM.get(card)?.it.name || ""))}</small></span><span class="stepper sm"><button type="button" data-act="mq" data-id="${esc(id)}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${esc(id)}" data-d="1" aria-label="One card more">+</button></span></div>` : ""}
   </div>`;
 }
-function recOpen(p, id) {
-  const l = p.items[id]; if (!l) return;
-  showModal(recSheetHtml(p, id));
-  const card = document.querySelector("#modal .modal-card"); if (card) card.scrollTop = 0;
-  document.querySelector("#recSheet h3")?.setAttribute("tabindex", "-1"); document.querySelector("#recSheet h3")?.focus({ preventScroll: true });
+function viewMedia(p, h) {
+  const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
+  return `<section class="pad media-tab">
+    <p class="hint mt-lead">How long each card records at the format you shoot. Add the cards to the list from here.</p>
+    ${cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><p>Add a camera from ${esc(h.name)}'s catalog, then work out its cards here.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
+    <p class="hint rs-note">From the camera makers' own figures. Real times run a little different with audio and the picture.</p>
+  </section>`;
 }
-/* a change in the sheet: save it on the camera, update the cards on the list, and redraw the sheet in place */
+/* a change in the Media tab: kept on the camera's line, and that camera's card redrawn in place */
 function recApply(p, id, fn) {
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return;
-  fn(l, e);
-  if (l.rec && l.rec.codec) { const k = recKey(e.it.name); if (k) { (app.settings.recLast || (app.settings.recLast = {}))[k] = { codec: l.rec.codec, mode: l.rec.mode, fps: l.rec.fps }; app.settings.recFps = l.rec.fps; } }
-  applyDefaults(p); touch(p); touchSettings();
-  const card = document.querySelector("#modal .modal-card"), y = card ? card.scrollTop : 0;
-  if (card) { card.innerHTML = recSheetHtml(p, id); card.scrollTop = y; }
-  const keep = window.scrollY; render(); window.scrollTo(0, keep);
+  recEnsure(l, e, p); fn(l, e);
+  if (l.rec && l.rec.codec) { const k = recKey(e.it.name); if (k) { (app.settings.recLast || (app.settings.recLast = {}))[k] = { codec: l.rec.codec, mode: l.rec.mode, fps: l.rec.fps }; app.settings.recFps = l.rec.fps; touchSettings(); } }
+  touch(p); mediaRedraw(p);
 }
-function recSaveDefault(l, e, on) {
-  const m = app.settings.cardPick || (app.settings.cardPick = {});
-  if (on) m[e.it.id] = l.cards && !l.cards.off && l.cards.id ? { id: l.cards.id, n: l.cards.n } : { id: "", n: 0 }; else delete m[e.it.id];
+function mediaRedraw(p) {
+  if (app.tab !== "media") return;
+  document.querySelectorAll(".media-cam").forEach(el => { const id = el.id.slice(3); const html = mediaCamHtml(p, id); if (html) el.outerHTML = html; });
+  refreshRows(p, []);
 }
 const SEC_CAT = { camera: "camera", lens: "lenses", filters: "filters", accessories: "camera_accessories" };
 const secTape = s => SEC_CAT[s.id] && (app.settings.catColors || {})[SEC_CAT[s.id]] ? catTape({ id: SEC_CAT[s.id] }) : `var(--sec-${s.custom ? "custom" : s.id}, var(--pal-slate))`;
@@ -3497,18 +3483,15 @@ document.addEventListener("click", e => {
     }
     case "remove": {
       const und = snapItems(p), name = p.items[id]?.name;
-      if (p.items[id]?.auto) for (const x of Object.values(p.items)) if (x.cards && x.cards.id === id) x.cards = { ...x.cards, off: true };
       delete p.items[id];
       if (app.editing === id) app.editing = null;
       applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable("Removed", name, und);
       break;
     }
-    case "rec-open": if (p) recOpen(p, id); break;
-    case "rec-card": if (p) recApply(p, id, (l, e) => { const c = b.dataset.card; l.cards = c ? { id: c, n: l.cards && l.cards.n > 0 ? l.cards.n : cardsPer() } : { ...(l.cards || { n: cardsPer() }), id: "", off: true }; if ((app.settings.cardPick || {})[e.it.id]) recSaveDefault(l, e, true); }); break;
-    case "rec-n": if (p) recApply(p, id, (l, e) => { if (!l.cards) return; l.cards.n = Math.max(1, Math.min(20, (l.cards.n || 0) + Number(b.dataset.d))); if ((app.settings.cardPick || {})[e.it.id]) recSaveDefault(l, e, true); }); break;
-    case "rec-gb": if (p) recApply(p, id, l => { if (l.cards) l.cards.gb = Number(b.dataset.gb); }); break;
-    case "rec-fps": if (p) recApply(p, id, l => { if (l.rec) l.rec.fps = Number(b.dataset.fps); }); break;
-    case "cper": app.settings.cardsPer = Math.max(1, Math.min(20, cardsPer() + Number(b.dataset.d))); touchSettings(); rerenderKeepScroll(); break;
+    case "rec-card": if (p) recApply(p, id, l => { l.rec.card = b.dataset.card; delete l.rec.gb; }); break;
+    case "rec-gb": if (p) recApply(p, id, l => { l.rec.gb = Number(b.dataset.gb); }); break;
+    case "rec-fps": if (p) recApply(p, id, l => { l.rec.fps = Number(b.dataset.fps); }); break;
+    case "mq": if (p) { const l = p.items[id], c = l && l.rec && l.rec.card; if (c) { const now = p.items[c] ? lineQty(p.items[c]) : 0; setQty(p, c, Math.max(0, now + Number(b.dataset.d))); closeModal(); mediaRedraw(p); } } break;
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
     case "edit-done": app.editing = null; rerenderKeepScroll(); break;
     case "rename-reset": { const l = p.items[id]; if (l && l.orig) { l.name = l.orig; touch(p); rerenderKeepScroll(); } break; }
@@ -3595,6 +3578,9 @@ document.addEventListener("click", e => {
     case "rinc": case "rdec": { const r = app.settings.rules.find(x => x.id === b.dataset.rid); if (r) { r.qty = Math.max(0, Math.min(99, r.qty + (act === "rinc" ? 1 : -1))); touchSettings(); rerenderKeepScroll(); } break; }
     case "rdel": app.settings.rules = app.settings.rules.filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
     case "rule-new": ruleDialog(); break;
+    case "pkg-add": ruleDialog(id); break;
+    case "pk-more": { const k = "add" + Date.now().toString(36); dd[k] = {}; dd.q[k] = 1; dd.adds.push(k); document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); document.getElementById("pk-" + k + "-c")?.focus(); break; }
+    case "pk-less": { dd.adds = dd.adds.filter(k => k !== b.dataset.k); delete dd[b.dataset.k]; document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); break; }
     case "clash-new": clashDialog(); break;
     case "clash-edit": clashDialog(b.dataset.rid); break;
     case "clash-del": app.settings.clashes = clashRules().filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
@@ -3684,17 +3670,15 @@ document.addEventListener("change", e => {
   if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
   if (t.dataset.rec && p) {
     const id = t.dataset.id, k = t.dataset.rec;
-    if (k === "always") { const l = p.items[id], e = ITEM.get(id); if (l && e) { recSaveDefault(l, e, t.checked); touchSettings(); } return; }
     recApply(p, id, (l, e) => {
-      if (k === "mbps") { const v = Math.max(0, Math.min(20000, parseFloat(t.value) || 0)); l.rec = v ? { mbps: v } : {}; return; }
+      if (k === "mbps") { const v = Math.max(0, Math.min(20000, parseFloat(t.value) || 0)); if (v) l.rec.mbps = v; else delete l.rec.mbps; return; }
       const prof = recProfile(e.it.name); if (!prof) return;
-      if (k === "codec") { const was = l.rec && l.rec.mode; l.rec = { codec: t.value, mode: was, fps: l.rec && l.rec.fps }; recEnsure(l, e); }
+      if (k === "codec") { l.rec.codec = t.value; recEnsure(l, e, p); }
       if (k === "mode") { l.rec.mode = t.value; const c = prof.find(x => x.n === l.rec.codec), md = c && c.m.find(x => x[0] === t.value); if (md && l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop(); }
     });
     return;
   }
   if (t.name === "helperOn" && t.type === "checkbox") { setHelper(t.checked); app.helperMissing = false; rerenderKeepScroll(); return; }
-  if (t.name === "autoCards" && t.type === "checkbox") { app.settings.autoCards = t.checked; touchSettings(); rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
   if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
   if (t.id === "f-u2same") { document.getElementById("u2Dates").hidden = t.checked; return; }
@@ -3703,8 +3687,16 @@ document.addEventListener("change", e => {
     ta.className = "nt-" + (f2.querySelector('input[name="notesSize"]:checked')?.value || "m") + (f2.elements.notesBold.checked ? " nt-b" : ""); return;
   }
   if (t.dataset.settitle) { app.settings.docTitle = t.value.trim().slice(0, 60); touchSettings(); toast("Title saved"); return; }
+  if (t.dataset.pkq) { dd.q[t.dataset.pkq] = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); return; }
+  if (t.dataset.pkmedia) {
+    const k = t.dataset.pkmedia, m = dd.media;
+    if (k === "on") { m.on = t.checked; document.getElementById("pk-media").innerHTML = pkgMediaHtml(); if (m.on) document.getElementById("pk-mqty")?.focus(); }
+    else if (k === "id") m.id = t.value; else m.qty = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1));
+    return;
+  }
   if (t.dataset.rdhouse) {
     dd.house = t.value; cx.a = []; cx.b = [];
+    if (dd.adds) { dd.adds.forEach(k => { dd[k] = {}; }); dd.media = { on: false, id: "", qty: 4 }; const ad = document.getElementById("pk-adds"); if (ad) ad.innerHTML = pkgAddsHtml(); const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
     ["when", "add", "ca", "cb", "cc"].forEach(k => { dd[k] = {}; const box = document.getElementById("pk-" + k); if (box) box.innerHTML = pickerHtml(k); });
     ["a", "b"].forEach(k => { const box = document.getElementById("cx-" + k); if (box) box.innerHTML = ""; });
     return;
@@ -3721,6 +3713,7 @@ document.addEventListener("change", e => {
       return;
     }
     if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); box.querySelector(t.dataset.pkc ? "[data-pks]" : "[data-pki]")?.focus(); }
+    if (k === "when") { const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
     return;
   }
   if (t.form && t.form.id === "meForm") {
@@ -3910,14 +3903,19 @@ document.addEventListener("submit", e => {
     return;
   }
   if (f.id === "ruleForm") {
-    const err = document.getElementById("rdErr"), qty = Math.max(1, Math.min(99, parseInt(f.elements.qty.value, 10) || 1));
-    const say = m => { err.textContent = m; err.hidden = false; };
-    if (!dd.when.id) return say("Choose the item you add.");
-    if (!dd.add.id) return say("Choose what comes with it.");
-    if (dd.when.id === dd.add.id) return say("Choose a different item to come with it.");
-    const ex = app.settings.rules.find(r => r.kind === "item" && r.when === dd.when.id && r.add === dd.add.id);
-    if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when: dd.when.id, add: dd.add.id, qty });
-    touchSettings(); closeModal(); rerenderKeepScroll(); toast("Default saved");
+    const err = document.getElementById("rdErr"), say = m => { err.textContent = m; err.hidden = false; };
+    const when = dd.when.id;
+    if (!when) return say("Choose the item you add.");
+    const items = [];
+    if (dd.media.on && dd.media.id) items.push([dd.media.id, dd.media.qty]);
+    for (const k of dd.adds) if (dd[k] && dd[k].id) items.push([dd[k].id, dd.q[k] || 1]);
+    if (!items.length) return say("Choose what comes with it.");
+    if (items.some(([id]) => id === when)) return say("Choose a different item to come with it.");
+    for (const [add, qty] of items) {
+      const ex = app.settings.rules.find(r => r.kind === "item" && r.when === when && r.add === add);
+      if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when, add, qty });
+    }
+    touchSettings(); closeModal(); rerenderKeepScroll(); toast(dd.fixed ? "Added to the package" : "Package saved");
     return;
   }
   const p = cur();
@@ -4276,7 +4274,7 @@ if (!Array.isArray(app.productions)) app.productions = [];
   if (!app.settings.mediaSeeded) { app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); }
   applyCatalog();
   const ui = lsGet(LS_UI, {}), recent = ui.at && Date.now() - ui.at < RESUME_MS;
-  if (recent && ui.view === "production" && app.productions.some(p => p.id === ui.pid)) { app.view = "production"; app.pid = ui.pid; app.tab = ["add", "fav", "list"].includes(ui.tab) ? ui.tab : "add"; }
+  if (recent && ui.view === "production" && app.productions.some(p => p.id === ui.pid)) { app.view = "production"; app.pid = ui.pid; app.tab = ["add", "fav", "list", "media"].includes(ui.tab) ? ui.tab : "add"; }
   else if (needsWelcome()) app.view = "welcome";
   sendAppBack(false);
 }
