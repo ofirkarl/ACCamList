@@ -960,6 +960,143 @@ function resolveBattery(r, houseId) {
   }
   return { id: "auto-" + flat(b.label), label: b.label };
 }
+/* ---------- cards and recording time ----------
+   Each camera on a list can carry its cards (l.cards = { id, n }: which card, how many for each camera) and the format it records
+   (l.rec = { codec, mode, fps }). From these, how long one card lasts and how long the camera's cards last together.
+   Where the numbers come from:
+   ARRI: ARRI's Formats & Data Rate Calculator (bytes per frame; Codex Compact Drive sizes as the camera sees them).
+   RED: RED's recording-time tool (14-bit raw ÷ REDCODE ratio, held to the camera's write speed, + 5%).
+   Sony X-OCN: bits per pixel from Sony's VENICE 2 record-time table. Sony XAVC-I/L: Sony's FX9 record-time table.
+   Sony XAVC S / HS: Sony's spec sheets (Mbps). Canon: Canon's spec sheets (Mbps at 25p).
+   Blackmagic RAW: Blackmagic's own calculator (12-bit ÷ ratio, + 4 KB a frame). ProRes: Apple's ProRes white paper.
+   DJI ProRes RAW: the middle of DJI's published range.
+   Codec kinds (t): B bytes a frame · bpp bits a pixel · pr Apple ProRes [HD, UHD] bits a pixel · braw ratio [low, high]
+   · red least REDCODE ratio · M25 / M24 Mbps at 25p / 23.98p, growing with the frame rate · Mfix [[up to fps, Mbps]] */
+const REC_ARRI = {"alexa35":[{"n":"ARRIRAW","t":"B","m":[["4.6K 3:2 Open Gate",4608,3164,75,23219804],["4.6K 16:9",4608,2592,75,19032748],["4K 16:9",4096,2304,120,15057612],["3.8K 16:9 → UHD",3840,2160,120,13243186],["4K 2:1",4096,2048,120,13394542],["3.3K 6:5",3328,2790,100,14814618],["3K 1:1",3072,3072,100,15057612]]},{"n":"ProRes 4444 XQ","t":"B","m":[["4.6K 3:2 OG",4608,3164,60,16417365],["4.6K 16:9 → 4K",4096,2304,75,9257057],["4K 16:9",4096,2304,100,10678869],["4K 16:9 → UHD",3840,2160,120,9400917],["4K 16:9 → 2K",2048,1152,120,2777685],["4K 16:9 → HD",1920,1080,120,2458197],["4K 2:1",4096,2048,120,8237328],["3.3K 6:5",3328,2790,75,10506837],["3.3K 6:5 → 3.8K 2.39:1 Ana. 2x",3840,1608,90,7037525],["3K 1:1",3072,3072,90,9257057],["3K 1:1 → 3.8K 2:1 Ana 2x",3840,1920,100,7248795],["2.7K 8:9 → UHD 16:9 Ana 2x",3840,2160,100,8144956],["2K 16:9 S16",2048,1152,120,2376710]]},{"n":"ProRes 4444","t":"B","m":[["4.6K 3:2 OG",4608,3164,60,10986069],["4.6K 16:9 → 4K",4096,2304,75,6201079],["4K 16:9",4096,2304,100,7164501],["4K 16:9 → UHD",3840,2160,120,6312533],["4K 16:9 → 2K",2048,1152,120,1897045],["4K 16:9 → HD",1920,1080,120,1688149],["4K 2:1",4096,2048,120,5520903],["3.3K 6:5",3328,2790,75,7049813],["3.3K 6:5 → 3.8K 2.39:1 Ana. 2x",3840,1608,90,4735573],["3K 1:1",3072,3072,90,6201079],["3K 1:1 → 3.8K 2:1 Ana 2x",3840,1920,100,4860852],["2.7K 8:9 → UHD 16:9 Ana 2x",3840,2160,100,5456809],["2K 16:9 S16",2048,1152,120,1612650]]},{"n":"ProRes 422 HQ","t":"B","m":[["4.6K 3:2 OG",4608,3164,60,7377493],["4.6K 16:9 → 4K",4096,2304,75,4160652],["4K 16:9",4096,2304,100,4825685],["4K 16:9 → UHD",3840,2160,120,4260437],["4K 16:9 → 2K",2048,1152,120,1315413],["4K 16:9 → HD",1920,1080,120,1172053],["4K 2:1",4096,2048,120,3708635],["3.3K 6:5",3328,2790,75,4751957],["3.3K 6:5 → 3.8K 2.39:1 Ana. 2x",3840,1608,90,3207765],["3K 1:1",3072,3072,90,4160652],["3K 1:1 → 3.8K 2:1 Ana 2x",3840,1920,100,3268685],["2.7K 8:9 → UHD 16:9 Ana 2x",3840,2160,100,3664739],["2K 16:9 S16",2048,1152,120,1100610]]}],"alexa35xtreme":[{"n":"ARRIRAW","t":"B","m":[["4.6K 3:2 Open Gate",4608,3164,80,23835221],["4.6K 16:9",4608,2592,80,19554901],["4K 16:9",4096,2304,125,15479381],["3.8K 16:9 → UHD",3840,2160,140,13623893],["3.8K 2.39:1",3840,1608,190,10179157],["3.3K 6:5",3328,2790,120,15233621],["2K 16:9 S16",2048,1152,330,3977813],["HD 16:9 S16",1920,1080,330,3514965]]},{"n":"ARRICORE","t":"B","m":[["4.6K 3:2 Open Gate",4608,3164,120,10728021],["4.6K 16:9",4608,2592,150,8802901],["4K 16:9",4096,2304,150,7201365],["3.8K 16:9 → UHD",3840,2160,150,6156885],["3.8K 2.39:1",3840,1608,240,4620885],["3.3K 6:5",3328,2790,120,7139925],["2K 16:9 S16",2048,1152,330,1909333],["HD 16:9 S16",1920,1080,330,1647189]]},{"n":"ProRes 4444 XQ","t":"B","m":[["4.6K 3:2 Open Gate",4608,3164,120,16417365],["4.6K 16:9",4608,2592,150,13476437],["4K 16:9",4096,2304,150,10678869],["4K 16:9 → UHD",3840,2160,150,9400917],["4K 16:9 → 2K",2048,1152,150,2777685],["4K 16:9 → HD",1920,1080,150,2458197],["3.8K 16:9 → UHD",3840,2160,150,9400917],["3.8K 2.39:1",3840,1608,240,7037525],["3.3K 6:5",3328,2790,120,10506837],["3.3K 6:5 → 3.8K 2.39:1 Ana. 2x",3840,1608,120,7037525],["2K 16:9 S16",2048,1152,330,2777685],["HD 16:9 S16",1920,1080,330,2458197]]},{"n":"ProRes 4444","t":"B","m":[["4.6K 3:2 Open Gate",4608,3164,120,10986069],["4.6K 16:9",4608,2592,150,9028181],["4K 16:9",4096,2304,150,7164501],["4K 16:9 → UHD",3840,2160,150,6312533],["4K 16:9 → 2K",2048,1152,150,1897045],["4K 16:9 → HD",1920,1080,150,1688149],["3.8K 16:9 → UHD",3840,2160,150,6312533],["3.8K 2.39:1",3840,1608,240,4735573],["3.3K 6:5",3328,2790,120,7049813],["3.3K 6:5 → 3.8K 2.39:1 Ana. 2x",3840,1608,120,4735573],["2K 16:9 S16",2048,1152,330,1897045],["HD 16:9 S16",1920,1080,330,1688149]]},{"n":"ProRes 422 HQ","t":"B","m":[["4.6K 3:2 Open Gate",4608,3164,120,7377493],["4.6K 16:9",4608,2592,150,6070869],["4K 16:9",4096,2304,150,4825685],["4K 16:9 → UHD",3840,2160,150,4260437],["4K 16:9 → 2K",2048,1152,150,1315413],["4K 16:9 → HD",1920,1080,150,1172053],["3.8K 16:9 → UHD",3840,2160,150,4260437],["3.8K 2.39:1",3840,1608,240,3207765],["3.3K 6:5",3328,2790,120,4751957],["3.3K 6:5 → 3.8K 2.39:1 Ana. 2x",3840,1608,120,3207765],["2K 16:9 S16",2048,1152,330,1315413],["HD 16:9 S16",1920,1080,330,1172053]]}],"miniLF":[{"n":"ARRIRAW","t":"B","m":[["4.5K 3:2 OG",4448,3096,40,20180724],["4.5K 2.39:1",4448,1856,60,12097704],["3.8K 16:9 → UHD",3840,2160,60,12153648],["2.8K 1:1",2880,2880,60,12153648],["3.4K 3:2",3424,2202,60,11049408]]},{"n":"ProRes 4444 XQ","t":"B","m":[["4.5K 3:2 OG",4448,3096,40,13624663],["4.5K 2.39:1",4448,1856,60,8144087],["4.3K 16:9 → UHD",3840,2160,48,8068513],["4.3K 16:9 → HD",1920,1080,75,2020097],["3.8K 16:9 → UHD",3840,2160,60,8068513],["3.8K 16:9 → 2K",2048,1152,90,2300098],["3.8K 16:9 → HD",1920,1080,90,2020097],["2.8K 1:1",2880,2880,60,7173513],["3.2K 16:9",3200,1800,75,5604200],["2.8K 4:3",2880,2160,75,6456296],["2.8K 16:9 → HD",1920,1080,100,2020097]]},{"n":"ProRes 4444","t":"B","m":[["4.5K 3:2 OG",4448,3096,40,9193857],["4.5K 2.39:1",4448,1856,60,5447426],["4.3K 16:9 → UHD",3840,2160,48,5380390],["4.3K 16:9 → HD",1920,1080,75,1348084],["3.8K 16:9 → UHD",3840,2160,60,5380390],["3.8K 16:9 → 2K",2048,1152,90,1536130],["3.8K 16:9 → HD",1920,1080,90,1348084],["2.8K 1:1",2880,2880,60,4783890],["3.2K 16:9",3200,1800,75,3740000],["2.8K 4:3",2880,2160,75,4308064],["2.8K 16:9 → HD",1920,1080,100,1348084]]},{"n":"ProRes 422 HQ","t":"B","m":[["4.5K 3:2 OG",4448,3096,40,6129238],["4.5K 2.39:1",4448,1856,60,3631617],["4.3K 16:9 → UHD",3840,2160,48,3588094],["4.3K 16:9 → HD",1920,1080,75,900079],["3.8K 16:9 → UHD",3840,2160,60,3588094],["3.8K 16:9 → 2K",2048,1152,90,1024057],["3.8K 16:9 → HD",1920,1080,90,900079],["2.8K 1:1",2880,2880,60,3828494],["3.2K 16:9",3200,1800,75,2496200],["2.8K 4:3",2880,2160,75,2872276],["2.8K 16:9 → HD",1920,1080,100,900079]]}],"mini":[{"n":"ARRIRAW","t":"B","m":[["16:9 2.8K",2880,1620,48,6999351],["Open Gate 3.4K",3424,2202,30,11311008],["Open Gate 3.4K → 2.8K",2880,2160,30,11311008],["Open Gate 3.4K → 1.9K",1920,2160,30,11311008],["Open Gate 3.4K → 2.5K",2560,2145,30,11311008]]},{"n":"ProRes 4444 XQ","t":"B","m":[["16:9 2.8K → HD",1920,1080,120,2322432],["16:9 1.6K → HD",1920,1080,120,2322432],["0.88:1 1.9K → HD",1920,1080,120,2322432],["16:9 2.8K → 2K",2048,1152,120,2642412],["1.19:1 2.5K → 2K",2048,858,120,1968046],["16:9 3.2K",3200,1800,30,6451200],["16:9 3.2K → UHD",3840,2160,30,9289728],["4:3 2.8K",2880,2160,50,6967296]]},{"n":"ProRes 4444","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,1548288],["16:9 1.6K → HD",1920,1080,200,1548288],["0.88:1 1.9K → HD",1920,1080,120,1548288],["16:9 2.8K → 2K",2048,1152,200,1761608],["1.19:1 2.5K → 2K",2048,858,120,1312031],["16:9 3.2K",3200,1800,60,4300800],["16:9 3.2K → UHD",3840,2160,60,6193152],["4:3 2.8K",2880,2160,50,4644864]]},{"n":"ProRes 422 HQ","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,1032192],["16:9 1.6K → HD",1920,1080,200,1032192],["0.88:1 1.9K → HD",1920,1080,120,1032192],["16:9 2.8K → 2K",2048,1152,200,1174405],["1.19:1 2.5K → 2K",2048,858,120,874687],["16:9 3.2K",3200,1800,60,2867200],["16:9 3.2K → UHD",3840,2160,60,4128768],["4:3 2.8K",2880,2160,50,3096576]]},{"n":"ProRes 422","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,688248],["16:9 1.6K → HD",1920,1080,200,688248],["0.88:1 1.9K → HD",1920,1080,120,688248],["16:9 2.8K → 2K",2048,1152,200,783073],["1.19:1 2.5K → 2K",2048,858,120,583226],["16:9 3.2K",3200,1800,60,1911800],["16:9 3.2K → UHD",3840,2160,60,2752992],["4:3 2.8K",2880,2160,50,2064744]]},{"n":"ProRes 422 LT","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,479232],["16:9 1.6K → HD",1920,1080,200,479232],["0.88:1 1.9K → HD",1920,1080,120,479232],["16:9 2.8K → 2K",2048,1152,200,545260],["1.19:1 2.5K → 2K",2048,858,120,406105],["16:9 3.2K",3200,1800,60,1331200],["16:9 3.2K → UHD",3840,2160,60,1916928],["4:3 2.8K",2880,2160,50,1437696]]}],"amira":[{"n":"ARRIRAW","t":"B","m":[["16:9 2.8K",2880,1620,48,6999351]]},{"n":"ProRes 4444 XQ","t":"B","m":[["16:9 2.8K → HD",1920,1080,120,2322432],["16:9 1.6K → HD",1920,1080,120,2322432],["16:9 2.8K → 2K",2048,1152,120,2642412],["16:9 3.2K",3200,1800,30,6451200],["16:9 3.2K → UHD",3840,2160,30,9289728]]},{"n":"ProRes 4444","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,1548288],["16:9 1.6K → HD",1920,1080,200,1548288],["16:9 2.8K → 2K",2048,1152,200,1761608],["16:9 3.2K",3200,1800,60,4300800],["16:9 3.2K → UHD",3840,2160,60,6193152]]},{"n":"ProRes 422 HQ","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,1032192],["16:9 1.6K → HD",1920,1080,200,1032192],["16:9 2.8K → 2K",2048,1152,200,1174405],["16:9 3.2K",3200,1800,60,2867200],["16:9 3.2K → UHD",3840,2160,60,4128768]]},{"n":"ProRes 422","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,688248],["16:9 1.6K → HD",1920,1080,200,688248],["16:9 2.8K → 2K",2048,1152,200,783073],["16:9 3.2K",3200,1800,60,1911800],["16:9 3.2K → UHD",3840,2160,60,2752992]]},{"n":"ProRes 422 LT","t":"B","m":[["16:9 2.8K → HD",1920,1080,200,479232],["16:9 1.6K → HD",1920,1080,200,479232],["16:9 2.8K → 2K",2048,1152,200,545260],["16:9 3.2K",3200,1800,60,1331200],["16:9 3.2K → UHD",3840,2160,60,1916928]]}],"alexaClassic":[{"n":"ProRes 4444 XQ","t":"B","m":[["16:9 → HD",1920,1080,60,2327557],["16:9 → 2K",2048,1152,60,2659333],["4:3 → 2K",2048,1536,48,3544069]]},{"n":"ProRes 4444","t":"B","m":[["16:9 → HD",1920,1080,60,1553413],["16:9 → 2K",2048,1152,60,1774597],["4:3 → 2K",2048,1536,48,2364421]]},{"n":"ProRes 422 HQ","t":"B","m":[["16:9 → HD",1920,1080,120,1037317],["16:9 → 2K",2048,1152,60,1184773],["4:3 → 2K",2048,1536,48,1577989]]},{"n":"ProRes 422","t":"B","m":[["16:9 → HD",1920,1080,120,693253],["16:9 → 2K",2048,1152,60,791557],["4:3 → 2K",2048,1536,48,1053701]]}]};
+const PR = { "ProRes 4444 XQ": [8.045, 6.4], "ProRes 4444": [5.31, 4.268], "ProRes 422 HQ": [3.54, 2.844], "ProRes 422": [2.365, 1.895], "ProRes 422 LT": [1.641, 1.319], "ProRes 422 Proxy": [0.724, 0.583] };
+const pr = (names, modes) => names.map(n => ({ n, t: "pr", v: PR[n], m: modes }));
+const XOCN = { "X-OCN XT": 4.6, "X-OCN ST": 3.16, "X-OCN LT": 1.83 };
+const xocn = (names, modes) => names.map(n => ({ n, t: "bpp", v: XOCN[n], m: modes }));
+const brawOf = (ratios, modes) => ratios.map(r => typeof r === "number" ? { n: `Blackmagic RAW ${r}:1`, t: "braw", v: [r, r], m: modes } : { n: `Blackmagic RAW ${r[0]}`, t: "braw", v: r[1], m: modes });
+const BRAW_Q = [["Q0", [4, 2]], ["Q1", [6, 2.5]], ["Q3", [9, 3.5]], ["Q5", [15, 6]]];
+const UHD = ["UHD", 3840, 2160], DCI = ["4K DCI", 4096, 2160], HD = ["HD", 1920, 1080];
+const m = (mode, fps, v) => v === undefined ? [mode[0], mode[1], mode[2], fps] : [mode[0], mode[1], mode[2], fps, v];
+/* Sony */
+const VENICE6K = [["6K 3:2", 6048, 4032, 30], ["6K 2.39:1", 6048, 2534, 90], ["6K 17:9", 6054, 3192, 72], ["5.7K 16:9", 5674, 3192, 72], ["4K 6:5", 4096, 3432, 75], ["4K 4:3", 4096, 3024, 75], ["4K 17:9", 4096, 2160, 110], ["3.8K 16:9", 3840, 2160, 110]];
+const VENICE8K = [["8.6K 3:2", 8640, 5760, 30], ["8.6K 17:9", 8640, 4556, 48], ["8.2K 17:9", 8192, 4320, 60], ["8.2K 2.39:1", 8192, 3432, 72], ["8.1K 16:9", 8100, 4556, 48], ["7.6K 16:9", 7680, 4320, 60], ["5.8K 6:5", 5792, 4854, 48], ["5.8K 4:3", 5792, 4276, 60], ["5.8K 17:9", 5792, 3056, 90], ["5.5K 2.39:1", 5480, 2296, 120], ["5.4K 16:9", 5434, 3056, 90]];
+const BURANO = [["8.6K 16:9", 8632, 4856, 30], ["8.6K 17:9", 8632, 4552, 30], ["6K 16:9", 6052, 3404, 60], ["6K 17:9", 6052, 3192, 60], ["5.8K 6:5", 5828, 4856, 30], ["S35 5.8K 16:9", 5760, 3240, 60], ["S35 5.8K 17:9", 5760, 3036, 60], ["S35 4.3K 4:3", 4256, 3192, 60], ["S35 4K 17:9", 4096, 2160, 120], ["3.8K 16:9", 3840, 2160, 120]];
+const XAVC_I = (fps4k, fpsHd) => [{ n: "XAVC-I 4K", t: "M24", m: [m(DCI, fps4k, 297), m(UHD, fps4k, 297)] }, { n: "XAVC-I HD", t: "M24", m: [m(HD, fpsHd, 123)] }];
+const XAVC_L = [{ n: "XAVC-L 4K", t: "Mfix", m: [m(UHD, 60, [[30, 128], [60, 186]])] }, { n: "XAVC-L HD", t: "Mfix", m: [m(HD, 60, [[60, 71]])] }];
+const XAVC_S = (si) => [...(si ? [{ n: "XAVC S-I 4K", t: "M24", m: [m(UHD, 60, 240), m(DCI, 60, 240)] }, { n: "XAVC S-I HD", t: "M24", m: [m(HD, 60, 89)] }] : []),
+  ...(si ? [{ n: "XAVC HS 4K", t: "Mfix", m: [m(UHD, 120, [[30, 100], [60, 200], [120, 280]])] }] : []),
+  { n: si ? "XAVC S 4K (4:2:2 10-bit)" : "XAVC S 4K", t: "Mfix", m: [m(UHD, si ? 120 : 30, si ? [[24, 100], [30, 140], [60, 200], [120, 280]] : [[30, 100]])] },
+  { n: "XAVC S HD", t: "Mfix", m: [m(HD, si ? 120 : 60, [[60, 50], [120, 100]])] }];
+/* RED */
+const KOMODO = [["6K 17:9", 6144, 3240, 40], ["6K 2.4:1", 6144, 2592, 50], ["6K 16:9", 5760, 3240, 40], ["6K 3:2", 4860, 3240, 40], ["6K 6:5", 3888, 3240, 40], ["5K 17:9", 5120, 2700, 48], ["4K 17:9", 4096, 2160, 60], ["4K 16:9", 3840, 2160, 60], ["2K 17:9", 2048, 1080, 120]];
+const HELIUM = [["8K FF", 8192, 4320, 60], ["8K 2.4:1", 8192, 3456, 75], ["8K 16:9", 7680, 4320, 60], ["8K 6:5", 5184, 4320, 60], ["7K FF", 7168, 3780, 60], ["6K FF", 6144, 3240, 75], ["6K 2.4:1", 6144, 2592, 100], ["6K 16:9", 5760, 3240, 75], ["5K FF", 5120, 2700, 96], ["4K FF", 4096, 2160, 120], ["4K 16:9", 3840, 2160, 120]];
+const DRAGON = [["6K FF", 6144, 3240, 75], ["6K 2.4:1", 6144, 2592, 100], ["6K 16:9", 5568, 3132, 75], ["6K 6:5", 3792, 3160, 75], ["5K FF", 5120, 2700, 96], ["5K 2.4:1", 5120, 2160, 120], ["4.5K FF", 4608, 2412, 100], ["4K FF", 4096, 2160, 120], ["4K 16:9", 3840, 2160, 120]];
+const redQ = (qs, modes) => qs.map(([n, q]) => ({ n: "REDCODE " + n, t: "red", v: q, m: modes }));
+/* Canon (Mbps at 25p) */
+const crm = (rows) => ["LT", "ST", "HQ"].map((q, i) => ({ n: "Cinema RAW Light " + q, t: "M25", m: rows.filter(r => r[4][i]).map(r => [r[0], r[1], r[2], i === 2 && r[5] ? r[5] : r[3], r[4][i]]) })).filter(c => c.m.length);
+const xfavc = (intra4k, intraHd, lgop4k, hevc) => [{ n: "XF-AVC Intra 4K", t: "M25", m: [m(DCI, 60, intra4k), m(UHD, 60, intra4k)] }, ...(intraHd ? [{ n: "XF-AVC Intra HD", t: "M25", m: [m(HD, 120, intraHd)] }] : []),
+  ...(lgop4k ? [{ n: "XF-AVC Long GOP 4K", t: "Mfix", m: [m(DCI, 60, lgop4k), m(UHD, 60, lgop4k)] }] : []), ...(hevc ? [{ n: "XF-HEVC S 4K", t: "Mfix", m: [m(DCI, 60, hevc), m(UHD, 60, hevc)] }] : [])];
+/* Blackmagic */
+const PYX6K = [["6K Open Gate", 6080, 4048, 36], ["6.5K anamorphic", 4864, 4048, 36], ["6K 16:9", 6144, 3388, 46], ["6K DCI", 6144, 3182, 48], ["6K 2.4:1", 6144, 2510, 60], ["Super 35 4K", 4512, 2826, 50], ["4K 16:9", 4128, 2320, 60], ["4K DCI", 4128, 2176, 60], ["Super 16", 2176, 1182, 100], ["HD", 1984, 1078, 120]];
+const URSA12K = [["12K 17:9", 12288, 6480, 60], ["12K 2.4:1", 12288, 5112, 75], ["8K 17:9", 8192, 4320, 110], ["6K Super 16", 6144, 3240, 120], ["4K Super 16", 4096, 2160, 220]];
+const PYX12K = [["12K Open Gate", 12288, 8040, 40], ["12K 17:9", 12288, 6480, 50], ["8K 17:9", 8192, 4320, 100], ["4K 17:9", 4096, 2160, 100]];
+const URSA46 = [["4.6K", 4608, 2592, 120], ["4.6K 2.4:1", 4608, 1920, 150], ["4K DCI", 4096, 2160, 150], ["UHD", 3840, 2160, 150], ["HD", 1920, 1080, 300]];
+const POCKET4K = [["4K DCI", 4096, 2160, 60], ["UHD", 3840, 2160, 60], ["2.8K 17:9", 2880, 1512, 80], ["HD", 1920, 1080, 120]];
+const POCKET6K = [["6K", 6144, 3456, 50], ["6K 2.4:1", 6144, 2560, 60], ["5.7K 17:9", 5744, 3024, 60], ["4K DCI", 4096, 2160, 60], ["2.8K 17:9", 2880, 1512, 120], ["HD", 1920, 1080, 120]];
+/* DJI Ronin 4D 6K: ProRes RAW at the middle of DJI's range */
+const R4D = [["6K 17:9", 6008, 3168, 60], ["C4K", 4096, 2160, 120], ["UHD", 3840, 2160, 120]];
+const REC = {
+  ...REC_ARRI,
+  venice: [...xocn(["X-OCN XT", "X-OCN ST", "X-OCN LT"], VENICE6K), ...pr(["ProRes 4444", "ProRes 422 HQ", "ProRes 422"], [HD]), { n: "XAVC-I Class 480 4K", t: "M24", m: [m(DCI, 60, 476), m(UHD, 60, 476)] }, ...XAVC_I(60, 120).slice(0, 1)],
+  venice2: [...xocn(["X-OCN XT", "X-OCN ST", "X-OCN LT"], VENICE8K), ...pr(["ProRes 4444", "ProRes 422 HQ"], [DCI, UHD, HD]), { n: "XAVC-I Class 480 4K", t: "M24", m: [m(DCI, 60, 476), m(UHD, 60, 476)] }, ...XAVC_I(60, 120).slice(0, 1)],
+  burano: [...xocn(["X-OCN ST", "X-OCN LT"], BURANO), ...XAVC_I(120, 240), ...XAVC_L],
+  fx9: [...XAVC_I(60, 180), ...XAVC_L], fx6: [...XAVC_I(120, 240), ...XAVC_L], fs7: [...XAVC_I(60, 180), ...XAVC_L],
+  fs5: [{ n: "XAVC-L 4K", t: "Mfix", m: [m(UHD, 30, [[30, 100]])] }, { n: "XAVC-L HD", t: "Mfix", m: [m(HD, 60, [[60, 50]])] }],
+  sonySI: XAVC_S(true), sonyS: XAVC_S(false),
+  komodo: redQ([["HQ", 2], ["MQ", 5], ["LQ", 8]], KOMODO),
+  helium: redQ([["3:1", 3], ["5:1", 5], ["8:1", 8], ["12:1", 12]], HELIUM),
+  dragon: redQ([["3:1", 3], ["5:1", 5], ["8:1", 8], ["12:1", 12]], DRAGON),
+  c400: [...crm([["FF 6K", 6000, 3164, 60, [576, 886, 1800], 30], ["S35 4.3K", 4368, 2304, 60, [306, 470, 954]], ["S16 2K", 2184, 1152, 120, [77, 118, 240]]]), ...xfavc(500, 125, [[30, 150], [60, 250]], [[30, 135], [60, 225]])],
+  c500: [...crm([["FF 5.9K", 5952, 3140, 60, [556, 871, 1770], 30], ["4:3 4.2K", 4192, 3140, 60, [400, 615, 1250], 30], ["6:5 3.8K", 3768, 3140, 60, [360, 553, 1350], 30], ["S35 4K", 4096, 2160, 60, [269, 414, 841]], ["S16 2K", 2048, 1080, 120, [69, 105, 213]]]), ...xfavc(410, 160, [[30, 160], [60, 260]])],
+  c80: [...crm([["FF 6K", 6000, 3164, 30, [576, 0, 0]], ["S35 4.3K", 4368, 2304, 60, [306, 470, 0]]]), ...xfavc(500, 125, [[30, 150], [60, 250]], [[30, 135], [60, 225]])],
+  c70: [...crm([["4K DCI", 4096, 2160, 60, [269, 414, 841]]]), ...xfavc(410, 160, [[30, 160], [60, 260]], [[30, 135], [60, 225]])],
+  c300ii: [{ n: "XF-AVC Intra 4K", t: "M25", m: [m(DCI, 30, 410), m(UHD, 30, 410)] }, { n: "XF-AVC Intra HD", t: "M25", m: [m(HD, 60, 160)] }, { n: "XF-AVC Long GOP HD", t: "Mfix", m: [m(HD, 60, [[60, 50]])] }],
+  c300: [{ n: "MPEG-2 HD 50 Mbps", t: "Mfix", m: [m(HD, 30, [[30, 50]])] }],
+  pyxis6k: brawOf([3, 5, 8, 12, ...BRAW_Q], PYX6K),
+  pyxis12k: brawOf([5, 8, 12, 18, ...BRAW_Q], PYX12K), ursa12k: brawOf([5, 8, 12, 18, ...BRAW_Q], URSA12K),
+  ursa46: [...brawOf([3, 5, 8, 12, ...BRAW_Q], URSA46), ...pr(["ProRes 4444 XQ", "ProRes 4444", "ProRes 422 HQ", "ProRes 422"], [m(DCI, 60), m(UHD, 60), m(HD, 120)])],
+  pocket4k: [...brawOf([3, 5, 8, 12, ...BRAW_Q], POCKET4K), ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"], [m(DCI, 60), m(UHD, 60), m(HD, 120)])],
+  pocket6k: [...brawOf([3, 5, 8, 12, ...BRAW_Q], POCKET6K), ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"], [m(DCI, 60), m(UHD, 60), m(HD, 120)])],
+  ronin4d: [{ n: "ProRes RAW HQ", t: "bpp", v: 4.0, m: R4D }, { n: "ProRes RAW", t: "bpp", v: 2.5, m: R4D }, ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"], R4D)]
+};
+/* which recording profile a camera from the catalog uses, by its name */
+const REC_OF = [[/alexa 35 (xtreme|extreme)/i, "alexa35xtreme"], [/alexa 35/i, "alexa35"], [/alexa mini lf/i, "miniLF"], [/alexa mini/i, "mini"], [/amira/i, "amira"], [/alexa (plus|ev|classic|xt\b)/i, "alexaClassic"],
+  [/venice 2/i, "venice2"], [/venice/i, "venice"], [/burano/i, "burano"], [/fx9/i, "fx9"], [/fx6/i, "fx6"], [/fs7/i, "fs7"], [/fs5/i, "fs5"],
+  [/fx3|fx30|fx2\b|a7s (mark )?iii|a7s3|a7 iv|a7iv/i, "sonySI"], [/a7s (mark )?ii\b|alpha a7s$|a7 (mark )?iii|alpha a7 mark iii/i, "sonyS"],
+  [/komodo/i, "komodo"], [/helium/i, "helium"], [/dragon/i, "dragon"],
+  [/c400/i, "c400"], [/c500 mark ii/i, "c500"], [/c80\b/i, "c80"], [/c70\b/i, "c70"], [/c300 mark ii/i, "c300ii"], [/c300\b/i, "c300"],
+  [/pyxis 6k/i, "pyxis6k"], [/pyxis 12k/i, "pyxis12k"], [/ursa mini pro 12k/i, "ursa12k"], [/ursa mini pro 4\.6k/i, "ursa46"], [/pocket cinema camera 4k/i, "pocket4k"], [/pocket cinema camera 6k/i, "pocket6k"],
+  [/ronin 4d/i, "ronin4d"]];
+const recProfile = name => { const hit = REC_OF.find(([re]) => re.test(name || "")); return hit ? REC[hit[1]] || null : null; };
+/* bytes a second for one codec and mode at a frame rate */
+function recRate(c, md, fps) {
+  const px = md[1] * md[2], v = md[4];
+  switch (c.t) {
+    case "B": return v * fps;
+    case "bpp": return px * c.v / 8 * fps;
+    case "pr": return px * (px <= 2.5e6 ? c.v[0] : c.v[1]) / 8 * fps;
+    case "braw": return ((px * 1.5 / c.v[0] + px * 1.5 / c.v[1]) / 2 + 4000) * fps + 288000;
+    case "red": { const raw = px * 14 / 8 * fps, out = /^REDCODE \d/.test(c.n) ? 300e6 : 280e6; return Math.min(raw / c.v, out) * 1.05; }
+    case "M25": return v * 1e6 / 8 * fps / 25;
+    case "M24": return v * 1e6 / 8 * fps / 23.976;
+    case "Mfix": { const band = v.find(b => fps <= b[0]) || v[v.length - 1]; return band[1] * 1e6 / 8; }
+  }
+  return 0;
+}
+/* how many bytes a card holds for footage: Codex drives as ARRI gives them, other cards about 94% of the size on the label */
+function cardBytes(name, gb) {
+  if (/codex compact/i.test(name || "")) return /2\s*TB|1920/i.test(name) ? 1875369984000 : 937687040000;
+  const g = gb || capGB(name) || (/AXS-?A?(\d{3,4})/i.exec(name || "") || [])[1] * 1 || (/(\d{2,4})\s*G\b/i.exec(name || "") || [])[1] * 1 || 0;
+  return g ? g * 1e9 * 0.94 : 0;
+}
+const REC_FPS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 72, 75, 90, 96, 100, 120, 150, 180, 200, 240];
+const fpsLabel = f => f === 23.976 ? "23.98" : String(f);
+function fmtDur(sec) { const mins = Math.floor(sec / 60); if (mins < 60) return `${mins} min`; const h = Math.floor(mins / 60), r = mins % 60; return r ? `${h} h ${r} min` : `${h} h`; }
+/* the cards that fit a camera, in its rental house: one of each card the camera takes */
+function cardChoices(e, houseId) {
+  const types = (e && e.it.camera && e.it.camera.media) || [], out = [];
+  for (const type of types) for (const [id, x] of ITEM) if (x.h.id === houseId && x.s.id === "media" && grpOf(x.it, x.s) === type) out.push({ id, name: x.it.name, type });
+  return out;
+}
+/* the card a camera starts with: the one saved for this camera, else a 1TB one (or the biggest under that) of its first card type */
+function defaultCard(e, houseId) {
+  const saved = (app.settings.cardPick || {})[e.it.id], choices = cardChoices(e, houseId);
+  if (saved && (ITEM.has(saved.id) || !saved.id)) return { id: saved.id || "", n: saved.n ?? cardsPer() };
+  if (!choices.length) return null;
+  const first = choices.filter(c => c.type === choices[0].type), size = c => cardBytes(c.name) || 1;
+  const pick = first.filter(c => size(c) <= 1.01e12).sort((a, b) => size(b) - size(a))[0] || first.sort((a, b) => size(a) - size(b))[0];
+  return { id: pick.id, n: cardsPer() };
+}
+const cardsPer = () => app.settings.cardsPer ?? 3;
+const autoCardsOn = () => app.settings.autoCards !== false;
+/* what a camera's cards hold at its recording format: per card and all together */
+function recResult(l, e) {
+  const prof = recProfile(e ? e.it.name : l.name), r = l.rec;
+  const card = l.cards && !l.cards.off && l.cards.id ? (ITEM.get(l.cards.id)?.it.name || "") : "";
+  const bytes = card ? cardBytes(card, l.cards.gb) : 0;
+  let rate = 0, c = null, md = null;
+  if (r && r.mbps) rate = r.mbps * 1e6 / 8;
+  else if (prof && r) {
+    c = prof.find(x => x.n === r.codec) || null; md = c && (c.m.find(x => x[0] === r.mode) || null);
+    if (md) rate = recRate(c, md, r.fps);
+  }
+  const per = rate && bytes ? bytes / rate : 0;
+  return { prof, c, md, rate, bytes, per, n: l.cards && !l.cards.off ? l.cards.n || 0 : 0, card };
+}
 function shortName(n) { return n.replace(/\s+(Digital Motion Picture Camera|Cinema Camera|Camera).*$/i, "").slice(0, 40); }
 /* what the defaults just added, for the notice: [{ label, qty, why }] */
 let lastAutoAdds = [];
@@ -970,6 +1107,12 @@ function applyDefaults(p) {
     const e = ITEM.get(id);
     const manual = lineQty(l) - (l.auto || 0);  // only what you added yourself sets off defaults, never what they added
     if (!e || manual <= 0) continue;
+    // the camera's own cards: the kind it takes, as many for each camera as set on it
+    const cc = l.cards, ce = cc && !cc.off && cc.id && cc.n > 0 ? ITEM.get(cc.id) : null;
+    if (ce) {
+      const w = want.get(cc.id) || { qty: 0, why: [], label: ce.it.name };
+      w.qty += manual * cc.n; w.why.push(`${cc.n} per ${shortName(e.it.name)}`); want.set(cc.id, w);
+    }
     for (const r of app.settings.rules) if ((r.kind === "item" || l.section === "camera") && ruleMatches(r, e)) {
       const t = resolveTarget(r, e, p.houseId);
       const w = want.get(t.id) || { qty: 0, why: [], label: t.label };
@@ -1184,6 +1327,8 @@ function setQty(p, id, qty, field) {
   if (!l) {
     if (qty === 0 || !ITEM.has(id)) return [];
     l = p.items[id] = lineFromCatalog(id);
+    const ce = ITEM.get(id);
+    if (autoCardsOn() && ce.it.camera && !ce.it.camera.film) { const dc = defaultCard(ce, p.houseId); if (dc && dc.id) l.cards = dc; }
     if (l.tx !== undefined) { l.sets = qty; l.tx = qty; l.rx = qty; }
     else l.qty = qty;
   } else if (field && l.tx !== undefined) {
@@ -1622,6 +1767,9 @@ function viewSettings() {
       ${canBuzz() ? `<label class="check"><input type="checkbox" name="haptics" ${app.settings.haptics === false ? "" : "checked"}> Vibrate lightly on taps</label>` : ""}</div>
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
     <div class="set-group"><h3>Defaults</h3>
+      <div class="cards-auto"><label class="check"><input type="checkbox" name="autoCards" ${autoCardsOn() ? "checked" : ""}> Add the right cards with each camera</label>
+        ${autoCardsOn() ? `<div class="rs-n"><span>Cards for each camera</span><span class="stepper sm"><button type="button" data-act="cper" data-d="-1" aria-label="Fewer cards">−</button><b class="num">${cardsPer()}</b><button type="button" data-act="cper" data-d="1" aria-label="More cards">+</button></span></div>` : ""}
+        <span class="hint">The card kind each camera takes, from its rental house. Change the card or how many on the camera's line in the list.</span></div>
       <p class="hint" style="margin:0">Pick an item and what comes with it. When you add that item to a list, these are added too and follow its quantity, and a notice tells you.</p>
       <div class="rules">${rules || `<p class="hint">No defaults yet.</p>`}</div>
       <div><button class="btn" type="button" data-act="rule-new">+ New default</button></div></div>
@@ -2477,9 +2625,91 @@ function lineHtml(p, id, l) {
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
       ${specs ? `<div class="l-meta">${specs}</div>` : ""}
       ${kids}
+      ${recStripHtml(p, id, l, e)}
       <div class="l-bottom">${qtys}${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}</div>
       ${editor}
     </li>`;
+}
+/* the camera's cards and recording time, under its line on the list: a tap opens the sheet to set them */
+const CARD_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M10 3v4M13 3v4M16 4v3"/></svg>`;
+const CLOCK_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+const hasRec = e => !!(e && e.it.camera && !e.it.camera.film && ((e.it.camera.media || []).length || recProfile(e.it.name)));
+const shortCard = n => String(n || "").replace(/\b(Memory Card|Card|Memory)\b/gi, "").replace(/\s{2,}/g, " ").trim();
+function recStripHtml(p, id, l, e) {
+  if (!hasRec(e)) return "";
+  const r = recResult(l, e), on = l.cards && !l.cards.off && r.card;
+  const fmt = l.rec && (l.rec.mbps ? `${l.rec.mbps} Mbps` : l.rec.codec ? `${l.rec.codec} · ${l.rec.mode} · ${fpsLabel(l.rec.fps)} fps` : "");
+  const time = r.per ? `${fmtDur(r.per)} a card${r.n > 1 ? ` · ${fmtDur(r.per * r.n)} on ${r.n}` : ""}` : "";
+  const media = ((e.it.camera.media || [])[0]) || "";
+  return `<button class="rec-strip" type="button" data-act="rec-open" data-id="${esc(id)}" aria-label="Cards and recording time for ${esc(l.name)}">
+    <span class="rs-a">${CARD_ICON}${on ? `<span><b class="num">${r.n}×</b> ${esc(shortCard(r.card))}</span>` : `<span>${media ? esc(media) : "Cards"}</span>`}</span>
+    <span class="rs-b">${CLOCK_ICON}${fmt ? `<span>${esc(fmt)}</span>` : `<span class="rs-set">Recording time</span>`}</span>
+    ${time ? `<span class="rs-t">${esc(time)}</span>` : ""}
+  </button>`;
+}
+/* the sheet: the cards, the format, the resolution and the frame rate, and what they come to */
+const recKey = name => (REC_OF.find(([re]) => re.test(name || "")) || [])[1] || "";
+function recEnsure(l, e) {
+  const prof = recProfile(e.it.name); if (!prof) return;
+  const last = (app.settings.recLast || {})[recKey(e.it.name)] || {};
+  const r = l.rec || (l.rec = {});
+  if (r.mbps) return;
+  const c = prof.find(x => x.n === r.codec) || prof.find(x => x.n === last.codec) || prof[0];
+  r.codec = c.n;
+  const md = c.m.find(x => x[0] === r.mode) || c.m.find(x => x[0] === last.mode) || c.m[0];
+  r.mode = md[0];
+  const fps = r.fps || last.fps || app.settings.recFps || 25;
+  const opts = REC_FPS.filter(f => f <= md[3]);
+  r.fps = opts.includes(fps) ? fps : opts.filter(f => f <= fps).pop() || opts[0] || 24;
+}
+function recSheetHtml(p, id) {
+  const l = p.items[id], e = ITEM.get(id); if (!l || !e) return "";
+  recEnsure(l, e);
+  const r = recResult(l, e), choices = cardChoices(e, p.houseId), cc = l.cards || {}, off = !cc.id || cc.off;
+  const saved = (app.settings.cardPick || {})[e.it.id], isSaved = saved && saved.id === (off ? "" : cc.id) && (off || saved.n === cc.n);
+  const sizeUnknown = !off && r.card && !cardBytes(r.card);
+  const prof = r.prof, c = r.c, md = r.md;
+  const card = (x) => `<button type="button" class="chip${!off && cc.id === x.id ? " on" : ""}" data-act="rec-card" data-id="${esc(id)}" data-card="${esc(x.id)}" aria-pressed="${!off && cc.id === x.id}">${esc(shortCard(x.name))}</button>`;
+  const result = r.per ? `<div class="rs-res"><div><b class="num">${fmtDur(r.per)}</b><span>on one card</span></div>${r.n > 1 ? `<div><b class="num">${fmtDur(r.per * r.n)}</b><span>on ${r.n} cards</span></div>` : ""}<small class="num">about ${r.rate >= 1e8 ? Math.round(r.rate / 1e6) : (r.rate / 1e6).toFixed(1)} MB/s</small></div>`
+    : `<div class="rs-res empty"><span>${off ? "Pick a card to see how long it lasts." : sizeUnknown ? "Pick the card's size to see how long it lasts." : prof ? "Pick the format to see how long a card lasts." : "Type the data rate to see how long a card lasts."}</span></div>`;
+  const fmtPart = prof ? `<div class="field"><label for="rs-codec">Format</label><select id="rs-codec" data-rec="codec" data-id="${esc(id)}">${prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join("")}</select></div>
+      <div class="field"><label for="rs-mode">Resolution</label><select id="rs-mode" data-rec="mode" data-id="${esc(id)}">${(c ? c.m : []).map(x => `<option value="${esc(x[0])}" ${x === md ? "selected" : ""}>${esc(x[0])}${/\d+ ?x ?\d+/.test(x[0]) ? "" : ` · ${x[1]}×${x[2]}`}</option>`).join("")}</select></div>
+      <div class="field"><span class="lbl" id="rs-fps-l">Frame rate</span><div class="chips fps" role="group" aria-labelledby="rs-fps-l">${REC_FPS.filter(f => !md || f <= md[3]).map(f => `<button type="button" class="chip${l.rec.fps === f ? " on" : ""}" data-act="rec-fps" data-id="${esc(id)}" data-fps="${f}" aria-pressed="${l.rec.fps === f}">${fpsLabel(f)}</button>`).join("")}</div></div>`
+    : `<div class="field"><label for="rs-mbps">Data rate (Mbps)</label><input id="rs-mbps" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${esc(id)}" value="${l.rec && l.rec.mbps ? l.rec.mbps : ""}"><span class="hint">This camera's formats aren't in the app yet. Take the rate from its menu or manual.</span></div>`;
+  return `<div class="sheet rec-sheet" id="recSheet" data-id="${esc(id)}">
+    <h3 class="plain">Cards and recording time</h3>
+    <p class="rs-cam">${esc(l.name)}</p>
+    ${result}
+    <fieldset class="rs-g"><legend>Cards</legend>
+      ${choices.length ? `<div class="chips">${choices.map(card).join("")}<button type="button" class="chip${off ? " on" : ""}" data-act="rec-card" data-id="${esc(id)}" data-card="" aria-pressed="${off}">No cards</button></div>` : `<p class="hint">${esc(houseById(p.houseId)?.name || "This house")}'s catalog has no ${esc((e.it.camera.media || [])[0] || "cards")} for this camera.</p>`}
+      ${sizeUnknown || cc.gb ? `<div class="field"><span class="lbl">Card size</span><div class="chips">${[64, 128, 256, 512, 1000, 2000].map(g => `<button type="button" class="chip${cc.gb === g ? " on" : ""}" data-act="rec-gb" data-id="${esc(id)}" data-gb="${g}">${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</button>`).join("")}</div></div>` : ""}
+      ${!off ? `<div class="rs-n"><span>For each camera</span><span class="stepper sm"><button type="button" data-act="rec-n" data-id="${esc(id)}" data-d="-1" aria-label="Fewer cards">−</button><b class="num">${cc.n}</b><button type="button" data-act="rec-n" data-id="${esc(id)}" data-d="1" aria-label="More cards">+</button></span></div>` : ""}
+      <label class="check"><input type="checkbox" data-rec="always" data-id="${esc(id)}" ${isSaved ? "checked" : ""}> Start every ${esc(shortName(e.it.name))} with ${off ? "no cards" : "these cards"}</label>
+    </fieldset>
+    <fieldset class="rs-g"><legend>Recording</legend>${fmtPart}</fieldset>
+    <p class="hint rs-note">From the camera makers' own figures. Real times run a little different with audio and the picture.</p>
+    <div class="modal-actions"><span class="grow"></span><button class="btn primary" type="button" data-act="modal-close">Done</button></div>
+  </div>`;
+}
+function recOpen(p, id) {
+  const l = p.items[id]; if (!l) return;
+  showModal(recSheetHtml(p, id));
+  const card = document.querySelector("#modal .modal-card"); if (card) card.scrollTop = 0;
+  document.querySelector("#recSheet h3")?.setAttribute("tabindex", "-1"); document.querySelector("#recSheet h3")?.focus({ preventScroll: true });
+}
+/* a change in the sheet: save it on the camera, update the cards on the list, and redraw the sheet in place */
+function recApply(p, id, fn) {
+  const l = p.items[id], e = ITEM.get(id); if (!l || !e) return;
+  fn(l, e);
+  if (l.rec && l.rec.codec) { const k = recKey(e.it.name); if (k) { (app.settings.recLast || (app.settings.recLast = {}))[k] = { codec: l.rec.codec, mode: l.rec.mode, fps: l.rec.fps }; app.settings.recFps = l.rec.fps; } }
+  applyDefaults(p); touch(p); touchSettings();
+  const card = document.querySelector("#modal .modal-card"), y = card ? card.scrollTop : 0;
+  if (card) { card.innerHTML = recSheetHtml(p, id); card.scrollTop = y; }
+  const keep = window.scrollY; render(); window.scrollTo(0, keep);
+}
+function recSaveDefault(l, e, on) {
+  const m = app.settings.cardPick || (app.settings.cardPick = {});
+  if (on) m[e.it.id] = l.cards && !l.cards.off && l.cards.id ? { id: l.cards.id, n: l.cards.n } : { id: "", n: 0 }; else delete m[e.it.id];
 }
 const SEC_CAT = { camera: "camera", lens: "lenses", filters: "filters", accessories: "camera_accessories" };
 const secTape = s => SEC_CAT[s.id] && (app.settings.catColors || {})[SEC_CAT[s.id]] ? catTape({ id: SEC_CAT[s.id] }) : `var(--sec-${s.custom ? "custom" : s.id}, var(--pal-slate))`;
@@ -2885,6 +3115,19 @@ const SEND_DEFAULT = { subject: "Camera list – {production}", message: "Hi,\n\
 const sendFill = (t, p) => String(t || "").replace(/\{production\}/g, p.name || "the production").replace(/\{ac\}/g, p.ac || "").replace(/\s+$/, "");
 const sendUnfill = (t, p) => { let s = String(t || ""); if (p.name && p.name.length > 1) s = s.split(p.name).join("{production}"); if (p.ac && p.ac.length > 1) s = s.split(p.ac).join("{ac}"); return s; };
 const sendJob = { key: "", blob: null, wait: null };
+/* a file, once built, is kept while the list stays the same: saving or sending it again uses the same file straight away */
+const fileCache = new Map();
+const fileKey = (p, fmt) => [p.id, fmt, docSigOf(p), docVer(p), skuOn(), layoutOf(), docTitle(p)].join(":");
+const fileReady = (p, fmt) => fileCache.has(fileKey(p, fmt)) && fileCache.get(fileKey(p, fmt)).done;
+function getFile(p, fmt) {
+  const k = fileKey(p, fmt), hit = fileCache.get(k);
+  if (hit) return hit.job;
+  const e = { done: false, job: null };
+  e.job = (fmt === "pdf" ? buildPdf(p) : buildDocx(p)).then(b => { e.done = true; return b; }).catch(err => { fileCache.delete(k); throw err; });
+  fileCache.set(k, e);
+  while (fileCache.size > 6) fileCache.delete(fileCache.keys().next().value);
+  return e.job;
+}
 function sendDialog(p) {
   const s = { ...SEND_DEFAULT, ...(app.settings.send || {}) };
   showModal(`<form class="form dialog" id="sendForm" autocomplete="off">
@@ -2915,14 +3158,14 @@ function sendHowText(fmt) {
 }
 /* the file is built as soon as the dialog opens, so tapping Send shares it straight away (phones only open the share menu right after a tap) */
 function sendPrep(p, fmt) {
-  const key = p.id + ":" + p.updatedAt + ":" + fmt + ":" + skuOn() + ":" + layoutOf();
+  const key = fileKey(p, fmt);
   const how = document.getElementById("sendHow"); if (how) how.textContent = sendHowText(fmt);
   const go = document.getElementById("sendGo");
   const ready = () => { const g = document.getElementById("sendGo"); if (g && sendJob.key === key) { g.disabled = false; g.textContent = sendLabel(fmt); } };
   if (sendJob.key === key && sendJob.blob) { ready(); return; }
   if (go) { go.disabled = true; go.textContent = fmt === "pdf" ? "Preparing the PDF…" : "Preparing…"; }
   sendJob.key = key; sendJob.blob = null;
-  sendJob.wait = (fmt === "pdf" ? buildPdf(p) : buildDocx(p)).then(b => { if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
+  sendJob.wait = getFile(p, fmt).then(b => { if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
     .catch(() => { if (sendJob.key === key) { sendJob.key = ""; const g = document.getElementById("sendGo"); if (g) g.textContent = "Couldn't build the file"; } });
 }
 const sendLabel = fmt => canShareKind(fmt) ? "Send…" : isTouch() ? "Save & email" : "Save file";
@@ -3226,11 +3469,19 @@ document.addEventListener("click", e => {
       break;
     }
     case "remove": {
-      const und = snapItems(p), name = p.items[id]?.name; delete p.items[id];
+      const und = snapItems(p), name = p.items[id]?.name;
+      if (p.items[id]?.auto) for (const x of Object.values(p.items)) if (x.cards && x.cards.id === id) x.cards = { ...x.cards, off: true };
+      delete p.items[id];
       if (app.editing === id) app.editing = null;
       applyDefaults(p); clashSettle(p); touch(p); rerenderKeepScroll(); undoable("Removed", name, und);
       break;
     }
+    case "rec-open": if (p) recOpen(p, id); break;
+    case "rec-card": if (p) recApply(p, id, (l, e) => { const c = b.dataset.card; l.cards = c ? { id: c, n: l.cards && l.cards.n > 0 ? l.cards.n : cardsPer() } : { ...(l.cards || { n: cardsPer() }), id: "", off: true }; if ((app.settings.cardPick || {})[e.it.id]) recSaveDefault(l, e, true); }); break;
+    case "rec-n": if (p) recApply(p, id, (l, e) => { if (!l.cards) return; l.cards.n = Math.max(1, Math.min(20, (l.cards.n || 0) + Number(b.dataset.d))); if ((app.settings.cardPick || {})[e.it.id]) recSaveDefault(l, e, true); }); break;
+    case "rec-gb": if (p) recApply(p, id, l => { if (l.cards) l.cards.gb = Number(b.dataset.gb); }); break;
+    case "rec-fps": if (p) recApply(p, id, l => { if (l.rec) l.rec.fps = Number(b.dataset.fps); }); break;
+    case "cper": app.settings.cardsPer = Math.max(1, Math.min(20, cardsPer() + Number(b.dataset.d))); touchSettings(); rerenderKeepScroll(); break;
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
     case "edit-done": app.editing = null; rerenderKeepScroll(); break;
     case "rename-reset": { const l = p.items[id]; if (l && l.orig) { l.name = l.orig; touch(p); rerenderKeepScroll(); } break; }
@@ -3350,9 +3601,9 @@ document.addEventListener("click", e => {
     }
     case "notice-close": { const n = document.getElementById("notice"); if (n) { n.classList.remove("in"); n.hidden = true; } break; }
     /* exports */
-    case "export-docx": buildDocx(p).then(blob => saveFile(fileBase(p) + ".docx", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The Word file couldn't be built. Use PDF or Text.")); break;
+    case "export-docx": getFile(p, "docx").then(blob => saveFile(fileBase(p) + ".docx", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The Word file couldn't be built. Use PDF or Text.")); break;
     case "export-csv": saveFile(fileBase(p) + ".csv", csvText(p)); break;
-    case "export-pdf": toast("Building the PDF…"); buildPdf(p).then(blob => saveFile(fileBase(p) + ".pdf", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The PDF couldn't be built here. Use Word or Text.")); break;
+    case "export-pdf": if (!fileReady(p, "pdf")) toast("Building the PDF…"); getFile(p, "pdf").then(blob => saveFile(fileBase(p) + ".pdf", blob)).then(ok => { if (ok) savedVer(p); }).catch(() => toast("The PDF couldn't be built here. Use Word or Text.")); break;
     case "copy": copyText(listText(p), () => { commitVer(p); toast(`List copied · version ${p.docVer}`); }); break;
     case "export-txt": saveFile(fileBase(p) + ".txt", listText(p)).then(ok => { if (ok) savedVer(p); }); break;
     case "preview": openPreview(p); break;
@@ -3404,6 +3655,18 @@ document.addEventListener("change", e => {
   }
   if (t.dataset.rqty) { const r = app.settings.rules.find(x => x.id === t.dataset.rqty); if (r) { r.qty = Math.max(0, Math.min(99, parseInt(t.value, 10) || 0)); touchSettings(); } return; }
   if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
+  if (t.dataset.rec && p) {
+    const id = t.dataset.id, k = t.dataset.rec;
+    if (k === "always") { const l = p.items[id], e = ITEM.get(id); if (l && e) { recSaveDefault(l, e, t.checked); touchSettings(); } return; }
+    recApply(p, id, (l, e) => {
+      if (k === "mbps") { const v = Math.max(0, Math.min(20000, parseFloat(t.value) || 0)); l.rec = v ? { mbps: v } : {}; return; }
+      const prof = recProfile(e.it.name); if (!prof) return;
+      if (k === "codec") { const was = l.rec && l.rec.mode; l.rec = { codec: t.value, mode: was, fps: l.rec && l.rec.fps }; recEnsure(l, e); }
+      if (k === "mode") { l.rec.mode = t.value; const c = prof.find(x => x.n === l.rec.codec), md = c && c.m.find(x => x[0] === t.value); if (md && l.rec.fps > md[3]) l.rec.fps = REC_FPS.filter(f => f <= md[3]).pop(); }
+    });
+    return;
+  }
+  if (t.name === "autoCards" && t.type === "checkbox") { app.settings.autoCards = t.checked; touchSettings(); rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
   if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
   if (t.id === "f-u2same") { document.getElementById("u2Dates").hidden = t.checked; return; }

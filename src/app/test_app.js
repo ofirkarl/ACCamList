@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { getUndo: () => undoFn, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
+;return { getUndo: () => undoFn, REC, recRate, recResult, recProfile, cardBytes, defaultCard, recSheetHtml, recStripHtml, recEnsure, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -28,6 +28,7 @@ A.app.settings.rules = [
 const find = (house, re) => { for (const [id, e] of A.ITEM) if (e.h.id === house && re.test(e.it.name)) return id; throw new Error("not found " + re); };
 const ok = (cond, msg) => { console.log((cond ? "PASS " : "FAIL ") + msg); if (!cond) process.exitCode = 1; };
 
+A.app.settings.autoCards = false;  // the camera-cards default is tested on its own, at the end
 // --- default batteries
 const p = A.newProduction({ name: "Mizrahi", company: "Keshet", houseId: "utopia", dp: "Damian Tsatskin", ac: "Ofir Karlstadt", acPhone: "0542405010", prep: "2026-03-16", shootStart: "2026-03-17", shootEnd: "2026-03-17" });
 A.app.productions.push(p); A.app.pid = p.id;
@@ -590,3 +591,43 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const hp = A.newProduction({ name: "home card", houseId: "fitussi", prep: "2099-01-01" }); A.app.productions.push(hp);
   ok(/class="pc-status soon">Prep in \d+ days</.test(A.viewHome()) && /class="pc-house" data-house="fitussi">/.test(A.viewHome()) && /Productions <span class="num">1</.test(A.viewHome()), "a production card: its status and its rental house's color");
   A.app.settings = keep.s; A.app.productions = keep.p; A.app.view = keep.v; }
+
+// --- a camera's cards and recording time
+{ const keepRules = A.app.settings.rules; A.app.settings.rules = [];  // only the cards, no other defaults
+  A.app.settings.autoCards = true; A.app.settings.cardsPer = 3; delete A.app.settings.cardPick;
+  const pc = A.newProduction({ name: "Cards", houseId: "utopia" }); A.app.productions.push(pc);
+  const a35 = find("utopia", /^ARRI Alexa 35$/), cdx1 = find("utopia", /Codex Compact Drive 1TB/), cdx2 = find("utopia", /Codex Compact Drive 2TB/);
+  A.setQty(pc, a35, 2);
+  ok(pc.items[a35].cards && pc.items[a35].cards.id === cdx1 && pc.items[cdx1] && pc.items[cdx1].qty === 6, `2 Alexa 35 -> 6x Codex 1TB (${pc.items[cdx1]?.qty})`);
+  const l = pc.items[a35], e = A.ITEM.get(a35);
+  l.rec = { codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
+  let r = A.recResult(l, e);
+  ok(Math.floor(r.per / 60) === 28 && r.n === 3, `ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min (${Math.floor(r.per / 60)})`);
+  l.cards = { id: cdx2, n: 2 }; A.applyDefaults(pc);
+  ok(!pc.items[cdx1] && pc.items[cdx2].qty === 4 && Math.floor(A.recResult(l, e).per / 60) === 56, "switching to 2TB drives, 2 a camera: 4 on the list, 56 min each");
+  ok(/rec-strip/.test(A.recStripHtml(pc, a35, l, e)) && /2×<\/b> ARRI Codex Compact Drive 2TB/.test(A.recStripHtml(pc, a35, l, e)) && /56 min a card · 1 h 52 min on 2/.test(A.recStripHtml(pc, a35, l, e)), "the camera's line shows its cards and how long they last");
+  ok(/Cards and recording time/.test(A.recSheetHtml(pc, a35)) && /data-act="rec-fps"/.test(A.recSheetHtml(pc, a35)) && /on 2 cards/.test(A.recSheetHtml(pc, a35)), "the sheet: cards, format, frame rate, and the result");
+  const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
+  ok(Math.floor(A.recResult(ll, A.ITEM.get(lf)).per / 60) === 121, "Mini LF ProRes 4444 UHD 24 fps: 2 h 1 min on 1TB, as ARRI's sheet says");
+  const v2 = find("utopia", /^Sony Venice 2/), axs = find("utopia", /1TB AXS S66/);
+  A.setQty(pc, v2, 1); const lv = pc.items[v2]; lv.cards = { id: axs, n: 3 }; lv.rec = { codec: "X-OCN LT", mode: "8.6K 3:2", fps: 24 };
+  const mv = Math.floor(A.recResult(lv, A.ITEM.get(v2)).per / 60);
+  ok(mv >= 57 && mv <= 58, `VENICE 2 X-OCN LT 8.6K 3:2 24 fps on AXS 1TB: about 58 min, as Sony's table (${mv})`);
+  const fx3 = find("utopia", /^Sony ILME-FX3$/); A.setQty(pc, fx3, 1);
+  ok(pc.items[fx3].cards && /CFexpress Type A/.test(A.ITEM.get(pc.items[fx3].cards.id).it.name), "an FX3 starts with CFexpress Type A cards");
+  const film = find("utopia", /Arriflex 416/); A.setQty(pc, film, 1); ok(!pc.items[film].cards, "a film camera gets no cards");
+  const old = A.newProduction({ name: "Old", houseId: "utopia" }); A.app.productions.push(old);
+  A.app.settings.autoCards = false; A.setQty(old, a35, 1); ok(!old.items[a35].cards && !old.items[cdx1], "with cards switched off, a camera comes alone");
+  A.app.settings.autoCards = true;
+  // a camera with no formats in the app: the data rate typed in
+  const gopro = find("utopia", /GoPro HERO13/); A.setQty(pc, gopro, 1); const lg = pc.items[gopro]; lg.rec = { mbps: 120 };
+  const rg = A.recResult(lg, A.ITEM.get(gopro)); ok(rg.card && Math.floor(rg.per / 60) === Math.floor(A.cardBytes(rg.card) / (120e6 / 8) / 60), "a typed data rate gives the card time too");
+  ok(/Data rate \(Mbps\)/.test(A.recSheetHtml(pc, gopro)), "...and the sheet asks for it");
+  A.app.settings.autoCards = false; A.app.settings.rules = keepRules; }
+
+// --- a file once built is used again while the list stays the same
+{ const pf2 = A.newProduction({ name: "File cache", houseId: "utopia" }); A.app.productions.push(pf2);
+  A.setQty(pf2, find("utopia", /^Sony ILME-FX3$/), 1);
+  const k1 = A.fileKey(pf2, "docx"); A.commitVer(pf2); const k2 = A.fileKey(pf2, "docx");
+  ok(k1 === k2, "saving (and so numbering the version) keeps the same file");
+  A.setQty(pf2, find("utopia", /^Sony ILME-FX3$/), 2); ok(A.fileKey(pf2, "docx") !== k2, "a change to the list makes a new file"); }
