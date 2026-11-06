@@ -2827,8 +2827,10 @@ function mediaCamHtml(p, id) {
   if (r.prof && c) {
     // Format with what it records; the sensor area with the file it makes; the frame rate with the bit rate it comes to
     set += pair(tap("codec", "Format", esc(c.n)), info("Color sampling", r.cs ? esc(r.cs) : "–"), "codec");
-    if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("File", px(now)), "mode")
-      : pair(tap("mode", "Sensor", esc(sensorText(now.sensor))), info("File", px(now), now.out ? esc(now.out) : note(now)), "mode");
+    // the recording resolution: its size, and after it the file's name (UHD, 2K…) or a note on a size the maker doesn't give
+    const rr = x => { const t = x.out ? esc(x.out) : note(x); return px(x) + (t ? ` <span class="t-b">${t}</span>` : ""); };
+    if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("Recording resolution", px(now)), "mode")
+      : pair(tap("mode", "Sensor", esc(sensorText(now.sensor))), info("Recording resolution", rr(now)), "mode");
     set += pair(tap("fps", "Frame rate", `${fpsLabel(l.rec.fps)} fps`), info("Bit rate", mbps ? `${Math.round(mbps).toLocaleString("en-US")} Mbps` : "–"), "fps");
   } else set += `<div class="mc-pair one"><label class="mc-tile tap mc-inp"><span class="t-l">Bit rate</span><span class="t-v"><input type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></label></div>`;
   // the card, how many of it, and what they come to
@@ -2836,7 +2838,7 @@ function mediaCamHtml(p, id) {
   if (!choices.length) media = pair(info("Card", `Not in ${esc(houseById(p.houseId)?.name || "the")} catalog`));
   else {
     const [ca, cb] = card ? splitTail(cardLabel(cardName, e.it.name)) : ["Choose", ""];
-    media = `<div class="mc-card${open === "card" ? " on" : ""}"><button type="button" class="mc-tile" data-act="mc-open" data-id="${u}" data-k="card" aria-expanded="${open === "card"}">${lab("Card", esc(cb))}${val(esc(ca))}</button>${card ? `<span class="mc-step"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b>${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span>` : ""}</div>${panel("card")}`;
+    media = `<div class="mc-card${open === "card" ? " on" : ""}"><button type="button" class="mc-tile" data-act="mc-open" data-id="${u}" data-k="card" aria-expanded="${open === "card"}">${lab("Card")}${val(esc(ca) + (cb ? ` <span class="t-b">${esc(cb)}</span>` : ""))}</button>${card ? `<span class="mc-step"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b>${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span>` : ""}</div>${panel("card")}`;
     if (sizeUnknown) media += pair(tap("gb", "Card size", l.rec.gb ? (l.rec.gb >= 1000 ? l.rec.gb / 1000 + "TB" : l.rec.gb + "GB") : "Choose"), "", "gb");
   }
   const total = onList && r.per ? fmtDur(r.per * onList) : "–";
