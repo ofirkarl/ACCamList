@@ -1368,20 +1368,6 @@ body.welcome-on .app { padding-bottom: 0; }
 
 a.btn { text-decoration: none; }
 
-/* ---- the Media tab ---- */
-.media-tab { display: grid; gap: 16px; }
-.media-tab .mt-lead, .media-tab .rs-note { margin: 0; }
-.media-cam { display: grid; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); box-shadow: 0 1px 2px rgba(48, 40, 28, .04); min-width: 0; }
-.mc-name { margin: 0; font-size: 17px; font-weight: 700; }
-.mc-name small { font-size: 13px; font-weight: 500; color: var(--muted); }
-.media-cam .field { gap: 6px; }
-.media-cam .chips.wrap { flex-wrap: wrap; overflow: visible; }
-.mc-fmt { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-.mc-fmt select { min-width: 0; width: 100%; }
-@media (max-width: 440px) { .mc-fmt { grid-template-columns: 1fr; } }
-.mc-list { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; font-weight: 500; }
-.mc-list small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
-.mc-list .stepper button:disabled { opacity: .35; }
 
 /* ---- packages ---- */
 .packages { display: grid; gap: 10px; }
@@ -1404,31 +1390,21 @@ a.btn { text-decoration: none; }
 
 /* ---- the production's tabs: a bar at the bottom of the screen, in thumb reach ---- */
 .navbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: color-mix(in srgb, var(--surface) 97%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid var(--line); box-shadow: 0 -10px 28px -18px rgba(48, 40, 28, .3); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(8px, env(safe-area-inset-left, 0px)); padding-right: max(8px, env(safe-area-inset-right, 0px)); transition: transform .25s var(--ease); }
-.navbar-in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.nav-tab { position: relative; display: grid; place-items: center; min-height: 62px; padding: 10px 6px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 500; line-height: 1.2; text-align: center; cursor: pointer; transition: color .2s; }
-.nav-tab .nt-l { position: relative; z-index: 0; display: inline-block; max-width: 7.5em; text-wrap: balance; }
+.navbar-in { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, minmax(max-content, 1fr)); }
+.nav-tab { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; padding: 8px 2px 10px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; font-weight: 500; line-height: 16px; text-align: center; cursor: pointer; transition: color .2s; -webkit-tap-highlight-color: transparent; }
+.nav-tab .nt-i { position: relative; display: grid; place-items: center; width: 56px; height: 32px; border-radius: 999px; transition: background-color .2s, transform .12s var(--ease); }
+.nav-tab .nt-i svg { width: 22px; height: 22px; }
+.nav-tab .nt-l { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .nav-tab[aria-selected="true"] { color: var(--accent); }
-.nav-tab[aria-selected="true"] .nt-l::after { content: ""; position: absolute; inset: -6px -10px; z-index: -1; border-radius: 10px; background: color-mix(in srgb, var(--accent) 9%, transparent); }
-.nav-tab::before { content: ""; position: absolute; top: -1px; left: 50%; width: 36px; height: 3px; margin-left: -18px; border-radius: 0 0 3px 3px; background: var(--accent); transform: scaleX(0); transition: transform .25s var(--ease); }
-.nav-tab[aria-selected="true"]::before { transform: scaleX(1); }
-.nav-tab:active .nt-l { transform: scale(.96); }
-.nav-tab .num { display: block; width: max-content; min-width: 18px; height: 16px; margin: 3px auto 0; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: color-mix(in srgb, var(--muted) 16%, transparent); color: inherit; font-size: 11px; font-weight: 600; line-height: 16px; text-align: center; }
+.nav-tab[aria-selected="true"] .nt-i { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.nav-tab:active .nt-i { transform: scale(.94); }
+.nav-tab .num { position: absolute; top: -2px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 999px; background: color-mix(in srgb, var(--fg) 11%, var(--surface)); color: var(--fg); box-shadow: 0 0 0 2px var(--surface); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
 .nav-tab[aria-selected="true"] .num { background: var(--accent); color: var(--accent-fg); }
 .nav-tab .num:empty { display: none; }
 body.nav-on .app { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 body.kb-up .navbar { transform: translateY(110%); }
-@media (prefers-reduced-motion: reduce) { .navbar, .nav-tab::before { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .navbar, .nav-tab .nt-i { transition: none; } .nav-tab:active .nt-i { transform: none; } }
 
-/* ---- Media Calculator: the camera, its card and format, and at the bottom what they come to ---- */
-.media-cam { gap: 16px; }
-.mc-out { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; margin: 4px -16px -16px; padding: 14px 16px; border-top: 1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); border-radius: 0 0 var(--r-card) var(--r-card); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
-.mc-res { display: grid; gap: 2px; }
-.mc-big { font-size: 26px; font-weight: 700; letter-spacing: -.01em; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
-.mc-sub { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.mc-sub b { color: var(--fg); font-weight: 600; }
-.mc-list { display: grid; justify-items: end; gap: 4px; padding: 0; border: 0; }
-.mc-list .stepper { background: var(--surface); }
-.mc-list .stepper button:disabled { opacity: .35; }
 
 /* ---- a camera's media in its package ---- */
 .pk-media { display: grid; gap: 6px; margin-bottom: 10px; }
@@ -1457,22 +1433,52 @@ body.kb-up .navbar { transform: translateY(110%); }
 .nsel-grp { padding: 10px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 @keyframes nsel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .nsel-list { animation: none; } }
-.mc-warn { font-size: 12px; font-weight: 600; color: var(--warn); }
 
 .nsel-static { display: flex; align-items: center; gap: 10px; min-height: 46px; box-sizing: border-box; padding: 10px 14px; border: 1px dashed var(--line); border-radius: var(--r-ctl); font-size: 15px; color: var(--fg); }
 .nsel-static .ns-a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nsel-static .ns-b { flex: none; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
 
-/* the sensor mode, short, with the file it records beside it as plain information */
-.mc-res-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.mc-res-row > .field:has(.nsel.open) { grid-column: 1 / -1; }
-.mc-res-row:has(.nsel.open) .mc-file { display: none; }
-.mc-file { display: grid; gap: 6px; min-width: 0; }
-.mc-file > .lbl { font-size: 13px; font-weight: 500; color: var(--muted); }
-.mc-fv { display: grid; align-content: center; min-height: 46px; gap: 1px; }
-.mc-fv b { font-size: 15px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
-.mc-fv span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.mc-fv b + span { font-size: 12px; }
+
+/* ---- Media Calculator: each camera is one card of even rows, 48px: what it is on the left, its value on the right.
+   A value to change sits in a pill 36px high (a menu, a number, the stepper); information is plain text.
+   At the bottom, on a tint: the card, how many, and what they come to ---- */
+.media-tab { display: grid; gap: 16px; }
+.media-cam { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); box-shadow: 0 1px 2px rgba(48, 40, 28, .04); }
+.mc-name { margin: 0; padding: 16px 16px 4px; font-size: 17px; font-weight: 700; line-height: 24px; }
+.mc-name small { font-size: 15px; font-weight: 400; color: var(--muted); }
+.mc-rows { padding: 0 16px; }
+.mc-row { display: grid; grid-template-columns: minmax(max-content, 1fr) minmax(0, auto); align-items: center; column-gap: 16px; min-height: 48px; border-top: 1px solid var(--hair); }
+.mc-rows > .mc-row:first-child { border-top: 0; }
+.mc-row > label, .mc-row > .lbl { align-self: stretch; display: flex; align-items: center; font-size: 15px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+.mc-row > label { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mc-row > .nsel { display: contents; }
+.mc-row .nsel-btn { justify-self: end; width: auto; max-width: 100%; min-width: 0; min-height: 0; height: 36px; padding: 0 14px; gap: 8px; border: 0; border-radius: 999px; background: var(--sunken); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 5%, transparent); font-size: 15px; font-weight: 500; }
+.mc-row .nsel-btn .ns-a { flex: 0 1 auto; }
+.mc-row .nsel-btn .ns-b, .mc-v .ns-b { flex: none; font-size: 13px; font-weight: 400; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mc-row .nsel.open .nsel-btn { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mc-row .nsel.open .nsel-btn .ns-b { color: inherit; opacity: .75; }
+.mc-row .nsel-list { grid-column: 1 / -1; margin: 0 0 12px; contain: inline-size; }
+.mc-v { justify-self: end; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; column-gap: 8px; min-width: 0; font-size: 15px; font-weight: 500; text-align: end; font-variant-numeric: tabular-nums; }
+.mc-v .ns-a { overflow-wrap: anywhere; }
+.mc-row .stepper { justify-self: end; }
+.mc-row .stepper button { width: 32px; height: 32px; }
+.mc-row .stepper b { min-width: 36px; border: 0; font-family: var(--font-body); font-size: 15px; font-weight: 500; line-height: 32px; font-variant-numeric: tabular-nums; }
+.mc-row .stepper button:disabled { opacity: .35; box-shadow: none; }
+.mc-inp { justify-self: end; display: inline-flex; align-items: center; gap: 6px; height: 36px; box-sizing: border-box; padding: 0 14px; border-radius: 999px; background: var(--sunken); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 5%, transparent); }
+.mc-inp:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.mc-inp input { width: 64px; padding: 0; border: 0; background: none; color: var(--fg); font: inherit; font-size: 15px; font-weight: 500; text-align: end; outline: none; -moz-appearance: textfield; }
+.mc-inp input::-webkit-outer-spin-button, .mc-inp input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.mc-inp i { font-style: normal; font-size: 13px; color: var(--muted); }
+.mc-note { margin: -4px 0 0; padding: 0 0 12px; font-size: 13px; color: var(--muted); text-align: end; }
+.mc-note.warn { color: var(--warn); font-weight: 500; }
+.mc-out { --tint-line: color-mix(in srgb, var(--accent) 16%, var(--line)); margin-top: 4px; border-top: 1px solid var(--tint-line); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+.mc-out .mc-row { border-top-color: var(--tint-line); }
+.mc-out .nsel-btn, .mc-out .stepper, .mc-out .mc-inp { background: var(--surface); }
+.mc-res { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; padding: 12px 16px 16px; border-top: 1px solid var(--tint-line); }
+.mc-res > div { display: grid; min-width: 0; }
+.mc-res > div + div { text-align: end; }
+.mc-res .lbl { font-size: 13px; line-height: 20px; color: var(--muted); }
+.mc-big { font-size: 24px; font-weight: 700; line-height: 32px; letter-spacing: -.01em; color: var(--accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -2693,6 +2699,8 @@ if (typeof document !== "undefined" && document.addEventListener && typeof Mutat
   document.addEventListener("click", e => {
     const o = e.target.closest && e.target.closest(".nsel-opt");
     if (o) { buzz("tap"); nselPick(o.closest(".nsel"), o.dataset.v); return; }
+    const lab = e.target.closest && e.target.closest("label");
+    if (lab && lab.control && lab.control.classList.contains("nsel-btn")) return;
     const b = e.target.closest && e.target.closest(".nsel-btn");
     if (b) { buzz("tap"); nselOpen(b.closest(".nsel")); return; }
     if (!(e.target.closest && e.target.closest(".nsel"))) nselClose();
@@ -3489,7 +3497,7 @@ function viewProduction() {
   ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
     ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
-      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-l">${label}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span></button>`).join("")}
+      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
   </div></nav>`;
 }
 
@@ -4227,6 +4235,15 @@ function lineHtml(p, id, l) {
 const CARD_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M10 3v4M13 3v4M16 4v3"/></svg>`;
 const hasRec = e => !!(e && e.it.camera && !e.it.camera.film && ((e.it.camera.media || []).length || recProfile(e.it.name)));
 const shortCard = n => String(n || "").replace(/\b(Memory Card|Card|Memory)\b/gi, "").replace(/\s{2,}/g, " ").trim();
+/* a card as a menu shows it: its name, then its size (and SD speed class) apart, so the size stays in view when a long name is cut */
+function cardLabel(name, v, camName) {
+  // a card of the camera's own make goes without the make: an ARRI camera's "Codex Compact Drive", a RED's "Mini-Mag SSD"
+  const make = String(camName || "").split(/\s+/)[0], own = make && new RegExp(`^${make.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(?=\\S)`, "i");
+  const n = (own ? shortCard(name).replace(own, "") : shortCard(name)), m = n.match(/\b\d+(?:\.\d+)?\s?[TG]B\b/i);
+  const base = m ? n.replace(m[0], "").replace(/\s{2,}/g, " ").trim().replace(/[\s\-–]+$/, "") : n;
+  const tail = [m ? m[0].replace(/\s/g, "") : "", v ? `V${v}` : ""].filter(Boolean).join(" ");
+  return tail && base ? `${base} · ${tail}` : base || tail;
+}
 const recKey = name => (REC_OF.find(([re]) => re.test(name || "")) || [])[1] || "";
 /* the card a camera's figures use: the one picked, else one of its kind already on the list, else a 1TB one (or the biggest under that) */
 function pickCard(e, houseId) {
@@ -4260,38 +4277,53 @@ function mediaCamHtml(p, id) {
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || ""), u = esc(id);
-  const sel = (k, label, opts, short) => `<div class="field"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}"${short ? ` data-short="1"` : ""}>${opts}</select></div>`;
-  const cardOpts = choices.map(x => { const v = isSd(x.id) && sdClass(x.id); return `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(shortCard(x.name))}${v ? ` · V${v}` : ""}</option>`; }).join("");
+  // every line is one even row: what it is on the left, its value on the right.
+  // A value to change sits in a pill (a menu, a number, the stepper); information is plain text
+  const row = (k, label, opts, short) => `<div class="mc-row"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}"${short ? ` data-short="1"` : ""}>${opts}</select></div>`;
+  const info = (label, a, b) => `<div class="mc-row mc-info"><span class="lbl">${label}</span><span class="mc-v"><span class="ns-a">${a}</span>${b ? `<span class="ns-b">${b}</span>` : ""}</span></div>`;
+  const types = [...new Set(choices.map(x => x.type))];
+  const cardOpt = x => `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(cardLabel(x.name, isSd(x.id) && sdClass(x.id), e.it.name))}</option>`;
+  const cardOpts = types.length > 1 ? types.map(t => `<optgroup label="${esc(t)}">${choices.filter(x => x.type === t).map(cardOpt).join("")}</optgroup>`).join("") : choices.map(cardOpt).join("");
   const sd = card && isSd(card), cls = sd ? sdClass(card) : 0;
   const mbps = r.rate ? r.rate * 8 / 1e6 : 0, need = sd && mbps ? sdNeed(mbps) : 0;
-  // the resolution in its parts: the sensor area (width and shape), then the file it records
+  // the sensor mode as a short menu (its width in K and its shape), and under it the file it records, as information
   const resPart = () => {
     const parts = (c ? c.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
     if (!now) return "";
     const px = x => `${x.m[1]}×${x.m[2]}`;
-    if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return sel("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
-    // one menu of sensor modes, each with the file it records; beside it, that file as plain information
+    if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return row("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
     const opts = parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(sensorText(x.sensor))} · ${esc(x.out ? x.out + " " : "")}${px(x)}</option>`).join("");
-    return `<div class="mc-res-row">${sel("mode", "Sensor", opts, true)}<div class="mc-file"><span class="lbl">File</span><div class="mc-fv">${now.out ? `<b>${esc(now.out).replace(/ (Ana\.) /, " $1&nbsp;")}</b>` : ""}<span>${px(now)}</span></div></div></div>`;
+    return row("mode", "Sensor", opts, true) + info("File", now.out ? esc(now.out) : px(now), now.out ? px(now) : "");
   };
-  const fmtPart = r.prof ? `${sel("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))}
-      ${resPart()}
-      ${sel("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))}`
-    : `<div class="field"><label for="rs-mbps-${u}">Data rate (Mbps)</label><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"></div>`;
-  const sdWarn = sd && mbps ? (!need ? `<div class="mc-warn">Too fast for SD cards</div>` : cls && cls < need ? `<div class="mc-warn">Needs a V${need} card</div>` : !cls ? `<div class="mc-sub">Needs V${need} or faster</div>` : "") : "";
+  const recRows = r.prof ? row("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))
+      + resPart()
+      + row("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))
+      + (mbps ? info("Bit rate", `${Math.round(mbps).toLocaleString("en-US")} Mbps`, r.cs ? esc(r.cs) : "") : "")
+    : `<div class="mc-row"><label for="rs-mbps-${u}">Bit rate</label><span class="mc-inp"><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></div>`;
+  const sdNote = sd && mbps ? (!need ? `<p class="mc-note warn">Too fast for SD cards</p>` : cls && cls < need ? `<p class="mc-note warn">Needs a V${need} card</p>` : !cls ? `<p class="mc-note">Needs V${need} or faster</p>` : "") : "";
+  const mediaRows = (choices.length ? row("card", "Card", cardOpts) : info("Card", `Not in ${esc(houseById(p.houseId)?.name || "the")} catalog`))
+    + (sd ? row("sdc", "Speed class", `<option value="0" ${cls ? "" : "selected"}>Not set</option>${[30, 60, 90].map(v => `<option value="${v}" ${cls === v ? "selected" : ""}>V${v}</option>`).join("")}`) + sdNote : "")
+    + (sizeUnknown ? row("gb", "Card size", `<option value="0">Choose…</option>${[64, 128, 256, 512, 1000, 2000].map(g => `<option value="${g}" ${l.rec.gb === g ? "selected" : ""}>${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</option>`).join("")}`) : "")
+    + (card ? `<div class="mc-row mc-cards"><span class="lbl">Cards</span><span class="stepper"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span></div>` : "");
+  // the result: one card on the left, all the cards on the list on the right
+  const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
     <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
-    ${choices.length ? `<div class="mc-fmt">${sel("card", "Card", cardOpts)}${sd ? sel("sdc", "Speed class", `<option value="0" ${cls ? "" : "selected"}>Not set</option>${[30, 60, 90].map(v => `<option value="${v}" ${cls === v ? "selected" : ""}>V${v}</option>`).join("")}`) : ""}</div>` : `<p class="hint">Not in ${esc(houseById(p.houseId)?.name || "the")} catalog</p>`}
-    ${sizeUnknown ? sel("gb", "Card size", `<option value="0">Choose…</option>${[64, 128, 256, 512, 1000, 2000].map(g => `<option value="${g}" ${l.rec.gb === g ? "selected" : ""}>${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</option>`).join("")}`) : ""}
-    ${fmtPart}
+    <div class="mc-rows">${recRows}</div>
     <div class="mc-out">
-      <div class="mc-res"><div class="mc-big">${r.per ? fmtDur(r.per) : "–"}</div>
-        <div class="mc-sub">one card${mbps ? ` · ${Math.round(mbps).toLocaleString("en-US")} Mbps` : ""}${r.cs ? ` · ${esc(r.cs)}` : ""}</div>${sdWarn}</div>
-      ${card ? `<div class="mc-list"><span class="stepper"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span>
-        <div class="mc-sub">on the list${onList && r.per ? ` · <b>${fmtDur(r.per * onList)}</b>` : ""}</div></div>` : ""}
+      <div class="mc-rows">${mediaRows}</div>
+      <div class="mc-res" aria-live="polite"><div><span class="lbl">Per card</span><b class="mc-big">${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="lbl">Total</span><b class="mc-big">${total}</b></div></div>
     </div>
   </div>`;
 }
+/* the bottom bar's icons, in one line style */
+const NAV_SVG = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const NAV_ICON = {
+  add: NAV_SVG(`<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M12 8.5v7M8.5 12h7"/>`),
+  fav: NAV_SVG(`<path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/>`),
+  list: NAV_SVG(`<rect x="4.5" y="4.5" width="15" height="16" rx="3"/><path d="M9 3.5h6v2.5H9zM8.5 11h7M8.5 15h4.5"/>`),
+  media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
+};
 function viewMedia(p, h) {
   const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
   return `<section class="pad media-tab">

@@ -1203,6 +1203,8 @@ if (typeof document !== "undefined" && document.addEventListener && typeof Mutat
   document.addEventListener("click", e => {
     const o = e.target.closest && e.target.closest(".nsel-opt");
     if (o) { buzz("tap"); nselPick(o.closest(".nsel"), o.dataset.v); return; }
+    const lab = e.target.closest && e.target.closest("label");
+    if (lab && lab.control && lab.control.classList.contains("nsel-btn")) return;
     const b = e.target.closest && e.target.closest(".nsel-btn");
     if (b) { buzz("tap"); nselOpen(b.closest(".nsel")); return; }
     if (!(e.target.closest && e.target.closest(".nsel"))) nselClose();
@@ -1999,7 +2001,7 @@ function viewProduction() {
   ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
     ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
-      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-l">${label}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span></button>`).join("")}
+      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
   </div></nav>`;
 }
 
@@ -2737,6 +2739,15 @@ function lineHtml(p, id, l) {
 const CARD_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h8l4 4v14H7z"/><path d="M10 3v4M13 3v4M16 4v3"/></svg>`;
 const hasRec = e => !!(e && e.it.camera && !e.it.camera.film && ((e.it.camera.media || []).length || recProfile(e.it.name)));
 const shortCard = n => String(n || "").replace(/\b(Memory Card|Card|Memory)\b/gi, "").replace(/\s{2,}/g, " ").trim();
+/* a card as a menu shows it: its name, then its size (and SD speed class) apart, so the size stays in view when a long name is cut */
+function cardLabel(name, v, camName) {
+  // a card of the camera's own make goes without the make: an ARRI camera's "Codex Compact Drive", a RED's "Mini-Mag SSD"
+  const make = String(camName || "").split(/\s+/)[0], own = make && new RegExp(`^${make.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(?=\\S)`, "i");
+  const n = (own ? shortCard(name).replace(own, "") : shortCard(name)), m = n.match(/\b\d+(?:\.\d+)?\s?[TG]B\b/i);
+  const base = m ? n.replace(m[0], "").replace(/\s{2,}/g, " ").trim().replace(/[\s\-–]+$/, "") : n;
+  const tail = [m ? m[0].replace(/\s/g, "") : "", v ? `V${v}` : ""].filter(Boolean).join(" ");
+  return tail && base ? `${base} · ${tail}` : base || tail;
+}
 const recKey = name => (REC_OF.find(([re]) => re.test(name || "")) || [])[1] || "";
 /* the card a camera's figures use: the one picked, else one of its kind already on the list, else a 1TB one (or the biggest under that) */
 function pickCard(e, houseId) {
@@ -2770,38 +2781,53 @@ function mediaCamHtml(p, id) {
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, sizeUnknown = card && !cardBytes(ITEM.get(card)?.it.name || ""), u = esc(id);
-  const sel = (k, label, opts, short) => `<div class="field"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}"${short ? ` data-short="1"` : ""}>${opts}</select></div>`;
-  const cardOpts = choices.map(x => { const v = isSd(x.id) && sdClass(x.id); return `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(shortCard(x.name))}${v ? ` · V${v}` : ""}</option>`; }).join("");
+  // every line is one even row: what it is on the left, its value on the right.
+  // A value to change sits in a pill (a menu, a number, the stepper); information is plain text
+  const row = (k, label, opts, short) => `<div class="mc-row"><label for="rs-${k}-${u}">${label}</label><select id="rs-${k}-${u}" data-rec="${k}" data-id="${u}"${short ? ` data-short="1"` : ""}>${opts}</select></div>`;
+  const info = (label, a, b) => `<div class="mc-row mc-info"><span class="lbl">${label}</span><span class="mc-v"><span class="ns-a">${a}</span>${b ? `<span class="ns-b">${b}</span>` : ""}</span></div>`;
+  const types = [...new Set(choices.map(x => x.type))];
+  const cardOpt = x => `<option value="${esc(x.id)}" ${card === x.id ? "selected" : ""}>${esc(cardLabel(x.name, isSd(x.id) && sdClass(x.id), e.it.name))}</option>`;
+  const cardOpts = types.length > 1 ? types.map(t => `<optgroup label="${esc(t)}">${choices.filter(x => x.type === t).map(cardOpt).join("")}</optgroup>`).join("") : choices.map(cardOpt).join("");
   const sd = card && isSd(card), cls = sd ? sdClass(card) : 0;
   const mbps = r.rate ? r.rate * 8 / 1e6 : 0, need = sd && mbps ? sdNeed(mbps) : 0;
-  // the resolution in its parts: the sensor area (width and shape), then the file it records
+  // the sensor mode as a short menu (its width in K and its shape), and under it the file it records, as information
   const resPart = () => {
     const parts = (c ? c.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
     if (!now) return "";
     const px = x => `${x.m[1]}×${x.m[2]}`;
-    if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return sel("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
-    // one menu of sensor modes, each with the file it records; beside it, that file as plain information
+    if (parts.every(x => !x.out && OUT_ONLY.test(x.sensor))) return row("mode", "Resolution", parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(x.sensor)} · ${px(x)}</option>`).join(""));
     const opts = parts.map(x => `<option value="${esc(x.m[0])}" ${x === now ? "selected" : ""}>${esc(sensorText(x.sensor))} · ${esc(x.out ? x.out + " " : "")}${px(x)}</option>`).join("");
-    return `<div class="mc-res-row">${sel("mode", "Sensor", opts, true)}<div class="mc-file"><span class="lbl">File</span><div class="mc-fv">${now.out ? `<b>${esc(now.out).replace(/ (Ana\.) /, " $1&nbsp;")}</b>` : ""}<span>${px(now)}</span></div></div></div>`;
+    return row("mode", "Sensor", opts, true) + info("File", now.out ? esc(now.out) : px(now), now.out ? px(now) : "");
   };
-  const fmtPart = r.prof ? `${sel("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))}
-      ${resPart()}
-      ${sel("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))}`
-    : `<div class="field"><label for="rs-mbps-${u}">Data rate (Mbps)</label><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"></div>`;
-  const sdWarn = sd && mbps ? (!need ? `<div class="mc-warn">Too fast for SD cards</div>` : cls && cls < need ? `<div class="mc-warn">Needs a V${need} card</div>` : !cls ? `<div class="mc-sub">Needs V${need} or faster</div>` : "") : "";
+  const recRows = r.prof ? row("codec", "Format", r.prof.map(x => `<option ${x === c ? "selected" : ""}>${esc(x.n)}</option>`).join(""))
+      + resPart()
+      + row("fps", "Frame rate", REC_FPS.filter(f => !md || f <= md[3]).map(f => `<option value="${f}" ${l.rec.fps === f ? "selected" : ""}>${fpsLabel(f)} fps</option>`).join(""))
+      + (mbps ? info("Bit rate", `${Math.round(mbps).toLocaleString("en-US")} Mbps`, r.cs ? esc(r.cs) : "") : "")
+    : `<div class="mc-row"><label for="rs-mbps-${u}">Bit rate</label><span class="mc-inp"><input id="rs-mbps-${u}" type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></div>`;
+  const sdNote = sd && mbps ? (!need ? `<p class="mc-note warn">Too fast for SD cards</p>` : cls && cls < need ? `<p class="mc-note warn">Needs a V${need} card</p>` : !cls ? `<p class="mc-note">Needs V${need} or faster</p>` : "") : "";
+  const mediaRows = (choices.length ? row("card", "Card", cardOpts) : info("Card", `Not in ${esc(houseById(p.houseId)?.name || "the")} catalog`))
+    + (sd ? row("sdc", "Speed class", `<option value="0" ${cls ? "" : "selected"}>Not set</option>${[30, 60, 90].map(v => `<option value="${v}" ${cls === v ? "selected" : ""}>V${v}</option>`).join("")}`) + sdNote : "")
+    + (sizeUnknown ? row("gb", "Card size", `<option value="0">Choose…</option>${[64, 128, 256, 512, 1000, 2000].map(g => `<option value="${g}" ${l.rec.gb === g ? "selected" : ""}>${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</option>`).join("")}`) : "")
+    + (card ? `<div class="mc-row mc-cards"><span class="lbl">Cards</span><span class="stepper"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span></div>` : "");
+  // the result: one card on the left, all the cards on the list on the right
+  const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
     <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
-    ${choices.length ? `<div class="mc-fmt">${sel("card", "Card", cardOpts)}${sd ? sel("sdc", "Speed class", `<option value="0" ${cls ? "" : "selected"}>Not set</option>${[30, 60, 90].map(v => `<option value="${v}" ${cls === v ? "selected" : ""}>V${v}</option>`).join("")}`) : ""}</div>` : `<p class="hint">Not in ${esc(houseById(p.houseId)?.name || "the")} catalog</p>`}
-    ${sizeUnknown ? sel("gb", "Card size", `<option value="0">Choose…</option>${[64, 128, 256, 512, 1000, 2000].map(g => `<option value="${g}" ${l.rec.gb === g ? "selected" : ""}>${g >= 1000 ? g / 1000 + "TB" : g + "GB"}</option>`).join("")}`) : ""}
-    ${fmtPart}
+    <div class="mc-rows">${recRows}</div>
     <div class="mc-out">
-      <div class="mc-res"><div class="mc-big">${r.per ? fmtDur(r.per) : "–"}</div>
-        <div class="mc-sub">one card${mbps ? ` · ${Math.round(mbps).toLocaleString("en-US")} Mbps` : ""}${r.cs ? ` · ${esc(r.cs)}` : ""}</div>${sdWarn}</div>
-      ${card ? `<div class="mc-list"><span class="stepper"><button type="button" data-act="mq" data-id="${u}" data-d="-1" aria-label="One card less"${onList ? "" : " disabled"}>−</button><b class="num">${onList}</b><button type="button" data-act="mq" data-id="${u}" data-d="1" aria-label="One card more">+</button></span>
-        <div class="mc-sub">on the list${onList && r.per ? ` · <b>${fmtDur(r.per * onList)}</b>` : ""}</div></div>` : ""}
+      <div class="mc-rows">${mediaRows}</div>
+      <div class="mc-res" aria-live="polite"><div><span class="lbl">Per card</span><b class="mc-big">${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="lbl">Total</span><b class="mc-big">${total}</b></div></div>
     </div>
   </div>`;
 }
+/* the bottom bar's icons, in one line style */
+const NAV_SVG = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const NAV_ICON = {
+  add: NAV_SVG(`<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M12 8.5v7M8.5 12h7"/>`),
+  fav: NAV_SVG(`<path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/>`),
+  list: NAV_SVG(`<rect x="4.5" y="4.5" width="15" height="16" rx="3"/><path d="M9 3.5h6v2.5H9zM8.5 11h7M8.5 15h4.5"/>`),
+  media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
+};
 function viewMedia(p, h) {
   const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
   return `<section class="pad media-tab">

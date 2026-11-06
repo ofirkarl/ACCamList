@@ -604,12 +604,14 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(Math.floor(A.recResult(l, e).per / 60) === 28, "ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min");
   l.rec.card = cdx2; ok(Math.floor(A.recResult(l, e).per / 60) === 56, "on a 2TB drive: 56 min");
   const html = A.mediaCamHtml(pc, a35);
-  ok(/data-rec="card"/.test(html) && /data-rec="fps"/.test(html) && /data-act="mq"/.test(html) && /on the list/.test(html) && html.indexOf("mc-out") > html.indexOf('data-rec="fps"'), "Media Calculator: card, format, frame rate as menus, and at the bottom the result and the cards on the list");
-  ok(/ Mbps · RAW · 13-bit/.test(html), "the result shows the bit rate and what the codec records (ARRIRAW on an Alexa 35: RAW, 13-bit)");
+  ok(/data-rec="card"/.test(html) && /data-rec="fps"/.test(html) && /data-act="mq"/.test(html) && html.indexOf("mc-out") > html.indexOf('data-rec="fps"') && html.indexOf('data-rec="card"') > html.indexOf("mc-out") && html.indexOf("mc-res") > html.indexOf('data-act="mq"'), "Media Calculator: the recording rows, then at the bottom the card, how many, and the result");
+  ok((html.match(/class="mc-row/g) || []).length >= 7 && /<span class="lbl">Per card<\/span><b class="mc-big">56 min<\/b><\/div><div><span class="lbl">Total<\/span>/.test(html), "every line one row; the result in two halves: per card, and total");
+  ok(/ selected>Codex Compact Drive · 2TB<\/option>/.test(html) && /<label for="rs-card-[^"]+">Card<\/label>/.test(html), "the card without the camera's own make, and its size apart: Codex Compact Drive · 2TB");
+  ok(/<span class="lbl">Bit rate<\/span><span class="mc-v"><span class="ns-a">[\d,]+ Mbps<\/span><span class="ns-b">RAW · 13-bit<\/span>/.test(html), "a Bit rate row: the rate, and what the codec records (ARRIRAW on an Alexa 35: RAW, 13-bit)");
   l.rec = { card: cdx1, codec: "ProRes 422 HQ", mode: "4K 16:9 → UHD", fps: 25 }; const hp = A.mediaCamHtml(pc, a35);
-  ok(/<label for="rs-mode-[^"]+">Sensor<\/label><select [^>]*data-short="1"/.test(hp) && /<option value="4K 16:9 → UHD" selected>4K · 16:9 · UHD 3840×2160<\/option>/.test(hp) && /class="mc-file"><span class="lbl">File<\/span><div class="mc-fv"><b>UHD<\/b><span>3840×2160<\/span>/.test(hp) && /3\.3K · 6:5/.test(hp), "the sensor mode as a short menu (4K · 16:9), the file it records beside it as information (UHD 3840×2160)");
+  ok(/<label for="rs-mode-[^"]+">Sensor<\/label><select [^>]*data-short="1"/.test(hp) && /<option value="4K 16:9 → UHD" selected>4K · 16:9 · UHD 3840×2160<\/option>/.test(hp) && /<span class="lbl">File<\/span><span class="mc-v"><span class="ns-a">UHD<\/span><span class="ns-b">3840×2160<\/span>/.test(hp) && hp.indexOf(">File<") > hp.indexOf(">Sensor<") && /3\.3K · 6:5/.test(hp), "the sensor mode as a short menu (4K · 16:9), and under it the file it records as information (UHD 3840×2160)");
   l.rec = { card: cdx2, codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
-  A.setQty(pc, cdx2, 8); ok(/<b class="num">8<\/b>/.test(A.mediaCamHtml(pc, a35)) && /on the list · <b>7 h 28 min<\/b>/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
+  A.setQty(pc, cdx2, 8); ok(/<b class="num">8<\/b>/.test(A.mediaCamHtml(pc, a35)) && /<span class="lbl">Total<\/span><b class="mc-big">7 h 28 min<\/b>/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
   ok(/No cameras on the list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
   const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
   ok(Math.floor(A.recResult(ll, A.ITEM.get(lf)).per / 60) === 121, "Mini LF ProRes 4444 UHD 24 fps: 2 h 1 min on 1TB, as ARRI's sheet says");
@@ -619,7 +621,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(mv >= 57 && mv <= 58, `VENICE 2 X-OCN LT 8.6K 3:2 24 fps on AXS 1TB: about 58 min, as Sony's table (${mv})`);
   const gopro = find("utopia", /GoPro HERO13/); A.setQty(pc, gopro, 1); const lg = pc.items[gopro]; A.recEnsure(lg, A.ITEM.get(gopro), pc); lg.rec.mbps = 120;
   const rg = A.recResult(lg, A.ITEM.get(gopro)); ok(rg.card && Math.floor(rg.per / 60) === Math.floor(A.cardBytes(rg.card) / (120e6 / 8) / 60), "a typed data rate gives the card time too");
-  ok(/Data rate \(Mbps\)/.test(A.mediaCamHtml(pc, gopro)), "...and the Media tab asks for it");
+  ok(/<label for="rs-mbps-[^"]+">Bit rate<\/label><span class="mc-inp"><input [^>]*data-rec="mbps"[^>]*value="120"><i>Mbps<\/i>/.test(A.mediaCamHtml(pc, gopro)), "...and the Media tab asks for it, in its Bit rate row");
   // a list from the short-lived auto cards: they stay, as ordinary lines
   const old = A.newProduction({ name: "Old", houseId: "utopia" }); A.app.productions.push(old);
   old.items[a35] = { ...A.lineFromCatalog(a35), qty: 1, cards: { id: cdx1, n: 4 } }; old.items[cdx1] = { ...A.lineFromCatalog(cdx1), qty: 4, auto: 4, autoWhy: "4 per ARRI Alexa 35" };
