@@ -606,25 +606,24 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const html = A.mediaCamHtml(pc, a35);
   const tile = k => new RegExp(`data-act="mc-open" data-id="[^"]+" data-k="${k}"`);
   ok(tile("codec").test(html) && tile("fps").test(html) && tile("mode").test(html) && tile("card").test(html) && /data-act="mq"/.test(html) && html.indexOf('data-k="card"') > html.indexOf('data-k="mode"') && html.indexOf("mc-res") > html.indexOf('data-act="mq"'), "Media Calculator: the settings as tiles, then the card with how many, then the result");
-  ok(/<div class="mc-pair"><button [^>]*data-k="codec"[^>]*><span class="t-l"><span>Format<\/span><\/span>[\s\S]*?data-k="fps"[^>]*><span class="t-l"><span>Frame rate<\/span><\/span><span class="t-v">24 fps<\/span>/.test(html), "Format and Frame rate side by side");
   ok(/<span class="t-l">Per card<\/span><b>56 min<\/b><\/div><div><span class="t-l">Total<\/span>/.test(html) && !/class="mc-panel"/.test(html), "the result in two halves, per card and total; no choices open until a tile is tapped");
   ok(/<span class="t-l"><span>Card<\/span><span class="t-x">2TB<\/span><\/span><span class="t-v">Codex Compact Drive<\/span>/.test(html) && A.cardLabel("Sony 1TB AXS S66 Memory Card", "Sony Venice 2") === "AXS S66 · 1TB" && A.cardLabel("SanDisk 64GB SD Card V90", "Sony ILME-FX3") === "SanDisk SD · 64GB V90", "the card without the camera's own make, its size apart: Codex Compact Drive 2TB");
   ok(/<span class="mc-step"><button [^>]*data-d="-1"[^>]*>−<\/button><b>\d+<\/b><button [^>]*data-d="1"[^>]*>\+<\/button><\/span>/.test(html), "how many cards: two plain round buttons around the number");
-  ok(/<div class="mc-pair"><div class="mc-tile info"><span class="t-l"><span>Bit rate<\/span><\/span><span class="t-v">[\d,]+ Mbps<\/span><\/div><div class="mc-tile info"><span class="t-l"><span>Color<\/span><\/span><span class="t-v">RAW · 13-bit<\/span>/.test(html), "Bit rate and Color side by side, as information (ARRIRAW on an Alexa 35: RAW, 13-bit)");
+  ok(/data-k="codec"[^>]*><span class="t-l"><span>Format<\/span><\/span><span class="t-v">ARRIRAW<\/span><\/button><div class="mc-tile info"><span class="t-l"><span>Color sampling<\/span><\/span><span class="t-v">RAW · 13-bit<\/span>/.test(html) && /data-k="fps"[^>]*><span class="t-l"><span>Frame rate<\/span><\/span><span class="t-v">24 fps<\/span><\/button><div class="mc-tile info"><span class="t-l"><span>Bit rate<\/span><\/span><span class="t-v">[\d,]+ Mbps<\/span>/.test(html), "Format beside Color sampling, Frame rate beside Bit rate");
   l.rec = { card: cdx1, codec: "ProRes 422 HQ", mode: "4K 16:9 → UHD", fps: 25 }; const hp = A.mediaCamHtml(pc, a35);
-  ok(/<div class="mc-pair"><button [^>]*data-k="mode"[^>]*><span class="t-l"><span>Sensor<\/span><\/span><span class="t-v">4K · 16:9<\/span><\/button><div class="mc-tile info"><span class="t-l"><span>File<\/span><span class="t-x">UHD<\/span><\/span><span class="t-v">3840×2160<\/span>/.test(hp), "the sensor area as a tile to choose (4K · 16:9), and beside it, in the same row, the file it records as information (UHD, 3840×2160)");
+  ok(/<div class="mc-pair"><button [^>]*data-k="mode"[^>]*><span class="t-l"><span>Sensor<\/span><\/span><span class="t-v">4K 16:9<\/span><\/button><div class="mc-tile info"><span class="t-l"><span>File<\/span><span class="t-x">UHD<\/span><\/span><span class="t-v">3840×2160<\/span>/.test(hp), "the sensor area as a tile to choose (4K 16:9), and beside it, in the same row, the file it records as information (UHD, 3840×2160)");
   A.setMcOpen({ id: a35, k: "mode" }); const ho = A.mediaCamHtml(pc, a35); A.setMcOpen(null);
-  const og = ho.indexOf('<div class="mc-grp">4K · 16:9</div>'), og2 = ho.indexOf('<div class="mc-grp">', og + 5);
-  ok(og > 0 && /class="mc-panel"/.test(ho) && ho.indexOf('data-v="4K 16:9 → UHD"') > og && ho.indexOf('data-v="4K 16:9 → UHD"') < og2 && /class="mc-opt on"[^>]*data-v="4K 16:9 → UHD"[^>]*><span class="t-a">3840×2160<\/span><span class="t-b">UHD<\/span>/.test(ho) && ho.indexOf("mc-panel") > ho.indexOf(">File<") && ho.indexOf("mc-panel") < ho.indexOf(">Bit rate<"), "the sensor's choices open under its row: each sensor area a heading, the files it records under it, one line each");
+  const og = ho.indexOf('<div class="mc-grp">4K 16:9</div>'), og2 = ho.indexOf('<div class="mc-grp">', og + 5);
+  ok(og > 0 && /class="mc-panel"/.test(ho) && ho.indexOf('data-v="4K 16:9 → UHD"') > og && ho.indexOf('data-v="4K 16:9 → UHD"') < og2 && /class="mc-opt on"[^>]*data-v="4K 16:9 → UHD"[^>]*><span class="t-a">UHD<\/span><span class="t-b">3840×2160<\/span>/.test(ho) && /data-v="4K 16:9"[^>]*><span class="t-a">4K<\/span><span class="t-b">4096×2304<\/span>/.test(ho) && /data-v="4K 2:1"[^>]*><span class="t-a">4K 2:1<\/span><span class="t-b">4096×2048<\/span>/.test(ho) && ho.indexOf("mc-panel") > ho.indexOf(">File<") && ho.indexOf("mc-panel") < ho.indexOf(">Frame rate<"), "the sensor's choices under its row: a sensor area that records several files is a heading over them (4K, UHD…), one that records one file is a single line");
   A.setMcOpen({ id: a35, k: "fps" }); ok(/<div class="mc-chips">/.test(A.mediaCamHtml(pc, a35)), "frame rates open as a grid of small buttons"); A.setMcOpen(null);
   { const t = JSON.parse(JSON.stringify(l.rec)); A.recSet(l, e, pc, "fps", "120"); A.recSet(l, e, pc, "mode", "4K 16:9 → UHD"); ok(l.rec.mode === "4K 16:9 → UHD" && l.rec.fps <= 120, "choosing a value sets it on the camera's line"); l.rec = t; }
   l.rec = { card: cdx2, codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
   A.setQty(pc, cdx2, 8); ok(/<b>8<\/b>/.test(A.mediaCamHtml(pc, a35)) && /<span class="t-l">Total<\/span><b>7 h 28 min<\/b>/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
   ok(/No cameras on the list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
-  const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K 16:9 → UHD", fps: 24 };
+  const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K LF 16:9 → UHD", fps: 24 };
   ok(Math.floor(A.recResult(ll, A.ITEM.get(lf)).per / 60) === 121, "Mini LF ProRes 4444 UHD 24 fps: 2 h 1 min on 1TB, as ARRI's sheet says");
   const v2 = find("utopia", /^Sony Venice 2/), axs = find("utopia", /1TB AXS S66/);
-  A.setQty(pc, v2, 1); const lv = pc.items[v2]; lv.rec = { card: axs, codec: "X-OCN LT", mode: "8.6K 3:2", fps: 24 };
+  A.setQty(pc, v2, 1); const lv = pc.items[v2]; lv.rec = { card: axs, codec: "X-OCN LT", mode: "FF 8.6K 3:2", fps: 24 };
   const mv = Math.floor(A.recResult(lv, A.ITEM.get(v2)).per / 60);
   ok(mv >= 57 && mv <= 58, `VENICE 2 X-OCN LT 8.6K 3:2 24 fps on AXS 1TB: about 58 min, as Sony's table (${mv})`);
   const gopro = find("utopia", /GoPro HERO13/); A.setQty(pc, gopro, 1); const lg = pc.items[gopro]; A.recEnsure(lg, A.ITEM.get(gopro), pc); lg.rec.mbps = 120;
@@ -659,6 +658,19 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const hx = A.mediaCamHtml(ps, fx3);
   ok(!/Speed class|Needs|data-rec="sdc"/.test(hx) && /<span class="t-l"><span>Resolution<\/span><\/span><span class="t-v">UHD<\/span>/.test(hx) && typeof A.sdClass === "undefined", "SD cards: no speed class of their own (it goes in the card's name); an FX3 shows its Resolution tile");
   const r4d = find("utopia", /Ronin 4D/); A.setQty(ps, r4d, 1); ok(A.ITEM.get(r4d).it.camera.media.includes("CFexpress Type B") && (A.setMcOpen({ id: r4d, k: "card" }), /<div class="mc-grp">CFexpress Type B<\/div>/.test(A.mediaCamHtml(ps, r4d))) && (A.setMcOpen(null), true), "the Ronin 4D takes CFexpress Type B cards too"); }
+
+// --- sensor modes as the makers publish them (checked against their documents)
+{ const modes = k => [...new Set(A.REC[k].flatMap(c => c.m.map(x => `${x[0]}=${x[1]}x${x[2]}`)))];
+  ok(modes("pyxis6k").includes("Open Gate 3:2=6048x4032") && modes("pyxis6k").includes("1080 HD 16:9=1920x1080") && !modes("pyxis6k").some(x => /6080|4128|1984/.test(x)), "PYXIS 6K: Blackmagic's sizes (Open Gate 3:2 6048×4032)");
+  ok(modes("mini").includes("S16 HD → HD=1920x1080") && modes("mini").includes("16:9 HD Ana. → HD=1920x1080") && !modes("mini").some(x => /1\.6K|0\.88|1\.19/.test(x)), "ALEXA Mini: ARRI's mode names (S16 HD, 16:9 HD Ana.)");
+  ok(modes("miniLF").includes("4.5K LF 3:2 Open Gate=4448x3096") && modes("miniLF").includes("3.4K S35 3:2=3424x2202"), "Mini LF: LF / S35 in the names");
+  ok(modes("burano").includes("S35 1.9K 16:9=1920x1080") && modes("burano").includes("FFc 3.8K 16:9=3840x2160") && modes("burano").includes("S35c 3.8K 16:9=3840x2160"), "BURANO: Sony's FF / FFc / S35 / S35c modes");
+  ok(!modes("komodo").some(x => /3:2|6:5/.test(x)) && modes("dragon").includes("6K FF=6144x3160") && !modes("dragon").some(x => /4\.5K/.test(x)), "RED: only the formats RED lists; DRAGON-X 6K FF is 6144×3160");
+  ok(!modes("ronin4d").some(x => /UHD/.test(x)) && modes("ronin4d").includes("2K=2048x1080"), "Ronin 4D: 6K, C4K and 2K, as DJI lists");
+  ok(!modes("sonySI4K").some(x => /DCI/.test(x)) && modes("sonySI").some(x => /DCI/.test(x)) && A.recProfile("Sony a7 IV") === A.REC.sonySI4K && A.recProfile("Sony a7S III") === A.REC.sonySI, "DCI 4K on the FX3 and a7S III, not on the a7 IV");
+  const pk = A.newProduction({ name: "K", houseId: "utopia" }); A.app.productions.push(pk);
+  const kom = find("utopia", /komodo 6k/i); if (kom) { A.setQty(pk, kom, 1); pk.items[kom].rec = { codec: "REDCODE HQ", mode: "6K 16:9", fps: 24 }; ok(/<span class="t-x">calculated<\/span>/.test(A.mediaCamHtml(pk, kom)), "a size RED gives only as a ratio says it's calculated"); }
+}
 
 // --- a matching card reader for each kind of card on the list
 { const keepRules = A.app.settings.rules; A.app.settings.rules = []; A.app.settings.readers = true;
