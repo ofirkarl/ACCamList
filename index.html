@@ -1518,6 +1518,8 @@ body.kb-room .app { padding-bottom: 70vh; }
 .mc-add { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 1.5px dashed var(--line); border-radius: var(--r-card); background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .mc-add span { font-size: 20px; line-height: 1; }
 .mc-add:active { background: var(--accent-soft); }
+/* the page that a swipe carries */
+.tabpane { will-change: auto; touch-action: pan-y; }
 </style>
 </head>
 <body>
@@ -2526,17 +2528,23 @@ const XAVC_S = (si, dci = si) => [...(si ? [{ n: "XAVC S-I 4K", t: "M24", m: [m(
   ...(si ? [{ n: "XAVC HS 4K", t: "Mfix", m: [m(UHD, 120, [[30, 100], [60, 200], [120, 280]])] }] : []),
   { n: si ? "XAVC S 4K (4:2:2 10-bit)" : "XAVC S 4K", t: "Mfix", m: [m(UHD, si ? 120 : 30, si ? [[24, 100], [30, 140], [60, 200], [120, 280]] : [[30, 100]])] },
   { n: "XAVC S HD", t: "Mfix", m: [m(HD, si ? 120 : 60, [[60, 50], [120, 100]])] }];
-/* Sony FX9, by Sony's brochure: imager scan modes Full-Frame (6K), Super 35 and Super 16 (firmware 3), what each records and how fast;
-   rates are the effective ones behind Sony's recording-time table (QD-G128A) */
+/* Sony FX9, by Sony's operating manual and brochure: the 6K full-frame sensor's imager scan modes and what each records.
+   FF 6K: DCI 4K, UHD, HD up to 30p · FFc 5K (full-frame crop) and S35 4K: up to 60p · FF 2K: HD up to 180p ·
+   S35 2K: HD up to 120p · S16 2K (firmware 3): HD up to 180p. Rates: the effective ones behind Sony's recording-time table (QD-G128A) */
 const FX9M = (sn, out, w, h, fps) => [`${sn} → ${out}`, w, h, fps];
-const FX9_4K = [FX9M("Full-Frame", "DCI 4K", 4096, 2160, 60), FX9M("Full-Frame", "UHD", 3840, 2160, 60), FX9M("Super 35", "DCI 4K", 4096, 2160, 60), FX9M("Super 35", "UHD", 3840, 2160, 60)];
-const FX9_UHD = FX9_4K.filter(x => / UHD$/.test(x[0])).map(x => [...x.slice(0, 3), 60]);
-const FX9_HD = cap => [FX9M("Full-Frame", "HD", 1920, 1080, Math.min(cap, 180)), FX9M("Super 35", "HD", 1920, 1080, Math.min(cap, 120)), FX9M("Super 16", "HD", 1920, 1080, Math.min(cap, 180))];
+const FX9_4KMODES = [["FF 6K", 30], ["FFc 5K", 60], ["S35 4K", 60]];
+const FX9_4K = FX9_4KMODES.flatMap(([sn, f]) => [FX9M(sn, "DCI 4K", 4096, 2160, f), FX9M(sn, "UHD", 3840, 2160, f)]);
+const FX9_UHD = FX9_4KMODES.map(([sn, f]) => FX9M(sn, "UHD", 3840, 2160, f));
+const FX9_HD = (hs, cap) => [...FX9_4KMODES.map(([sn, f]) => FX9M(sn, "HD", 1920, 1080, Math.min(f, cap))),
+  ...(hs ? [FX9M("FF 2K", "HD", 1920, 1080, Math.min(hs.ff, cap)), FX9M("S35 2K", "HD", 1920, 1080, Math.min(hs.s35, cap)), FX9M("S16 2K", "HD", 1920, 1080, Math.min(hs.s16, cap))] : [])];
 const withV = (modes, v) => modes.map(x => [...x, v]);
-const FX9 = [{ n: "XAVC-I 4K", t: "M24", m: withV(FX9_4K, 297) }, { n: "XAVC-I HD", t: "Mfix", m: withV(FX9_HD(180), [[24, 123], [30, 152], [60, 280], [100, 467], [120, 560], [150, 700], [180, 840]]) },
-  { n: "XAVC-L 4K", t: "Mfix", m: withV(FX9_UHD, [[30, 128], [60, 186]]) }, { n: "XAVC-L HD 50", t: "Mfix", m: withV(FX9_HD(60), [[60, 71]]) },
-  { n: "XAVC-L HD 35", t: "Mfix", m: withV(FX9_HD(60), [[60, 52]]) }, { n: "XAVC-L HD 25", t: "Mfix", m: withV(FX9_HD(30), [[30, 39]]) },
-  { n: "MPEG HD422", t: "Mfix", m: withV(FX9_HD(30), [[30, 73]]) }];
+const FX9 = [{ n: "XAVC-I 4K", t: "M24", m: withV(FX9_4K, 297) },
+  { n: "XAVC-I HD", t: "Mfix", m: withV(FX9_HD({ ff: 180, s35: 120, s16: 180 }, 180), [[24, 123], [30, 152], [60, 280], [100, 467], [120, 560], [150, 700], [180, 840]]) },
+  { n: "XAVC-L 4K", t: "Mfix", m: withV(FX9_UHD, [[30, 128], [60, 186]]) },
+  { n: "XAVC-L HD 50", t: "Mfix", m: withV(FX9_HD({ ff: 120, s35: 120, s16: 120 }, 120), [[60, 71], [120, 142]]) },
+  { n: "XAVC-L HD 35", t: "Mfix", m: withV(FX9_HD({ ff: 120, s35: 120, s16: 120 }, 120), [[60, 52], [120, 104]]) },
+  { n: "XAVC-L HD 25", t: "Mfix", m: withV(FX9_HD(null, 30), [[30, 39]]) },
+  { n: "MPEG HD422", t: "Mfix", m: withV(FX9_HD(null, 30), [[30, 73]]) }];
 /* RED */
 const KOMODO = [["6K 17:9", 6144, 3240, 40], ["6K 2.4:1", 6144, 2592, 50], ["6K 2:1", 6144, 3072, 40], ["6K 16:9", 5760, 3240, 40], ["5K 17:9", 5120, 2700, 48], ["4K 17:9", 4096, 2160, 60], ["4K 16:9", 3840, 2160, 60], ["2K 17:9", 2048, 1080, 120]];
 const HELIUM = [["8K FF", 8192, 4320, 60], ["8K 2.4:1", 8192, 3456, 75], ["8K 16:9", 7680, 4320, 60], ["8K 6:5", 5184, 4320, 60], ["7K FF", 7168, 3780, 60], ["6K FF", 6144, 3240, 75], ["6K 2.4:1", 6144, 2592, 100], ["6K 16:9", 5760, 3240, 75], ["5K FF", 5120, 2700, 96], ["4K FF", 4096, 2160, 120], ["4K 16:9", 3840, 2160, 120]];
@@ -3561,7 +3569,7 @@ function viewProduction() {
   return `<section class="pad">
     ${head}
   </section>
-  ${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}
+  <div class="tabpane" id="tabpane">${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
     ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
       `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
@@ -4459,30 +4467,53 @@ document.addEventListener("input", e => {
    two views as two stops: Add gear · Favorites · Camera List · My list · Any camera. Not on things that scroll sideways
    or are being dragged, not while typing, in a dialog, the preview or the edit mode */
 const SWIPE_STOPS = [["add"], ["fav"], ["list"], ["media", "list"], ["media", "free"]];
-const sw = { x: 0, y: 0, t: 0, ok: false };
+const sw = { x: 0, y: 0, t: 0, ok: false, dir: 0 };
+const swHere = () => SWIPE_STOPS.findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
+const swCalm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+const swPane = () => document.getElementById("tabpane");
 document.addEventListener("touchstart", e => {
-  sw.ok = false;
+  sw.ok = false; sw.dir = 0;
   if (e.touches.length !== 1 || app.view !== "production" || app.sel || app.editing) return;
   if (document.getElementById("modal") || document.getElementById("preview") || document.body.classList.contains("kb-up")) return;
   const t = e.target;
-  if (t.closest && t.closest("input, textarea, select, [data-drag], .chips, .f-ruler, .nsel-list, [data-noswipe]")) return;
+  if (t.closest && t.closest("input, textarea, select, [data-drag], .chips, .f-ruler, .nsel-list, .navbar, [data-noswipe]")) return;
   for (let n = t; n && n !== document.body; n = n.parentElement) if (n.scrollWidth > n.clientWidth + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowX)) return;
   Object.assign(sw, { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), ok: true });
 }, { passive: true });
+document.addEventListener("touchmove", e => {
+  if (!sw.ok || e.touches.length !== 1 || (typeof drag !== "undefined" && drag.on)) return;
+  const dx = e.touches[0].clientX - sw.x, dy = e.touches[0].clientY - sw.y;
+  if (!sw.dir) { if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { sw.ok = false; return; } if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.8) sw.dir = 1; else return; }
+  const pane = swPane(); if (!pane || swCalm()) return;
+  const here = swHere(), edge = !SWIPE_STOPS[here + (dx < 0 ? 1 : -1)];
+  const x = edge ? dx * 0.25 : dx;  // at the first or last page it gives a little, then springs back
+  pane.style.transition = "none"; pane.style.transform = `translateX(${x}px)`; pane.style.opacity = String(1 - Math.min(Math.abs(x) / innerWidth, 1) * 0.35);
+}, { passive: true });
+function swBack(pane) { if (!pane) return; pane.style.transition = "transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s"; pane.style.transform = ""; pane.style.opacity = ""; setTimeout(() => { pane.style.transition = ""; }, 240); }
 document.addEventListener("touchend", e => {
   if (!sw.ok) return; sw.ok = false;
-  if (typeof drag !== "undefined" && drag.on) return;
-  const c = e.changedTouches[0], dx = c.clientX - sw.x, dy = c.clientY - sw.y;
-  if (Date.now() - sw.t > 700 || Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.8) return;
-  const here = SWIPE_STOPS.findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
-  const to = SWIPE_STOPS[here + (dx < 0 ? 1 : -1)];
-  if (here < 0 || !to) return;
+  const pane = swPane();
+  if (typeof drag !== "undefined" && drag.on) { swBack(pane); return; }
+  const c = e.changedTouches[0], dx = c.clientX - sw.x, dy = c.clientY - sw.y, dt = Date.now() - sw.t;
+  const here = swHere(), to = SWIPE_STOPS[here + (dx < 0 ? 1 : -1)];
+  // far enough, or a quick flick
+  const go = here >= 0 && to && Math.abs(dx) >= Math.abs(dy) * 1.8 && (Math.abs(dx) > innerWidth * 0.28 || (Math.abs(dx) > 50 && dt < 300));
+  if (!go) { swBack(pane); return; }
   buzz("tap");
-  if (to[1]) app.mcMode = to[1];
-  mcOpen = null;
-  if (to[0] !== app.tab) { app.tab = to[0]; app.editing = null; render(); window.scrollTo(0, 0); }
-  else rerenderKeepScroll();
+  const out = dx < 0 ? -1 : 1, calm = swCalm();
+  const show = () => {
+    if (to[1]) app.mcMode = to[1];
+    mcOpen = null;
+    if (to[0] !== app.tab) { app.tab = to[0]; app.editing = null; render(); window.scrollTo(0, 0); } else rerenderKeepScroll();
+    const np = swPane(); if (!np || calm) return;
+    np.style.transition = "none"; np.style.transform = `translateX(${-out * 28}%)`; np.style.opacity = "0";
+    requestAnimationFrame(() => requestAnimationFrame(() => { np.style.transition = "transform .26s cubic-bezier(.2,.8,.2,1), opacity .2s"; np.style.transform = ""; np.style.opacity = ""; setTimeout(() => { np.style.transition = ""; }, 280); }));
+  };
+  if (!pane || calm) { show(); return; }
+  pane.style.transition = "transform .14s ease-in, opacity .14s ease-in"; pane.style.transform = `translateX(${out * 45}%)`; pane.style.opacity = "0";
+  setTimeout(show, 140);
 }, { passive: true });
+document.addEventListener("touchcancel", () => { if (sw.ok) { sw.ok = false; swBack(swPane()); } }, { passive: true });
 function mcClose() { if (!mcOpen) return; mcOpen = null; const p = cur(); if (p) mediaRedraw(p); }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && mcOpen) { e.stopPropagation(); mcClose(); } }, true);
 /* the bottom bar's icons, in one line style */
