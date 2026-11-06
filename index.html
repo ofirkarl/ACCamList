@@ -1509,6 +1509,8 @@ body.kb-up .navbar { transform: translateY(110%); }
 .mc-search:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
 .mc-opt[hidden] { display: none; }
 .mc-none { margin: 0; padding: 12px; font-size: 15px; color: var(--muted); }
+/* while typing: room under the page, so the field being typed in can rise to the top of the screen */
+body.kb-room .app { padding-bottom: 70vh; }
 </style>
 </head>
 <body>
@@ -2850,6 +2852,26 @@ document.addEventListener("focusin", e => {
   if (!t || !t.closest || !t.closest("#modal") || !/^(INPUT|TEXTAREA)$/.test(t.tagName)) return;
   setTimeout(() => { if (document.activeElement === t) { fitToKeyboard(); t.scrollIntoView({ block: "nearest" }); } }, 320);
 });
+/* typing anywhere in the app: the field being typed in moves to the top of the part of the screen the keyboard leaves,
+   under any sticky bar, so what's typed and what it brings up (search results, the rest of the line) stay in view */
+const KB_FIELD = /^(INPUT|TEXTAREA)$/, KB_SKIP = /^(checkbox|radio|button|submit|range|color|file)$/;
+function kbLift() {
+  const t = document.activeElement, vv = window.visualViewport;
+  if (!t || !KB_FIELD.test(t.tagName) || KB_SKIP.test(t.type) || t.closest("#modal") || !vv) return;
+  const bar = [...document.querySelectorAll(".bar")].map(b => b.getBoundingClientRect()).find(r => r.height && r.top <= 1 && r.bottom > 0);
+  const top = (bar ? bar.bottom : 0) + 12, r = t.getBoundingClientRect(), room = vv.height;
+  // already comfortably in view (top half of what's left above the keyboard): leave it
+  if (r.top >= top && r.bottom <= top + room * 0.45) return;
+  window.scrollBy({ top: r.top - top, behavior: "smooth" });
+}
+document.addEventListener("focusin", e => {
+  const t = e.target;
+  if (!t || !KB_FIELD.test(t.tagName) || KB_SKIP.test(t.type) || t.closest("#modal")) return;
+  document.body.classList.add("kb-room");  // room below, so even a field near the bottom of the page can rise
+  setTimeout(kbLift, 60); setTimeout(kbLift, 380);
+});
+document.addEventListener("focusout", () => setTimeout(() => { const a = document.activeElement; if (!a || !KB_FIELD.test(a.tagName)) document.body.classList.remove("kb-room"); }, 200));
+if (window.visualViewport) window.visualViewport.addEventListener("resize", () => { if (document.body.classList.contains("kb-up")) kbLift(); });
 function closeModal() { const m = document.getElementById("modal"); if (m) { m.remove(); navSync(); } }
 
 /* the phone's back button steps back through the app (the standalone app only): a dialog, the preview, the lens finder,
