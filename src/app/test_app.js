@@ -674,6 +674,15 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const kom = find("utopia", /komodo 6k/i); if (kom) { A.setQty(pk, kom, 1); pk.items[kom].rec = { codec: "REDCODE HQ", mode: "6K 16:9", fps: 24 }; ok(/<span class="t-b">calculated<\/span>/.test(A.mediaCamHtml(pk, kom)), "a size RED gives only as a ratio says it's calculated"); }
 }
 
+// --- "Any camera": a calculation for a camera that isn't on the list
+{ const pf = A.newProduction({ name: "F", houseId: "utopia" }); A.app.productions.push(pf);
+  const h0 = A.mediaCamHtml(pf, "free");
+  ok(/data-k="cam"/.test(h0) && /Choose a camera/.test(h0) && !/mc-res/.test(h0), "Any camera starts with a Camera tile to choose from");
+  const a35 = find("utopia", /^ARRI Alexa 35$/); A.app.settings.mcFree = { utopia: { id: a35, rec: {}, n: 3 } };
+  const h1 = A.mediaCamHtml(pf, "free");
+  ok(/<span class="t-l"><span>Camera<\/span><\/span><span class="t-v">ARRI Alexa 35<\/span>/.test(h1) && /data-id="free" data-d="1"/.test(h1) && /<b>3<\/b>/.test(h1) && /<span class="t-l">Total<\/span><b>(?!–)/.test(h1) && !Object.keys(pf.items).length, "...then the whole calculator for it, with its own card count, and nothing added to the list");
+  delete A.app.settings.mcFree; }
+
 // --- a matching card reader for each kind of card on the list
 { const keepRules = A.app.settings.rules; A.app.settings.rules = []; A.app.settings.readers = true;
   const pr = A.newProduction({ name: "Readers", houseId: "utopia" }); A.app.productions.push(pr);

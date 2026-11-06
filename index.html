@@ -1495,6 +1495,12 @@ body.kb-up .navbar { transform: translateY(110%); }
 .mc-chips .mc-opt { justify-content: center; padding: 10px 4px; }
 .mc-chips.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mc-chips .mc-opt .t-a { flex: 0 1 auto; text-align: center; }
+
+/* the Media Calculator's two views: the cameras on the list, or any camera of the house */
+.mc-mode { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--sunken); }
+.mc-mode button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: none; color: var(--muted); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color .15s, color .15s; }
+.mc-mode button[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .12), inset 0 0 0 1px var(--line); }
+.mc-opt.wrap .t-a { white-space: normal; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -4303,10 +4309,24 @@ function recSet(l, e, p, k, v) {
    Under the settings: the card with how many of it, then what they come to */
 let mcOpen = null;   // the tile whose choices are open: { id, k }
 const splitTail = s => { const i = s.lastIndexOf(" · "); return i > 0 ? [s.slice(0, i), s.slice(i + 3)] : [s, ""]; };
+/* "Any camera": a camera from the house's catalog that needn't be on the list, with its own card count (kept per house, apart from the list) */
+function mcFreeOf(p) {
+  const all = app.settings.mcFree || (app.settings.mcFree = {});
+  const f = all[p.houseId] || (all[p.houseId] = { id: "", rec: {}, n: 2 });
+  if (f.id && !ITEM.has(f.id)) { f.id = ""; f.rec = {}; }
+  return f;
+}
+const mcFreeCams = houseId => [...ITEM.keys()].filter(k => { const x = ITEM.get(k); return x.h.id === houseId && hasRec(x) && !/\bfor\b/i.test(x.it.name); }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name));
 function mediaCamHtml(p, id) {
-  const l = p.items[id], e = ITEM.get(id); if (!l || !e) return "";
+  const free = id === "free", F = free ? mcFreeOf(p) : null;
+  const l = free ? F : p.items[id], e = ITEM.get(free ? F.id : id);
+  if (free && !e) {  // no camera chosen yet: only the Camera tile, and its list
+    const open = mcOpen && mcOpen.id === "free" ? mcOpen.k : "";
+    return `<div class="media-cam" id="mc-free"><div class="mc-set"><div class="mc-pair one"><button type="button" class="mc-tile tap${open === "cam" ? " on" : ""}" data-act="mc-open" data-id="free" data-k="cam" aria-expanded="${open === "cam"}"><span class="t-l"><span>Camera</span></span><span class="t-v">Choose a camera</span></button></div>${open === "cam" ? `<div class="mc-panel">${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap" data-act="mc-pick" data-id="free" data-k="cam" data-v="${esc(k)}" aria-pressed="false"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}</div>` : ""}</div></div>`;
+  }
+  if (!l || !e) return "";
   recEnsure(l, e, p);
-  const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = card && p.items[card] ? lineQty(p.items[card]) : 0;
+  const r = recResult(l, e), choices = cardChoices(e, p.houseId), card = l.rec.card, onList = free ? F.n : card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, u = esc(id), open = mcOpen && mcOpen.id === id ? mcOpen.k : "";
   const cardName = card ? ITEM.get(card)?.it.name || "" : "", sizeUnknown = card && !cardBytes(cardName);
   const lab = (label, x) => `<span class="t-l"><span>${label}</span>${x ? `<span class="t-x">${x}</span>` : ""}</span>`;
@@ -4331,7 +4351,8 @@ function mediaCamHtml(p, id) {
       body = [...new Set(parts.map(x => x.sensor))].map(sn => opt(k, sn, sn === now.sensor, esc(sensorText(sn)))).join("");
     } else if (k === "mode") {  // the recording resolutions this sensor area makes
       body = parts.filter(x => x.sensor === now.sensor).map(x => opt(k, x.m[0], x === now, esc(x.out || kOf(x.sensor) || px(x)), px(x) + (note(x) ? ` · ${note(x)}` : ""))).join("");
-    } else if (k === "card") {
+    } else if (k === "cam") body = mcFreeCams(p.houseId).map(x => opt(k, x, x === (F && F.id), esc(ITEM.get(x).it.name))).join("").replace(/class="mc-opt/g, 'class="mc-opt wrap');
+    else if (k === "card") {
       const types = [...new Set(choices.map(x => x.type))];
       body = types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(cardOpt).join("")).join("") : choices.map(cardOpt).join("");
     } else if (k === "gb") body = `<div class="mc-chips three">${[64, 128, 256, 512, 1000, 2000].map(g => opt(k, g, l.rec.gb === g, g >= 1000 ? g / 1000 + "TB" : g + "GB")).join("")}</div>`;
@@ -4360,8 +4381,8 @@ function mediaCamHtml(p, id) {
   }
   const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
-    <h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>
-    <div class="mc-set">${set}</div>
+    ${free ? "" : `<h3 class="mc-name">${esc(l.name)}${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}</h3>`}
+    <div class="mc-set">${free ? pair(tap("cam", "Camera", esc(e.it.name)), "", "cam") : ""}${set}</div>
     <div class="mc-media">${media}<div class="mc-res" aria-live="polite"><div><span class="t-l">Per card</span><b>${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="t-l">Total</span><b>${total}</b></div></div></div>
   </div>`;
 }
@@ -4382,14 +4403,17 @@ const NAV_ICON = {
   media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
 };
 function viewMedia(p, h) {
-  if (mcOpen && !p.items[mcOpen.id]) mcOpen = null;
+  const freeMode = app.mcMode === "free";
+  if (mcOpen && (freeMode ? mcOpen.id !== "free" : !p.items[mcOpen.id])) mcOpen = null;
   const cams = Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => id);
-  return `<section class="pad media-tab">
-    ${cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
-  </section>`;
+  const seg = `<div class="mc-mode" role="tablist">${[["list", "My list"], ["free", "Any camera"]].map(([v, t]) => `<button type="button" role="tab" data-act="mc-mode" data-v="${v}" aria-selected="${(app.mcMode || "list") === v}">${t}</button>`).join("")}</div>`;
+  const body = freeMode ? mediaCamHtml(p, "free")
+    : cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`;
+  return `<section class="pad media-tab">${seg}${body}</section>`;
 }
 /* a change in the Media tab: kept on the camera's line, and that camera's card redrawn in place */
 function recApply(p, id, fn) {
+  if (id === "free") { const F = mcFreeOf(p), e = ITEM.get(F.id); if (e) { recEnsure(F, e, p); fn(F, e); } touchSettings(); mediaRedraw(p); return; }
   const l = p.items[id], e = ITEM.get(id); if (!l || !e) return;
   recEnsure(l, e, p); fn(l, e);
   if (l.rec && l.rec.codec) { const k = recKey(e.it.name); if (k) { (app.settings.recLast || (app.settings.recLast = {}))[k] = { codec: l.rec.codec, mode: l.rec.mode, fps: l.rec.fps }; app.settings.recFps = l.rec.fps; touchSettings(); } }
@@ -5188,8 +5212,12 @@ document.addEventListener("click", e => {
       break;
     }
     case "mc-open": if (p) mcToggle(p, id, b.dataset.k); break;
-    case "mc-pick": if (p) { const k = b.dataset.k, v = b.dataset.v; mcOpen = null; recApply(p, id, (l, e) => recSet(l, e, p, k, v)); document.getElementById("mc-" + id)?.querySelector(`[data-k="${k}"]`)?.scrollIntoView({ block: "nearest" }); } break;
-    case "mq": if (p) { const l = p.items[id], c = l && l.rec && l.rec.card; if (c) { const now = p.items[c] ? lineQty(p.items[c]) : 0; setQty(p, c, Math.max(0, now + Number(b.dataset.d))); closeModal(); mediaRedraw(p); } } break;
+    case "mc-mode": if (app.mcMode !== b.dataset.v) { app.mcMode = b.dataset.v; mcOpen = null; rerenderKeepScroll(); } break;
+    case "mc-pick": if (p) { const k = b.dataset.k, v = b.dataset.v; mcOpen = null;
+      if (id === "free" && k === "cam") { const F = mcFreeOf(p); if (F.id !== v) { F.id = v; F.rec = {}; } touchSettings(); mediaRedraw(p); document.getElementById("mc-free")?.scrollIntoView({ block: "nearest" }); break; }
+      recApply(p, id, (l, e) => recSet(l, e, p, k, v)); document.getElementById("mc-" + id)?.querySelector(`[data-k="${k}"]`)?.scrollIntoView({ block: "nearest" }); } break;
+    case "mq": if (p && id === "free") { const F = mcFreeOf(p); F.n = Math.max(0, Math.min(99, (F.n || 0) + Number(b.dataset.d))); touchSettings(); mediaRedraw(p); break; }
+      if (p) { const l = p.items[id], c = l && l.rec && l.rec.card; if (c) { const now = p.items[c] ? lineQty(p.items[c]) : 0; setQty(p, c, Math.max(0, now + Number(b.dataset.d))); closeModal(); mediaRedraw(p); } } break;
     case "edit-line": app.editing = app.editing === id ? null : id; rerenderKeepScroll(); document.getElementById("en-" + id)?.focus(); break;
     case "edit-done": app.editing = null; rerenderKeepScroll(); break;
     case "rename-reset": { const l = p.items[id]; if (l && l.orig) { l.name = l.orig; touch(p); rerenderKeepScroll(); } break; }
