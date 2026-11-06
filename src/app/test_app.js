@@ -676,11 +676,15 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 
 // --- "Any camera": a calculation for a camera that isn't on the list
 { const pf = A.newProduction({ name: "F", houseId: "utopia" }); A.app.productions.push(pf);
-  const h0 = A.mediaCamHtml(pf, "free");
+  const h0 = A.mediaCamHtml(pf, "free0");
   ok(/data-k="cam"/.test(h0) && /Choose a camera/.test(h0) && !/mc-res/.test(h0), "Any camera starts with a Camera tile to choose from");
   const a35 = find("utopia", /^ARRI Alexa 35$/); A.app.settings.mcFree = { utopia: { id: a35, rec: {}, n: 3 } };
-  const h1 = A.mediaCamHtml(pf, "free");
-  ok(/<span class="t-l"><span>Camera<\/span><\/span><span class="t-v">ARRI Alexa 35<\/span>/.test(h1) && /data-id="free" data-d="1"/.test(h1) && /<b>3<\/b>/.test(h1) && /<span class="t-l">Total<\/span><b>(?!–)/.test(h1) && !Object.keys(pf.items).length, "...then the whole calculator for it, with its own card count, and nothing added to the list");
+  const h1 = A.mediaCamHtml(pf, "free0");
+  ok(/<span class="t-l"><span>Camera<\/span><\/span><span class="t-v">ARRI Alexa 35<\/span>/.test(h1) && /data-id="free0" data-d="1"/.test(h1) && /<b>3<\/b>/.test(h1) && /<span class="t-l">Total<\/span><b>(?!–)/.test(h1) && !Object.keys(pf.items).length, "...then the whole calculator for it, with its own card count, and nothing added to the list");
+  ok(Array.isArray(A.app.settings.mcFree.utopia) && A.app.settings.mcFree.utopia[0].id === a35, "a single camera kept before becomes the first of a list");
+  const fx9 = find("utopia", /fx9/i); A.app.settings.mcFree.utopia.push({ id: fx9, rec: {}, n: 1 });
+  A.app.mcMode = "free"; const v = A.viewMedia(pf, A.houseById("utopia")); A.app.mcMode = "list";
+  ok(/id="mc-free0"/.test(v) && /id="mc-free1"/.test(v) && /Camera 2<\/span><button [^>]*data-act="mc-del" data-id="free1"/.test(v) && /data-act="mc-add"/.test(v), "Any camera: two cameras side by side to compare, each numbered with Remove, and Add camera to compare under them");
   delete A.app.settings.mcFree; }
 
 // --- Sony FX9, as Sony's brochure has it
