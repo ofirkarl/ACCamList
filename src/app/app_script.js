@@ -1153,6 +1153,18 @@ function applyDefaults(p) {
       if (!want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${type} cards`], label: rd.label });
     }
   }
+  // a package never brings in what doesn't work with the list: what works comes instead (or nothing), unless you chose to keep both
+  for (const r of app.settings.clashes || []) {
+    if ((p.clashOk || {})[r.id] || !r.a.some(x => p.items[x] && lineQty(p.items[x]) - (p.items[x].auto || 0) > 0 || want.has(x))) continue;
+    for (const id of r.b) {
+      const w = want.get(id); if (!w) continue;
+      want.delete(id);
+      if (r.swap && ITEM.has(r.swap) && !r.a.includes(r.swap)) {
+        const s2 = want.get(r.swap) || { qty: 0, why: [], label: itName(r.swap) };
+        s2.qty += w.qty; s2.why.push(...w.why.map(x => `${x}, instead of ${shortName(itName(id))}`)); want.set(r.swap, s2);
+      }
+    }
+  }
   const changed = [];
   for (const [id, l] of Object.entries(p.items)) if (l.auto && !want.has(id)) {
     l.qty = Math.max(0, l.qty - l.auto); l.auto = 0; delete l.autoWhy; changed.push(id);
@@ -1275,9 +1287,11 @@ function clashSwap(p, rid) {
   const r = (app.settings.clashes || []).find(x => x.id === rid);
   if (!r || !ITEM.has(r.swap)) return [];
   let n = 0, note = "";
-  for (const id of r.b) { const l = p.items[id]; if (!l) continue; n += lineQty(l); if (!note && l.note) note = l.note; delete p.items[id]; }
+  for (const id of r.b) { const l = p.items[id]; if (!l) continue; n += lineQty(l) - (l.auto || 0); if (!note && l.note) note = l.note; delete p.items[id]; }
+  // what a package brought in is swapped by the package itself (see applyDefaults); what you added yourself is swapped here
   const had = p.items[r.swap];
-  const ids = [...r.b, ...setQty(p, r.swap, (had ? lineQty(had) : 0) + Math.max(1, n))];
+  const ids = [...r.b, ...(n > 0 ? setQty(p, r.swap, (had ? lineQty(had) : 0) + n) : applyDefaults(p))];
+  clashSettle(p); touch(p);
   if (!had && note && p.items[r.swap] && !p.items[r.swap].note) p.items[r.swap].note = note;
   return ids;
 }
