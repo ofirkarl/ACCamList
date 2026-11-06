@@ -1,0 +1,39 @@
+# Builds the Android helper (AC Cam List Send) and publishes it as the latest release:
+# https://github.com/ofirkarl/ACCamList/releases/latest/download/ac-cam-list-send.apk
+name: Android helper
+on:
+  push:
+    branches: [main]
+    paths: ["src/android/**", ".github/workflows/send-app.yml"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.7" }
+      - name: Build
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [ -n "$KEYSTORE_PASS" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            KEYSTORE_FILE="$RUNNER_TEMP/release.jks" gradle -p src/android assembleRelease --no-daemon
+            cp src/android/app/build/outputs/apk/release/app-release.apk ac-cam-list-send.apk
+          else
+            # no signing key in the repo yet: a debug-signed build, fine for trying it out
+            gradle -p src/android assembleDebug --no-daemon
+            cp src/android/app/build/outputs/apk/debug/app-debug.apk ac-cam-list-send.apk
+          fi
+      - name: Publish
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          TAG="send-app-${{ github.run_number }}"
+          gh release create "$TAG" ac-cam-list-send.apk --title "AC Cam List Send 1.${{ github.run_number }}" --notes "The Android helper that attaches Word files when AC Cam List sends a list." --latest

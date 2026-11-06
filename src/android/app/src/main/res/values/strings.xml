@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AC Cam List Send</string>
+    <string name="failed">The file couldn\'t be opened for sending. Try again from AC Cam List.</string>
+    <string name="about">This helper lets AC Cam List attach Word files when you send a list. There is nothing to do here: in AC Cam List, tap Send and pick WhatsApp, Gmail or any other app.</string>
+    <string name="open_app">Open AC Cam List</string>
+</resources>

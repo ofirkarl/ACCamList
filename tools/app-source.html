@@ -133,7 +133,7 @@ h2.page { font-family: var(--font-display); font-weight: 800; font-size: 40px; l
 /* production header */
 .prod-head { padding-block: 10px 6px; display: grid; gap: 6px; }
 .prod-head .back { justify-self: start; }
-.send-how.warn { color: var(--warn); font-weight: 600; }
+.send-how.warn, .hint.warn { color: var(--warn); font-weight: 600; }
 .set-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .prod-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .prod-title h2 { font-family: var(--font-display); font-weight: 800; font-size: 36px; line-height: 1; margin: 0; text-transform: uppercase; overflow-wrap: anywhere; }
@@ -1225,6 +1225,8 @@ body.welcome-on .app { padding-bottom: 0; }
 .rs-note { margin: 0; font-size: 12px; }
 .cards-auto { display: grid; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 @media (prefers-reduced-motion: reduce) { .rec-strip { transition: none; } .rec-strip:active { transform: none; } }
+
+a.btn { text-decoration: none; }
 </style>
 
 <div class="app">
@@ -2322,7 +2324,7 @@ function defaultCard(e, houseId) {
   const pick = first.filter(c => size(c) <= 1.01e12).sort((a, b) => size(b) - size(a))[0] || first.sort((a, b) => size(a) - size(b))[0];
   return { id: pick.id, n: cardsPer() };
 }
-const cardsPer = () => app.settings.cardsPer ?? 3;
+const cardsPer = () => app.settings.cardsPer ?? 4;
 const autoCardsOn = () => app.settings.autoCards !== false;
 /* what a camera's cards hold at its recording format: per card and all together */
 function recResult(l, e) {
@@ -3006,6 +3008,12 @@ function viewSettings() {
       <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add gear.</span></div>`; })()}
     <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span>
       ${canBuzz() ? `<label class="check"><input type="checkbox" name="haptics" ${app.settings.haptics === false ? "" : "checked"}> Vibrate lightly on taps</label>` : ""}</div>
+    ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
+      <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
+      ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
+      <div><a class="btn" href="${HELPER_APK}" rel="noopener">${SAVE_ICON}<span>Get the helper app</span></a></div>
+      <label class="check"><input type="checkbox" name="helperOn" ${helperOn() ? "checked" : ""}> The helper app is installed on this phone</label>
+      <span class="hint">Once downloaded, open the file to install it. Android asks once to allow installs from your browser.</span></div>` : ""}
     <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
     <div class="set-group"><h3>Defaults</h3>
       <div class="cards-auto"><label class="check"><input type="checkbox" name="autoCards" ${autoCardsOn() ? "checked" : ""}> Add the right cards with each camera</label>
@@ -4328,6 +4336,20 @@ function savedVer(p, sent) {
 }
 /* the app itself, to send to someone */
 const APP_URL = "https://ofirkarl.github.io/ACCamList/";
+/* Word files on Android: Chrome won't put them in the share menu, so a small helper app (AC Cam List Send) does.
+   The file goes to it in an intent:// link; it opens the share menu with the file attached. Whether it's installed is per phone. */
+const SEND_PKG = "com.ofirkarl.accamlist.send";
+const HELPER_APK = "https://github.com/ofirkarl/ACCamList/releases/latest/download/ac-cam-list-send.apk";
+const LS_HELPER = "accam-send-helper";
+const isAndroid = () => { try { return /Android/i.test(navigator.userAgent); } catch (e) { return false; } };
+const helperOn = () => { try { return localStorage.getItem(LS_HELPER) === "1"; } catch (e) { return false; } };
+const setHelper = on => { try { if (on) localStorage.setItem(LS_HELPER, "1"); else localStorage.removeItem(LS_HELPER); } catch (e) {} };
+const useHelper = fmt => fmt === "docx" && isAndroid() && helperOn();
+const blobB64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = rej; r.readAsDataURL(blob); });
+function helperUrl(name, mime, subject, text, b64) {
+  const e = encodeURIComponent;
+  return `intent://send#Intent;scheme=accamlist;package=${SEND_PKG};S.name=${e(name)};S.mime=${e(mime)};S.subject=${e(subject)};S.text=${e(text)};S.data=${e(b64)};S.browser_fallback_url=${e(APP_URL + "#send-app")};end`;
+}
 async function shareApp() {
   const data = { title: "AC Cam List", text: "Camera equipment lists for camera assistants: pick the rental house, build the list, send it.", url: APP_URL };
   try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e && e.name === "AbortError") return; }
@@ -4388,13 +4410,14 @@ const SEND_MIME = { pdf: "application/pdf", docx: "application/vnd.openxmlformat
 const LS_NODOCX = "accam-no-docx-share";
 const noDocxShare = () => { try { return localStorage.getItem(LS_NODOCX) === "1"; } catch (e) { return false; } };
 function canShareKind(fmt) {
+  if (useHelper(fmt)) return true;
   if (fmt === "docx" && noDocxShare()) return false;
   try { return typeof File === "function" && !!navigator.canShare && navigator.canShare({ files: [new File(["x"], "x." + fmt, { type: SEND_MIME[fmt] })] }); } catch (e) { return false; }
 }
 const isTouch = () => { try { return matchMedia("(pointer: coarse)").matches; } catch (e) { return false; } };
 function sendHowText(fmt) {
   if (canShareKind(fmt)) return "This opens your phone's share menu with the file attached: pick Gmail, WhatsApp or any other app.";
-  if (fmt === "docx" && canShareKind("pdf")) return "This phone can't attach Word files to the share menu (PDF can). Save & email puts the Word file in Downloads and opens an email: attach it there. In WhatsApp: attach › Document, it's first in the list.";
+  if (fmt === "docx" && canShareKind("pdf")) return "This phone can't attach Word files to the share menu (PDF can). Save & email puts the Word file in Downloads and opens an email: attach it there. To attach Word files straight away, get the helper app in Settings.";
   return "Sending with the file attached works from your phone. Here, Send saves the file and copies the message for you to paste.";
 }
 /* the file is built as soon as the dialog opens, so tapping Send shares it straight away (phones only open the share menu right after a tap) */
@@ -4406,7 +4429,8 @@ function sendPrep(p, fmt) {
   if (sendJob.key === key && sendJob.blob) { ready(); return; }
   if (go) { go.disabled = true; go.textContent = fmt === "pdf" ? "Preparing the PDF…" : "Preparing…"; }
   sendJob.key = key; sendJob.blob = null;
-  sendJob.wait = getFile(p, fmt).then(b => { if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
+  sendJob.b64 = "";
+  sendJob.wait = getFile(p, fmt).then(async b => { if (useHelper(fmt)) { const t = await blobB64(b); if (sendJob.key === key) sendJob.b64 = t; } if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
     .catch(() => { if (sendJob.key === key) { sendJob.key = ""; const g = document.getElementById("sendGo"); if (g) g.textContent = "Couldn't build the file"; } });
 }
 const sendLabel = fmt => canShareKind(fmt) ? "Send…" : isTouch() ? "Save & email" : "Save file";
@@ -4415,6 +4439,11 @@ async function sendNow(p, f) {
   app.settings.send = { subject: sendUnfill(subject, p), message: sendUnfill(message, p), fmt }; touchSettings();
   const blob = sendJob.blob; if (!blob) return;
   const name = fileBase(p) + (fmt === "pdf" ? ".pdf" : ".docx");
+  if (useHelper(fmt) && sendJob.b64) {  // AC Cam List Send opens the share menu with the Word file attached
+    location.href = helperUrl(name, SEND_MIME.docx, subject, message, sendJob.b64);
+    closeModal(); commitVer(p); toast("Opening the share menu…"); buzz("done");
+    return;
+  }
   const file = typeof File === "function" ? new File([blob], name, { type: blob.type || (fmt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document") }) : null;
   let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })) && !(fmt === "docx" && noDocxShare()); } catch (e) {}
   if (can) {
@@ -4907,6 +4936,7 @@ document.addEventListener("change", e => {
     });
     return;
   }
+  if (t.name === "helperOn" && t.type === "checkbox") { setHelper(t.checked); app.helperMissing = false; rerenderKeepScroll(); return; }
   if (t.name === "autoCards" && t.type === "checkbox") { app.settings.autoCards = t.checked; touchSettings(); rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
   if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
@@ -5491,7 +5521,17 @@ if (!Array.isArray(app.productions)) app.productions = [];
   const ui = lsGet(LS_UI, {}), recent = ui.at && Date.now() - ui.at < RESUME_MS;
   if (recent && ui.view === "production" && app.productions.some(p => p.id === ui.pid)) { app.view = "production"; app.pid = ui.pid; app.tab = ["add", "fav", "list"].includes(ui.tab) ? ui.tab : "add"; }
   else if (needsWelcome()) app.view = "welcome";
+  sendAppBack(false);
 }
+/* back from a Send the helper app didn't pick up (Chrome opens #send-app instead): it isn't installed here, so Settings shows where to get it */
+function sendAppBack(draw) {
+  if (typeof location === "undefined" || location.hash !== "#send-app") return;
+  setHelper(false); app.helperMissing = true; closeModal(); app.setFrom = app.view === "production" ? app.pid : null; app.view = "settings";
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+  if (draw) render();
+  setTimeout(() => document.getElementById("sendAppGroup")?.scrollIntoView({ block: "center" }), 150);
+}
+if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => sendAppBack(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(); });
 render();
 initAccount();

@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { getUndo: () => undoFn, REC, recRate, recResult, recProfile, cardBytes, defaultCard, recSheetHtml, recStripHtml, recEnsure, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
+;return { getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, REC, recRate, recResult, recProfile, cardBytes, defaultCard, recSheetHtml, recStripHtml, recEnsure, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -594,15 +594,15 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 
 // --- a camera's cards and recording time
 { const keepRules = A.app.settings.rules; A.app.settings.rules = [];  // only the cards, no other defaults
-  A.app.settings.autoCards = true; A.app.settings.cardsPer = 3; delete A.app.settings.cardPick;
+  A.app.settings.autoCards = true; delete A.app.settings.cardsPer; delete A.app.settings.cardPick;
   const pc = A.newProduction({ name: "Cards", houseId: "utopia" }); A.app.productions.push(pc);
   const a35 = find("utopia", /^ARRI Alexa 35$/), cdx1 = find("utopia", /Codex Compact Drive 1TB/), cdx2 = find("utopia", /Codex Compact Drive 2TB/);
   A.setQty(pc, a35, 2);
-  ok(pc.items[a35].cards && pc.items[a35].cards.id === cdx1 && pc.items[cdx1] && pc.items[cdx1].qty === 6, `2 Alexa 35 -> 6x Codex 1TB (${pc.items[cdx1]?.qty})`);
+  ok(pc.items[a35].cards && pc.items[a35].cards.id === cdx1 && pc.items[cdx1] && pc.items[cdx1].qty === 8, `2 Alexa 35 -> 8x Codex 1TB (4 a camera) (${pc.items[cdx1]?.qty})`);
   const l = pc.items[a35], e = A.ITEM.get(a35);
   l.rec = { codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
   let r = A.recResult(l, e);
-  ok(Math.floor(r.per / 60) === 28 && r.n === 3, `ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min (${Math.floor(r.per / 60)})`);
+  ok(Math.floor(r.per / 60) === 28 && r.n === 4, `ARRIRAW 4.6K OG 24 fps on a 1TB drive: 28 min (${Math.floor(r.per / 60)})`);
   l.cards = { id: cdx2, n: 2 }; A.applyDefaults(pc);
   ok(!pc.items[cdx1] && pc.items[cdx2].qty === 4 && Math.floor(A.recResult(l, e).per / 60) === 56, "switching to 2TB drives, 2 a camera: 4 on the list, 56 min each");
   ok(/rec-strip/.test(A.recStripHtml(pc, a35, l, e)) && /2×<\/b> ARRI Codex Compact Drive 2TB/.test(A.recStripHtml(pc, a35, l, e)) && /56 min a card · 1 h 52 min on 2/.test(A.recStripHtml(pc, a35, l, e)), "the camera's line shows its cards and how long they last");
@@ -631,3 +631,8 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const k1 = A.fileKey(pf2, "docx"); A.commitVer(pf2); const k2 = A.fileKey(pf2, "docx");
   ok(k1 === k2, "saving (and so numbering the version) keeps the same file");
   A.setQty(pf2, find("utopia", /^Sony ILME-FX3$/), 2); ok(A.fileKey(pf2, "docx") !== k2, "a change to the list makes a new file"); }
+
+// --- Word files on Android go through the helper app
+{ const u = A.helperUrl("Camera list - X v2.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "Camera list – X", "Hi,\nAttached", "UEsDBA+/=");
+  ok(/^intent:\/\/send#Intent;scheme=accamlist;package=com\.ofirkarl\.accamlist\.send;/.test(u) && /S\.data=UEsDBA%2B%2F%3D;/.test(u) && /S\.text=Hi%2C%0AAttached;/.test(u) && /S\.browser_fallback_url=https%3A%2F%2Fofirkarl\.github\.io%2FACCamList%2F%23send-app;end$/.test(u), "the helper link carries the file, its name and the message");
+  ok(!A.useHelper("docx"), "the helper is off until it's switched on, on an Android phone"); }

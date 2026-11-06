@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+    </queries>
+    <application android:label="@string/app_name" android:icon="@mipmap/ic_launcher" android:allowBackup="false" android:supportsRtl="true">
+        <!-- AC Cam List hands a file over with an intent:// link; this opens the share menu with the file attached, then closes -->
+        <activity android:name=".SendActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true" android:noHistory="true" android:launchMode="singleTask" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="accamlist" android:host="send" />
+            </intent-filter>
+        </activity>
+        <!-- opened from the launcher: says what the app is for -->
+        <activity android:name=".AboutActivity" android:exported="true" android:theme="@android:style/Theme.DeviceDefault.Light.Dialog.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <provider android:name=".SharedFiles" android:authorities="com.ofirkarl.accamlist.send.files" android:exported="false" android:grantUriPermissions="true" />
+    </application>
+</manifest>
