@@ -502,7 +502,7 @@ A.renameCatItem(U, rn, "ARRI Alexa Mini"); A.syncLineNames(rn, "Alexa Mini (body
 A.app.settings.me = { name: "Ofir K", phone: "050" }; A.app.formFor = null; A.app.dupFrom = null;
 ok(/value="Ofir K"/.test(A.viewForm()) && /value="050"/.test(A.viewForm()), "a new production starts with your name and phone");
 const vset = A.viewSettings();
-ok(/id="meForm"/.test(vset) && /name="theme"/.test(vset) && /data-act="rule-new"/.test(vset) && !/Add a battery rule/.test(vset), "settings: your details, light/dark, your own packages (no battery form)");
+ok(/id="meForm"/.test(vset) && /data-act="me-toggle"/.test(vset) && !/name="theme"/.test(vset) && !/name="haptics"/.test(vset) && !/name="readers"/.test(vset) && /data-act="rule-new"/.test(vset) && !/Add a battery rule/.test(vset), "settings: your details (fold away), your own packages; no theme, vibration or reader switches (theme and share are up top)");
 // --- your own defaults: when you add X, N x Y come with it, following X's quantity
 const plate = find("utopia", /V-Mount Battery Plate|V-Mount Plate/i), dp = A.newProduction({ name: "d", houseId: "utopia" }); A.app.productions.push(dp);
 const keepRules = A.app.settings.rules; A.app.settings.rules = [{ id: "r-x", kind: "item", house: "utopia", when: mini, add: plate, qty: 2 }];
@@ -542,7 +542,7 @@ A.setQty(vlist, mini, 2); ok(A.docVer(vlist) === 2 && /VERSION 2/.test(A.listTex
 A.setQty(vlist, mini, 1); ok(A.docVer(vlist) === 1, "undoing the change goes back to 1");
 A.setQty(vlist, mini, 2); A.commitVer(vlist); vlist.notes = "pickup sunday"; ok(A.docVer(vlist) === 3, "saved as 2, then a note: the next is 3");
 ok(/Version \d/.test(A.docxHeaderClean(vlist)), "the Word header shows the version");
-const vset3 = A.viewSettings(); ok(!/data-settitle/.test(vset3) && !/cat-reset-all/.test(vset3) && /data-act="share-app"/.test(vset3), "settings: no title field, no undo-all, a share-the-app button");
+const vset3 = A.viewSettings(); ok(!/data-settitle/.test(vset3) && !/cat-reset-all/.test(vset3) && !/data-act="share-app"/.test(vset3) && /id="shareBtn"[^>]*data-act="share-app"/.test(builtHtml) && /id="themeBtn"[^>]*data-act="theme"/.test(builtHtml), "settings: no title field, no undo-all; share and theme are buttons up top");
 // --- doesn't work together: ARRI Amira + cforce mini -> cforce mini RF
 const amira = "utopia:arri-amira-premium", cfm = "utopia:arri-cforce-mini-motor", cfrf = "utopia:arri-cforce-mini-rf-motor";
 A.app.settings.clashes = [{ id: "x-1", house: "utopia", a: [amira], b: [cfm], swap: cfrf, why: "No radio inside the camera" }];
@@ -701,14 +701,17 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(A.csOf("XAVC-L HD 35") === "4:2:0 · 8-bit" && A.csOf("MPEG HD422") === "4:2:2 · 8-bit", "FX9 sampling for XAVC-L HD 35 and MPEG HD422"); }
 
 // --- a matching card reader for each kind of card on the list
-{ const keepRules = A.app.settings.rules; A.app.settings.rules = []; A.app.settings.readers = true;
-  const pr = A.newProduction({ name: "Readers", houseId: "utopia" }); A.app.productions.push(pr);
+{ const keepRules = A.app.settings.rules, keepPR = A.app.settings.pkReaders;
   const cdx1 = find("utopia", /Codex Compact Drive 1TB/), cdx2 = find("utopia", /Codex Compact Drive 2TB/), dock = find("utopia", /Codex Compact Drive Dock/), sd = find("utopia", /SanDisk 64GB SD Card/), sdr = find("utopia", /Lexar SD\/CF Card Reader/);
-  A.setQty(pr, cdx1, 4); A.setQty(pr, cdx2, 2); A.setQty(pr, sd, 3);
-  ok(pr.items[dock]?.qty === 1 && pr.items[sdr]?.qty === 1, "one Codex dock for both Codex drives, one SD reader");
-  A.setQty(pr, sd, 0); ok(!pr.items[sdr], "the SD cards go, and so does their reader");
-  A.app.settings.readers = false; A.applyDefaults(pr); ok(!pr.items[dock], "switched off: the readers come off");
-  A.app.settings.rules = keepRules; }
+  const cam = find("utopia", /^ARRI Alexa 35$/), cam2 = find("utopia", /^ARRI Alexa Mini LF$/);
+  A.app.settings.rules = [{ id: "r1", kind: "item", house: "utopia", when: cam, add: cdx1, qty: 4 }, { id: "r2", kind: "item", house: "utopia", when: cam, add: sd, qty: 3 }, { id: "r3", kind: "item", house: "utopia", when: cam2, add: cdx2, qty: 2 }];
+  A.app.settings.pkReaders = { [cam]: true, [cam2]: true };
+  const pr = A.newProduction({ name: "Readers", houseId: "utopia" }); A.app.productions.push(pr);
+  A.setQty(pr, cam, 1); A.setQty(pr, cam2, 1);
+  ok(pr.items[dock]?.qty === 1 && pr.items[sdr]?.qty === 1, "a camera package with the reader tick: one Codex dock for both Codex drives, one SD reader");
+  A.app.settings.pkReaders = {}; A.applyDefaults(pr); ok(!pr.items[dock] && !pr.items[sdr], "tick off: the readers come off");
+  A.app.settings.readers = true; A.applyDefaults(pr); ok(A.app.settings.readers === false && A.app.settings.pkReaders[cam] && A.app.settings.pkReaders[cam2] && pr.items[dock], "the old switch moves onto every package with cards");
+  A.app.settings.rules = keepRules; A.app.settings.pkReaders = keepPR || {}; }
 
 // --- a file once built is used again while the list stays the same
 { const pf2 = A.newProduction({ name: "File cache", houseId: "utopia" }); A.app.productions.push(pf2);

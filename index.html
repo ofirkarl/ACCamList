@@ -1565,6 +1565,30 @@ body.kb-room .app { padding-bottom: 70vh; }
 /* the Media Calculator keeps the room for itself: no unit switch, dates or details above it */
 .prod-head.ph-extra { padding-block: 0 4px; }
 /* the production's name, and its company under it */
+.topbar .top-left { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-40%); display: flex; align-items: center; gap: 6px; }
+.topbar .top-left .theme-btn svg { width: 18px; height: 18px; }
+.topbar .top-right .save-state:empty { display: none; }
+/* Your details: filled in once, then folded to one line */
+.me-group { gap: 0; }
+.me-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--fg); font: inherit; text-align: start; cursor: pointer; }
+.me-group.open .me-head { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.me-av { width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 15px; }
+.me-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.me-t b { font-size: 16px; font-weight: 600; }
+.me-t small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.me-head .chev { flex: none; color: var(--accent); transition: transform .25s var(--ease); }
+.me-group.open .me-head .chev { transform: rotate(180deg); }
+.me-group #meForm { padding: 14px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 16px 16px; background: var(--surface); }
+/* package menus: a search over the three menus */
+.pk-find { display: grid; gap: 6px; margin-bottom: 4px; }
+.pk-search { width: 100%; box-sizing: border-box; min-height: 40px; }
+.pk-hits { display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.pk-hit { display: grid; gap: 2px; padding: 9px 12px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--fg); font: inherit; text-align: start; cursor: pointer; }
+.pk-hit:first-child { border-top: 0; }
+.pk-hit span { font-size: 14px; font-weight: 500; }
+.pk-hit small { font-size: 12px; color: var(--muted); }
+.pk-hit:active { background: var(--accent-soft); }
+.pk-hits .hint { margin: 0; padding: 10px 12px; }
 .lt-row { min-height: 36px; }  /* the same height with or without its button, so pages line up
  */
 .ph-title { display: grid; justify-items: center; gap: 4px; margin-top: 4px; text-align: center; }
@@ -1602,6 +1626,7 @@ body.kb-room .app { padding-bottom: 70vh; }
 <div class="app">
   <div class="topbar pad">
     <div class="brandmark">AC Cam <span>List</span></div>
+    <div class="top-left"><button class="iconbtn theme-btn" id="themeBtn" type="button" data-act="theme" aria-label="Theme"></button><button class="iconbtn theme-btn" id="shareBtn" type="button" data-act="share-app" aria-label="Share AC Cam List" title="Share AC Cam List"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7.5 7.5 4.5-4.5 4.5 4.5"/><path d="M5 12v6.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V12"/></svg></button></div>
     <div class="top-right"><div class="save-state" id="saveState" aria-live="polite"></div><button class="iconbtn theme-btn" id="setBtn" type="button" data-act="settings" aria-label="Settings" title="Settings"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
   </div>
   <main id="view"></main>
@@ -2738,6 +2763,10 @@ function shortName(n) { return n.replace(/\s+(Digital Motion Picture Camera|Cine
 /* what the defaults just added, for the notice: [{ label, qty, why }] */
 let lastAutoAdds = [];
 function applyDefaults(p) {
+  // the old "a reader for every list" switch became a tick on each camera's package
+  if (app.settings.readers) { const pr = app.settings.pkReaders || (app.settings.pkReaders = {});
+    for (const r of app.settings.rules) { const t = r.kind === "item" && ITEM.get(r.add); if (t && t.s.id === "media") pr[r.when] = true; }
+    app.settings.readers = false; touchSettings(); }
   // cards added with a camera (a short-lived way of doing it) stay on the list as ordinary lines
   for (const l of Object.values(p.items)) if (l.cards) { const c = l.cards.id && p.items[l.cards.id]; if (c && c.auto) { c.auto = 0; delete c.autoWhy; } delete l.cards; }
   const want = new Map();
@@ -2754,6 +2783,10 @@ function applyDefaults(p) {
       want.set(t.id, w);
       // one card reader for each kind of card on the list
       if (r.kind === "media") { const rd = resolveReader(t.type, p.houseId); if (rd && !want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${t.type} cards`], label: rd.label }); }
+      // a camera whose package asks for it: a reader for each kind of card the package brings
+      if (r.kind === "item" && (app.settings.pkReaders || {})[r.when]) { const te = ITEM.get(t.id);
+        if (te && te.s.id === "media") { const type = grpOf(te.it, te.s);
+          if (type && !(p.readerOff || {})[type]) { const rd = resolveReader(type, p.houseId) || { id: "auto-reader-" + flat(type), label: type + " card reader" }; if (!want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${type} cards`], label: rd.label }); } } }
     }
   }
   // a matching card reader for each kind of card on the list, once (unless taken off this list)
@@ -3488,11 +3521,14 @@ function viewSettings() {
       ${r.swap ? `<span class="c-sw">Use instead: <b>${esc(itName(r.swap))}</b></span>` : ""}${r.why ? `<small>${esc(r.why)}</small>` : ""}</button>
       <span class="c-tools"><button class="iconbtn" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule" title="Edit">${PEN_ICON}</button><button class="x" type="button" data-act="clash-del" data-rid="${esc(r.id)}" aria-label="Delete this rule">×</button></span></div>`).join("");
   const me = app.settings.me || {}, acct = accountHtml();
+  const meOpen = app.open.has("me") || !(me.name || "").trim();  // filled in once: folded away after that
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
     <div class="prod-head">${app.setFrom && app.productions.some(x => x.id === app.setFrom) ? `<button class="btn ghost back" type="button" data-act="open" data-id="${esc(app.setFrom)}" data-keep="1">← Back to the list</button>` : `<button class="btn ghost back" type="button" data-act="home">← Productions</button>`}<div class="set-title"><h2 class="page">Settings</h2>${acct}</div></div>
-    <div class="set-group"><h3>Your details</h3>
-      <form class="form tight" id="meForm" autocomplete="off"><div class="row2">
+    <div class="set-group me-group${meOpen ? " open" : ""}"><button class="me-head" type="button" data-act="me-toggle" aria-expanded="${meOpen}" aria-controls="meForm">
+        <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
+        <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
+      <form class="form tight" id="meForm" autocomplete="off"${meOpen ? "" : " hidden"}><div class="row2">
         <div class="field"><label for="me-name">Your name (1st AC)</label><input id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
@@ -3500,18 +3536,14 @@ function viewSettings() {
       return `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-catimport="1" hidden>${LOAD_ICON}<span>Load a catalog file</span></label></div>
       <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add gear.</span></div>`; })()}
-    <div class="set-group"><h3>Appearance</h3>${themeSeg}<span class="hint">Auto follows your device.</span>
-      ${canBuzz() ? `<label class="check"><input type="checkbox" name="haptics" ${app.settings.haptics === false ? "" : "checked"}> Vibrate lightly on taps</label>` : ""}</div>
     ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
       <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
       ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
       <div><a class="btn" href="${HELPER_APK}" rel="noopener">${SAVE_ICON}<span>Get the helper app</span></a></div>
       <label class="check"><input type="checkbox" name="helperOn" ${helperOn() ? "checked" : ""}> The helper app is installed on this phone</label>
       <span class="hint">Once downloaded, open the file to install it. Android asks once to allow installs from your browser.</span></div>` : ""}
-    <div class="set-group"><h3>Share the app</h3><div><button class="btn" type="button" data-act="share-app">${SEND_ICON}<span>Share AC Cam List</span></button></div><span class="hint">Sends a link to the app. Lists stay yours.</span></div>
     <div class="set-group"><h3>Packages</h3>
       <div class="packages">${rules || `<p class="hint">No packages yet.</p>`}</div>
-      <label class="check pk-readers"><input type="checkbox" name="readers" ${app.settings.readers ? "checked" : ""}> A card reader for each kind of card on the list</label>
       <div><button class="btn" type="button" data-act="rule-new">+ New package</button></div></div>
     <div class="set-group"><h3>Doesn't work together</h3>
       <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
@@ -3529,9 +3561,21 @@ function pickerHtml(key) {
   const subs = c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "";
   let items = "";
   if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${it.id === v.id ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
-  return `<div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
+  return `<div class="pk-find"><label class="search pk-search" for="pk-${key}-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+      <input id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
+    <div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
     <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${sub ? "" : "disabled"}><option value="">Choose…</option>${items}</select></div>`;
+}
+/* the search over a package picker: a few best matches; tapping one fills the three menus */
+function pkFind(key, q) {
+  const box = document.getElementById("pk-" + key + "-hits"); if (!box) return;
+  const words = norm(q).split(/\s+/).filter(Boolean);
+  if (!words.length) { box.hidden = true; box.innerHTML = ""; return; }
+  const hits = [];
+  for (const [id, e] of ITEM) { if (e.h.id !== dd.house) continue; const n = norm(e.it.name + " " + e.s.name); if (words.every(w => n.includes(w))) { hits.push(e); if (hits.length >= 8) break; } }
+  box.hidden = false;
+  box.innerHTML = hits.length ? hits.map(e => `<button type="button" class="pk-hit" data-act="pk-hit" data-k="${key}" data-id="${esc(e.it.id)}"><span>${esc(e.it.name)}</span><small>${esc(e.c.name)}${e.s.direct ? "" : " · " + esc(e.s.name)}</small></button>`).join("") : `<p class="hint">Nothing matches. Try another word.</p>`;
 }
 /* a new "doesn't work together" rule: one or more items, what they don't work with, and what to use instead */
 const cx = { id: "", a: [], b: [] };
@@ -3559,7 +3603,7 @@ function ruleDialog(whenId, edit) {
   const fixed = whenId && ITEM.get(whenId);
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
   dd.house = fixed ? fixed.h.id : (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id);
-  dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {}; dd.edit = "";
+  dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {}; dd.edit = ""; dd.reader = !!(fixed && (app.settings.pkReaders || {})[whenId]);
   dd.adds = []; if (!fixed || !pkgKinds().length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">${fixed ? "Add to the package" : "New package"}</h3>
     ${!fixed && HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
@@ -3576,7 +3620,7 @@ function ruleDialog(whenId, edit) {
 function pkgEditDialog(whenId) {
   const e = ITEM.get(whenId); if (!e) return;
   const rs = app.settings.rules.filter(r => r.kind === "item" && r.when === whenId);
-  dd.house = e.h.id; dd.when = pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = [];
+  dd.house = e.h.id; dd.when = pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.reader = !!(app.settings.pkReaders || {})[whenId];
   const kinds = pkgKinds();
   rs.forEach((r, i) => {
     const kind = kinds.find(k => k.cards.some(c => c.id === r.add));
@@ -3609,7 +3653,8 @@ function pkgMediaHtml() {
     const t = esc(k.type);
     return `<div class="pk-kind${m.on ? " on" : ""}"><label class="check"><input type="checkbox" data-pkmedia="on" data-type="${t}" ${m.on ? "checked" : ""}> ${t}</label>
       ${m.on ? `<div class="pk-kq">${k.cards.length > 1 ? `<select aria-label="${t} card" data-pkmedia="id" data-type="${t}">${k.cards.map(c => `<option value="${esc(c.id)}" ${c.id === m.id ? "selected" : ""}>${esc(shortCard(c.name))}</option>`).join("")}</select>` : `<span class="pk-card">${esc(shortCard(k.cards[0].name))}</span>`}
-        ${pkStep(`aria-label="How many ${t} cards" data-pkmedia="qty" data-type="${t}"`, m.qty, "pkmq", `data-type="${t}"`)}</div>` : ""}</div>`; }).join("")}</div>`;
+        ${pkStep(`aria-label="How many ${t} cards" data-pkmedia="qty" data-type="${t}"`, m.qty, "pkmq", `data-type="${t}"`)}</div>` : ""}</div>`; }).join("")}
+    <div class="pk-kind pk-reader${dd.reader ? " on" : ""}"><label class="check"><input type="checkbox" data-pkreader="1" ${dd.reader ? "checked" : ""}> Card reader for each card type</label></div></div>`;
 }
 /* a quantity in the package dialog: − number +, the same stepper as on the list */
 const pkStep = (attrs, v, act, data) => `<span class="stepper"><button type="button" data-act="${act}-dec" ${data} aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" ${attrs} value="${v}"><button type="button" data-act="${act}-inc" ${data} aria-label="More">+</button></span>`;
@@ -5694,6 +5739,14 @@ document.addEventListener("click", e => {
       break;
     }
     case "share-app": shareApp(); break;
+    case "pk-hit": {  // the match goes into the menus, as if picked there
+      const k = b.dataset.k; dd[k] = pickOf(b.dataset.id);
+      const wrap = document.getElementById("pk-" + k); if (!wrap) break;
+      wrap.innerHTML = pickerHtml(k);
+      const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+      break; }
+    case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
+      b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
       const d = pendingCatalog; pendingCatalog = null; closeModal(); if (!d) break;
       const was = clone({ catalog: app.settings.catalog || {}, closedBrands: app.settings.closedBrands || {}, catColors: app.settings.catColors || {} });
@@ -5748,6 +5801,7 @@ document.addEventListener("input", e => {
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
   if (t.id === "fq") { app.fq = t.value; applyFavFilter(); return; }
+  if (t.dataset && t.dataset.pkfind) { pkFind(t.dataset.pkfind, t.value); return; }
   if (t.id === "bq") { const q = norm(t.value.trim()); let n = 0; document.querySelectorAll("#bpList li").forEach(li => { const hit = !q || li.dataset.b.includes(q); li.hidden = !hit; if (hit) n++; }); const none = document.getElementById("bpNone"); if (none) none.hidden = n > 0; return; }
   if (!p) return;
   if (t.dataset.note) { const l = p.items[t.dataset.note]; if (l) { l.note = t.value.slice(0, 200); touch(p); } return; }
@@ -5793,6 +5847,8 @@ document.addEventListener("change", e => {
     ["a", "b"].forEach(k => { const box = document.getElementById("cx-" + k); if (box) box.innerHTML = ""; });
     return;
   }
+  if (t.dataset.pkfind) return;
+  if (t.dataset.pkreader) { dd.reader = t.checked; t.closest(".pk-kind")?.classList.toggle("on", t.checked); return; }
   if (t.dataset.pkc || t.dataset.pks || t.dataset.pki) {
     const k = t.dataset.pkc || t.dataset.pks || t.dataset.pki, v = dd[k];
     if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
@@ -6019,6 +6075,10 @@ document.addEventListener("submit", e => {
       const ex = app.settings.rules.find(r => r.kind === "item" && r.when === when && r.add === add);
       if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when, add, qty });
     }
+    const pr = app.settings.pkReaders || (app.settings.pkReaders = {}), hadR = !!pr[when] || !!(dd.edit && pr[dd.edit]);
+    if (dd.edit && dd.edit !== when) delete pr[dd.edit];
+    if (pkgKinds().length) { if (dd.reader) pr[when] = true; else delete pr[when]; }
+    if (hadR !== !!pr[when]) for (const q of app.productions) { applyDefaults(q); touch(q); }
     touchSettings(); closeModal(); rerenderKeepScroll(); toast(dd.edit ? "Package updated" : dd.fixed ? "Added to the package" : "Package saved"); dd.edit = "";
     return;
   }
