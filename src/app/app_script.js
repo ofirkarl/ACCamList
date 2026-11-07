@@ -2085,11 +2085,12 @@ function viewProduction() {
   const st = prodStatus(p);
   // shoot and prep: one card, a small label over each date, so nothing gets cut
   // each half the same three lines, centred: what · date · weekday
-  const wd = s => { const q = parseDate(s); return q ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(q.y, q.m - 1, q.d).getDay()] : ""; };
-  const dCell = (icon, label, val, sub) => `<span class="pd-cell"><span class="pd-l">${icon}<span>${label}</span></span><span class="pd-v">${esc(val)}</span><span class="pd-sub">${esc(sub)}</span></span>`;
-  const multi = p.shootEnd && p.shootEnd !== p.shootStart;
-  const shootTxt = p.shootStart ? dCell(CHIP_CAL, "Shoot", fmtSpan(p.shootStart, p.shootEnd), multi ? `${wd(p.shootStart)}–${wd(p.shootEnd)}${days ? ` · ${days} days` : ""}` : `${wd(p.shootStart)} · 1 day`) : "";
-  const prepTxt = p.prep ? dCell(PREP_ICON, "Prep", fmtDM(p.prep), wd(p.prep)) : "";
+
+  // shoot and prep: one slim bar, a small label over each date; tap it to change the dates
+  const dCell = (icon, label, val) => `<span class="pd-cell"><span class="pd-l">${icon}<span>${label}</span></span><span class="pd-v">${esc(val)}</span></span>`;
+
+  const shootTxt = p.shootStart ? dCell(CHIP_CAL, `Shoot${days > 1 ? ` · ${days} days` : ""}`, fmtSpan(p.shootStart, p.shootEnd)) : "";
+  const prepTxt = p.prep ? dCell(PREP_ICON, "Prep", fmtDM(p.prep)) : "";
   // the lens finder gets the whole screen: nothing above the tabs
   const finder = app.tab === "add" && fin().on;
   // the top is the same on every page (and stays put on a swipe); what's under the name slides with its page
@@ -2100,11 +2101,7 @@ function viewProduction() {
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
-      <div class="ph-chips">${shootTxt || prepTxt ? `<button class="pdates${shootTxt && prepTxt ? " two" : ""}" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Dates and details"><span class="pd-cells">${shootTxt}${prepTxt}</span><span class="pd-more">${INFO_ICON}<span>Company, crew &amp; notes</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span></button>` : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
-        ${shootTxt || prepTxt ? "" : `<button class="ph-chip ph-info" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Info: company, DP, 1st AC and notes" title="Info">${INFO_ICON}</button>`}</div>
-      <div class="pinfo${infoOpen ? " open" : ""}" id="pinfo"><div class="pinfo-in"><div class="pinfo-card">
-        <dl class="prod-facts">${facts.map(([k, v]) => `<div${k === "Notes" ? ` class="pf-wide"` : ""}><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
-        <div class="pinfo-acts"><button class="btn sm" type="button" data-act="edit">${missing ? "+ Add DP, 1st AC and dates" : "Edit details"}</button></div></div></div></div>
+      <div class="ph-chips">${shootTxt || prepTxt ? `<button class="pdates${shootTxt && prepTxt ? " two" : ""}" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${prepTxt}</button>` : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}</div>
     </div></section>`;
   swExtra = extra;
   return `<section class="pad" data-keep="head">

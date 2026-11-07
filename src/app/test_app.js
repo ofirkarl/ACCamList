@@ -466,7 +466,7 @@ ok(rdr && rdr[1].qty === 1 && /CFast/.test(rdr[1].autoWhy || ""), `a CFast reade
 A.app.pid = p.id; A.app.view = "production"; A.app.tab = "list";
 const vp = A.viewProduction();
 ok(/data-act="preview"/.test(vp) && /Preview &amp; export/.test(vp) && !/data-act="dup"/.test(vp) && !/>Details</.test(vp) && !/data-act="copy"/.test(vp), "header: Preview & export at the top; no Details, Duplicate or Copy text");
-ok(/class="ph-name"/.test(vp) && /data-act="pinfo"/.test(vp) && /class="pinfo/.test(vp) && /Camera List/.test(vp), "header: name, dates row with an Info tab and its panel; tab named Camera List");
+ok(/class="ph-name"/.test(vp) && !/data-act="pinfo"/.test(vp) && !/class="pinfo/.test(vp) && /Camera List/.test(vp), "header: name and a slim dates bar, no Info panel; tab named Camera List");
 ok(/id="lq"/.test(vp) && /data-act="sec-toggle"/.test(vp) && /data-act="sec-all"/.test(vp) && !/Wireless video/.test(vp), "Cam list: search, sections that close, no wireless box");
 A.app.tab = "add"; A.fin().on = true; ok(!/class="prod-head"/.test(A.viewProduction()), "the lens finder hides everything above the tabs"); A.fin().on = false;
 const vf = A.viewForm();
