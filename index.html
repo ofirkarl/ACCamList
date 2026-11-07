@@ -2937,12 +2937,12 @@ if (typeof document !== "undefined" && document.addEventListener && typeof Mutat
   document.addEventListener("change", e => { const w = e.target.closest && e.target.closest(".nsel"); if (w && !e.target.classList.contains("nsel-q")) nselSync(w); });
   // ticking a choice keeps the search field (and the keyboard) where they are, so the list doesn't jump under the finger
   document.addEventListener("mousedown", e => { if (e.target.closest && e.target.closest(".nsel-list .nsel-opt") && e.target.closest(".nsel-list").querySelector(".nsel-q")) e.preventDefault(); }, true);
-  // typing in a menu's search keeps only the choices that match (the first, "Any…", always stays)
+  // typing in a menu's search keeps only the choices that match (the first, "Any…", and what you ticked always stay)
   document.addEventListener("input", e => {
     if (!e.target.classList || !e.target.classList.contains("nsel-q")) return;
     e.stopPropagation();
     const q = norm(e.target.value.trim()), list = e.target.closest(".nsel-list");
-    list.querySelectorAll(".nsel-opt").forEach((b, i) => { b.hidden = !!q && i > 0 && b.getAttribute("aria-selected") !== "true" && !norm(b.textContent).includes(q);  // what you ticked stays in view });
+    list.querySelectorAll(".nsel-opt").forEach((b, i) => { b.hidden = !!q && i > 0 && b.getAttribute("aria-selected") !== "true" && !norm(b.textContent).includes(q); });
   }, true);
 }
 /* a notice slides in when defaults add something: what, and why */
