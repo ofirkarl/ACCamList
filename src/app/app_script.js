@@ -1907,7 +1907,7 @@ function ruleParts(r) {
   return { when: r.label, add: r.kind === "media" ? "memory cards to match the camera, and a card reader" : r.battery.label, house: "" };
 }
 /* packages and "doesn't work together": their own page, reached from the bottom of Productions */
-function rulesGroups() {
+function rulesGroups(only) {
   const pkRow = r => { const x = ruleParts(r); return `<div class="pk-row"><span class="pk-nm">${esc(x.add)}</span>
       <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="How many with each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
       <button class="x" type="button" data-act="rdel" data-rid="${esc(r.id)}" aria-label="Take ${esc(x.add)} out of the package">×</button></div>`; };
@@ -1922,21 +1922,22 @@ function rulesGroups() {
       <span class="c-b">doesn't work with <b>${esc(r.b.map(itName).join(", "))}</b></span>
       ${r.swap ? `<span class="c-sw">Use instead: <b>${esc(itName(r.swap))}</b></span>` : ""}${r.why ? `<small>${esc(r.why)}</small>` : ""}</button>
       <span class="c-tools"><button class="iconbtn" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule" title="Edit">${PEN_ICON}</button><button class="x" type="button" data-act="clash-del" data-rid="${esc(r.id)}" aria-label="Delete this rule">×</button></span></div>`).join("");
-  return `    <div class="set-group"><h3 id="rs-pkg">Packages</h3>
+  const pkg = `<div class="set-group"><h3 id="rs-pkg">Packages</h3>
       <div class="packages">${rules || `<p class="hint">No packages yet.</p>`}</div>
-      <div><button class="btn" type="button" data-act="rule-new">+ Create a Package</button></div></div>
-    <div class="set-group"><h3 id="rs-clash">Doesn't work together</h3>
+      <div><button class="btn" type="button" data-act="rule-new">+ Create a Package</button></div></div>`;
+  const clash = `<div class="set-group"><h3 id="rs-clash">Doesn't work together</h3>
       <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
       <div class="rules">${clashRows || `<p class="hint">No rules yet.</p>`}</div>
-      <div><button class="btn" type="button" data-act="clash-new">+ New rule</button></div></div>
-`;
+      <div><button class="btn" type="button" data-act="clash-new">+ New rule</button></div></div>`;
+  return only === "clash" ? clash : only === "pkg" ? pkg : pkg + clash;
 }
 const rulesCounts = () => { const w = new Set(app.settings.rules.map(r => r.kind === "item" ? r.when : "rule:" + r.id)); return [w.size, (app.settings.clashes || []).length]; };
 function viewRules() {
+  const clash = app.rulesTo === "clash";
   return `<section class="pad"><div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button></div>
-      <div class="ph-title"><h2 class="ph-name">Packages &amp; rules</h2><p class="ph-co">What comes with what</p></div></div>
-    <div class="settings rules-page">${rulesGroups()}</div></section>`;
+      <div class="ph-title"><h2 class="ph-name">${clash ? "Doesn't work with" : "Packages"}</h2><p class="ph-co">${clash ? "And what to swap in" : "What comes with a camera"}</p></div></div>
+    <div class="settings rules-page">${rulesGroups(clash ? "clash" : "pkg")}</div></section>`;
 }
 const rulesHomeHtml = () => { const [np, nc] = rulesCounts();
   return `<div class="home-head browse-head"><h3 class="home-sec">Packages &amp; rules</h3></div>
@@ -3904,7 +3905,7 @@ document.addEventListener("click", e => {
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
     case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break;
       app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
-    case "rules-open": { closePreview(); app.view = "rules"; render(); const h = document.getElementById(b.dataset.to === "clash" ? "rs-clash" : "rs-pkg"); window.scrollTo(0, h ? Math.max(0, h.getBoundingClientRect().top + scrollY - 80) : 0); break; }
+    case "rules-open": closePreview(); app.rulesTo = b.dataset.to === "clash" ? "clash" : "pkg"; app.view = "rules"; render(); window.scrollTo(0, 0); break;
     case "browse-new": app.formFor = null; app.dupFrom = null; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "open": {
