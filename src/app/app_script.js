@@ -2493,6 +2493,8 @@ function finderResults(p, h) {
   const mo = fin().more;
   // your focal length comes first, right under the search; the shorter ones fold into one line above it until you open them
   const shorter = keys.filter(k => k < ck), nShort = shorter.reduce((a, k) => a + by.get(k).length, 0);
+  const unfold = shorter.length && mo.short ? `<section class="f-col f-fold open"><span class="fv-mark" aria-hidden="true"><b>↓</b></span>
+      <div class="fv-body"><button class="fv-head" type="button" data-act="fin-short" aria-expanded="true"><span class="fv-diff">Hide shorter · ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm</span>${CHEV}</button></div></section>` : "";
   const fold = shorter.length && !mo.short ? `<section class="f-col f-fold"><span class="fv-mark" aria-hidden="true"><b>↑</b></span>
       <div class="fv-body"><button class="fv-head" type="button" data-act="fin-short" aria-expanded="false"><span class="fv-diff">Shorter · ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm</span><span class="fv-n">${nShort} lens${nShort === 1 ? "" : "es"}</span>${CHEV}</button></div></section>` : "";
   const cols = keys.filter(k => !(fold && k < ck)).map(k => {
@@ -2511,7 +2513,7 @@ function finderResults(p, h) {
     </section>`;
   }).join("");
   return `<p class="f-sum"><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close · ${esc(h.name)}</p>
-    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${fold}${cols}</div>`;
+    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${fold}${unfold}${cols}</div>`;
 }
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);
