@@ -1226,6 +1226,7 @@ function nselOpen(w) {
   list.className = "nsel-list" + (sel.multiple ? " multi" : ""); list.setAttribute("role", "listbox"); if (sel.multiple) list.setAttribute("aria-multiselectable", "true");
   const opt = o => `<button type="button" class="nsel-opt" role="option" data-v="${esc(o.value)}" aria-selected="${o.selected}">${nselText(o.text)}</button>`;
   list.innerHTML = [...sel.children].map(c => c.tagName === "OPTGROUP" ? `<div class="nsel-grp">${esc(c.label)}</div>${[...c.children].map(opt).join("")}` : opt(c)).join("");
+  if (sel.dataset.search) list.insertAdjacentHTML("afterbegin", `<input class="nsel-q" type="search" autocomplete="off" placeholder="${esc(sel.dataset.search)}" aria-label="${esc(sel.dataset.search)}">`);
   w.append(list); w.classList.add("open"); w.querySelector(".nsel-btn").setAttribute("aria-expanded", "true");
   const on = list.querySelector('[aria-selected="true"]');
   requestAnimationFrame(() => { (on || list).scrollIntoView({ block: "nearest", behavior: "smooth" }); });
@@ -1257,7 +1258,16 @@ if (typeof document !== "undefined" && document.addEventListener && typeof Mutat
     if (!(e.target.closest && e.target.closest(".nsel"))) nselClose();
   }, true);
   document.addEventListener("keydown", e => { if (e.key === "Escape" && document.querySelector(".nsel.open")) { e.stopPropagation(); nselClose(); } }, true);
-  document.addEventListener("change", e => { const w = e.target.closest && e.target.closest(".nsel"); if (w) nselSync(w); });
+  document.addEventListener("change", e => { const w = e.target.closest && e.target.closest(".nsel"); if (w && !e.target.classList.contains("nsel-q")) nselSync(w); });
+  // ticking a choice keeps the search field (and the keyboard) where they are, so the list doesn't jump under the finger
+  document.addEventListener("mousedown", e => { if (e.target.closest && e.target.closest(".nsel-list .nsel-opt") && e.target.closest(".nsel-list").querySelector(".nsel-q")) e.preventDefault(); }, true);
+  // typing in a menu's search keeps only the choices that match (the first, "Any…", always stays)
+  document.addEventListener("input", e => {
+    if (!e.target.classList || !e.target.classList.contains("nsel-q")) return;
+    e.stopPropagation();
+    const q = norm(e.target.value.trim()), list = e.target.closest(".nsel-list");
+    list.querySelectorAll(".nsel-opt").forEach((b, i) => { b.hidden = !!q && i > 0 && b.getAttribute("aria-selected") !== "true" && !norm(b.textContent).includes(q);  // what you ticked stays in view });
+  }, true);
 }
 /* a notice slides in when defaults add something: what, and why */
 function notifyDefaults(adds) {
@@ -2345,8 +2355,8 @@ function lensSpec(it, sub) {
     const m = name.match(/\b([TF])\s?\/?\s?(\d{1,2}(?:\.\d)?)\b/i);
     if (m && +m[2] >= 0.7 && +m[2] <= 22) { stop = [+m[2], +m[2]]; label = (m[1].toUpperCase() === "F" ? "f/" : "T") + m[2]; }
   }
-  // one way of writing a stop everywhere: T, as on set (a still lens's f-number is shown as its T)
-  label = label.replace(/\bf\s*\/\s*(?=\d)/gi, "T").replace(/\bF(?=\d)/g, "T").replace(/^T(\d+(?:\.\d+)?)\s*[-–]\s*(\d)/, "T$1–T$2");
+  // each lens as its maker rates it: a cine lens in T, a still lens in f/ (one way of writing each)
+  label = label.replace(/\bF(?=\d)/g, "f/").replace(/\bf\s*\/\s*(?=\d)/gi, "f/").replace(/^(T|f\/)(\d+(?:\.\d+)?)\s*[-–]\s*(\d)/, "$1$2–$1$3");
   let spec = null;
   if (it.lens && (focals || zoom)) {
     spec = { focals, zoom, set: !!L.set, stop, label, cov: L.coverage || "", squeeze: L.squeeze || "" };
@@ -2516,11 +2526,11 @@ function finderHtml(p, h) {
     <div class="f-form">
       <div class="f-fields">
         <label class="f-field"><span>Focal length</span><span class="f-inp"><input data-fin="f" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.f)}" placeholder="50" aria-label="Focal length in mm"><i>mm</i></span></label>
-        <label class="f-field"><span>Stop</span><span class="f-inp"><i>T</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="T-stop"></span></label>
+        <label class="f-field"><span>Stop</span><span class="f-inp"><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" placeholder="2.8" aria-label="Stop, T or f"></span></label>
       </div>
       <div class="f-fields">
         <label class="f-field${s.kind ? " set" : ""}"><span>Lens type</span><select data-fin="kind" multiple>${kinds}</select></label>
-        <label class="f-field${s.brand ? " set" : ""}"><span>Manufacturer</span><select data-fin="brand" multiple>${brandOpts}</select></label>
+        <label class="f-field${s.brand ? " set" : ""}"><span>Manufacturer</span><select data-fin="brand" multiple data-search="Search manufacturers">${brandOpts}</select></label>
       </div>
       <div class="f-fields">
         <label class="f-field${s.mount ? " set" : ""}"><span>Mount</span><select data-fin="mount" multiple>${mounts}</select></label>

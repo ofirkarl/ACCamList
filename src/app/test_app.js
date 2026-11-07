@@ -408,7 +408,7 @@ ok(fh.indexOf('class="fav-cat"') >= 0 && fh.indexOf(">Cameras<") < fh.indexOf(">
 // --- advanced search: lens finder
 const spOf = re => { const e = A.ITEM.get(find("utopia", re)); return A.lensSpec(e.it, e.s.id); };
 ok(spOf(/^Zeiss Ultra Prime T1\.9 Lens Set$/).focals.includes(50) && spOf(/^Zeiss Ultra Prime T1\.9 Lens Set$/).set, "a set lists its focal lengths");
-ok(String(spOf(/^Sony Prime 50mm F1\.2/).stop) === "1.2,1.2" && spOf(/^Sony Prime 50mm F1\.2/).label === "T1.2", "stop read from the name when the specs have none, written as T like every stop");
+ok(String(spOf(/^Sony Prime 50mm F1\.2/).stop) === "1.2,1.2" && spOf(/^Sony Prime 50mm F1\.2/).label === "f/1.2", "stop read from the name when the specs have none (a still lens in f/)");
 ok(spOf(/Angenieux EZ-2 15-40mm/).zoom, "zooms keep their range");
 Object.assign(A.fin(), { f: "50", t: "1.9", kind: "", mount: "", cov: "", more: {} });
 const fmm = A.finderMatches(U);
