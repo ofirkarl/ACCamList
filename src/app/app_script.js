@@ -1199,11 +1199,16 @@ function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span cl
 function nselSync(w) {
   const sel = w.querySelector("select"), btn = w.querySelector(".nsel-btn"); if (!sel || !btn) return;
   const o = sel.options[sel.selectedIndex];
-  const txt = o ? o.text : "", cut = sel.dataset.short ? txt.lastIndexOf(" · ") : -1;
+  if (sel.multiple) {  // several chosen: their names, or how many
+    const on = [...sel.selectedOptions].filter(x => x.value), nm = x => (x.dataset.full || x.text).replace(/\s*\(\d+\)$/, "");
+    btn.innerHTML = nselText(on.length ? (on.length <= 2 ? on.map(nm).join(", ") : `${on.length} selected`) : (sel.options[0] ? sel.options[0].text.replace(/\s*\(\d+\)$/, "") : ""));
+    btn.disabled = sel.disabled; btn.classList.toggle("ph", !on.length); return;
+  }
+  const txt = o ? (o.dataset.full ? o.dataset.full + o.text.replace(/^.*?(\s*\(\d+\))?$/, "$1") : o.text) : "", cut = sel.dataset.short ? txt.lastIndexOf(" · ") : -1;
   btn.innerHTML = nselText(cut > 0 ? txt.slice(0, cut) : txt); btn.disabled = sel.disabled; btn.classList.toggle("ph", !o || !o.value || /^Choose/.test(o.text));
 }
 function niceSelect(sel) {
-  if (sel.dataset.nice || sel.multiple || !sel.parentNode) return;
+  if (sel.dataset.nice || !sel.parentNode) return;
   sel.dataset.nice = "1";
   const w = document.createElement("div"); w.className = "nsel";
   const btn = document.createElement("button"); btn.type = "button"; btn.className = "nsel-btn"; btn.setAttribute("aria-haspopup", "listbox"); btn.setAttribute("aria-expanded", "false");
@@ -1218,7 +1223,7 @@ function nselOpen(w) {
   nselClose(w);
   if (w.classList.contains("open")) { nselClose(); return; }
   const sel = w.querySelector("select"), list = document.createElement("div");
-  list.className = "nsel-list"; list.setAttribute("role", "listbox");
+  list.className = "nsel-list" + (sel.multiple ? " multi" : ""); list.setAttribute("role", "listbox"); if (sel.multiple) list.setAttribute("aria-multiselectable", "true");
   const opt = o => `<button type="button" class="nsel-opt" role="option" data-v="${esc(o.value)}" aria-selected="${o.selected}">${nselText(o.text)}</button>`;
   list.innerHTML = [...sel.children].map(c => c.tagName === "OPTGROUP" ? `<div class="nsel-grp">${esc(c.label)}</div>${[...c.children].map(opt).join("")}` : opt(c)).join("");
   w.append(list); w.classList.add("open"); w.querySelector(".nsel-btn").setAttribute("aria-expanded", "true");
@@ -1226,8 +1231,16 @@ function nselOpen(w) {
   requestAnimationFrame(() => { (on || list).scrollIntoView({ block: "nearest", behavior: "smooth" }); });
 }
 function nselPick(w, v) {
-  const sel = w.querySelector("select"); nselClose();
-  if (sel.value !== v) { sel.value = v; nselSync(w); sel.dispatchEvent(new Event("change", { bubbles: true })); }
+  const sel = w.querySelector("select");
+  if (sel.multiple) {  // tick and untick, the list stays open; "Any" clears the others
+    const opts = [...sel.options], any = opts.find(o => !o.value);
+    if (!v) opts.forEach(o => { o.selected = !o.value; });
+    else { const o = opts.find(x => x.value === v); if (o) o.selected = !o.selected; if (any) any.selected = !opts.some(x => x.value && x.selected); }
+    w.querySelectorAll(".nsel-opt").forEach(b => b.setAttribute("aria-selected", String(!!opts.find(o => o.value === b.dataset.v)?.selected)));
+    nselSync(w); sel.dispatchEvent(new Event("input", { bubbles: true })); sel.dispatchEvent(new Event("change", { bubbles: true })); return;
+  }
+  nselClose();
+  if (sel.value !== v) { sel.value = v; nselSync(w); sel.dispatchEvent(new Event("input", { bubbles: true })); sel.dispatchEvent(new Event("change", { bubbles: true })); }  // as a real menu does: input, then change
   w.querySelector(".nsel-btn")?.focus({ preventScroll: true });
 }
 if (typeof document !== "undefined" && document.addEventListener && typeof MutationObserver !== "undefined") {
@@ -2356,6 +2369,7 @@ const KINDS = [
   ["Anamorphic", [["ana", "All anamorphic", sp => sp.ana], ["ana-prime", "Anamorphic primes", sp => sp.ana && lensType(sp) !== "zoom"], ["ana-zoom", "Anamorphic zooms", sp => sp.ana && lensType(sp) === "zoom"]]],
   ["Specialty", [["probe", "Probe lenses", sp => sp.probe], ["macro", "Macro", sp => sp.macro], ["tilt", "Tilt & shift", sp => sp.tilt], ["fisheye", "Fisheye", sp => sp.fisheye]]]];
 /* primes cover single lenses and the lenses in sets alike (an older "sets" choice reads as primes) */
+const finList = v => String(v || "").split("|").filter(Boolean);  // a finder choice: one value, or several joined by |
 const kindTest = v => { v = v === "sph-set" ? "sph-prime" : v === "ana-set" ? "ana-prime" : v; for (const [, opts] of KINDS) for (const [k, , fn] of opts) if (k === v) return fn; return () => true; };
 const houseLenses = h => { const out = []; for (const [id, e] of ITEM) if (e.h.id === h.id) { const sp = lensSpec(e.it, e.s.id); if (sp) out.push([id, e, sp]); } return out; };
 /* stops between two apertures: + means a is slower than b */
@@ -2383,11 +2397,12 @@ function gapText(g, sp) {
 function finderMatches(h) {
   const s = fin(), F = numIn(s.f), T = numIn(s.t) > 0 ? numIn(s.t) : null;
   if (!(F > 0)) return null;
-  const okKind = kindTest(s.kind), list = [];
+  // lens type, mount and manufacturer each take several choices: a lens that fits any of them shows
+  const kinds = finList(s.kind).map(kindTest), mounts = finList(s.mount), brands = finList(s.brand), list = [];
   for (const [id, e, sp] of houseLenses(h)) {
-    if (!okKind(sp)) continue;
-    if (s.mount && !sp.mounts.includes(s.mount)) continue;
-    if (s.brand && (e.it.brand || "Generic") !== s.brand) continue;
+    if (kinds.length && !kinds.some(fn => fn(sp))) continue;
+    if (mounts.length && !mounts.some(m => sp.mounts.includes(m))) continue;
+    if (brands.length && !brands.includes(e.it.brand || "Generic")) continue;
     if (s.cov && !((COVER[sp.cov] ?? -1) >= COVER[s.cov])) continue;
     const type = lensType(sp), { pos, d } = focalFit(sp, F);
     if (d > Math.log(2.05)) continue;
@@ -2485,9 +2500,13 @@ function finderResults(p, h) {
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);
   const count = fn => all.filter(([, , sp]) => fn(sp)).length;
-  const sel = (key, v) => s[key] === v ? " selected" : "";
-  const kinds = `<option value=""${sel("kind", "")}>Any lens (${all.length})</option>` + KINDS.map(([grp, opts]) => `<optgroup label="${grp}">${opts.map(([k, label, fn]) => { const n = count(fn); return n || s.kind === k ? `<option value="${k}"${sel("kind", k)}>${esc(label)} (${n})</option>` : ""; }).join("")}</optgroup>`).join("");
-  const mounts = `<option value=""${sel("mount", "")}>Any mount</option>` + MOUNTS.map(([k, label]) => { const n = count(sp => sp.mounts.includes(k)); return n || s.mount === k ? `<option value="${k}"${sel("mount", k)}>${esc(label)} (${n})</option>` : ""; }).join("");
+  const sel = (key, v) => (v ? finList(s[key]).includes(v) : !finList(s[key]).length) ? " selected" : "";
+  // under a heading the choices are short (All, Prime lenses, Zoom lenses); the field shows the full name
+  const short = l => l.replace(/^All (spherical|anamorphic)$/i, "All").replace(/^(Spherical|Anamorphic) primes$/i, "Prime lenses").replace(/^(Spherical|Anamorphic) zooms$/i, "Zoom lenses");
+  const kinds = `<option value=""${sel("kind", "")}>Any lens (${all.length})</option>` + KINDS.map(([grp, opts]) => `<optgroup label="${grp}">${opts.map(([k, label, fn]) => { const n = count(fn); return n || finList(s.kind).includes(k) ? `<option value="${k}" data-full="${esc(label)}"${sel("kind", k)}>${esc(short(label))} (${n})</option>` : ""; }).join("")}</optgroup>`).join("");
+  const mounts = `<option value=""${sel("mount", "")}>Any mount</option>` + MOUNTS.map(([k, label]) => { const n = count(sp => sp.mounts.includes(k)); return n || finList(s.mount).includes(k) ? `<option value="${k}"${sel("mount", k)}>${esc(label)} (${n})</option>` : ""; }).join("");
+  const bn = new Map(); for (const [, e] of all) bn.set(e.it.brand || "Generic", (bn.get(e.it.brand || "Generic") || 0) + 1);
+  const brandOpts = `<option value=""${sel("brand", "")}>Any manufacturer</option>` + [...bn.entries()].sort((a, b) => brandSort(a[0], b[0])).map(([b, n]) => `<option value="${esc(b)}"${sel("brand", b)}>${esc(b)} (${n})</option>`).join("");
   const covs = [["", "Any format"], ["S16", "S16 and up"], ["S35", "S35 and up"], ["FF", "FF and up"], ["LF", "Large format"]].map(([k, label]) => `<option value="${k}"${sel("cov", k)}>${label}</option>`).join("");
   return `<div class="pad finder" style="--tape: ${lens ? catTape(lens) : "var(--pal-amber)"}">
     <div class="f-head"><div><h3 class="f-title">${tapeIcon("lenses")}Find a lens</h3><p class="hint">Your focal length opens first. Shorter lenses sit above it on the ruler, longer ones below.</p></div>
@@ -2498,11 +2517,11 @@ function finderHtml(p, h) {
         <label class="f-field"><span>Stop</span><span class="f-inp"><i>f/</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="Stop (f-number or T-stop)"></span></label>
       </div>
       <div class="f-fields">
-        <label class="f-field${s.kind ? " set" : ""}"><span>Lens type</span><select data-fin="kind">${kinds}</select></label>
-        <div class="f-field${s.brand ? " set" : ""}"><span id="fb-lbl">Manufacturer</span><button class="f-pick" type="button" data-act="fin-brand" aria-labelledby="fb-lbl fb-val" aria-haspopup="dialog"><span id="fb-val">${esc(s.brand || "Any manufacturer")}</span>${CHEV}</button></div>
+        <label class="f-field${s.kind ? " set" : ""}"><span>Lens type</span><select data-fin="kind" multiple>${kinds}</select></label>
+        <label class="f-field${s.brand ? " set" : ""}"><span>Manufacturer</span><select data-fin="brand" multiple>${brandOpts}</select></label>
       </div>
       <div class="f-fields">
-        <label class="f-field${s.mount ? " set" : ""}"><span>Mount</span><select data-fin="mount">${mounts}</select></label>
+        <label class="f-field${s.mount ? " set" : ""}"><span>Mount</span><select data-fin="mount" multiple>${mounts}</select></label>
         <label class="f-field${s.cov ? " set" : ""}"><span>Covers</span><select data-fin="cov">${covs}</select></label>
       </div>
     </div>
@@ -4187,7 +4206,7 @@ document.addEventListener("toggle", e => {
 document.addEventListener("input", e => {
   const t = e.target, p = cur();
   if (t.name === "colorHex" && t.form) { const r = t.form.querySelector('input[name="color"][value="custom"]'); if (r) r.checked = true; t.closest(".sw")?.style.setProperty("--sw", t.value); return; }
-  if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!t.value); refreshFinder(); return; }
+  if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.multiple ? [...t.selectedOptions].map(o => o.value).filter(Boolean).join("|") : t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!fin()[t.dataset.fin]); refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
   if (t.id === "fq") { app.fq = t.value; applyFavFilter(); return; }
