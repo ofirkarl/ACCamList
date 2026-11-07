@@ -1402,7 +1402,7 @@ function stepBack() {
     render(); window.scrollTo(0, 0); return;
   }
   if (app.view === "settings" && app.setFrom && app.productions.some(x => x.id === app.setFrom)) { app.pid = app.setFrom; app.setFrom = null; app.view = "production"; render(); window.scrollTo(0, 0); return; }
-  if (app.view !== "home") { app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; app.setFrom = null; render(); window.scrollTo(0, 0); }
+  if (app.view !== "home") { app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; app.fq = ""; app.setFrom = null; render(); window.scrollTo(0, 0); }
 }
 window.addEventListener("popstate", () => {
   if (!NAV.on) return;
@@ -1557,6 +1557,7 @@ function render() {
   houseTheme(app.view === "production" && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
   if (app.view === "production" && app.tab === "list") applyListFilter();
+  if (app.view === "production" && app.tab === "fav") applyFavFilter();
   uiSave(); navSync();
 }
 
@@ -2062,19 +2063,21 @@ function viewProduction() {
   const dm = s => { const q = parseDate(s); return q ? q.d + "." + q.m : ""; };
   const shootDM = p.shootStart ? (p.shootEnd && p.shootEnd !== p.shootStart ? `${dm(p.shootStart)}–${dm(p.shootEnd)}` : dm(p.shootStart)) : "";
   const st = prodStatus(p);
-  const shootTxt = p.shootStart ? `<span class="ph-chip">${CHIP_CAL}<span>${esc(fmtSpan(p.shootStart, p.shootEnd))}</span>${days ? `<span class="ph-n">· ${days} day${days === 1 ? "" : "s"}</span>` : ""}</span>` : "";
-  const prepTxt = p.prep ? `<span class="ph-chip">${PREP_ICON}<span class="ph-n">Prep</span><span>${esc(fmtDM(p.prep))}</span></span>` : "";
+  // shoot and prep: one card, a small label over each date, so nothing gets cut
+  const dCell = (icon, label, sub, val) => `<span class="pd-cell"><span class="pd-l">${icon}<span>${label}</span>${sub ? `<span class="pd-sub">${sub}</span>` : ""}</span><span class="pd-v">${esc(val)}</span></span>`;
+  const shootTxt = p.shootStart ? dCell(CHIP_CAL, "Shoot", days ? `${days} day${days === 1 ? "" : "s"}` : "", fmtSpan(p.shootStart, p.shootEnd)) : "";
+  const prepTxt = p.prep ? dCell(PREP_ICON, "Prep", "", fmtDM(p.prep)) : "";
   // the lens finder gets the whole screen: nothing above the tabs
   const finder = app.tab === "add" && fin().on;
   // the top is the same on every page (and stays put on a swipe); what's under the name slides with its page
   const head = finder ? "" : `<div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
-      <h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>
+      <div class="ph-title"><h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>${p.company ? `<p class="ph-co">${esc(p.company)}</p>` : ""}</div>
     </div>`;
-  const extra = finder ? "" : `<section class="pad"><div class="prod-head ph-extra">
+  const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
-      <div class="ph-chips">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
+      <div class="ph-chips">${shootTxt || prepTxt ? `<button class="pdates${shootTxt && prepTxt ? " two" : ""}" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${prepTxt}</button>` : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
         <button class="ph-chip ph-info" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Info: company, DP, 1st AC and notes" title="Info">${INFO_ICON}</button></div>
       <div class="pinfo${infoOpen ? " open" : ""}" id="pinfo"><div class="pinfo-in"><div class="pinfo-card">
         <dl class="prod-facts">${facts.map(([k, v]) => `<div${k === "Notes" ? ` class="pf-wide"` : ""}><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
@@ -2749,6 +2752,28 @@ function favoritesFor(p) {
   return { starred, custom, used };
 }
 function customLineId(p, name, section) { return Object.keys(p.items).find(id => p.items[id].custom && flat(p.items[id].name) === flat(name) && p.items[id].section === section); }
+const FAV_STAR = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/></svg>`;
+const FAV_CLOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6"/><path d="M3.5 4v4h4M12 8v4l3 2"/></svg>`;
+/* the Favorites search: hide items that don't match, then empty subheadings, categories and groups */
+function applyFavFilter() {
+  const q = norm((app.fq || "").trim()); let shown = 0;
+  document.querySelectorAll("#tabpane .fav-group").forEach(g => {
+    let gn = 0;
+    g.querySelectorAll(".fav-cat").forEach(cat => {
+      let cn = 0, head = null, hn = 0;
+      const flush = () => { if (head) head.hidden = !!q && !hn; };
+      cat.querySelectorAll(".fav-list > li").forEach(li => {
+        if (li.classList.contains("fav-head")) { flush(); head = li; hn = 0; return; }
+        const hit = !q || norm(li.querySelector(".nm")?.textContent || "").includes(q);
+        li.hidden = !hit; if (hit) { cn++; hn++; }
+      });
+      flush(); cat.hidden = !!q && !cn; gn += cn;
+    });
+    g.querySelectorAll(":scope > .hint").forEach(x => { x.hidden = !!q; });
+    g.hidden = !!q && !gn; shown += gn;
+  });
+  const none = document.getElementById("fqNone"); if (none) none.hidden = !q || shown > 0;
+}
 function viewFavorites(p, h) {
   const f = favoritesFor(p);
   const cRows = f.custom.map(c => {
@@ -2759,10 +2784,17 @@ function viewFavorites(p, h) {
   const starred = favByCategory(h, f.starred.map(e => [e, rowHtml(p, e.it, "")]));
   const typed = cRows ? `<div class="fav-cat" style="--tape: var(--tape-custom)"><h4 class="fav-cat-h">${tapeIcon("custom")}Not in the catalog<span class="cnt">${f.custom.length}</span></h4><ul class="fav-list">${cRows}</ul></div>` : "";
   const used = favByCategory(h, f.used.map(({ e, n }) => [e, rowHtml(p, e.it, "", `In ${n} production${n === 1 ? "" : "s"}`)]));
+  const nStar = f.starred.length + f.custom.length, nUsed = f.used.length;
+  const gh = (icon, t, n, k) => `<h3 class="fav-gh ${k}"><span class="fav-gi">${icon}</span><span>${t}</span>${n ? `<span class="fav-gn num">${n}</span>` : ""}</h3>`;
   return `<section class="pad">
-    <div class="fav-group"><h3>Starred</h3>
+    <div class="list-tools" data-keep="tools">
+      <label class="search lsearch" for="fq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input id="fq" type="search" placeholder="Search favorites" autocomplete="off" value="${esc(app.fq || "")}" aria-label="Search Favorites"></label>
+      <div class="lt-row"><span class="summary-line"><b class="num">${nStar}</b> favorites · <span class="num">${nUsed}</span> used before · ${esc(h.name)}</span></div></div>
+    <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
+    <div class="fav-group" data-fg="star">${gh(FAV_STAR, "Favorites", nStar, "star")}
       ${starred || typed ? starred + typed : `<p class="hint">Tap ☆ next to any item in Add gear or in the list to keep it here for quick picking.</p>`}</div>
-    <div class="fav-group"><h3>Used before</h3>
+    <div class="fav-group" data-fg="used">${gh(FAV_CLOCK, "Used before", nUsed, "used")}
       ${used || `<p class="hint">Items from your other ${esc(h.name)} productions will show up here.</p>`}</div>
   </section>`;
 }
@@ -2997,7 +3029,16 @@ const swPane = () => document.getElementById("tabpane");
 let swExtra = "";  // what sits under the production's name (dates, unit, info), drawn into the page beside
 const swSeg = () => document.getElementById("mcseg");
 /* what moves with the finger: the page, and the My list | Any camera bar only when leaving the Media tab */
+const swSig = el => el.textContent.replace(/\s+/g, " ").trim() + "|" + [...el.querySelectorAll("input")].map(i => i.placeholder + "=" + i.value).join(",");
 function swMove(x, how, side) {
+  // what both pages have (the dates, the search row) stays where it is; if its words differ they cross-fade
+  if (sw.keeps && sw.keeps.length) {
+    const fade = how === "none" ? "none" : `${how}, ${how.replace("transform", "opacity")}`, gx = x + (sw.side || side) * innerWidth, k = Math.min(1, Math.abs(x) / innerWidth);
+    for (const { live, twin, same } of sw.keeps) {
+      live.style.transition = fade; live.style.transform = x ? `translateX(${-x}px)` : ""; live.style.opacity = x && !same ? Math.max(0, 1 - 2 * k) : "";
+      twin.style.transition = fade; twin.style.transform = `translateX(${-gx}px)`; twin.style.opacity = same ? 0 : Math.max(0, 2 * k - 1);  // one out, then the other in: never two words on top of each other
+    }
+  }
   const to = SWIPE_STOPS[swHere() + side], seg = swSeg(), inMedia = to && to[0] === "media" && app.tab === "media";
   const els = [swPane()]; if (seg && to && to[0] !== "media") els.push(seg);
   els.forEach(el => { if (!el) return; el.style.transition = how; el.style.transform = x ? `translateX(${x}px)` : ""; });
@@ -3026,9 +3067,14 @@ function swGhost(side) {
   if (cr) Object.assign(ga.style, { width: cr.width + "px", maxWidth: "none", marginLeft: cr.left + "px", marginRight: "0" });
   g.style.transform = `translateX(${side * innerWidth}px)`;
   document.body.appendChild(g);
+  sw.keeps = [...pane.querySelectorAll("[data-keep]")].map(el => { const t = g.querySelector(`[data-keep="${el.dataset.keep}"]`); return t && { live: el, twin: t, same: swSig(el) === swSig(t) }; }).filter(Boolean);
   Object.assign(sw, { ghost: g, side, gTop: top });
 }
-function swDropGhost() { if (sw.ghost) { sw.ghost.remove(); sw.ghost = null; sw.side = 0; } }
+function swDropGhost() {
+  (sw.keeps || []).forEach(({ live }) => { live.style.transition = live.style.transform = live.style.opacity = ""; });
+  sw.keeps = [];
+  if (sw.ghost) { sw.ghost.remove(); sw.ghost = null; sw.side = 0; }
+}
 const swEase = "cubic-bezier(.2,.8,.2,1)";
 document.addEventListener("touchstart", e => {
   sw.ok = false; sw.dir = 0; swDropGhost();
@@ -3141,7 +3187,7 @@ function viewList(p, h) {
     </div>`;
   }).join("");
   return `<section class="pad">
-    <div class="list-tools">
+    <div class="list-tools" data-keep="tools">
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
@@ -3743,7 +3789,7 @@ document.addEventListener("click", e => {
   }
   const p = cur();
   switch (act) {
-    case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; render(); window.scrollTo(0, 0); break;
+    case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; app.fq = ""; render(); window.scrollTo(0, 0); break;
     case "settings": if (app.view === "settings") break; closePreview(); app.setFrom = app.view === "production" ? app.pid : null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
@@ -3752,7 +3798,7 @@ document.addEventListener("click", e => {
     case "open": {
       const keep = b.dataset.keep === "1" && app.pid === id;
       app.pid = id; app.view = "production"; app.editing = null; app.dupFrom = null; app.setFrom = null;
-      if (!keep) { app.editCat = false; app.tab = totals(cur() || { items: {} }).lines ? "list" : "add"; app.q = ""; app.lq = ""; app.cat = "all"; }
+      if (!keep) { app.editCat = false; app.tab = totals(cur() || { items: {} }).lines ? "list" : "add"; app.q = ""; app.lq = ""; app.fq = ""; app.cat = "all"; }
       render(); window.scrollTo(0, 0); break;
     }
     case "edit": app.formFor = app.pid; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
@@ -4085,6 +4131,7 @@ document.addEventListener("input", e => {
   if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!t.value); refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
+  if (t.id === "fq") { app.fq = t.value; applyFavFilter(); return; }
   if (t.id === "bq") { const q = norm(t.value.trim()); let n = 0; document.querySelectorAll("#bpList li").forEach(li => { const hit = !q || li.dataset.b.includes(q); li.hidden = !hit; if (hit) n++; }); const none = document.getElementById("bpNone"); if (none) none.hidden = n > 0; return; }
   if (!p) return;
   if (t.dataset.note) { const l = p.items[t.dataset.note]; if (l) { l.note = t.value.slice(0, 200); touch(p); } return; }
@@ -4324,7 +4371,7 @@ document.addEventListener("submit", e => {
     app.dupFrom = null;
     touch(p);
     const stay = was && findProd(was) && mainOf(findProd(was)) === p ? was : p.id;
-    app.pid = stay; app.view = "production"; app.q = ""; app.lq = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
+    app.pid = stay; app.view = "production"; app.q = ""; app.lq = ""; app.fq = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
     if (ask) unit2StartDialog(p);
     return;
   }
