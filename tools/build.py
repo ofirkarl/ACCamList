@@ -43,8 +43,8 @@ rep('<title>AC Cam List</title>\n<meta name="claude:viewport-fit-sides" content=
 <meta name="apple-mobile-web-app-title" content="AC Cam List">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32-v2.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon-v2.png">
 <script src="config.js"></script>
 <script>
 ''' + shim + '''</script>

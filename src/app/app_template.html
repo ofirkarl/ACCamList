@@ -1459,6 +1459,17 @@ body.kb-room .app { padding-bottom: 70vh; }
 .l-grid > .tools { grid-area: t; justify-self: end; margin-top: 0; }
 .l-grid > .l-bottom { grid-area: q; justify-self: end; }
 .l-grid.wide > .l-bottom { justify-self: stretch; }
+/* browsing a catalog without a production: look, search, star; nothing to add */
+.browse-on .item .ctl, .browse-on .item .add, .browse-on .f-row .ctl { display: none; }
+.browse-on .item .nm-btn { pointer-events: none; }
+.browse-pane { padding-bottom: 24px; }
+.browse-head { margin-top: 32px; }
+.browse-list { display: grid; gap: 8px; }
+.browse-card { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); color: var(--fg); font: inherit; text-align: start; cursor: pointer; }
+.browse-card:active { transform: scale(.99); }
+.browse-card .pc-house { min-width: 0; }
+.browse-card .bc-n { white-space: nowrap; flex: none; margin-inline-start: auto; font-size: 13px; color: var(--muted); }
+.browse-card .bc-go { font-size: 22px; line-height: 1; color: var(--muted); }
 .lt-row { min-height: 36px; }  /* the same height with or without its button, so pages line up
  */
 .ph-title { display: grid; justify-items: center; gap: 4px; margin-top: 4px; text-align: center; }
@@ -1695,7 +1706,7 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "browse" ? app.browseP : app.productions.find(p => p.id === app.pid);  // browsing a catalog: a list that is never kept
 
 /* ---------- the user's catalog edits ----------
    Per rental house: renamed items and headings, items moved elsewhere, the user's own categories, subcategories
@@ -2295,7 +2306,7 @@ function schedule(id) {
   clearTimeout(timers.get(id));
   timers.set(id, setTimeout(() => flush(id), 700));
 }
-function touch(p) { p.updatedAt = Date.now(); lsSave(); schedule(p.id); }
+function touch(p) { if (p && p.browse) return; p.updatedAt = Date.now(); lsSave(); schedule(p.id); }
 function touchSettings() { app.settings.updatedAt = Date.now(); lsPut(LS_SET, app.settings); schedule(SETTINGS_ID); }
 function flush(id) {
   timers.delete(id);
@@ -3058,13 +3069,15 @@ function render() {
   else if (app.view === "form") v.innerHTML = viewForm();
   else if (app.view === "settings") v.innerHTML = viewSettings();
   else if (app.view === "production" && cur()) v.innerHTML = viewProduction();
+  else if (app.view === "browse" && cur()) v.innerHTML = viewBrowse();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
   document.body.classList?.toggle("nav-on", app.view === "production");
+  document.body.classList?.toggle("browse-on", app.view === "browse");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
-  houseTheme(app.view === "production" && cur() ? cur().houseId : hp ? hp.dataset.value : "");
+  houseTheme((app.view === "production" || app.view === "browse") && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if (app.view === "production" && app.tab === "fav") applyFavFilter();
@@ -3127,8 +3140,19 @@ function viewHome() {
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
+    ${sel ? "" : browseHtml()}
   </section>${selDock}`;
 }
+/* a rental house's catalog, to look through without a production: search, filters and stars work; nothing is added */
+function viewBrowse() {
+  const p = cur(), h = houseById(p.houseId);
+  return `<section class="pad"><div class="prod-head">
+      <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="browse-new" data-house="${esc(h.id)}">+ Start a list here</button></div>
+      <div class="ph-title"><h2 class="ph-name">${esc(h.name)}</h2><p class="ph-co">Catalog · ${houseCount(h)} items</p></div></div></section>
+    <div class="tabpane browse-pane">${viewCatalog(p, h)}</div>`;
+}
+const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
+    <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
 function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
@@ -3182,7 +3206,7 @@ function viewForm() {
   const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
   const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
   const me = app.settings.me || {};
-  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "" }));
+  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "", ...(app.formHouse && houseById(app.formHouse) ? { houseId: app.formHouse } : {}) }));
   const hasItems = (editing || src) && totals(editing || src).lines > 0;
   const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
   // an old list with a typed-in day count keeps it until its dates are picked again
@@ -5330,6 +5354,9 @@ document.addEventListener("click", e => {
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
+    case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break;
+      app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
+    case "browse-new": app.formFor = null; app.dupFrom = null; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "open": {
       const keep = b.dataset.keep === "1" && app.pid === id;

@@ -1,6 +1,6 @@
 /* AC Cam List service worker: opens offline, picks up new versions on the next visit. */
-const CACHE = 'accam-202611070857';
-const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/favicon-32.png'];
+const CACHE = 'accam-202611070901';
+const SHELL = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192-v2.png', 'icons/icon-512-v2.png', 'icons/favicon-32-v2.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
