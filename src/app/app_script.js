@@ -32,6 +32,8 @@ const CHEV = `<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill=
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function parseDate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null; }
 function fmtDate(s) { const p = parseDate(s); return p ? `${p.d} ${MONTHS[p.m - 1]} ${p.y}` : ""; }
+/* dates in the sent document: DD.MM.YY, always two digits each */
+function fmtDoc(s) { const p = parseDate(s); return p ? `${String(p.d).padStart(2, "0")}.${String(p.m).padStart(2, "0")}.${String(p.y).slice(2)}` : ""; }
 function fmtShort(s) { const p = parseDate(s); return p ? `${p.d}.${p.m}.${String(p.y).slice(2)}` : ""; }
 function fmtRange(a, b) {
   const pa = parseDate(a), pb = parseDate(b);
@@ -139,7 +141,7 @@ function nameHtml(text, q) {
       && !(i === t.length - 1 && /^(?:set|kit|lens|lenses)$/i.test(t[i]));  // never leave "Set" alone on a line
     if (!units.length || brk) units.push([t[i]]); else units[units.length - 1].push(t[i]);
   }
-  return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u">${hl(w.join(" "), q)}</span>`; }).join(" ");
+  return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u${/^\d+(?:\.\d+)?[-–]\d+(?:\.\d+)?mm$/i.test(w.join(" ")) ? " zr" : ""}">${hl(w.join(" "), q)}</span>`; }).join(" ");
 }
 /* a lens set on one flowing line, each lens with its stop: "18 T2.9 • 25 T2.1 • 35 T2.1 …" (the set name already says how many); hi marks the focal length being searched */
 function perHtml(per, hi, around) {
@@ -2295,7 +2297,9 @@ function treeHtml(p, h) {
   if (ed && !searching) out.push(`<button class="add-head big" type="button" data-act="new-cat">+ Add category or subcategory</button>`);
   const lq = searching ? parseLensQuery(app.q) : null;
   const banner = lq ? `<button class="f-banner" type="button" data-act="fin-open" data-mm="${esc(lq.f)}" data-t="${esc(lq.t)}">${RULER_ICON}<span><b>${esc(lq.f)}mm${lq.t ? " · T" + esc(lq.t) : ""}</b>See the exact lens and the closest ones on a ruler</span><span aria-hidden="true">→</span></button>` : "";
-  return banner + (out.length ? out.join("") : `<p class="empty">Nothing in ${esc(h.name)} matches "${esc(app.q)}". Try part of the model name, the brand, or a focal length like 35mm.</p>`);
+  const nHits = searching ? (out.join("").match(/<li class="item[ "]/g) || []).length : 0;
+  const qsum = searching && out.length ? `<p class="q-sum"><b>${nHits}</b> result${nHits === 1 ? "" : "s"}</p>` : "";
+  return banner + qsum + (out.length ? out.join("") : `<p class="empty">Nothing in ${esc(h.name)} matches "${esc(app.q)}". Try part of the model name, the brand, or a focal length like 35mm.</p>`);
 }
 /* ----- Lens search: a lens by focal length and stop, plus lens type, mount and format.
    The exact match sits in the middle of a ruler, shorter lenses to the left, longer to the right. ----- */
@@ -3351,9 +3355,9 @@ function headerParts(p) {
   if (a.length) L.push({ big: true, segs: a });
   const b = [...seg("DP", p.dp), ...seg("1st AC", p.ac && p.ac + (p.acPhone ? " " + p.acPhone : ""))];
   if (b.length) L.push({ segs: b });
-  if (p.prep) L.push({ plain: `- Prep: ${fmtShort(p.prep)}` });
+  if (p.prep) L.push({ plain: `- Prep: ${fmtDoc(p.prep)}` });
   if (p.shootStart) {
-    const range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)}–${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart);
+    const range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtDoc(p.shootStart)}–${fmtDoc(p.shootEnd)}` : fmtDoc(p.shootStart);
     L.push({ plain: `- Shoot: ${range}${days ? ` // ${days} shoot day${days === 1 ? "" : "s"} total` : ""}` });
   }
   if (unitLine(p)) L.push({ plain: unitLine(p) });
@@ -3397,7 +3401,7 @@ function csvText(p) {
     rows.push([secName(s.id), r.qty, r.name, r.extra.join("; "), r.kids.join("; "), r.sku, l.brand || "", l.cat || "", l.sub || ""]);
   return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
 }
-function fileBase(p) { return ("Camera list - " + (p.name || "production") + (unitLine(p) ? " " + unitLine(p) : "") + (p.shootStart ? " " + fmtShort(p.shootStart).replace(/\./g, "-") : "") + " v" + docVer(p)).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
+function fileBase(p) { return ("Camera list - " + (p.name || "production") + (unitLine(p) ? " " + unitLine(p) : "") + (p.shootStart ? " " + fmtDoc(p.shootStart).replace(/\./g, "-") : "") + " v" + docVer(p)).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
 
 /* ----- the clean layout (default), after the camlist look: the production's name with "Camera List" across from it on every page,
    a short block of details, then each section between two thin rules: "2 x" and the item in bold, its sub-items and notes under it,
@@ -3416,7 +3420,7 @@ const docTitle = p => String((p && p.docTitle) || app.settings.docTitle || "Came
 const CLEAN_FONT = "Futura, 'Century Gothic', 'Avenir Next', 'IBM Plex Sans', Arial, Helvetica, sans-serif";
 function shootRangeText(p) {
   if (!p.shootStart) return "";
-  const days = shootDays(p), range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtShort(p.shootStart)} – ${fmtShort(p.shootEnd)}` : fmtShort(p.shootStart);
+  const days = shootDays(p), range = p.shootEnd && p.shootEnd !== p.shootStart ? `${fmtDoc(p.shootStart)} – ${fmtDoc(p.shootEnd)}` : fmtDoc(p.shootStart);
   return range + (days ? ` · ${days} shoot day${days === 1 ? "" : "s"}` : "");
 }
 /* the details block, one centered line each. With a 2nd Unit, both units' camera crew, each role by unit:
@@ -3425,9 +3429,9 @@ function shootRangeText(p) {
 const acText = p => p ? [p.ac, p.acPhone].filter(Boolean).join("  ") : "";
 function infoRows(p) {
   const o = otherUnit(p);
-  if (!o || !p.mainOf) return [{ k: "Production company", v: p.company }, { k: "DP", v: p.dp }, { k: "1st AC", v: acText(p) }, { k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }].filter(r => r.v);
+  if (!o || !p.mainOf) return [{ k: "Production company", v: p.company }, { k: "DP", v: p.dp }, { k: "1st AC", v: acText(p) }, { k: "Prep", v: p.prep ? fmtDoc(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }].filter(r => r.v);
   const sameDates = (o.prep || "") === (p.prep || "") && shootRangeText(o) === shootRangeText(p);
-  return [{ k: "Production company", v: p.company }, ...(sameDates ? [{ k: "Prep", v: p.prep ? fmtShort(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }] : [])].filter(r => r.v);
+  return [{ k: "Production company", v: p.company }, ...(sameDates ? [{ k: "Prep", v: p.prep ? fmtDoc(p.prep) : "" }, { k: "Shoot", v: shootRangeText(p) }] : [])].filter(r => r.v);
 }
 /* with a 2nd Unit: each unit's crew in its own column, 2nd Unit on the left and Main Unit on the right. This list's unit reads in full, the other quieter.
    Each column also has its unit's dates when the two units' dates differ. */
@@ -3435,7 +3439,7 @@ function crewCols(p) {
   const o = otherUnit(p); if (!o || !p.mainOf) return null;  // only the 2nd Unit's list shows both crews
   const m = p.mainOf ? o : p, q = p.mainOf ? p : o;
   const sameDates = (o.prep || "") === (p.prep || "") && shootRangeText(o) === shootRangeText(p);
-  const col = (x, name) => ({ name, dim: x !== p, rows: [{ k: "DP", v: x.dp }, { k: "1st AC", v: acText(x) }, ...(sameDates ? [] : [{ k: "Prep", v: x.prep ? fmtShort(x.prep) : "" }, { k: "Shoot", v: shootRangeText(x) }])].filter(r => r.v) });
+  const col = (x, name) => ({ name, dim: x !== p, rows: [{ k: "DP", v: x.dp }, { k: "1st AC", v: acText(x) }, ...(sameDates ? [] : [{ k: "Prep", v: x.prep ? fmtDoc(x.prep) : "" }, { k: "Shoot", v: shootRangeText(x) }])].filter(r => r.v) });
   return [col(q, "2nd Unit"), col(m, "Main Unit")];
 }
 const unitLine = p => otherUnit(p) ? (p.mainOf ? "2nd Unit" : "Main Unit") : "";
