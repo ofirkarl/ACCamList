@@ -1580,6 +1580,7 @@ function render() {
   if (app.view === "welcome") v.innerHTML = viewWelcome();
   else if (app.view === "form") v.innerHTML = viewForm();
   else if (app.view === "settings") v.innerHTML = viewSettings();
+  else if (app.view === "rules") v.innerHTML = viewRules();
   else if (app.view === "production" && cur()) v.innerHTML = viewProduction();
   else if (app.view === "browse" && cur()) v.innerHTML = viewBrowse();
   else { app.view = "home"; v.innerHTML = viewHome(); }
@@ -1652,7 +1653,7 @@ function viewHome() {
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
-    ${sel ? "" : browseHtml()}
+    ${sel ? "" : browseHtml() + rulesHomeHtml()}
   </section>${selDock}`;
 }
 /* a rental house's catalog, to look through without a production: search, filters and stars work; nothing is added */
@@ -1905,7 +1906,8 @@ function ruleParts(r) {
   if (r.kind === "item") { const a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: a ? a.it.name : gone, add: b ? b.it.name : gone, house: a ? a.h.name : "" }; }
   return { when: r.label, add: r.kind === "media" ? "memory cards to match the camera, and a card reader" : r.battery.label, house: "" };
 }
-function viewSettings() {
+/* packages and "doesn't work together": their own page, reached from the bottom of Productions */
+function rulesGroups() {
   const pkRow = r => { const x = ruleParts(r); return `<div class="pk-row"><span class="pk-nm">${esc(x.add)}</span>
       <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="How many with each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
       <button class="x" type="button" data-act="rdel" data-rid="${esc(r.id)}" aria-label="Take ${esc(x.add)} out of the package">×</button></div>`; };
@@ -1920,6 +1922,31 @@ function viewSettings() {
       <span class="c-b">doesn't work with <b>${esc(r.b.map(itName).join(", "))}</b></span>
       ${r.swap ? `<span class="c-sw">Use instead: <b>${esc(itName(r.swap))}</b></span>` : ""}${r.why ? `<small>${esc(r.why)}</small>` : ""}</button>
       <span class="c-tools"><button class="iconbtn" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule" title="Edit">${PEN_ICON}</button><button class="x" type="button" data-act="clash-del" data-rid="${esc(r.id)}" aria-label="Delete this rule">×</button></span></div>`).join("");
+  return `    <div class="set-group"><h3 id="rs-pkg">Packages</h3>
+      <div class="packages">${rules || `<p class="hint">No packages yet.</p>`}</div>
+      <div><button class="btn" type="button" data-act="rule-new">+ Create a Package</button></div></div>
+    <div class="set-group"><h3 id="rs-clash">Doesn't work together</h3>
+      <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
+      <div class="rules">${clashRows || `<p class="hint">No rules yet.</p>`}</div>
+      <div><button class="btn" type="button" data-act="clash-new">+ New rule</button></div></div>
+`;
+}
+const rulesCounts = () => { const w = new Set(app.settings.rules.map(r => r.kind === "item" ? r.when : "rule:" + r.id)); return [w.size, (app.settings.clashes || []).length]; };
+function viewRules() {
+  return `<section class="pad"><div class="prod-head">
+      <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button></div>
+      <div class="ph-title"><h2 class="ph-name">Packages &amp; rules</h2><p class="ph-co">What comes with what</p></div></div>
+    <div class="settings rules-page">${rulesGroups()}</div></section>`;
+}
+const rulesHomeHtml = () => { const [np, nc] = rulesCounts();
+  return `<div class="home-head browse-head"><h3 class="home-sec">Packages &amp; rules</h3></div>
+    <div class="browse-list">
+      <button class="browse-card rule-card" type="button" data-act="rules-open" data-to="pkg"><span class="rc-i" aria-hidden="true">${PKG_ICON}</span><span class="rc-t"><b>Create a Package</b><small>What comes with a camera</small></span><span class="bc-n"><b class="num">${np}</b> saved</span><span class="bc-go" aria-hidden="true">›</span></button>
+      <button class="browse-card rule-card" type="button" data-act="rules-open" data-to="clash"><span class="rc-i" aria-hidden="true">${CLASH_ICON}</span><span class="rc-t"><b>Doesn't work with</b><small>And what to swap in</small></span><span class="bc-n"><b class="num">${nc}</b> rules</span><span class="bc-go" aria-hidden="true">›</span></button>
+    </div>`; };
+const PKG_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>`;
+const CLASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>`;
+function viewSettings() {
   const me = app.settings.me || {}, acct = accountHtml();
   const meOpen = app.open.has("me") || !(me.name || "").trim();  // filled in once: folded away after that
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
@@ -1942,13 +1969,6 @@ function viewSettings() {
       <div><a class="btn" href="${HELPER_APK}" rel="noopener">${SAVE_ICON}<span>Get the helper app</span></a></div>
       <label class="check"><input type="checkbox" name="helperOn" ${helperOn() ? "checked" : ""}> The helper app is installed on this phone</label>
       <span class="hint">Once downloaded, open the file to install it. Android asks once to allow installs from your browser.</span></div>` : ""}
-    <div class="set-group"><h3>Packages</h3>
-      <div class="packages">${rules || `<p class="hint">No packages yet.</p>`}</div>
-      <div><button class="btn" type="button" data-act="rule-new">+ New package</button></div></div>
-    <div class="set-group"><h3>Doesn't work together</h3>
-      <p class="hint" style="margin:0">Items that don't work together, and what to take instead. When both are on a list you're told why, and can swap in one tap.</p>
-      <div class="rules">${clashRows || `<p class="hint">No rules yet.</p>`}</div>
-      <div><button class="btn" type="button" data-act="clash-new">+ New rule</button></div></div>
   </section>`;
 }
 
@@ -3884,6 +3904,7 @@ document.addEventListener("click", e => {
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
     case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break;
       app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
+    case "rules-open": { closePreview(); app.view = "rules"; render(); const h = document.getElementById(b.dataset.to === "clash" ? "rs-clash" : "rs-pkg"); window.scrollTo(0, h ? Math.max(0, h.getBoundingClientRect().top + scrollY - 80) : 0); break; }
     case "browse-new": app.formFor = null; app.dupFrom = null; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "open": {
