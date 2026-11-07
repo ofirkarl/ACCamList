@@ -2891,7 +2891,7 @@ if (typeof document !== "undefined" && document.addEventListener && typeof Mutat
     const o = e.target.closest && e.target.closest(".nsel-opt");
     if (o) { buzz("tap"); nselPick(o.closest(".nsel"), o.dataset.v); return; }
     const lab = e.target.closest && e.target.closest("label");
-    if (lab && lab.control && lab.control.classList.contains("nsel-btn")) return;
+    if (lab && lab.control && lab.control.classList.contains("nsel-btn") && !e.target.closest(".nsel-btn")) return;  // a tap on the label's words: the label passes it on to the button; a tap on the button itself opens it here
     const b = e.target.closest && e.target.closest(".nsel-btn");
     if (b) { buzz("tap"); nselOpen(b.closest(".nsel")); return; }
     if (!(e.target.closest && e.target.closest(".nsel"))) nselClose();
