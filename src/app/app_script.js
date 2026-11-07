@@ -2107,7 +2107,7 @@ function viewProduction() {
         <div class="pinfo-acts"><button class="btn sm" type="button" data-act="edit">${missing ? "+ Add DP, 1st AC and dates" : "Edit details"}</button></div></div></div></div>
     </div></section>`;
   swExtra = extra;
-  return `<section class="pad">
+  return `<section class="pad" data-keep="head">
     ${head}
   </section>
   ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "media" ? "" : extra}${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
@@ -2868,9 +2868,9 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-top"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>
-        <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span></div>
-      <div class="l-row">${specs ? `<div class="l-meta">${specs}</div>` : `<span class="l-meta"></span>`}<div class="l-bottom">${qtys}</div></div>
+      <div class="l-grid${l.tx !== undefined ? " wide" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : ""}</span>
+        <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
+      <div class="l-bottom">${qtys}</div></div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}
@@ -3044,6 +3044,10 @@ document.addEventListener("input", e => {
 /* a sideways swipe moves between the production's pages, in the bottom bar's order, with the Media Calculator's
    two views as two stops: Add gear · Favorites · Camera List · My list · Any camera. Not on things that scroll sideways
    or are being dragged, not while typing, in a dialog, the preview or the edit mode */
+/* each page keeps where you were on it: its scroll, per production */
+const tabKey = (tab, mode) => (app.pid || "") + ":" + tab + (tab === "media" ? ":" + (mode || "list") : "");
+function tabSave() { if (app.view === "production") (app.scrolls || (app.scrolls = {}))[tabKey(app.tab, app.mcMode)] = window.scrollY; }
+const tabSaved = (tab, mode) => (app.scrolls || {})[tabKey(tab, mode)] || 0;
 const SWIPE_STOPS = [["add"], ["fav"], ["list"], ["media", "list"], ["media", "free"]];
 const sw = { x: 0, y: 0, t: 0, ok: false, dir: 0, ghost: null, side: 0, gTop: 0 };
 const swHere = () => SWIPE_STOPS.findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
@@ -3054,47 +3058,57 @@ const swSeg = () => document.getElementById("mcseg");
 /* what moves with the finger: the page, and the My list | Any camera bar only when leaving the Media tab */
 const swSig = el => el.textContent.replace(/\s+/g, " ").trim() + "|" + [...el.querySelectorAll("input")].map(i => i.placeholder + "=" + i.value).join(",");
 function swMove(x, how, side) {
-  // what both pages have (the dates, the search row) stays where it is; if its words differ they cross-fade
-  if (sw.keeps && sw.keeps.length) {
-    const fade = how === "none" ? "none" : `${how}, ${how.replace("transform", "opacity")}`, gx = x + (sw.side || side) * innerWidth, k = Math.min(1, Math.abs(x) / innerWidth);
-    for (const { live, twin, same } of sw.keeps) {
-      live.style.transition = fade; live.style.transform = x ? `translateX(${-x}px)` : ""; live.style.opacity = x && !same ? Math.max(0, 1 - 2 * k) : "";
-      twin.style.transition = fade; twin.style.transform = `translateX(${-gx}px)`; twin.style.opacity = same ? 0 : Math.max(0, 2 * k - 1);  // one out, then the other in: never two words on top of each other
-    }
+  const fade = how === "none" ? "none" : `${how}, ${how.replace("transform", "opacity")}`, gx = x + (sw.side || side) * innerWidth, k = Math.min(1, Math.abs(x) / innerWidth);
+  const pane = swPane(); if (pane) { pane.style.transition = how; pane.style.transform = x ? `translateX(${x}px)` : ""; }
+  // what both pages have, at the same place (the name, the dates, the search row): stays where it is; if its words differ they cross-fade
+  for (const { live, twin, same, inPane, kept } of sw.keeps || []) {
+    if (!kept) { if (!inPane) { live.style.transition = how; live.style.transform = x ? `translateX(${x}px)` : ""; } continue; }  // not at the same place: it goes with its page
+    if (inPane) { live.style.transition = fade; live.style.transform = x ? `translateX(${-x}px)` : ""; } else live.style.transition = fade;
+    live.style.opacity = x && !same ? Math.max(0, 1 - 2 * k) : "";
+    twin.style.transition = fade; twin.style.transform = `translateX(${-gx}px)`; twin.style.opacity = same ? 0 : Math.max(0, 2 * k - 1);  // one out, then the other in
   }
-  const to = SWIPE_STOPS[swHere() + side], seg = swSeg(), inMedia = to && to[0] === "media" && app.tab === "media";
-  const els = [swPane()]; if (seg && to && to[0] !== "media") els.push(seg);
-  els.forEach(el => { if (!el) return; el.style.transition = how; el.style.transform = x ? `translateX(${x}px)` : ""; });
+  // with no picture beside it (at the first or last page) the bar under the name goes along with its page
+  if (!sw.ghost) { const seg = swSeg(); if (seg) { seg.style.transition = how; seg.style.transform = x ? `translateX(${x}px)` : ""; } }
+  const seg = swSeg(), to = SWIPE_STOPS[swHere() + side], segKept = (sw.keeps || []).some(q => q.kept && q.live === seg);
   if (seg) { const m = seg.querySelector(".mc-mode"), base = (app.mcMode || "list") === "free" ? 1 : 0;
-    if (m) { m.style.setProperty("--mcd", how === "none" ? "0s" : ".2s"); m.style.setProperty("--mcp", inMedia ? Math.min(1, Math.max(0, base - x / innerWidth)) : base); } }
+    if (m) { m.style.setProperty("--mcd", how === "none" ? "0s" : ".2s"); m.style.setProperty("--mcp", segKept && to && to[0] === "media" ? Math.min(1, Math.max(0, base - x / innerWidth)) : base); } }
 }
 /* the next page, drawn beside the one under the finger, so it shows while the finger moves */
 function swPageHtml(stop) {
   const p = cur(), h = houseById(p.houseId), was = { tab: app.tab, mode: app.mcMode, open: mcOpen };
   app.tab = stop[0]; if (stop[1]) app.mcMode = stop[1]; mcOpen = null;
-  let html = "";
-  try { html = (stop[0] === "media" ? "" : swExtra) + (stop[0] === "add" ? viewCatalog(p, h) : stop[0] === "fav" ? viewFavorites(p, h) : stop[0] === "media" ? (was.tab === "media" ? "" : mcSegHtml(false)) + viewMedia(p, h) : viewList(p, h)); }
+  let html = ["", ""];
+  try { html = [stop[0] === "media" ? mcSegHtml(false) : "", (stop[0] === "media" ? "" : swExtra) + (stop[0] === "add" ? viewCatalog(p, h) : stop[0] === "fav" ? viewFavorites(p, h) : stop[0] === "media" ? viewMedia(p, h) : viewList(p, h))]; }
   finally { app.tab = was.tab; app.mcMode = was.mode; mcOpen = was.open; }
   return html;  // a picture of it, drawn after the live page, so the live page's ids stay the ones found first
 }
 function swGhost(side) {
   swDropGhost();
-  const to = SWIPE_STOPS[swHere() + side], pane = swPane();
-  if (!to || !pane) return;
-  const top = Math.max(0, (swSeg() && to[0] !== "media" ? swSeg() : pane).getBoundingClientRect().top);
+  const to = SWIPE_STOPS[swHere() + side], pane = swPane(), head = document.querySelector('#view > [data-keep="head"]');
+  if (!to || !pane || !head) return;
+  const [segHtml, body] = swPageHtml(to);
   const g = document.createElement("div");
-  g.className = "swghost"; g.setAttribute("aria-hidden", "true"); g.style.top = top + "px";
-  g.innerHTML = `<div class="app"><div class="tabpane">${swPageHtml(to)}</div></div>`;
+  g.className = "swghost"; g.setAttribute("aria-hidden", "true");
+  g.innerHTML = `<div class="app">${head.outerHTML}${segHtml}<div class="tabpane">${body}</div></div>`;
   // the picture's column exactly where the live page's column is, so nothing changes width when it lands
   const col = pane.closest(".app"), cr = col && col.getBoundingClientRect(), ga = g.firstChild;
-  if (cr) Object.assign(ga.style, { width: cr.width + "px", maxWidth: "none", marginLeft: cr.left + "px", marginRight: "0" });
+  if (cr) Object.assign(ga.style, { width: cr.width + "px", maxWidth: "none", marginLeft: cr.left + "px", marginRight: "0", paddingTop: "0" });
   g.style.transform = `translateX(${side * innerWidth}px)`;
-  document.body.appendChild(g);
-  sw.keeps = [...pane.querySelectorAll("[data-keep]")].map(el => { const t = g.querySelector(`[data-keep="${el.dataset.keep}"]`); return t && { live: el, twin: t, same: swSig(el) === swSig(t) }; }).filter(Boolean);
-  Object.assign(sw, { ghost: g, side, gTop: top });
+  g.style.top = "0px"; document.body.appendChild(g);
+  // the next page drawn where you left it: its own scroll, as far as it can go
+  const headDoc = head.getBoundingClientRect().top + window.scrollY, appPad = parseFloat(getComputedStyle(col).paddingBottom) || 0;
+  const most = Math.max(0, headDoc + ga.offsetHeight + appPad + (document.documentElement.scrollHeight - (col.getBoundingClientRect().bottom + window.scrollY)) - innerHeight);
+  const S = Math.min(tabSaved(to[0], to[1]), most), top = headDoc - S;
+  g.style.top = top + "px";
+  sw.keeps = [...document.querySelectorAll('#view [data-keep]')].map(el => { const t = g.querySelector(`[data-keep="${el.dataset.keep}"]`);
+    return t && { live: el, twin: t, same: swSig(el) === swSig(t), inPane: pane.contains(el), kept: Math.abs(t.getBoundingClientRect().top - el.getBoundingClientRect().top) < 1 }; }).filter(Boolean);
+  // what this page has and the next one doesn't (the bar under the name, the dates) goes with its page
+  sw.keeps.push(...[...document.querySelectorAll('#view > [data-keep]')].filter(el => !g.querySelector(`[data-keep="${el.dataset.keep}"]`)).map(el => ({ live: el, twin: null, inPane: false, kept: false })));
+  Object.assign(sw, { ghost: g, side, gS: S });
 }
 function swDropGhost() {
   (sw.keeps || []).forEach(({ live }) => { live.style.transition = live.style.transform = live.style.opacity = ""; });
+  const seg = swSeg(); if (seg) seg.style.transition = seg.style.transform = "";
   sw.keeps = [];
   if (sw.ghost) { sw.ghost.remove(); sw.ghost = null; sw.side = 0; }
 }
@@ -3122,20 +3136,20 @@ document.addEventListener("touchmove", e => {
 }, { passive: true });
 function swBack() {
   const pane = swPane(), g = sw.ghost, side = sw.side;
-  if (pane) { swMove(0, `transform .24s ${swEase}`, side || 1); setTimeout(() => { pane.style.transition = ""; const s2 = swSeg(); if (s2) s2.style.transition = ""; }, 260); }
+  if (pane) { swMove(0, `transform .24s ${swEase}`, side || 1); setTimeout(() => { pane.style.transition = ""; const s2 = swSeg(); if (s2) s2.style.transition = ""; (sw.keeps || []).forEach(({ live }) => { live.style.transition = ""; }); }, 260); }
   if (g) { g.style.transition = `transform .24s ${swEase}`; g.style.transform = `translateX(${side * innerWidth}px)`; setTimeout(() => { if (sw.ghost === g) swDropGhost(); else g.remove(); }, 260); }
 }
 function swGo(to, side) {
-  const pane = swPane(), g = sw.ghost, gTop = sw.gTop, calm = swCalm() || !g;
+  const pane = swPane(), g = sw.ghost, gS = sw.gS, calm = swCalm() || !g;
   const show = () => {
+    tabSave();
     if (to[1]) app.mcMode = to[1];
     mcOpen = null;
     const sameTab = to[0] === app.tab;
     if (!sameTab) { app.tab = to[0]; app.editing = null; }
     render();
-    // the new page where its picture was: its top where the picture's top was
-    const np = swSeg() || swPane();
-    if (np) { const want = np.getBoundingClientRect().top + scrollY - gTop; window.scrollTo(0, g ? Math.max(0, want) : sameTab ? scrollY : 0); }
+    // the new page where its picture was: where you left it
+    window.scrollTo(0, g ? gS : tabSaved(app.tab, app.mcMode));
     requestAnimationFrame(() => { if (sw.ghost === g) swDropGhost(); else if (g) g.remove(); });
   };
   if (calm) { swDropGhost(); show(); return; }
@@ -3170,7 +3184,7 @@ const NAV_ICON = {
 /* My list | Any camera: drawn above the moving page, so a swipe between the two moves only the pill */
 function mcSegHtml(id) {
   const on = (app.mcMode || "list") === "free" ? 1 : 0;
-  return `<section class="pad mc-segwrap"${id ? ` id="mcseg"` : ""}><div class="mc-mode" role="tablist" style="--mcp:${on}"><span class="mc-pill" aria-hidden="true"></span>${[["list", "My list"], ["free", "Any camera"]].map(([v, t]) => `<button type="button" role="tab" data-act="mc-mode" data-v="${v}" aria-selected="${(app.mcMode || "list") === v}">${t}</button>`).join("")}</div></section>`;
+  return `<section class="pad mc-segwrap" data-keep="seg"${id ? ` id="mcseg"` : ""}><div class="mc-mode" role="tablist" style="--mcp:${on}"><span class="mc-pill" aria-hidden="true"></span>${[["list", "My list"], ["free", "Any camera"]].map(([v, t]) => `<button type="button" role="tab" data-act="mc-mode" data-v="${v}" aria-selected="${(app.mcMode || "list") === v}">${t}</button>`).join("")}</div></section>`;
 }
 function viewMedia(p, h) {
   const freeMode = app.mcMode === "free";
@@ -3920,7 +3934,8 @@ document.addEventListener("click", e => {
       break;
     }
     case "dup": startDuplicate(id || app.pid); break;
-    case "tab": app.tab = b.dataset.tab; app.editing = null; render(); window.scrollTo(0, 0); break;
+    case "tab": if (app.tab === b.dataset.tab) { window.scrollTo({ top: 0, behavior: "smooth" }); break; }  // tapping the page you're on goes to its top
+      tabSave(); app.tab = b.dataset.tab; app.editing = null; render(); window.scrollTo(0, tabSaved(app.tab, app.mcMode)); break;
     case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; s.brand = ""; }
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
     case "fin-close": fin().on = false; render(); break;
@@ -3985,7 +4000,7 @@ document.addEventListener("click", e => {
     case "mc-open": if (p) mcToggle(p, id, b.dataset.k); break;
     case "mc-add": if (p) { const list = mcFreeList(p); list.push({ id: "", rec: {}, n: 2 }); touchSettings(); const nid = "free" + (list.length - 1); mcOpen = null; rerenderKeepScroll(); mcToggle(p, nid, "cam"); document.getElementById("mc-" + nid)?.scrollIntoView({ block: "start", behavior: "smooth" }); } break;
     case "mc-del": if (p) { const list = mcFreeList(p), i = Number(id.slice(4)); if (list.length > 1) { const was = list.splice(i, 1)[0]; touchSettings(); mcOpen = null; rerenderKeepScroll(); undoable("Removed", was.id ? itName(was.id) : "a camera", () => { list.splice(i, 0, was); touchSettings(); rerenderKeepScroll(); }); } } break;
-    case "mc-mode": if (app.mcMode !== b.dataset.v) { const m = b.closest(".mc-mode"); if (m) { m.style.setProperty("--mcd", ".2s"); m.style.setProperty("--mcp", b.dataset.v === "free" ? 1 : 0); } app.mcMode = b.dataset.v; mcOpen = null; rerenderKeepScroll(); } break;
+    case "mc-mode": if (app.mcMode !== b.dataset.v) { const m = b.closest(".mc-mode"); if (m) { m.style.setProperty("--mcd", ".2s"); m.style.setProperty("--mcp", b.dataset.v === "free" ? 1 : 0); } tabSave(); app.mcMode = b.dataset.v; mcOpen = null; render(); window.scrollTo(0, tabSaved("media", app.mcMode)); } break;
     case "mc-pick": if (p) { const k = b.dataset.k, v = b.dataset.v; mcOpen = null;
       if (isFree(id) && k === "cam") { const F = mcFreeOf(p, id); if (F.id !== v) { F.id = v; F.rec = {}; } touchSettings(); mediaRedraw(p); document.getElementById("mc-" + id)?.scrollIntoView({ block: "nearest" }); break; }
       recApply(p, id, (l, e) => recSet(l, e, p, k, v)); document.getElementById("mc-" + id)?.querySelector(`[data-k="${k}"]`)?.scrollIntoView({ block: "nearest" }); } break;
