@@ -1620,6 +1620,16 @@ body.kb-room .app { padding-bottom: 70vh; }
 .nsel-list.multi .nsel-opt { display: flex; align-items: center; gap: 10px; }
 .nsel-list.multi .nsel-opt::before { content: ""; width: 18px; height: 18px; flex: none; box-sizing: border-box; border: 2px solid color-mix(in srgb, var(--fg) 35%, transparent); border-radius: 5px; }
 .nsel-list.multi .nsel-opt[aria-selected="true"]::before { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 14px no-repeat; }
+/* a lens line opens: a small chevron in its corner says so */
+.f-card::after { content: ""; position: absolute; right: 14px; bottom: 12px; width: 6px; height: 6px; border: solid var(--muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg); transition: transform .2s var(--ease); pointer-events: none; }
+.f-card.open::after { transform: translate(0, 3px) rotate(-135deg); }
+/* dark: each lens its own card, clearly apart */
+:root[data-theme="dark"] .fv .f-cards { gap: 10px; background: none; border: 0; border-radius: 0; overflow: visible; box-shadow: none; }
+:root[data-theme="dark"] .fv .f-card { border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--fg) 5%, var(--surface)); box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+:root[data-theme="dark"] .fv .f-card + .f-card { border-top: 1px solid color-mix(in srgb, var(--fg) 16%, transparent); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .fv .f-cards { gap: 10px; background: none; border: 0; border-radius: 0; overflow: visible; box-shadow: none; }
+  :root:not([data-theme="light"]) .fv .f-card { border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent); border-radius: 16px; background: color-mix(in srgb, var(--fg) 5%, var(--surface)); box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+  :root:not([data-theme="light"]) .fv .f-card + .f-card { border-top: 1px solid color-mix(in srgb, var(--fg) 16%, transparent); } }
 .lt-row { min-height: 36px; }  /* the same height with or without its button, so pages line up
  */
 .ph-title { display: grid; justify-items: center; gap: 4px; margin-top: 4px; text-align: center; }
