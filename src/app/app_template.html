@@ -1489,7 +1489,8 @@ body.kb-room .app { padding-bottom: 70vh; }
 .nsel-list .nsel-q { position: sticky; top: -4px; z-index: 1; width: 100%; box-sizing: border-box; margin: 0 0 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); font: inherit; font-size: 16px; }
 .nsel-list .nsel-q:focus { outline: none; border-color: var(--accent); }
 /* the fold line's chevron (right): the page's colour, a size up from the ruler's other chevrons */
-.f-fold .fv-head .chev { width: 20px; height: 20px; color: var(--accent); stroke-width: 2.6; }
+.f-fold-up { display: grid; place-items: center; width: 40px; height: 36px; margin-inline-end: 2px; padding: 0; border: 0; background: none; color: var(--accent); cursor: pointer; }
+.f-fold-up .chev { width: 28px; height: 28px; stroke-width: 2.6; color: var(--accent); transform: rotate(180deg); }
 /* the summary line carries the folded shorter lenses: one line between the search and your focal length */
 .finder .f-sum { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: -4px 0 -6px; min-height: 32px; }
 .f-fold-btn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 12px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
@@ -4031,8 +4032,8 @@ function finderResults(p, h) {
   const mo = fin().more;
   // your focal length comes first, right under the search; the shorter ones fold into one line above it until you open them
   const shorter = keys.filter(k => k < ck), nShort = shorter.reduce((a, k) => a + by.get(k).length, 0);
-  const unfold = shorter.length && mo.short ? `<section class="f-col f-fold open"><span class="fv-mark" aria-hidden="true"><b>↓</b></span>
-      <div class="fv-body"><button class="fv-head" type="button" data-act="fin-short" aria-expanded="true"><span class="fv-diff">Hide shorter · ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm</span>${CHEV}</button></div></section>` : "";
+  // open, the same spot on the summary line holds just the orange chevron that folds them back
+  const unfold = shorter.length && mo.short ? `<button class="f-fold-up" type="button" data-act="fin-short" aria-expanded="true" aria-label="Fold the shorter lenses, ${fmtN(shorter[0])} to ${fmtN(shorter[shorter.length - 1])}mm">${CHEV}</button>` : "";
   // folded, the shorter ones are a small button on the summary line, so your focal length sits right under the search
   const fold = shorter.length && !mo.short ? `<button class="f-fold-btn" type="button" data-act="fin-short" aria-expanded="false" aria-label="Show shorter lenses, ${fmtN(shorter[0])} to ${fmtN(shorter[shorter.length - 1])}mm">↑ ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm <span>${nShort}</span>${CHEV}</button>` : "";
   const cols = keys.filter(k => !(fold && k < ck)).map(k => {
@@ -4050,8 +4051,8 @@ function finderResults(p, h) {
       </div>
     </section>`;
   }).join("");
-  return `<div class="f-sum"><span><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close</span>${fold}</div>
-    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${unfold}${cols}</div>`;
+  return `<div class="f-sum"><span><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close</span>${fold}${unfold}</div>
+    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${cols}</div>`;
 }
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);

@@ -2493,8 +2493,8 @@ function finderResults(p, h) {
   const mo = fin().more;
   // your focal length comes first, right under the search; the shorter ones fold into one line above it until you open them
   const shorter = keys.filter(k => k < ck), nShort = shorter.reduce((a, k) => a + by.get(k).length, 0);
-  const unfold = shorter.length && mo.short ? `<section class="f-col f-fold open"><span class="fv-mark" aria-hidden="true"><b>↓</b></span>
-      <div class="fv-body"><button class="fv-head" type="button" data-act="fin-short" aria-expanded="true"><span class="fv-diff">Hide shorter · ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm</span>${CHEV}</button></div></section>` : "";
+  // open, the same spot on the summary line holds just the orange chevron that folds them back
+  const unfold = shorter.length && mo.short ? `<button class="f-fold-up" type="button" data-act="fin-short" aria-expanded="true" aria-label="Fold the shorter lenses, ${fmtN(shorter[0])} to ${fmtN(shorter[shorter.length - 1])}mm">${CHEV}</button>` : "";
   // folded, the shorter ones are a small button on the summary line, so your focal length sits right under the search
   const fold = shorter.length && !mo.short ? `<button class="f-fold-btn" type="button" data-act="fin-short" aria-expanded="false" aria-label="Show shorter lenses, ${fmtN(shorter[0])} to ${fmtN(shorter[shorter.length - 1])}mm">↑ ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm <span>${nShort}</span>${CHEV}</button>` : "";
   const cols = keys.filter(k => !(fold && k < ck)).map(k => {
@@ -2512,8 +2512,8 @@ function finderResults(p, h) {
       </div>
     </section>`;
   }).join("");
-  return `<div class="f-sum"><span><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close</span>${fold}</div>
-    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${unfold}${cols}</div>`;
+  return `<div class="f-sum"><span><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close</span>${fold}${unfold}</div>
+    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${cols}</div>`;
 }
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);
