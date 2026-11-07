@@ -1833,7 +1833,7 @@ const app = {
   q: "", cat: "all",
   open: new Set(["camera_accessories/general"]),
   editing: null,
-  editCat: false,         // Add gear in edit mode: rename and move catalog items
+  editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
 const cur = () => app.productions.find(p => p.id === app.pid);
@@ -3540,7 +3540,7 @@ function viewSettings() {
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       return `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-catimport="1" hidden>${LOAD_ICON}<span>Load a catalog file</span></label></div>
-      <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add gear.</span></div>`; })()}
+      <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add Gear.</span></div>`; })()}
     ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
       <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
       ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
@@ -3752,7 +3752,7 @@ function viewProduction() {
   </section>
   ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "media" ? "" : extra}${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
-    ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
+    ${[["add", "Add Gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
       `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
   </div></nav>`;
 }
@@ -3775,7 +3775,7 @@ function rowHtml(p, it, q, extra) {
     <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
 }
 
-/* ----- Add gear: the rental house catalog ----- */
+/* ----- Add Gear: the rental house catalog ----- */
 function viewCatalog(p, h) {
   if (fin().on) return finderHtml(p, h);
   const chips = [`<button class="chip" type="button" data-act="chip" data-cat="all" aria-pressed="${app.cat === "all"}">All <span class="num">${houseCount(h)}</span></button>`]
@@ -4456,7 +4456,7 @@ function viewFavorites(p, h) {
       <div class="lt-row"><span class="summary-line"><b class="num">${nStar}</b> favorites · <span class="num">${nUsed}</span> used before · ${esc(h.name)}</span></div></div>
     <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
     <div class="fav-group" data-fg="star">${gh(FAV_STAR, "Favorites", nStar, "star")}
-      ${starred || typed ? starred + typed : `<p class="hint">Tap ☆ next to any item in Add gear or in the list to keep it here for quick picking.</p>`}</div>
+      ${starred || typed ? starred + typed : `<p class="hint">Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</p>`}</div>
     <div class="fav-group" data-fg="used">${gh(FAV_CLOCK, "Used before", nUsed, "used")}
       ${used || `<p class="hint">Items from your other ${esc(h.name)} productions will show up here.</p>`}</div>
   </section>`;
@@ -4682,7 +4682,7 @@ document.addEventListener("input", e => {
   list.querySelector(".mc-none").hidden = shown > 0;
 });
 /* a sideways swipe moves between the production's pages, in the bottom bar's order, with the Media Calculator's
-   two views as two stops: Add gear · Favorites · Camera List · My list · Any camera. Not on things that scroll sideways
+   two views as two stops: Add Gear · Favorites · Camera List · My list · Any camera. Not on things that scroll sideways
    or are being dragged, not while typing, in a dialog, the preview or the edit mode */
 /* each page keeps where you were on it: its scroll, per production */
 const tabKey = (tab, mode) => (app.pid || "") + ":" + tab + (tab === "media" ? ":" + (mode || "list") : "");
@@ -4832,7 +4832,7 @@ function viewMedia(p, h) {
   const m = mainOf(p), u2 = unit2Of(p), camsOf = (q, pre) => Object.entries(q.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => pre + id);
   const cams = u2 ? [...camsOf(m, "m~"), ...camsOf(u2, "u2~")] : camsOf(p, "");
   const body = freeMode ? mcFreeList(p).map((f, i) => mediaCamHtml(p, "free" + i)).join("") + `<button type="button" class="mc-add" data-act="mc-add"><span aria-hidden="true">+</span> Add camera to compare</button>`
-    : cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`;
+    : cams.length ? cams.map(id => mediaCamHtml(p, id)).join("") : `<div class="empty-state"><h3>No cameras on the list yet</h3><button class="btn primary" type="button" data-act="tab" data-tab="add">Add Gear</button></div>`;
   return `<section class="pad media-tab">${body}</section>`;
 }
 /* a change in the Media tab: kept on the camera's line, and that camera's card redrawn in place */
@@ -4872,7 +4872,7 @@ function viewList(p, h) {
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
     ${clashes.map(i => `<div class="warnbox" role="alert"><b>Doesn't work together</b><p>${clashPair(i)}${i.r.why ? ` · ${esc(i.r.why)}` : ""}</p>${clashActs(i, false)}</div>`).join("")}
-    ${t.lines ? "" : `<div class="empty-state"><h3>The list is empty</h3><p>Open Add gear to pick items from ${esc(h.name)}'s catalog, or type items into any section below.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add gear</button></div>`}
+    ${t.lines ? "" : `<div class="empty-state"><h3>The list is empty</h3><p>Open Add Gear to pick items from ${esc(h.name)}'s catalog, or type items into any section below.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add Gear</button></div>`}
     <p class="empty" id="lqNone" hidden>Nothing on the list matches. Try another word.</p>
     <div id="listSecs">${sections}</div>
     <div class="section"><button class="add-head big" type="button" data-act="new-section">+ New section</button></div>
