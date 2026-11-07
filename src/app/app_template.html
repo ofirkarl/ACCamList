@@ -3879,6 +3879,8 @@ function lensSpec(it, sub) {
     const m = name.match(/\b([TF])\s?\/?\s?(\d{1,2}(?:\.\d)?)\b/i);
     if (m && +m[2] >= 0.7 && +m[2] <= 22) { stop = [+m[2], +m[2]]; label = (m[1].toUpperCase() === "F" ? "f/" : "T") + m[2]; }
   }
+  // one way of writing a stop everywhere: T, as on set (a still lens's f-number is shown as its T)
+  label = label.replace(/\bf\s*\/\s*(?=\d)/gi, "T").replace(/\bF(?=\d)/g, "T").replace(/^T(\d+(?:\.\d+)?)\s*[-–]\s*(\d)/, "T$1–T$2");
   let spec = null;
   if (it.lens && (focals || zoom)) {
     spec = { focals, zoom, set: !!L.set, stop, label, cov: L.coverage || "", squeeze: L.squeeze || "" };
@@ -4048,7 +4050,7 @@ function finderHtml(p, h) {
     <div class="f-form">
       <div class="f-fields">
         <label class="f-field"><span>Focal length</span><span class="f-inp"><input data-fin="f" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.f)}" placeholder="50" aria-label="Focal length in mm"><i>mm</i></span></label>
-        <label class="f-field"><span>Stop</span><span class="f-inp"><i>f/</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="Stop (f-number or T-stop)"></span></label>
+        <label class="f-field"><span>Stop</span><span class="f-inp"><i>T</i><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" aria-label="T-stop"></span></label>
       </div>
       <div class="f-fields">
         <label class="f-field${s.kind ? " set" : ""}"><span>Lens type</span><select data-fin="kind" multiple>${kinds}</select></label>
