@@ -1422,7 +1422,8 @@ body.kb-room .app { padding-bottom: 70vh; }
 .pk-q { align-items: flex-end; justify-content: space-between; }
 .pk-q > .btn.ghost { min-height: 34px; }
 /* the Media Calculator keeps the room for itself: no unit switch, dates or details above it */
-.prod-head.ph-media .unit-sw, .prod-head.ph-media .ph-chips, .prod-head.ph-media .pinfo { display: none; }
+.prod-head.ph-extra { padding-block: 0 4px; }
+.prod-head.ph-extra:empty { display: none; }
 .mc-name .mc-unit { display: inline-block; margin-inline-start: 8px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 500; vertical-align: middle; }
 .pk-q .field { gap: 6px; }
 </style>
@@ -3507,21 +3508,25 @@ function viewProduction() {
   const prepTxt = p.prep ? `<span class="ph-chip">${PREP_ICON}<span class="ph-n">Prep</span><span>${esc(fmtDM(p.prep))}</span></span>` : "";
   // the lens finder gets the whole screen: nothing above the tabs
   const finder = app.tab === "add" && fin().on;
-  const head = finder ? "" : `<div class="prod-head${app.tab === "media" ? " ph-media" : ""}">
+  // the top is the same on every page (and stays put on a swipe); what's under the name slides with its page
+  const head = finder ? "" : `<div class="prod-head">
       <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
-      ${app.tab === "media" ? "" : st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       <h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>
+    </div>`;
+  const extra = finder ? "" : `<section class="pad"><div class="prod-head ph-extra">
+      ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
       <div class="ph-chips">${shootTxt}${prepTxt}${shootTxt || prepTxt ? "" : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
         <button class="ph-chip ph-info" type="button" data-act="pinfo" aria-expanded="${infoOpen}" aria-controls="pinfo" aria-label="Info: company, DP, 1st AC and notes" title="Info">${INFO_ICON}</button></div>
       <div class="pinfo${infoOpen ? " open" : ""}" id="pinfo"><div class="pinfo-in"><div class="pinfo-card">
         <dl class="prod-facts">${facts.map(([k, v]) => `<div${k === "Notes" ? ` class="pf-wide"` : ""}><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join("")}</dl>
         <div class="pinfo-acts"><button class="btn sm" type="button" data-act="edit">${missing ? "+ Add DP, 1st AC and dates" : "Edit details"}</button></div></div></div></div>
-    </div>`;
+    </div></section>`;
+  swExtra = extra;
   return `<section class="pad">
     ${head}
   </section>
-  ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
+  ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "media" ? "" : extra}${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
     ${[["add", "Add gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
       `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
@@ -4431,6 +4436,7 @@ const sw = { x: 0, y: 0, t: 0, ok: false, dir: 0, ghost: null, side: 0, gTop: 0 
 const swHere = () => SWIPE_STOPS.findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
 const swCalm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
 const swPane = () => document.getElementById("tabpane");
+let swExtra = "";  // what sits under the production's name (dates, unit, info), drawn into the page beside
 const swSeg = () => document.getElementById("mcseg");
 /* what moves with the finger: the page, and the My list | Any camera bar only when leaving the Media tab */
 function swMove(x, how, side) {
@@ -4445,7 +4451,7 @@ function swPageHtml(stop) {
   const p = cur(), h = houseById(p.houseId), was = { tab: app.tab, mode: app.mcMode, open: mcOpen };
   app.tab = stop[0]; if (stop[1]) app.mcMode = stop[1]; mcOpen = null;
   let html = "";
-  try { html = stop[0] === "add" ? viewCatalog(p, h) : stop[0] === "fav" ? viewFavorites(p, h) : stop[0] === "media" ? (was.tab === "media" ? "" : mcSegHtml(false)) + viewMedia(p, h) : viewList(p, h); }
+  try { html = (stop[0] === "media" ? "" : swExtra) + (stop[0] === "add" ? viewCatalog(p, h) : stop[0] === "fav" ? viewFavorites(p, h) : stop[0] === "media" ? (was.tab === "media" ? "" : mcSegHtml(false)) + viewMedia(p, h) : viewList(p, h)); }
   finally { app.tab = was.tab; app.mcMode = was.mode; mcOpen = was.open; }
   return html;  // a picture of it, drawn after the live page, so the live page's ids stay the ones found first
 }
@@ -4457,6 +4463,9 @@ function swGhost(side) {
   const g = document.createElement("div");
   g.className = "swghost"; g.setAttribute("aria-hidden", "true"); g.style.top = top + "px";
   g.innerHTML = `<div class="app"><div class="tabpane">${swPageHtml(to)}</div></div>`;
+  // the picture's column exactly where the live page's column is, so nothing changes width when it lands
+  const col = pane.closest(".app"), cr = col && col.getBoundingClientRect(), ga = g.firstChild;
+  if (cr) Object.assign(ga.style, { width: cr.width + "px", maxWidth: "none", marginLeft: cr.left + "px", marginRight: "0" });
   g.style.transform = `translateX(${side * innerWidth}px)`;
   document.body.appendChild(g);
   Object.assign(sw, { ghost: g, side, gTop: top });
