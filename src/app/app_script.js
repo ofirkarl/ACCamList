@@ -2491,7 +2491,11 @@ function finderResults(p, h) {
   if (!shown.length) return `<p class="f-none">No lenses between ${fmtN(F / 2)} and ${fmtN(F * 2)}mm at ${esc(h.name)} with these filters.</p>`;
   // a ruler down the left: shorter at the top, longer further down; your focal length open, the others one line each until you open them
   const mo = fin().more;
-  const cols = keys.map(k => {
+  // your focal length comes first, right under the search; the shorter ones fold into one line above it until you open them
+  const shorter = keys.filter(k => k < ck), nShort = shorter.reduce((a, k) => a + by.get(k).length, 0);
+  const fold = shorter.length && !mo.short ? `<section class="f-col f-fold"><span class="fv-mark" aria-hidden="true"><b>↑</b></span>
+      <div class="fv-body"><button class="fv-head" type="button" data-act="fin-short" aria-expanded="false"><span class="fv-diff">Shorter · ${fmtN(shorter[0])}–${fmtN(shorter[shorter.length - 1])}mm</span><span class="fv-n">${nShort} lens${nShort === 1 ? "" : "es"}</span>${CHEV}</button></div></section>` : "";
+  const cols = keys.filter(k => !(fold && k < ck)).map(k => {
     const ms = by.get(k), center = k === ck, open = center || !!mo["o" + k];
     const lim = (center ? 5 : 3) + 5 * (mo[k] || 0), left = ms.length - lim;
     const diff = center ? (ms.some(m => m.exact) ? "Exact" : "Your search") : `${k < F ? "−" : "+"}${fmtN(Math.abs(k - F))}mm`;
@@ -2507,7 +2511,7 @@ function finderResults(p, h) {
     </section>`;
   }).join("");
   return `<p class="f-sum"><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close · ${esc(h.name)}</p>
-    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${cols}</div>`;
+    <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${fold}${cols}</div>`;
 }
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);
@@ -3985,6 +3989,7 @@ document.addEventListener("click", e => {
     case "fin-close": fin().on = false; render(); break;
     case "fin-brand": finBrandDialog(); break;
     case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); v?.closest(".f-field")?.classList.toggle("set", !!s2.brand); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
+    case "fin-short": { const mo = fin().more || (fin().more = {}); mo.short = !mo.short; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
     case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) { v.textContent = s3.brand; v.closest(".f-field")?.classList.add("set"); } refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
     case "fv-row": {

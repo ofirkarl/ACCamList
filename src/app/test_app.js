@@ -421,7 +421,7 @@ ok(sig && sig.label === "T1.5" && !sig.exact, "a set with each lens's stop is ju
 ok(!fmm.list.some(m => m.exact && m.type === "zoom"), "a zoom through 50mm is close, not exact");
 A.fin().cov = "FF"; ok(A.finderMatches(U).list.every(m => ["FF", "LF", "MF"].includes(m.sp.cov)), "Covers FF keeps only lenses that cover full frame"); A.fin().cov = "";
 const frh = A.finderResults(A.newProduction({ name: "f", houseId: "utopia" }), U);
-ok(/class="f-col center open" data-col="50"/.test(frh) && !/f-graph/.test(frh) && /data-col="47"/.test(frh) && /class="f-col" data-col="47"/.test(frh), "ruler down the side: 50mm open, 47mm above it as one line");
+ok(/class="f-col center open" data-col="50"/.test(frh) && !/f-graph/.test(frh) && !/data-col="47"/.test(frh) && /data-act="fin-short"/.test(frh) && frh.indexOf("fin-short") < frh.indexOf('data-col="50"'), "ruler: 50mm open right under the search; the shorter ones folded into one line above it");
 ok(!/class="sku"/.test(frh) && /class="f-meta">[^<]*S35 · PL</.test(frh) && /<span class="ll on"><b>50<\/b> T1\.9<\/span>/.test(frh), "cards: name, stop, format · mount, each lens of a set with its stop; no SKU");
 const cp3 = spOf(/^Zeiss Compact Prime CP\.3 XD/);
 ok(cp3.per.map(x => x.f + " " + x.label).join(", ") === "18 T2.9, 25 T2.1, 35 T2.1, 50 T2.1, 85 T2.1", "CP.3 XD set lens by lens");
