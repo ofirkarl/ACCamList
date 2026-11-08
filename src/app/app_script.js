@@ -2577,8 +2577,8 @@ function finderHtml(p, h) {
       <button class="btn sm" type="button" data-act="fin-close">Done</button></div>
     <div class="f-form">
       <div class="f-fields">
-        <label class="f-field"><span>Focal length</span><span class="f-inp"><input data-fin="f" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.f)}" placeholder="50" aria-label="Focal length in mm"><i>mm</i></span></label>
-        <label class="f-field"><span>Stop</span><span class="f-inp"><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" placeholder="2.8" aria-label="Stop, T or f"></span></label>
+        <label class="f-field"><span>Focal length</span><span class="f-inp"><input data-fin="f" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.f)}" placeholder="Any" aria-label="Focal length in mm"><i>mm</i></span></label>
+        <label class="f-field"><span>Stop</span><span class="f-inp"><input data-fin="t" type="text" inputmode="decimal" autocomplete="off" value="${esc(s.t)}" placeholder="Any" aria-label="Stop, T or f"></span></label>
       </div>
       <div class="f-fields">
         <label class="f-field${s.kind ? " set" : ""}"><span>Lens type</span><select data-fin="kind" multiple>${kinds}</select></label>
