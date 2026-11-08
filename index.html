@@ -4129,7 +4129,21 @@ function gapText(g, sp) {
 /* every lens of this rental house within half to double the focal length that passes the filters, scored: focal first, then stop */
 function finderMatches(h) {
   const s = fin(), F = numIn(s.f), T = numIn(s.t) > 0 ? numIn(s.t) : null;
-  if (!(F > 0)) return null;
+  // no focal length: any other choice (stop, type, mount, maker, covers) lists every lens that fits, the nearest stop first
+  if (!(F > 0)) {
+    if (!(T != null || finList(s.kind).length || finList(s.mount).length || finList(s.brand).length || s.cov)) return null;
+    const kinds0 = finList(s.kind).map(kindTest), mounts0 = finList(s.mount), brands0 = finList(s.brand), flat = [];
+    for (const [id, e, sp] of houseLenses(h)) {
+      if (kinds0.length && !kinds0.some(fn => fn(sp))) continue;
+      if (mounts0.length && !mounts0.some(m => sp.mounts.includes(m))) continue;
+      if (brands0.length && !brands0.includes(e.it.brand || "Generic")) continue;
+      if (s.cov && !((COVER[sp.cov] ?? -1) >= COVER[s.cov])) continue;
+      const g = stopGap(sp, T), ranged = !!(sp.stop && stopsBetween(sp.stop[1], sp.stop[0]) > 0.34), hit = T != null && g != null && !ranged && Math.abs(g) < 0.08;
+      flat.push({ id, e, sp, type: lensType(sp), pos: null, d: 0, g, hit, exact: hit, score: T == null ? 0 : g == null ? 9 : Math.abs(g) + (ranged ? 0.3 : 0), label: sp.label, ssp: sp, f0: sp.zoom ? sp.zoom[0] : sp.focals[0] });
+    }
+    flat.sort((a, b) => a.score - b.score || a.f0 - b.f0 || (a.e.it.name > b.e.it.name ? 1 : -1));
+    return { F: null, T, list: flat, flat: true };
+  }
   // lens type, mount and manufacturer each take several choices: a lens that fits any of them shows
   const kinds = finList(s.kind).map(kindTest), mounts = finList(s.mount), brands = finList(s.brand), list = [];
   for (const [id, e, sp] of houseLenses(h)) {
@@ -4155,7 +4169,7 @@ function finderCard(p, m, T) {
   const it = m.e.it, sp = m.sp, on = !!p.items[m.id];
   const sc = T == null || m.g == null ? "" : m.hit ? " hit" : Math.abs(m.g) <= 0.7 ? " near" : "";
   const gap = T != null && m.g != null ? gapText(m.g, m.ssp) : "";
-  const meta = [m.type === "set" ? `${m.pos}mm from a ${sp.focals.length}-lens set` : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
+  const meta = [m.type === "set" ? (m.pos != null ? `${m.pos}mm from a ${sp.focals.length}-lens set` : `${sp.focals.length}-lens set`) : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
   // a tap anywhere on the line opens it to everything about the lens; the link and Add stay where they are
   const open = !!(fin().rows || {})[m.id];
   const facts = [["Covers", COV_LABEL[sp.cov] || sp.cov], ["Mount", sp.mounts.filter(x => x !== "Other").join(", ")],
@@ -4200,7 +4214,14 @@ function narrowHtml(ms) {
 }
 function finderResults(p, h) {
   const r = finderMatches(h);
-  if (!r) return `<p class="f-none">Type a focal length to start, for example 50.</p>`;
+  if (!r) return `<p class="f-none">Type a focal length to start, for example 50. Or pick a stop, type, mount or manufacturer.</p>`;
+  if (r.flat) {
+    const lim = 8 + 8 * (fin().more.flat || 0), left = r.list.length - lim, nHit = r.list.filter(m => m.hit).length;
+    if (!r.list.length) return `<p class="f-none">No lenses at ${esc(h.name)} with these filters.</p>`;
+    return `<div class="f-sum"><span>${r.T != null ? `<b>${nHit}</b> exact · <b>${r.list.length - nHit}</b> other` : `<b>${r.list.length}</b> lens${r.list.length === 1 ? "" : "es"}`}</span></div>
+      <div class="fv f-flatv"><ul class="f-cards">${r.list.slice(0, lim).map(m => finderCard(p, m, r.T)).join("")}</ul></div>
+      ${left > 0 ? `<button class="f-more" type="button" data-act="fin-more" data-mm="flat">Show ${Math.min(8, left)} more <span>· ${left} left</span></button>` : ""}`;
+  }
   const { F, T, list } = r, ck = colKey(F), by = new Map([[ck, []]]);
   for (const m of list) { const k = colKey(m.pos); if (!by.has(k)) by.set(k, []); by.get(k).push(m); }
   let keys = [...by.keys()].sort((a, b) => a - b);

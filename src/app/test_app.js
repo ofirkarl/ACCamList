@@ -431,6 +431,12 @@ ok(spOf(/^Cooke S4i T2\/65mm$/).mounts.join() === "PL", "a cine lens with no mou
 A.fin().mount = "E"; ok(A.finderMatches(U).list.length > 3 && A.finderMatches(U).list.every(m => m.sp.mounts.includes("E")), "Mount: Sony E only"); A.fin().mount = "";
 A.fin().kind = "ana"; ok(A.finderMatches(U).list.length > 3 && A.finderMatches(U).list.every(m => m.sp.ana), "Lens type: anamorphic only");
 A.fin().kind = "sph-prime"; { const L = A.finderMatches(U).list; ok(L.every(m => !m.sp.ana && m.type !== "zoom") && L.some(m => m.type === "set") && L.some(m => m.type === "prime"), "Lens type: spherical primes, single ones and the ones in sets"); }
+Object.assign(A.fin(), { f: "", t: "", kind: "", mount: "", cov: "", brand: "", more: {} });
+ok(A.finderMatches(U) === null, "no focal length and no other choice: nothing to list");
+A.fin().brand = "Cooke"; { const r0 = A.finderMatches(U); ok(r0 && r0.flat && r0.list.length > 3 && r0.list.every(m => m.e.it.brand === "Cooke"), "no focal length: a manufacturer alone lists its lenses"); }
+A.fin().brand = ""; A.fin().t = "2.8"; { const r1 = A.finderMatches(U); ok(r1 && r1.flat && r1.list.length > 10 && r1.list[0].score <= r1.list[5].score, "no focal length: a stop alone lists lenses, nearest stop first"); ok(/f-flatv/.test(A.finderResults(A.app.productions ? Object.values(A.app.productions)[0] || {items:{}} : {items:{}}, U)), "no focal length: the results render as one list"); }
+A.fin().t = ""; A.fin().mount = "E"; A.fin().kind = "ana"; ok(A.finderMatches(U).list.every(m => m.sp.ana && m.sp.mounts.includes("E")), "no focal length: type and mount together");
+Object.assign(A.fin(), { f: "50", t: "1.9", kind: "", mount: "", cov: "", brand: "", more: {} });
 A.fin().brand = "Cooke"; ok(A.finderMatches(U).list.length > 0 && A.finderMatches(U).list.every(m => m.e.it.brand === "Cooke"), "lens search by manufacturer"); A.fin().brand = "";
 Object.assign(A.fin(), { kind: "probe", f: "24", t: "" }); ok(A.finderMatches(U).list.length >= 5 && A.finderMatches(U).list.every(m => m.sp.probe), "Lens type: probe lenses");
 Object.assign(A.fin(), { kind: "", f: "50", t: "1.9" });
