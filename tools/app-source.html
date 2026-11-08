@@ -1285,6 +1285,11 @@ body.kb-up .navbar { transform: translateY(110%); }
 .nsel-btn.ph .ns-a { color: var(--muted); }
 .nsel-btn:disabled { opacity: .45; cursor: default; }
 .nsel.open .nsel-btn { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent); }
+.sug { position: fixed; z-index: 9999; margin: 0; padding: 4px; list-style: none; display: grid; gap: 1px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface); box-shadow: 0 12px 28px -16px rgba(48, 40, 28, .35); animation: nsel-in .18s var(--ease) both; }
+.sug li { display: grid; grid-template-columns: minmax(0, 1fr) 44px; align-items: center; }
+.sug-pick { min-height: 44px; text-align: start; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--fg); font: inherit; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sug-x { width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; }
+.sug-pick:active, .sug-x:active { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .nsel-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; min-width: 0; overflow: hidden; margin-top: 6px; padding: 4px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface); box-shadow: 0 12px 28px -16px rgba(48, 40, 28, .35); animation: nsel-in .18s var(--ease) both; }
 .nsel-opt { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; box-sizing: border-box; min-height: 42px; padding: 8px 10px; scroll-margin: 16px 0 96px; border: 0; border-radius: 8px; background: none; color: var(--fg); font: inherit; font-size: 15px; text-align: start; cursor: pointer; }
 .nsel-opt:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
@@ -2964,6 +2969,61 @@ document.addEventListener("focusin", e => {
 });
 document.addEventListener("focusout", () => setTimeout(() => { const a = document.activeElement; if (!a || !KB_FIELD.test(a.tagName)) document.body.classList.remove("kb-room"); }, 200));
 if (window.visualViewport) window.visualViewport.addEventListener("resize", () => { if (document.body.classList.contains("kb-up")) kbLift(); });
+/* ---------- memory for typed text: names and words used before come back as suggestions under the field ---------- */
+const HIST_MAX = 15, histNorm = x => String(x || "").trim().toLowerCase();
+function histAdd(key, val) {
+  val = String(val || "").trim(); if (!key || val.length < 2 || val.length > 80) return;
+  const hs = app.settings.hist || (app.settings.hist = {}), list = hs[key] || (hs[key] = []), n = histNorm(val), i = list.findIndex(x => histNorm(x) === n);
+  if (i === 0 && list[0] === val) return;
+  if (i >= 0) list.splice(i, 1);
+  list.unshift(val); if (list.length > HIST_MAX) list.length = HIST_MAX;
+  touchSettings();
+}
+function histFor(key, typed) {
+  const list = (app.settings.hist || {})[key] || [], q = histNorm(typed);
+  return list.filter(x => histNorm(x) !== q && (!q || histNorm(x).includes(q))).slice(0, 5);
+}
+function histDrop(key, val) {
+  const list = (app.settings.hist || {})[key]; if (!list) return;
+  const i = list.indexOf(val); if (i >= 0) { list.splice(i, 1); touchSettings(); }
+}
+let sugEl = null, sugIn = null, sugMute = 0;
+function sugHide() { if (sugEl) { sugEl.remove(); sugEl = null; } sugIn = null; }
+function sugPlace() {
+  if (!sugEl || !sugIn) return;
+  if (!sugIn.isConnected) { sugHide(); return; }
+  const r = sugIn.getBoundingClientRect(), vv = window.visualViewport, lim = vv ? vv.offsetTop + vv.height : innerHeight, h = sugEl.offsetHeight;
+  let top = r.bottom + 4; if (top + h > lim - 4) top = Math.max(4, r.top - h - 4);
+  sugEl.style.left = Math.max(8, r.left) + "px"; sugEl.style.width = Math.min(r.width, innerWidth - 16) + "px"; sugEl.style.top = top + "px";
+}
+function sugShow(inp) {
+  if (Date.now() < sugMute) return;
+  const items = histFor(inp.dataset.sug, inp.value);
+  if (!items.length) { sugHide(); return; }
+  if (!sugEl) { sugEl = document.createElement("ul"); sugEl.className = "sug"; sugEl.setAttribute("role", "listbox"); document.body.appendChild(sugEl); }
+  sugIn = inp;
+  sugEl.innerHTML = items.map(v => `<li role="option"><button type="button" class="sug-pick" data-v="${esc(v)}">${esc(v)}</button><button type="button" class="sug-x" data-v="${esc(v)}" aria-label="Forget ${esc(v)}">×</button></li>`).join("");
+  sugPlace();
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  const rec = t => { if (t && t.dataset && t.dataset.sug) histAdd(t.dataset.sug, t.value); };
+  document.addEventListener("focusin", e => { const t = e.target; if (t && t.dataset && t.dataset.sug) { t.setAttribute("autocomplete", "off"); sugShow(t); } });
+  document.addEventListener("input", e => { const t = e.target; if (t && t.dataset && t.dataset.sug) sugShow(t); });
+  document.addEventListener("focusout", e => { rec(e.target); if (e.target === sugIn) setTimeout(() => { if (document.activeElement !== sugIn) sugHide(); }, 150); });
+  document.addEventListener("keydown", e => { if (e.key === "Enter") rec(e.target); if (e.key === "Escape" && sugEl) sugHide(); });
+  document.addEventListener("submit", e => { for (const t of e.target.querySelectorAll("[data-sug]")) rec(t); }, true);
+  // a tap on a suggestion acts at once: the field keeps its focus and the keyboard stays up
+  document.addEventListener("pointerdown", e => {
+    const b = e.target.closest && e.target.closest(".sug button"); if (!b || !sugIn) return;
+    e.preventDefault(); const inp = sugIn, v = b.dataset.v;
+    if (b.classList.contains("sug-x")) { histDrop(inp.dataset.sug, v); sugShow(inp); return; }
+    // the list fades but stays under the finger a moment, so the tap that follows lands on it and not on the field beneath
+    const el = sugEl; sugEl = null; sugIn = null; sugMute = Date.now() + 500; if (el) { el.style.opacity = "0"; setTimeout(() => el.remove(), 450); }
+    inp.value = v; inp.dispatchEvent(new Event("input", { bubbles: true })); inp.dispatchEvent(new Event("change", { bubbles: true })); histAdd(inp.dataset.sug, v);
+  }, true);
+  document.addEventListener("scroll", sugPlace, true);
+  if (window.visualViewport) { window.visualViewport.addEventListener("resize", sugPlace); window.visualViewport.addEventListener("scroll", sugPlace); }
+}
 function closeModal() { const m = document.getElementById("modal"); if (m) { m.remove(); navSync(); } }
 
 /* the phone's back button steps back through the app (the standalone app only): a dialog, the preview, the lens finder,
@@ -3131,6 +3191,7 @@ function houseTheme(id) {
   if (id && houseById(id)) r.dataset.house = id; else delete r.dataset.house;
 }
 function render() {
+  sugHide();
   const v = document.getElementById("view");
   if (app.view === "welcome" && !needsWelcome()) app.view = "home";
   if (app.view === "welcome") v.innerHTML = viewWelcome();
@@ -3288,16 +3349,16 @@ function viewForm() {
     ${src ? `<p class="hint" style="margin:0">A copy of ${esc(src.name || "the production")} with all ${totals(src).lines} items. Nothing is made until you tap Create.</p>` : ""}</div>
     <form class="form" id="prodForm" autocomplete="off">
       <div class="row2">
-        <div class="field"><label for="f-name">Production</label><input id="f-name" name="name" required value="${esc(p.name)}"></div>
-        <div class="field"><label for="f-company">Production company</label><input id="f-company" name="company" value="${esc(p.company)}"></div>
+        <div class="field"><label for="f-name">Production</label><input data-sug="prod" id="f-name" name="name" required value="${esc(p.name)}"></div>
+        <div class="field"><label for="f-company">Production company</label><input data-sug="company" id="f-company" name="company" value="${esc(p.company)}"></div>
       </div>
       <div class="field"><span class="lbl" id="house-lbl">Rental house</span><div class="house-pick" id="housePick" role="group" aria-labelledby="house-lbl" data-value="${esc(p.houseId || "")}">${houses}</div>
         <span class="err" id="houseErr" hidden>Pick the rental house this list is for.</span>
         ${hasItems ? `<span class="hint">The rental house is locked while the list has items, since each list uses that house's catalog.</span>` : ""}</div>
       <div class="row3">
-        <div class="field"><label for="f-dp">DP</label><input id="f-dp" name="dp" value="${esc(p.dp)}"></div>
-        <div class="field"><label for="f-ac">1st AC</label><input id="f-ac" name="ac" value="${esc(p.ac)}"></div>
-        <div class="field"><label for="f-acphone">1st AC phone</label><input id="f-acphone" name="acPhone" type="tel" inputmode="tel" value="${esc(p.acPhone)}"></div>
+        <div class="field"><label for="f-dp">DP</label><input data-sug="dp" id="f-dp" name="dp" value="${esc(p.dp)}"></div>
+        <div class="field"><label for="f-ac">1st AC</label><input data-sug="ac" id="f-ac" name="ac" value="${esc(p.ac)}"></div>
+        <div class="field"><label for="f-acphone">1st AC phone</label><input data-sug="phone" id="f-acphone" name="acPhone" type="tel" inputmode="tel" value="${esc(p.acPhone)}"></div>
       </div>
       <div class="row-dates">
         <div class="field"><span class="lbl" id="prep-lbl">Prep day</span>
@@ -3313,9 +3374,9 @@ function viewForm() {
         <div class="u2-body" id="u2Body" ${u2 ? "" : "hidden"}>
           <span class="hint">A second list for this production, with its own camera crew. You can start it as a copy of the main list.</span>
           <div class="row3">
-            <div class="field"><label for="f-u2dp">2nd Unit DP</label><input id="f-u2dp" name="u2_dp" value="${esc(u2 ? u2.dp : "")}"></div>
-            <div class="field"><label for="f-u2ac">2nd Unit 1st AC</label><input id="f-u2ac" name="u2_ac" value="${esc(u2 ? u2.ac : "")}"></div>
-            <div class="field"><label for="f-u2acphone">1st AC phone</label><input id="f-u2acphone" name="u2_acPhone" type="tel" inputmode="tel" value="${esc(u2 ? u2.acPhone : "")}"></div>
+            <div class="field"><label for="f-u2dp">2nd Unit DP</label><input data-sug="dp" id="f-u2dp" name="u2_dp" value="${esc(u2 ? u2.dp : "")}"></div>
+            <div class="field"><label for="f-u2ac">2nd Unit 1st AC</label><input data-sug="ac" id="f-u2ac" name="u2_ac" value="${esc(u2 ? u2.ac : "")}"></div>
+            <div class="field"><label for="f-u2acphone">1st AC phone</label><input data-sug="phone" id="f-u2acphone" name="u2_acPhone" type="tel" inputmode="tel" value="${esc(u2 ? u2.acPhone : "")}"></div>
           </div>
           <label class="check"><input type="checkbox" name="u2_same" id="f-u2same" ${u2same ? "checked" : ""}>Same dates as the Main Unit</label>
           <div class="row-dates" id="u2Dates" ${u2same ? "hidden" : ""}>
@@ -3513,7 +3574,7 @@ function viewSettings() {
         <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
         <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
       <form class="form tight" id="meForm" autocomplete="off"${meOpen ? "" : " hidden"}><div class="row2">
-        <div class="field"><label for="me-name">Your name (1st AC)</label><input id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
+        <div class="field"><label for="me-name">Your name (1st AC)</label><input data-sug="ac" id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
@@ -3539,7 +3600,7 @@ function pickerHtml(key) {
   let items = "";
   if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${it.id === v.id ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
   return `<div class="pk-find"><label class="search pk-search" for="pk-${key}-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-      <input id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
+      <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
     <div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
     <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${sub ? "" : "disabled"}><option value="">Choose…</option>${items}</select></div>`;
@@ -3569,7 +3630,7 @@ function clashDialog(rid) {
     <fieldset class="pk"><legend>This item</legend><div class="cx-chips" id="cx-a">${cxChips("a")}</div><div id="pk-ca">${pickerHtml("ca")}</div><span class="hint">Pick one or more, for example every camera without a radio inside.</span></fieldset>
     <fieldset class="pk"><legend>Doesn't work with</legend><div class="cx-chips" id="cx-b">${cxChips("b")}</div><div id="pk-cb">${pickerHtml("cb")}</div></fieldset>
     <fieldset class="pk"><legend>Use instead <small>(optional)</small></legend><div id="pk-cc">${pickerHtml("cc")}</div></fieldset>
-    <div class="field"><label for="cx-why">Why <small>(optional)</small></label><input id="cx-why" name="why" maxlength="120" placeholder="e.g. No radio inside the camera" value="${esc(r ? r.why || "" : "")}"></div>
+    <div class="field"><label for="cx-why">Why <small>(optional)</small></label><input data-sug="why" id="cx-why" name="why" maxlength="120" placeholder="e.g. No radio inside the camera" value="${esc(r ? r.why || "" : "")}"></div>
     <span class="err" id="rdErr" hidden></span>
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save rule</button></div></form>`);
   if (!r) document.getElementById("pk-ca-c")?.focus();
@@ -3754,7 +3815,7 @@ function viewCatalog(p, h) {
     .concat(h.categories.filter(c => app.editCat || catCount(c)).map(c => `<button class="chip" type="button" data-act="chip" data-cat="${c.id}" aria-pressed="${app.cat === c.id}" style="--tape: ${catTape(c)}"><span class="dot"></span>${esc(c.name)} <span class="num">${catCount(c)}</span></button>`)).join("");
   return `<div class="bar pad">
       <div class="search-row"><label class="search" for="q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-      <input id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
+      <input data-sug="search" id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
       <button class="btn icon-btn spec-btn" type="button" data-act="fin-open" aria-label="Lens search: find a lens by focal length and stop" title="Lens search">${LENS_ICON}</button>
       <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
       <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
@@ -4461,7 +4522,7 @@ function viewFavorites(p, h) {
   return `<section class="pad">
     <div class="list-tools" data-keep="tools">
       <label class="search lsearch" for="fq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-        <input id="fq" type="search" placeholder="Search favorites" autocomplete="off" value="${esc(app.fq || "")}" aria-label="Search Favorites"></label>
+        <input data-sug="search" id="fq" type="search" placeholder="Search favorites" autocomplete="off" value="${esc(app.fq || "")}" aria-label="Search Favorites"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${nStar}</b> favorites · <span class="num">${nUsed}</span> used before · ${esc(h.name)}</span></div></div>
     <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
     <div class="fav-group" data-fg="star">${gh(FAV_STAR, "Favorites", nStar, "star")}
@@ -4513,7 +4574,7 @@ function lineHtml(p, id, l) {
       <div class="field"><span class="lbl">Sub-items</span>
         <ul class="children">${(l.children || []).map(c => `<li class="child">${stepper("k", id + "|" + c.id, c.qty, null, true)}<input type="text" data-kname="${esc(id + "|" + c.id)}" value="${esc(c.name)}" aria-label="Sub-item name"><button class="x" type="button" data-act="krm" data-id="${esc(id + "|" + c.id)}" aria-label="Remove ${esc(c.name)}">×</button></li>`).join("")}</ul>
         <form class="custom-add" data-kadd="${esc(id)}" autocomplete="off"><input name="name" placeholder="Add a sub-item" aria-label="New sub-item"><button type="submit">+ Add</button></form></div>
-      <div class="field"><label for="eo-${esc(id)}">Note</label><input id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="Shown in brackets after the name" value="${esc(l.note)}"></div>
+      <div class="field"><label for="eo-${esc(id)}">Note</label><input data-sug="note" id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="Shown in brackets after the name" value="${esc(l.note)}"></div>
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
@@ -4604,7 +4665,7 @@ const mcFreeOf = (p, id) => { const list = mcFreeList(p); return list[Number(Str
 /* with more than one camera to compare: each card numbered, with a way to take it away */
 const mcFreeHead = (list, id) => list.length > 1 ? `<div class="mc-head"><span>Camera ${Number(id.slice(4)) + 1}</span><button type="button" class="mc-del" data-act="mc-del" data-id="${id}" aria-label="Remove camera ${Number(id.slice(4)) + 1}">Remove</button></div>` : "";
 /* the camera list for "Any camera": a search field over every camera of the house, one per line */
-const mcCamList = (p, F, fid) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="${fid}" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
+const mcCamList = (p, F, fid) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input data-sug="search" type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="${fid}" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
 const mcFreeCams = houseId => [...ITEM.keys()].filter(k => { const x = ITEM.get(k); return x.h.id === houseId && hasRec(x) && !/\bfor\b/i.test(x.it.name); }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name));
 function mediaCamHtml(p, id) {
   const key = id; ({ p, id } = mcRoute(p, id));
@@ -4869,13 +4930,13 @@ function viewList(p, h) {
     const pcs = rows.reduce((a, [, l]) => a + lineQty(l), 0);
     return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span>${tapeIcon(s.custom ? "custom" : s.id, secName(s.id))}${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
       <div class="sec-body">${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
-      <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
+      <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input data-sug="item" name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
     </div>`;
   }).join("");
   return `<section class="pad">
     <div class="list-tools" data-keep="tools">
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-        <input id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
+        <input data-sug="search" id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
         ${t.lines ? `<button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button>` : ""}</div></div>
     <div id="copyFallback"></div>
@@ -5294,7 +5355,7 @@ function sendDialog(p) {
   showModal(`<form class="form dialog" id="sendForm" autocomplete="off">
     <h3 class="plain">Send the list</h3>
     <div class="field"><span class="lbl" id="sd-fmt">File</span><div class="seg" role="radiogroup" aria-labelledby="sd-fmt">${[["pdf", "PDF"], ["docx", "Word"]].map(([v, t]) => `<label><input type="radio" name="fmt" value="${v}" ${s.fmt === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div></div>
-    <div class="field"><label for="sd-subj">Subject</label><input id="sd-subj" name="subject" maxlength="200" value="${esc(sendFill(s.subject, p))}"></div>
+    <div class="field"><label for="sd-subj">Subject</label><input data-sug="subject" id="sd-subj" name="subject" maxlength="200" value="${esc(sendFill(s.subject, p))}"></div>
     <div class="field"><label for="sd-msg">Message</label><textarea id="sd-msg" name="message" rows="6" maxlength="2000">${esc(sendFill(s.message, p))}</textarea>
       <span class="hint">Your changes are kept for the next list.</span></div>
     <p class="hint send-how" id="sendHow">${sendHowText(s.fmt)}</p>
