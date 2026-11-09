@@ -5797,9 +5797,10 @@ document.addEventListener("click", e => {
       const lp = cur(), n = Object.keys(lp.items || {}).length;
       if (!n) { toast("The list is already empty"); break; }
       if (!b.classList.contains("armed")) { b.classList.add("armed"); toast("Tap the bin again to clear " + n + (n === 1 ? " item" : " items")); setTimeout(() => { if (b.isConnected) b.classList.remove("armed"); }, 4000); break; }
-      const it = JSON.stringify(lp.items), ck = JSON.stringify(lp.clashOk || {});
-      lp.items = {}; lp.clashOk = {}; touch(lp);
-      rerenderKeepScroll(); undoable("Cleared", "the list", () => { lp.items = JSON.parse(it); lp.clashOk = JSON.parse(ck); touch(lp); rerenderKeepScroll(); });
+      // a cleared list starts over: its version number goes back to 1, and Undo brings the old number back with the gear
+      const it = JSON.stringify(lp.items), ck = JSON.stringify(lp.clashOk || {}), dv = lp.docVer, dg = lp.docSig;
+      lp.items = {}; lp.clashOk = {}; delete lp.docVer; delete lp.docSig; touch(lp);
+      rerenderKeepScroll(); undoable("Cleared", "the list", () => { lp.items = JSON.parse(it); lp.clashOk = JSON.parse(ck); if (dv != null) lp.docVer = dv; if (dg != null) lp.docSig = dg; touch(lp); rerenderKeepScroll(); });
       break;
     }
     case "dup": startDuplicate(id || app.pid); break;
