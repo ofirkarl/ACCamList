@@ -1836,7 +1836,7 @@ function viewForm() {
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
         <button class="btn" type="button" ${back}>Cancel</button></div>
-        ${editing ? `<button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production${u2 ? " (both units)" : ""}</button>` : ""}
+        ${editing ? `<div class="danger-row"><button class="btn danger" type="button" data-act="reset-gear" id="resetBtn">Clear gear${u2 ? " (both units)" : ""}</button><button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production${u2 ? " (both units)" : ""}</button></div>` : ""}
       </div>
     </form>
   </section>`;
@@ -4021,7 +4021,7 @@ document.addEventListener("click", e => {
     }
     case "pm-select": closeModal(); app.sel = new Set([id]); render(); break;
     case "pm-del": {
-      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; break; }
       const nm = app.productions.find(x => x.id === id)?.name || "Production";
       const und = snapProds([id]); closeModal(); deleteProductions([id]); render(); undoable("Deleted", nm, und);
       break;
@@ -4080,10 +4080,21 @@ document.addEventListener("click", e => {
     }
     case "send-open": sendDialog(p); break;
     case "delete": {
-      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete production"; } }, 4000); break; }
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Delete production"; } }, 4000); break; }
       const delId = mainOf(findProd(app.formFor))?.id || app.formFor, und = snapProds([delId]), nm = findProd(delId)?.name || "the production";
       deleteProductions([delId]);
       app.view = "home"; app.pid = null; render(); undoable("Deleted", nm, und);
+      break;
+    }
+    case "reset-gear": {
+      // empties the gear list (both units, and what hangs off it) and keeps only the production's details
+      const mp = mainOf(findProd(app.formFor)), units = [mp, unit2Of(mp)].filter(Boolean), n = units.reduce((a, u) => a + Object.keys(u.items || {}).length, 0);
+      if (!n) { toast("There's no gear to clear"); break; }
+      const lbl = "Clear gear" + (units.length > 1 ? " (both units)" : "");
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm · " + n + (n === 1 ? " item" : " items"); setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = lbl; } }, 4000); break; }
+      const before = units.map(u => [u, JSON.stringify(u.items || {}), JSON.stringify(u.clashOk || {})]);
+      for (const u of units) { u.items = {}; u.clashOk = {}; touch(u); }
+      render(); undoable("Cleared the gear of", mp.name || "the production", () => { for (const [u, it, ck] of before) { u.items = JSON.parse(it); u.clashOk = JSON.parse(ck); touch(u); } render(); });
       break;
     }
     case "dup": startDuplicate(id || app.pid); break;
@@ -4208,7 +4219,7 @@ document.addEventListener("click", e => {
       break;
     }
     case "cat-item-delete": {
-      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; break; }
       deleteOwnItem(houseById(p.houseId), id); closeModal(); rerenderKeepScroll(); toast("Item deleted");
       break;
     }
@@ -4225,7 +4236,7 @@ document.addEventListener("click", e => {
     case "new-sub": newHeadDialog("sub", houseById(p.houseId), b.dataset.c); break;
     case "new-section": newHeadDialog("section", null); break;
     case "head-delete": {
-      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Tap again to delete"; break; }
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; break; }
       if (b.dataset.scope === "section") deleteSection(b.dataset.k);
       else if (isOwnGroup(houseById(p.houseId), b.dataset.k)) deleteFolder(houseById(p.houseId), b.dataset.k);
       else { deleteCustom(houseById(p.houseId), b.dataset.k); if (app.cat === b.dataset.k) app.cat = "all"; }
