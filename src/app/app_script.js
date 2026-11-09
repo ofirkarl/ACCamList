@@ -3361,6 +3361,7 @@ function mediaRedraw(p) {
 const SEC_CAT = { camera: "camera", lens: "lenses", filters: "filters", accessories: "camera_accessories" };
 const secTape = s => SEC_CAT[s.id] && (app.settings.catColors || {})[SEC_CAT[s.id]] ? catTape({ id: SEC_CAT[s.id] }) : `var(--sec-${s.custom ? "custom" : s.id}, var(--pal-slate))`;
 function viewList(p, h) {
+  const mainSrc = p.mainOf ? findProd(p.mainOf) : null;
   const t = totals(p), by = linesBySection(p), issues = coverageIssues(p), clashes = clashIssues(p);
   const secs = allSections(), closed = s => app.open.has("secx/" + s.id);
   const anyOpen = secs.some(s => by[s.id].length && !closed(s));
@@ -3378,6 +3379,7 @@ function viewList(p, h) {
         <input data-sug="search" id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
         ${t.lines ? `<span class="grp"><button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button><button class="btn ghost sm clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button></span>` : ""}</div></div>
+    ${mainSrc && Object.keys(mainSrc.items || {}).length ? `<button class="btn ghost sm u2-pull" type="button" data-act="u2-pull" data-id="${esc(p.id)}">${COPY_ICON}<span>Copy from Main Unit</span></button>` : ""}
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
     ${clashes.map(i => `<div class="warnbox" role="alert"><b>Doesn't work together</b><p>${clashPair(i)}${i.r.why ? ` · ${esc(i.r.why)}` : ""}</p>${clashActs(i, false)}</div>`).join("")}
@@ -4012,6 +4014,24 @@ document.addEventListener("click", e => {
     case "pm-dup": closeModal(); startDuplicate(id); break;
     case "pm-edit": closeModal(); app.pid = id; app.formFor = id; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
     case "unit-sw": if (findProd(id) && id !== app.pid) { app.pid = id; app.editing = null; rerenderKeepScroll(); toast(findProd(id).mainOf ? "2nd Unit list" : "Main Unit list"); } break;
+    case "u2-pull": {
+      // the 2nd Unit's list takes the Main Unit's: straight in when it is empty, otherwise add what is missing or replace it all
+      const q = findProd(id), m = q && findProd(q.mainOf); if (!q || !m) break;
+      const nq = Object.keys(q.items || {}).length, nm = Object.keys(m.items || {}).length, mode = b.dataset.mode;
+      if (!mode && nq) {
+        const missing = Object.keys(m.items).filter(k => !q.items[k]).length;
+        showModal(`<div class="sheet"><h3 class="plain">Copy from the Main Unit</h3><p class="hint">The Main Unit has ${nm} item${nm === 1 ? "" : "s"}; this list has ${nq}. ${missing ? `${missing} of the Main Unit's ${missing === 1 ? "is" : "are"} not on this list yet.` : "Everything on the Main Unit's list is already here."}</p>
+          <div class="sheet-acts">${missing ? `<button class="btn primary" type="button" data-act="u2-pull" data-id="${esc(q.id)}" data-mode="add">Add what's missing (${missing})</button>` : ""}<button class="btn${missing ? "" : " primary"}" type="button" data-act="u2-pull" data-id="${esc(q.id)}" data-mode="replace">Replace this list</button><button class="btn ghost" type="button" data-act="modal-close">Cancel</button></div></div>`);
+        break;
+      }
+      closeModal();
+      const it = JSON.stringify(q.items || {}), ck = JSON.stringify(q.clashOk || {}); 
+      if (mode === "add") { for (const k of Object.keys(m.items)) if (!q.items[k]) q.items[k] = clone(m.items[k]); }
+      else { q.items = clone(m.items); applyDefaults(q); }
+      touch(q); rerenderKeepScroll();
+      undoable(mode === "add" ? "Added" : "Copied", "the Main Unit's gear", () => { q.items = JSON.parse(it); q.clashOk = JSON.parse(ck); touch(q); rerenderKeepScroll(); });
+      break;
+    }
     case "u2-copy": case "u2-empty": {
       const m = findProd(id), q = unit2Of(m); closeModal(); if (!m || !q) break;
       if (act === "u2-copy") { q.items = clone(m.items); applyDefaults(q); touch(q); }
