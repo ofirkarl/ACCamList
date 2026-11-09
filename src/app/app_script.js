@@ -1836,7 +1836,7 @@ function viewForm() {
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
         <button class="btn" type="button" ${back}>Cancel</button></div>
-        ${editing ? `<div class="danger-row"><button class="btn danger" type="button" data-act="reset-gear" id="resetBtn">Clear gear${u2 ? " (both units)" : ""}</button><button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production${u2 ? " (both units)" : ""}</button></div>` : ""}
+        ${editing ? `<button class="btn danger" type="button" data-act="delete" id="delBtn">Delete production${u2 ? " (both units)" : ""}</button>` : ""}
       </div>
     </form>
   </section>`;
@@ -3385,6 +3385,7 @@ function viewList(p, h) {
     <p class="empty" id="lqNone" hidden>Nothing on the list matches. Try another word.</p>
     <div id="listSecs">${sections}</div>
     <div class="section"><button class="add-head big" type="button" data-act="new-section">+ New section</button></div>
+    ${t.lines ? `<button class="btn danger block clear-list" type="button" data-act="reset-gear" id="resetBtn">Clear list</button>` : ""}
   </section>`;
 }
 /* the Cam list search: hide lines that don't match, and sections left empty */
@@ -4087,14 +4088,13 @@ document.addEventListener("click", e => {
       break;
     }
     case "reset-gear": {
-      // empties the gear list (both units, and what hangs off it) and keeps only the production's details
-      const mp = mainOf(findProd(app.formFor)), units = [mp, unit2Of(mp)].filter(Boolean), n = units.reduce((a, u) => a + Object.keys(u.items || {}).length, 0);
-      if (!n) { toast("There's no gear to clear"); break; }
-      const lbl = "Clear gear" + (units.length > 1 ? " (both units)" : "");
-      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm · " + n + (n === 1 ? " item" : " items"); setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = lbl; } }, 4000); break; }
-      const before = units.map(u => [u, JSON.stringify(u.items || {}), JSON.stringify(u.clashOk || {})]);
-      for (const u of units) { u.items = {}; u.clashOk = {}; touch(u); }
-      render(); undoable("Cleared the gear of", mp.name || "the production", () => { for (const [u, it, ck] of before) { u.items = JSON.parse(it); u.clashOk = JSON.parse(ck); touch(u); } render(); });
+      // empties this list and keeps the production's details (name, company, crew, dates, notes)
+      const lp = cur(), n = Object.keys(lp.items || {}).length;
+      if (!n) { toast("The list is already empty"); break; }
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm · " + n + (n === 1 ? " item" : " items"); setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Clear list"; } }, 4000); break; }
+      const it = JSON.stringify(lp.items), ck = JSON.stringify(lp.clashOk || {});
+      lp.items = {}; lp.clashOk = {}; touch(lp);
+      rerenderKeepScroll(); undoable("Cleared", "the list", () => { lp.items = JSON.parse(it); lp.clashOk = JSON.parse(ck); touch(lp); rerenderKeepScroll(); });
       break;
     }
     case "dup": startDuplicate(id || app.pid); break;
