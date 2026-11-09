@@ -97,7 +97,11 @@ button { cursor: pointer; }
 .btn.ghost { background: transparent; border-color: transparent; padding-inline: 8px; color: var(--accent); }
 .btn.danger { color: var(--danger); }
 .btn.danger.armed { background: var(--danger); color: var(--surface); border-color: var(--danger); }
-.clear-list { display: block; width: 100%; margin-top: 12px; height: 48px; }
+.btn.clear-list { color: var(--danger); width: 36px; height: 36px; padding: 0; display: inline-grid; place-items: center; flex: none; }
+.lt-row { flex-wrap: nowrap; }
+.lt-row .summary-line { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lt-row .grp { flex: none; align-items: center; }
+.btn.clear-list.armed { background: var(--danger); border-color: var(--danger); color: var(--surface); }
 .btn[disabled] { opacity: .5; cursor: default; }
 
 /* home */
@@ -4939,7 +4943,7 @@ function viewList(p, h) {
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input data-sug="search" id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
-        ${t.lines ? `<button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button>` : ""}</div></div>
+        ${t.lines ? `<span class="grp"><button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button><button class="btn ghost sm clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button></span>` : ""}</div></div>
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
     ${clashes.map(i => `<div class="warnbox" role="alert"><b>Doesn't work together</b><p>${clashPair(i)}${i.r.why ? ` · ${esc(i.r.why)}` : ""}</p>${clashActs(i, false)}</div>`).join("")}
@@ -4947,7 +4951,6 @@ function viewList(p, h) {
     <p class="empty" id="lqNone" hidden>Nothing on the list matches. Try another word.</p>
     <div id="listSecs">${sections}</div>
     <div class="section"><button class="add-head big" type="button" data-act="new-section">+ New section</button></div>
-    ${t.lines ? `<button class="btn danger block clear-list" type="button" data-act="reset-gear" id="resetBtn">Clear list</button>` : ""}
   </section>`;
 }
 /* the Cam list search: hide lines that don't match, and sections left empty */
@@ -5653,7 +5656,7 @@ document.addEventListener("click", e => {
       // empties this list and keeps the production's details (name, company, crew, dates, notes)
       const lp = cur(), n = Object.keys(lp.items || {}).length;
       if (!n) { toast("The list is already empty"); break; }
-      if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm · " + n + (n === 1 ? " item" : " items"); setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.textContent = "Clear list"; } }, 4000); break; }
+      if (!b.classList.contains("armed")) { b.classList.add("armed"); toast("Tap the bin again to clear " + n + (n === 1 ? " item" : " items")); setTimeout(() => { if (b.isConnected) b.classList.remove("armed"); }, 4000); break; }
       const it = JSON.stringify(lp.items), ck = JSON.stringify(lp.clashOk || {});
       lp.items = {}; lp.clashOk = {}; touch(lp);
       rerenderKeepScroll(); undoable("Cleared", "the list", () => { lp.items = JSON.parse(it); lp.clashOk = JSON.parse(ck); touch(lp); rerenderKeepScroll(); });
