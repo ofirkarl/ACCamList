@@ -3070,6 +3070,7 @@ function histAdd(key, val) {
 }
 function histFor(key, typed) {
   const list = (app.settings.hist || {})[key] || [], q = histNorm(typed);
+  if (!q) return [];  // nothing typed yet: no list, suggestions only appear once typing starts
   return list.filter(x => histNorm(x) !== q && (!q || histNorm(x).includes(q))).slice(0, 5);
 }
 function histDrop(key, val) {
@@ -3098,6 +3099,17 @@ if (typeof document !== "undefined" && document.addEventListener) {
   const rec = t => { if (t && t.dataset && t.dataset.sug) histAdd(t.dataset.sug, t.value); };
   document.addEventListener("focusin", e => { const t = e.target; if (t && t.dataset && t.dataset.sug) { t.setAttribute("autocomplete", "off"); sugShow(t); } });
   document.addEventListener("input", e => { const t = e.target; if (t && t.dataset && t.dataset.sug) sugShow(t); });
+  // brackets typed before any letter: a field with only neutral characters reads as right-to-left (Hebrew first), so ( and ) land on the right side
+  document.addEventListener("input", e => {
+    const t = e.target; if (!t || (t.tagName !== "INPUT" && t.tagName !== "TEXTAREA") || t.getAttribute("dir") !== "auto" && t.getAttribute("dir") !== "rtl" || t.dataset.dirset === "no") return;
+    if (t.tagName === "INPUT" && !/^(text|search|)$/.test(t.getAttribute("type") || "")) return;
+    t.dataset.dirauto = "1";
+  }, true);
+  document.addEventListener("input", e => {
+    const t = e.target; if (!t || t.dataset.dirauto !== "1") return;
+    const hasLetter = /[A-Za-z\u0590-\u05FF\u0600-\u06FF]/.test(t.value);
+    t.setAttribute("dir", hasLetter ? "auto" : "rtl");
+  });
   document.addEventListener("focusout", e => { rec(e.target); if (e.target === sugIn) setTimeout(() => { if (document.activeElement !== sugIn) sugHide(); }, 150); });
   document.addEventListener("keydown", e => { if (e.key === "Enter") rec(e.target); if (e.key === "Escape" && sugEl) sugHide(); });
   document.addEventListener("submit", e => { for (const t of e.target.querySelectorAll("[data-sug]")) rec(t); }, true);

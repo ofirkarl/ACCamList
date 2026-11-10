@@ -735,7 +735,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 { A.app.settings.hist = {};
   A.histAdd("dp", "Damian Tsatskin"); A.histAdd("dp", "Avi Cohen"); A.histAdd("dp", "damian tsatskin"); A.histAdd("dp", "x"); A.histAdd("dp", "  Dana Levi ");
   ok(JSON.stringify(A.app.settings.hist.dp) === JSON.stringify(["Dana Levi", "damian tsatskin", "Avi Cohen"]), "typed names are remembered, newest first, without duplicates or one-letter entries");
-  ok(A.histFor("dp", "").length === 3 && A.histFor("dp", "da").length === 2 && A.histFor("dp", "avi")[0] === "Avi Cohen", "suggestions narrow as you type");
+  ok(A.histFor("dp", "").length === 0 && A.histFor("dp", "da").length === 2 && A.histFor("dp", "avi")[0] === "Avi Cohen", "nothing is suggested until typing starts, then suggestions narrow");
   ok(A.histFor("dp", "Avi Cohen").length === 0, "a field already showing the full name suggests nothing");
   ok(A.histFor("ac", "").length === 0, "each kind of field has its own memory");
   for (let i = 0; i < 20; i++) A.histAdd("search", "lens " + i);
