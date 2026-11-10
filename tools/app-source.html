@@ -1561,6 +1561,21 @@ body.kb-room .app { padding-bottom: 70vh; }
 .child .stepper button { width: 36px; height: 36px; }
 .child .stepper input { width: 44px; height: 36px; padding: 0; box-sizing: border-box; font-size: 14px; }
 .child .x { grid-area: x; width: 40px; height: 40px; }
+/* a production row: a header button, and for a production with a 2nd Unit a group of lists (closed: one line per unit and one bar; open: each list with its own bar) */
+.prod-card { display: block; box-sizing: border-box; }
+.prod-card .pc-head { display: grid; gap: 6px; width: 100%; text-align: start; background: transparent; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; }
+.prod-card .pc-chev { flex: none; width: 8px; height: 8px; border-inline-end: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-2px) rotate(45deg); transition: transform .18s var(--ease); align-self: center; }
+.prod-card .pc-chev.open { transform: translateY(1px) rotate(-135deg); }
+.prod-card .pc-units { display: grid; gap: 3px; margin-top: 2px; }
+.prod-card .pc-u { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: var(--muted); }
+.prod-card .pc-un { font-weight: 500; color: var(--fg); }
+.prod-card .pc-subs { display: grid; gap: 8px; margin-top: 12px; }
+.prod-card .pc-sub { display: grid; gap: 4px; width: 100%; text-align: start; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: inherit; font: inherit; }
+.prod-card .pc-sub b { font-size: 15px; font-weight: 500; }
+.prod-card .pc-sub .meta { font-size: 13px; }
+.prod-card .pc-sub .mix { margin-top: 4px; background: var(--surface); }
+.prod-card.picking .pc-head { padding-inline-start: 34px; }
+.prod-card.picking { padding-inline-start: 18px; }
 </style>
 
 <div class="app">
@@ -3235,7 +3250,7 @@ function render() {
 
 /* a list's gear by section, as a thin bar of their colors (how much camera, lens, support...) */
 function mixBar(p) {
-  const by = linesBySection(p), parts = allSections().map(s => [s, by[s.id].reduce((a, [, l]) => a + lineQty(l), 0)]).filter(([, n]) => n > 0);
+  const ps = Array.isArray(p) ? p : [p], bys = ps.map(linesBySection), parts = allSections().map(s => [s, bys.reduce((t, by) => t + by[s.id].reduce((a, [, l]) => a + lineQty(l), 0), 0)]).filter(([, n]) => n > 0);
   if (!parts.length) return `<span class="mix none" aria-hidden="true"></span>`;
   return `<span class="mix" role="img" aria-label="${esc(parts.map(([s, n]) => `${n} ${secName(s.id)}`).join(", "))}">${parts.map(([s, n]) => `<i style="flex:${n};--tape:${secTape(s)}"></i>`).join("")}</span>`;
 }
@@ -3269,15 +3284,24 @@ function viewHome() {
   const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
   const sel = app.sel;
   if (sel) for (const id of [...sel]) if (!app.productions.some(p => p.id === id)) sel.delete(id);
+  const cnt = x => { const t = totals(x); return t.lines ? `<span class="num">${t.lines}</span> item${t.lines === 1 ? "" : "s"} · <span class="num">${t.pcs}</span> pcs` : "No items"; };
   const cards = list.map(p => {
-    const t = totals(p), h = houseById(p.houseId);
+    const h = houseById(p.houseId), q = unit2Of(p);
     const when = fmtRange(p.shootStart, p.shootEnd), on = !!(sel && sel.has(p.id));
-    const st = prodStatus(p) || (unit2Of(p) && prodStatus(unit2Of(p)));
-    return `<li><button class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}" type="button" data-act="${sel ? "pick-prod" : "open"}" data-lp="prod" data-id="${esc(p.id)}"${sel ? ` aria-pressed="${on}"` : ""}>
-      ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<span class="pc-top"><b>${esc(p.name || "Untitled production")}</b>${p.docVer ? `<span class="pc-ver">Version ${p.docVer}</span>` : ""}</span>
-      ${st ? `<span class="pc-status ${st.k}">${esc(st.t)}</span>` : ""}<span class="meta">${h ? `<span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span>` : ""}${unit2Of(p) ? `<span class="unit-tag">+ 2nd Unit</span>` : ""}${when ? `<span>Shoot ${esc(when)}</span>` : ""}<span><span class="num">${t.lines}</span> items · <span class="num">${t.pcs}</span> pcs</span></span>
-      ${mixBar(p)}
-    </button></li>`;
+    const st = prodStatus(p) || (q && prodStatus(q));
+    // a production with a 2nd Unit is a group of lists; one whose Main list is empty shows just the 2nd Unit's, marked 2nd Unit
+    const only2 = q && !totals(p).lines && totals(q).lines > 0;
+    const group = !!q && !only2, openG = group && !sel && !!(app.openProds && app.openProds.has(p.id));
+    const shown = only2 ? q : p, t = totals(shown);
+    const act = sel ? "pick-prod" : group ? "prod-toggle" : "open", target = sel || group ? p.id : shown.id;
+    const unitRow = (x, label) => `<span class="pc-u"><span class="pc-un">${label}</span><span class="pc-uc">${cnt(x)}</span></span>`;
+    const head = `<button class="pc-head" type="button" data-act="${act}" data-lp="prod" data-id="${esc(target)}" data-pid="${esc(p.id)}"${sel ? ` aria-pressed="${on}"` : group ? ` aria-expanded="${openG}"` : ""}>
+      ${sel ? `<span class="pick" aria-hidden="true">${on ? "✓" : ""}</span>` : ""}<span class="pc-top"><b>${esc(p.name || "Untitled production")}</b>${group ? (sel ? "" : `<span class="pc-chev${openG ? " open" : ""}" aria-hidden="true"></span>`) : shown.docVer ? `<span class="pc-ver">Version ${shown.docVer}</span>` : ""}</span>
+      ${st ? `<span class="pc-status ${st.k}">${esc(st.t)}</span>` : ""}<span class="meta">${h ? `<span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span>` : ""}${only2 ? `<span class="unit-tag">2nd Unit</span>` : ""}${when ? `<span>Shoot ${esc(when)}</span>` : ""}${group ? "" : `<span>${cnt(shown)}</span>`}</span>
+      ${group && !openG ? `<span class="pc-units">${unitRow(p, "Main Unit")}${unitRow(q, "2nd Unit")}</span>` : ""}
+      ${openG ? "" : mixBar(group ? [p, q] : shown)}</button>`;
+    const sub = openG ? `<div class="pc-subs">${[[p, "Main Unit"], [q, "2nd Unit"]].map(([x, label]) => `<button class="pc-sub" type="button" data-act="open" data-id="${esc(x.id)}"><span class="pc-top"><b>${label}</b>${x.docVer ? `<span class="pc-ver">Version ${x.docVer}</span>` : ""}</span><span class="meta"><span>${cnt(x)}</span></span>${mixBar(x)}</button>`).join("")}</div>` : "";
+    return `<li><div class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}${group ? " grouped" : ""}${openG ? " expanded" : ""}" data-id="${esc(p.id)}">${head}${sub}</div></li>`;
   }).join("");
   const n = sel ? sel.size : 0;
   const selDock = sel ? `<div class="dock pad sel-dock"><div class="dock-in"><span class="summary-line"><b class="num">${n}</b> selected</span>
@@ -5646,6 +5670,7 @@ document.addEventListener("click", e => {
       const und = snapProds([id]); closeModal(); deleteProductions([id]); render(); undoable("Deleted", nm, und);
       break;
     }
+    case "prod-toggle": { app.openProds = app.openProds || new Set(); if (app.openProds.has(id)) app.openProds.delete(id); else app.openProds.add(id); rerenderKeepScroll(); break; }
     case "pick-prod": { if (!app.sel) break; if (app.sel.has(id)) app.sel.delete(id); else app.sel.add(id); rerenderKeepScroll(); break; }
     case "sel-cancel": app.sel = null; rerenderKeepScroll(); break;
     case "sel-dup": {

@@ -534,7 +534,7 @@ ok(!/class="cl-crew"/.test(A.exportHtml(mu)) && /<b>DP:<\/b> <bdi>Damian/.test(A
 ok(/<div style="font-size:18px;line-height:1.2;white-space:nowrap;text-align:center">Camera List<\/div>/.test(A.exportHtml(mu)) && /color:#8a8a8a;white-space:nowrap">Version \d+<br>\d+\.\d+\.\d\d · \d\d:\d\d</.test(A.exportHtml(mu)), "top of the list: Camera List centered, version and save time in gray top right");
 ok(/cl-notes" dir="auto" style="font-size:14.5px;font-weight:700">איסוף/.test(A.exportHtml(mu)) && !/class="cl-nt"/.test(A.exportHtml(mu)), "notes at the bottom of the details, bold and large");
 ok(/<w:rtl\/>/.test(A.docxXml(mu)) && /<w:bidi\/>/.test(A.docxXml(mu)) && /w:jc w:val="center"/.test(A.docxXml(mu)), "Word: centered details, Hebrew written right to left");
-ok(!/viewHome/.test("") && !A.viewHome().includes(`data-id="${su.id}"`) && A.viewHome().includes("+ 2nd Unit"), "the home screen shows the production once, marked + 2nd Unit");
+ok(!/viewHome/.test("") && !A.viewHome().includes(`data-id="${su.id}"`) && A.viewHome().includes("pc-units"), "the home screen shows the production once, grouped with a line per unit");
 const dcp = A.dupWithUnit(mu, { name: "copy" }); ok(dcp.unit2 && A.app.productions.find(x => x.id === dcp.unit2).mainOf === dcp.id && Object.keys(A.app.productions.find(x => x.id === dcp.unit2).items).length > 0, "duplicating copies the 2nd Unit too");
 const nBefore = A.app.productions.length; A.deleteProductions([dcp.id]); ok(A.app.productions.length === nBefore - 2, "deleting a production deletes its 2nd Unit");
 A.app.settings.docTitle = "Equipment List"; const up2 = A.newProduction({ name: "x", houseId: "utopia" }); A.setQty(up2, mini, 1);
