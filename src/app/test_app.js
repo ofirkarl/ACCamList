@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem };`)();
+;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, waFmt, savedLists, catEditDialog, modalsSeen: () => 0 };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -741,3 +741,35 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   for (let i = 0; i < 20; i++) A.histAdd("search", "lens " + i);
   ok(A.app.settings.hist.search.length === 15 && A.app.settings.hist.search[0] === "lens 19", "the memory keeps the 15 most recent");
   A.app.settings.hist = {}; }
+
+// --- round 12: Favorites without production info, slim saved list cards, categories that close, the item dialog's buttons, WhatsApp on Android
+{ const U = A.houseById("utopia"), fp = A.newProduction({ name: "Fav", houseId: "utopia", shootStart: "2026-12-01", shootEnd: "2026-12-04" }); A.app.productions.push(fp); A.app.pid = fp.id;
+  const ids = []; for (const [id, e] of A.ITEM) if (e.h.id === "utopia" && ids.length < 3 && !ids.some(x => A.ITEM.get(x).c === e.c)) ids.push(id);
+  for (const id of ids) A.app.settings.favorites[id] = { name: A.ITEM.get(id).it.name, section: A.ITEM.get(id).it.section };
+  A.app.view = "production"; A.app.tab = "fav"; A.app.favTab = "items";
+  const vp = A.viewProduction();
+  ok(!/class="pdates|ph-status|ph-add/.test(vp), "Favorites shows no production dates or status");
+  A.app.tab = "list"; ok(/class="pdates/.test(A.viewProduction()), "the Camera List still shows the dates");
+  A.app.tab = "fav";
+  let fh = A.viewFavorites(fp, U);
+  ok((fh.match(/data-act="fav-cat"/g) || []).length >= 6 && /data-act="fav-all" data-open="0">Close all/.test(fh), "favorite categories close one by one, or all at once");
+  ok(!/fav-gh|summary-line/.test(fh), "no extra heading or count line at the top of Favorites");
+  A.app.open.add("favx/" + A.ITEM.get(ids[0]).c.id); fh = A.viewFavorites(fp, U);
+  ok(/class="fav-cat closed"/.test(fh) && /data-open="0">Close all/.test(fh), "a closed category is marked, Close all stays while others are open");
+  const allK = [...new Set(A.favoritesFor(fp).starred.map(e => e.c.id)), "custom"]; for (const k of allK) A.app.open.add("favx/" + k);
+  ok(/data-open="1">Open all/.test(A.viewFavorites(fp, U)), "all closed: Open all"); for (const k of allK) A.app.open.delete("favx/" + k);
+  A.app.settings.lists = [{ id: "L1", name: "Doc kit", note: "Light", houseId: "utopia", items: [{ id: ids[0], qty: 2 }] }];
+  A.app.favTab = "lists"; fh = A.viewFavorites(fp, U);
+  ok(/sl-head/.test(fh) && /sl-add/.test(fh) && !/sl-mul/.test(fh) && /Light/.test(fh), "a saved list card: name, note, Add; the sets are chosen inside the list");
+  A.app.openList = "L1"; fh = A.viewFavorites(fp, U);
+  ok(/sl-back/.test(fh) && /sl-mul/.test(fh) && /Add to list/.test(fh) && !/sl-obar/.test(fh), "an opened list: back and edit beside the name, sets and Add to list");
+  A.app.openList = null; A.app.favTab = "items";
+  for (const id of ids) { delete A.app.settings.favorites[id]; A.app.open.delete("favx/" + A.ITEM.get(id).c.id); } A.app.settings.lists = [];
+  modals.length = 0; A.catEditDialog(U, ids[0]); const dlg = modals.pop() || "";
+  ok(/modal-actions quad">.*Remove from catalog.*Duplicate.*Cancel.*Save/s.test(dlg) && !/<select id="ci-sec"/.test(dlg) && /type="hidden" id="ci-sec"/.test(dlg), "Edit item: no section field; Remove, Duplicate, Cancel, Save two by two");
+  const nav = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  Object.defineProperty(globalThis, "navigator", { value: { userAgent: "Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile", canShare: () => true }, configurable: true });
+  A.app.settings.send = { fmt: "docx" }; ok(A.waFmt() === "pdf", "WhatsApp on an Android phone sends a PDF when Word is set (Chrome can't share Word files)");
+  store["accam-send-helper"] = "1"; ok(A.waFmt() === "docx", "with the helper app on, WhatsApp sends the Word file");
+  delete store["accam-send-helper"]; if (nav) Object.defineProperty(globalThis, "navigator", nav); else delete globalThis.navigator;
+  A.app.settings.send = undefined; A.app.view = "home"; }
