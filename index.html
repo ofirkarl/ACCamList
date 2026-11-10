@@ -1751,6 +1751,24 @@ body.kb-room .app { padding-bottom: 70vh; }
 .tool-row .tr-t b { font-size: 15px; font-weight: 500; }
 .tool-row .tr-t small { font-size: 12.5px; color: var(--muted); }
 .tools-sheet .sheet-acts { margin-top: 10px; }
+/* saved list cards: the same language as the production cards */
+.sl-card { padding: 16px 18px; gap: 6px; }
+.sl-head { display: grid; gap: 6px; width: 100%; text-align: start; background: transparent; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; }
+.sl-note { font-size: 13.5px; color: var(--muted); line-height: 1.35; }
+.sl-card .mix { margin-top: 2px; }
+.sl-edit { flex: none; width: 44px; min-height: 40px; padding: 0; justify-content: center; }
+.sl-act { margin-top: 8px; }
+.sl-open { display: grid; gap: 12px; }
+.sl-obar { display: flex; align-items: center; justify-content: space-between; }
+.sl-ohead { margin-bottom: 4px; }
+.sl-line { display: flex; gap: 10px; align-items: baseline; padding: 9px 14px; }
+.sl-q { flex: none; width: 36px; font-weight: 700; }
+.sl-ln { min-width: 0; }
+.sl-lnote { color: var(--muted); }
+.sl-line .kids { margin-top: 2px; }
+.btn.save-list { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; margin: 10px 0 2px; }
+.btn.save-list small { color: var(--muted); font-size: 12.5px; font-weight: 400; }
+.opt { font-weight: 400; color: var(--muted); font-size: 12px; margin-inline-start: 4px; }
 </style>
 </head>
 <body>
@@ -3602,7 +3620,7 @@ function viewForm() {
       <div class="field"><span class="lbl" id="house-lbl">Rental house</span><div class="house-pick" id="housePick" role="group" aria-labelledby="house-lbl" data-value="${esc(p.houseId || "")}">${houses}</div>
         <span class="err" id="houseErr" hidden>Pick the rental house this list is for.</span>
         ${hasItems ? `<span class="hint">The rental house is locked while the list has items, since each list uses that house's catalog.</span>` : ""}</div>
-      ${!editing && !src && savedLists().length ? `<div class="field"><label for="f-start">Start from a saved list</label><select id="f-start" name="startList"><option value="">Empty list</option>${savedLists().map(L => `<option value="${esc(L.id)}">${esc(L.name)} · ${esc((houseById(L.houseId) || {}).name || "")}</option>`).join("")}</select></div>` : ""}
+      ${!editing && !src && savedLists().length ? `<div class="field"><label for="f-start">Start from</label><select id="f-start" name="startList"><option value="">New list</option>${savedLists().map(L => `<option value="${esc(L.id)}">${esc(L.name)} · ${esc((houseById(L.houseId) || {}).name || "")}</option>`).join("")}</select></div>` : ""}
       <div class="row3">
         <div class="field"><label for="f-dp">DP</label><input data-sug="dp" id="f-dp" name="dp" value="${esc(p.dp)}"></div>
         <div class="field"><label for="f-ac">1st AC</label><input data-sug="ac" id="f-ac" name="ac" value="${esc(p.ac)}"></div>
@@ -4828,6 +4846,7 @@ function saveListDialog(p) {
   showModal(`<form class="form dialog" id="saveListForm" autocomplete="off"><h3 class="plain">Save as a list</h3>
     <p class="hint">${items.length} item${items.length === 1 ? "" : "s"} with their quantities, kept in Favorites › Lists for any ${esc(houseById(p.houseId).name)} production.</p>
     <div class="field"><label for="sl-name">Name</label><input id="sl-name" name="name" maxlength="80" required dir="auto" placeholder="e.g. Documentary kit" value=""></div>
+    <div class="field"><label for="sl-note">Note <span class="opt">optional</span></label><input id="sl-note" name="note" maxlength="140" dir="auto" placeholder="Shown under the name" value=""></div>
     <p class="hint">A list saved under an existing name updates it.</p>
     <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save list</button></div></form>`);
   setTimeout(() => document.getElementById("sl-name")?.focus(), 60);
@@ -4836,6 +4855,7 @@ function editListDialog(id) {
   const L = savedLists().find(x => x.id === id); if (!L) return;
   showModal(`<form class="form dialog" id="editListForm" data-id="${esc(id)}" autocomplete="off"><h3 class="plain">Edit list</h3>
     <div class="field"><label for="el-name">Name</label><input id="el-name" name="name" maxlength="80" required dir="auto" value="${esc(L.name)}"></div>
+    <div class="field"><label for="el-note">Note <span class="opt">optional</span></label><input id="el-note" name="note" maxlength="140" dir="auto" placeholder="Shown under the name" value="${esc(L.note || "")}"></div>
     <div class="field"><span class="lbl">Items · set a quantity of 0 to remove one</span><ul class="sl-rows">${L.items.map((it, i) => `<li class="sl-row"><span class="sl-n" dir="auto">${esc(listItemName(it))}</span><input type="number" name="q${i}" min="0" max="999" inputmode="numeric" value="${it.qty}" aria-label="Quantity of ${esc(listItemName(it))}"></li>`).join("")}</ul></div>
     <div class="modal-actions"><button class="btn danger" type="button" data-act="list-del" data-id="${esc(id)}">Delete</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`);
 }
@@ -4853,13 +4873,27 @@ function runSavedList(p, id, mult, mode) {
   closeModal(); rerenderKeepScroll();
   if (n) undoable("Added", `${n} item${n === 1 ? "" : "s"}`, und); else toast("Nothing new to add.");
 }
+const listProd = L => ({ items: Object.fromEntries(L.items.map((it, i) => [it.id || "c" + i, { section: it.id ? (ITEM.get(it.id) ? ITEM.get(it.id).it.section : "accessories") : it.section, qty: it.qty, name: listItemName(it) }])) });
+const listMulHtml = (L, m) => `<span class="stepper sm sl-mul"><button type="button" data-act="list-mul" data-id="${esc(L.id)}" data-d="-1" aria-label="One set less">−</button><span class="sl-x" aria-label="${m} set${m === 1 ? "" : "s"}">×${m}</span><button type="button" data-act="list-mul" data-id="${esc(L.id)}" data-d="1" aria-label="One set more">+</button></span>`;
+const listMeta = L => `<span class="meta"><span><span class="num">${L.items.length}</span> item${L.items.length === 1 ? "" : "s"} · <span class="num">${listPcs(L)}</span> pcs</span></span>`;
 function savedListsHtml(p, h) {
   const mine = savedLists().filter(L => L.houseId === p.houseId), others = savedLists().length - mine.length;
-  if (!mine.length) return `<p class="hint sl-empty">No saved lists for ${esc(h.name)} yet. Open Camera List and tap the bookmark to save the whole list under a name. Then add it to any production in one tap.</p>${others ? `<p class="hint">${others} saved list${others === 1 ? "" : "s"} for other rental houses.</p>` : ""}`;
+  if (app.openList) { const L = savedLists().find(x => x.id === app.openList); if (L && L.houseId === p.houseId) return savedListOpenHtml(L); app.openList = null; }
+  if (!mine.length) return `<p class="hint sl-empty">No saved lists yet. Open Camera List and tap Save as a list to keep the whole list under a name. Then add it to any production in one tap.</p>${others ? `<p class="hint">${others} saved list${others === 1 ? "" : "s"} for other rental houses.</p>` : ""}`;
   app.listMul = app.listMul || {};
-  return `<ul class="sl-list">${mine.map(L => { const m = app.listMul[L.id] || 1; return `<li class="sl-card"><div class="sl-top"><b dir="auto">${esc(L.name)}</b><button class="btn ghost sm" type="button" data-act="list-edit" data-id="${esc(L.id)}" aria-label="Edit ${esc(L.name)}">${PEN_ICON}</button></div>
-    <span class="meta"><span><span class="num">${L.items.length}</span> item${L.items.length === 1 ? "" : "s"} · <span class="num">${listPcs(L)}</span> pcs</span></span>
-    <div class="sl-act"><span class="stepper sm sl-mul"><button type="button" data-act="list-mul" data-id="${esc(L.id)}" data-d="-1" aria-label="One set less">−</button><span class="sl-x" aria-label="${m} set${m === 1 ? "" : "s"}">×${m}</span><button type="button" data-act="list-mul" data-id="${esc(L.id)}" data-d="1" aria-label="One set more">+</button></span><button class="btn primary" type="button" data-act="list-add" data-id="${esc(L.id)}">Add to list</button></div></li>`; }).join("")}</ul>${others ? `<p class="hint">${others} saved list${others === 1 ? "" : "s"} for other rental houses.</p>` : ""}`;
+  return `<ul class="sl-list">${mine.map(L => { const m = app.listMul[L.id] || 1; return `<li class="sl-card"><button class="sl-head" type="button" data-act="list-open" data-id="${esc(L.id)}"><span class="sl-top"><b dir="auto">${esc(L.name)}</b></span>${L.note ? `<span class="sl-note" dir="auto">${esc(L.note)}</span>` : ""}${listMeta(L)}${mixBar(listProd(L))}</button>
+    <div class="sl-act">${listMulHtml(L, m)}<button class="btn primary" type="button" data-act="list-add" data-id="${esc(L.id)}">Add to list</button><button class="btn sl-edit" type="button" data-act="list-edit" data-id="${esc(L.id)}" aria-label="Edit ${esc(L.name)}">${PEN_ICON}</button></div></li>`; }).join("")}</ul>${others ? `<p class="hint">${others} saved list${others === 1 ? "" : "s"} for other rental houses.</p>` : ""}`;
+}
+/* a saved list opened: laid out like the Camera List, section by section */
+function savedListOpenHtml(L) {
+  const pp = listProd(L), by = linesBySection(pp), m = (app.listMul || {})[L.id] || 1;
+  const kids = it => (it.kids || []).length ? `<ul class="kids">${it.kids.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
+  const byId = Object.fromEntries(L.items.map((it, i) => [it.id || "c" + i, it]));
+  const secs = allSections().filter(s => by[s.id].length).map(s => `<div class="section" style="--tape: ${secTape(s)}"><h3><span>${tapeIcon(s.custom ? "custom" : s.id, secName(s.id))}${esc(secName(s.id))}</span><span class="cnt num">${by[s.id].reduce((a, [, l]) => a + l.qty, 0)}</span></h3>
+      <div class="sec-body"><ul class="lines">${by[s.id].map(([id, l]) => { const it = byId[id]; return `<li class="line sl-line"><span class="sl-q num">${it.qty} x</span><span class="sl-ln"><span dir="auto">${esc(l.name)}</span>${it.note ? `<span class="sl-lnote" dir="auto"> (${esc(it.note)})</span>` : ""}${kids(it)}</span></li>`; }).join("")}</ul></div></div>`).join("");
+  return `<div class="sl-open"><div class="sl-obar"><button class="btn ghost back" type="button" data-act="list-back">← Lists</button><button class="btn sl-edit" type="button" data-act="list-edit" data-id="${esc(L.id)}" aria-label="Edit ${esc(L.name)}">${PEN_ICON}</button></div>
+    <div class="sl-card sl-ohead"><span class="sl-top"><b dir="auto">${esc(L.name)}</b></span>${L.note ? `<span class="sl-note" dir="auto">${esc(L.note)}</span>` : ""}${listMeta(L)}${mixBar(pp)}
+      <div class="sl-act">${listMulHtml(L, m)}<button class="btn primary" type="button" data-act="list-add" data-id="${esc(L.id)}">Add to list</button></div></div>${secs}</div>`;
 }
 function favTabsHtml() { return `<div class="seg fav-tabs" role="group" aria-label="Favorites">${[["items", "Items"], ["lists", "Lists"]].map(([v, t]) => `<button type="button" data-act="fav-tab" data-v="${v}" aria-pressed="${(app.favTab || "items") === v}">${t}${v === "lists" ? ` <span class="num">${savedLists().length || ""}</span>` : ""}</button>`).join("")}</div>`; }
 function viewFavorites(p, h) {
@@ -4871,20 +4905,17 @@ function viewFavorites(p, h) {
   }).join("");
   const starred = favByCategory(h, f.starred.map(e => [e, rowHtml(p, e.it, "")]));
   const typed = cRows ? `<div class="fav-cat" style="--tape: var(--tape-custom)"><h4 class="fav-cat-h">${tapeIcon("custom")}Not in the catalog<span class="cnt">${f.custom.length}</span></h4><ul class="fav-list">${cRows}</ul></div>` : "";
-  const used = favByCategory(h, f.used.map(({ e, n }) => [e, rowHtml(p, e.it, "", `In ${n} production${n === 1 ? "" : "s"}`)]));
-  const nStar = f.starred.length + f.custom.length, nUsed = f.used.length;
+  const nStar = f.starred.length + f.custom.length;
   const gh = (icon, t, n, k) => `<h3 class="fav-gh ${k}"><span class="fav-gi">${icon}</span><span>${t}</span>${n ? `<span class="fav-gn num">${n}</span>` : ""}</h3>`;
   if (app.favTab === "lists") return `<section class="pad">${favTabsHtml()}${savedListsHtml(p, h)}</section>`;
   return `<section class="pad">${favTabsHtml()}
     <div class="list-tools" data-keep="tools">
       <label class="search lsearch" for="fq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input data-sug="search" id="fq" type="search" placeholder="Search favorites" autocomplete="off" value="${esc(app.fq || "")}" aria-label="Search Favorites"></label>
-      <div class="lt-row"><span class="summary-line"><b class="num">${nStar}</b> favorites · <span class="num">${nUsed}</span> used before · ${esc(h.name)}</span></div></div>
+      <div class="lt-row"><span class="summary-line"><b class="num">${nStar}</b> favorite${nStar === 1 ? "" : "s"}</span></div></div>
     <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
     <div class="fav-group" data-fg="star">${gh(FAV_STAR, "Favorites", nStar, "star")}
       ${starred || typed ? starred + typed : `<p class="hint">Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</p>`}</div>
-    <div class="fav-group" data-fg="used">${gh(FAV_CLOCK, "Used before", nUsed, "used")}
-      ${used || `<p class="hint">Items from your other ${esc(h.name)} productions will show up here.</p>`}</div>
   </section>`;
 }
 /* favorites laid out like the catalog: one open block per category, a small heading per subcategory, catalog order inside */
@@ -5307,7 +5338,8 @@ function viewList(p, h) {
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input data-sug="search" id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
       <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
-        ${t.lines ? `<span class="grp"><button class="btn ghost sm" type="button" data-act="list-save" aria-label="Save as a list in Favorites" title="Save as a list">${LIST_ICON}</button><button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button><button class="btn ghost sm clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button></span>` : ""}</div></div>
+        ${t.lines ? `<span class="grp"><button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button><button class="btn ghost sm clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button></span>` : ""}</div></div>
+    ${t.lines ? `<button class="btn save-list" type="button" data-act="list-save">${LIST_ICON}<span>Save as a list</span><small>to Favorites</small></button>` : ""}
     ${mainSrc && Object.keys(mainSrc.items || {}).length ? `<button class="btn ghost sm u2-pull" type="button" data-act="u2-pull" data-id="${esc(p.id)}">${COPY_ICON}<span>Copy from Main Unit</span></button>` : ""}
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
@@ -5625,6 +5657,7 @@ function openPreview(p) {
   document.body.appendChild(o);
   document.body.style.overflow = "hidden";
   fitPreview();
+  setTimeout(() => { if (document.getElementById("waGo")) waPrep(p); }, 500);
   o.querySelector(".x").focus();
   navSync();
 }
@@ -5717,7 +5750,7 @@ function getFile(p, fmt) {
   const k = fileKey(p, fmt), hit = fileCache.get(k);
   if (hit) return hit.job;
   const e = { done: false, job: null };
-  e.job = (fmt === "pdf" ? buildPdf(p) : buildDocx(p)).then(b => { e.done = true; return b; }).catch(err => { fileCache.delete(k); throw err; });
+  e.job = (fmt === "pdf" ? buildPdf(p) : buildDocx(p)).then(b => { e.done = true; e.blob = b; return b; }).catch(err => { fileCache.delete(k); throw err; });
   fileCache.set(k, e);
   while (fileCache.size > 6) fileCache.delete(fileCache.keys().next().value);
   return e.job;
@@ -5763,24 +5796,26 @@ function sendPrep(p, fmt) {
   sendJob.wait = getFile(p, fmt).then(async b => { if (useHelper(fmt)) { const t = await blobB64(b); if (sendJob.key === key) sendJob.b64 = t; } if (sendJob.key === key) { sendJob.blob = b; ready(); } return b; })
     .catch(() => { if (sendJob.key === key) { sendJob.key = ""; const g = document.getElementById("sendGo"); if (g) g.textContent = "Couldn't build the file"; } });
 }
-/* WhatsApp: no questions, the phone's share menu opens straight away with the file attached (no text: WhatsApp gets the file only) */
-async function waSend(p) {
-  const btn = document.getElementById("waGo"), span = btn && btn.querySelector("span");
-  let fmt = (app.settings.send && app.settings.send.fmt) || "pdf";
-  if (!canShareKind(fmt) && canShareKind("pdf")) fmt = "pdf";
-  const name = fileBase(p) + (fmt === "pdf" ? ".pdf" : ".docx");
-  const idle = () => { if (btn) btn.disabled = false; if (span) span.textContent = "WhatsApp"; };
-  if (btn) btn.disabled = true; if (span) span.textContent = "Preparing…";
-  let blob; try { blob = await getFile(p, fmt); } catch (e) { idle(); toast("Couldn't build the file. Try again."); return; }
-  const file = typeof File === "function" ? new File([blob], name, { type: SEND_MIME[fmt] }) : null;
-  let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
-  if (!can) { idle(); if (await saveFile(name, blob)) { savedVer(p); toast("File saved. Attach it in WhatsApp."); } return; }
-  try { await navigator.share({ files: [file] }); idle(); savedVer(p, true); }
-  catch (e) {
-    if (e && e.name === "AbortError") { idle(); return; }
-    if (btn) btn.disabled = false; if (span) span.textContent = "Tap to send";  // the phone wants a fresh tap
-    btn && (btn.dataset.ready = "1");
+/* WhatsApp: no questions, the phone's share menu opens straight away with the file attached (no text). The file is built while the
+   preview is open, so the tap goes to the share menu at once: a phone only opens it right after a tap, not after a wait */
+const waFmt = () => { let f = (app.settings.send && app.settings.send.fmt) || "pdf"; if (!canShareKind(f) && canShareKind("pdf")) f = "pdf"; return f; };
+const waSet = txt => { const btn = document.getElementById("waGo"), span = btn && btn.querySelector("span"); if (span) span.textContent = txt; return btn; };
+function waPrep(p) { try { getFile(p, waFmt()).then(() => { if (document.getElementById("waGo")) waSet("WhatsApp"); }).catch(() => {}); } catch (e) {} }
+function waSend(p) {
+  const fmt = waFmt(), hit = fileCache.get(fileKey(p, fmt));
+  if (!hit || !hit.blob) {  // still being built: say so, and the label says when to tap
+    waSet("Preparing…");
+    getFile(p, fmt).then(() => waSet("Tap to send")).catch(() => { waSet("WhatsApp"); toast("Couldn't build the file. Try again."); });
+    return;
   }
+  const name = fileBase(p) + (fmt === "pdf" ? ".pdf" : ".docx");
+  const file = typeof File === "function" ? new File([hit.blob], name, { type: SEND_MIME[fmt] }) : null;
+  let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+  if (!can) { saveFile(name, hit.blob).then(ok => { if (ok) { savedVer(p); toast("File saved. Attach it in WhatsApp."); } }); return; }
+  navigator.share({ files: [file] }).then(() => { waSet("WhatsApp"); savedVer(p, true); }).catch(e => {
+    if (e && e.name === "AbortError") return;
+    toast("The share menu didn't open. Tap WhatsApp again.");
+  });
 }
 const sendLabel = fmt => canShareKind(fmt) ? "Send…" : isTouch() ? "Save & email" : "Save file";
 async function sendNow(p, f) {
@@ -6006,9 +6041,11 @@ document.addEventListener("click", e => {
       const und = snapProds([id]); closeModal(); deleteProductions([id]); render(); undoable("Deleted", nm, und);
       break;
     }
-    case "fav-tab": app.favTab = b.dataset.v === "lists" ? "lists" : "items"; rerenderKeepScroll(); break;
+    case "fav-tab": app.openList = null; app.favTab = b.dataset.v === "lists" ? "lists" : "items"; rerenderKeepScroll(); break;
     case "list-save": saveListDialog(p); break;
     case "list-edit": editListDialog(id); break;
+    case "list-open": app.openList = id; rerenderKeepScroll(); window.scrollTo(0, 0); break;
+    case "list-back": app.openList = null; rerenderKeepScroll(); break;
     case "list-mul": { app.listMul = app.listMul || {}; app.listMul[id] = Math.max(1, Math.min(9, (app.listMul[id] || 1) + (+b.dataset.d || 0))); rerenderKeepScroll(); break; }
     case "list-add": {
       const L = savedLists().find(x => x.id === id); if (!L) break;
@@ -6544,13 +6581,15 @@ document.addEventListener("submit", e => {
     const p = cur(); if (!p) return;
     const name = f.elements.name.value.trim(); if (!name) return;
     const arr = savedLists(), ex = arr.find(x => x.houseId === p.houseId && x.name.toLowerCase() === name.toLowerCase());
-    if (ex) { ex.items = listItemsOf(p); ex.name = name; } else arr.push({ id: uid("sl-"), name, houseId: p.houseId, items: listItemsOf(p) });
+    const note = f.elements.note.value.trim();
+    if (ex) { ex.items = listItemsOf(p); ex.name = name; if (note) ex.note = note; } else arr.push({ id: uid("sl-"), name, note, houseId: p.houseId, items: listItemsOf(p) });
     touchSettings(); closeModal(); toast(ex ? `Updated “${name}”` : `Saved “${name}” to Favorites › Lists`);
     return;
   }
   if (f.id === "editListForm") {
     const L = savedLists().find(x => x.id === f.dataset.id); if (!L) return;
     const name = f.elements.name.value.trim(); if (name) L.name = name;
+    L.note = f.elements.note.value.trim();
     L.items = L.items.map((it, i) => ({ ...it, qty: Math.max(0, Math.min(999, parseInt(f.elements["q" + i].value, 10) || 0)) })).filter(it => it.qty > 0);
     touchSettings(); closeModal(); rerenderKeepScroll();
     return;
