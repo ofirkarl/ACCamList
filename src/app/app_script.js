@@ -882,7 +882,7 @@ function newProduction(fields) {
 /* a copy of a production with all its items, under a new id (the caller names it) */
 function copyProduction(p, fields) {
   const c = JSON.parse(JSON.stringify(p));
-  delete c._w;
+  delete c._w; delete c.arch;
   return Object.assign(c, { id: uid("p"), createdAt: Date.now(), updatedAt: Date.now() }, fields || {});
 }
 function lineFromCatalog(id) {
@@ -1689,12 +1689,18 @@ function viewWelcome() {
     </form>
   </section>`;
 }
+/* a production whose last shoot day is more than a day behind goes to the Archive by itself (nothing is deleted); "Move to Archive" / "Restore" in its menu overrides that */
+function lastDayOf(p) { const q = unit2Of(p); return [p.shootEnd || p.shootStart, q && (q.shootEnd || q.shootStart)].filter(Boolean).sort().pop() || ""; }
+function isArchived(p) {
+  if (p.arch === "on") return true; if (p.arch === "off") return false;
+  const e = lastDayOf(p); return !!e && dayGap(e, todayIso()) >= 2;
+}
 function viewHome() {
   const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
   const sel = app.sel;
   if (sel) for (const id of [...sel]) if (!app.productions.some(p => p.id === id)) sel.delete(id);
   const cnt = x => { const t = totals(x); return t.lines ? `<span class="num">${t.lines}</span> item${t.lines === 1 ? "" : "s"} · <span class="num">${t.pcs}</span> pcs` : "No items"; };
-  const cards = list.map(p => {
+  const cardOf = p => {
     const h = houseById(p.houseId), q = unit2Of(p);
     const when = fmtRange(p.shootStart, p.shootEnd), on = !!(sel && sel.has(p.id));
     const st = prodStatus(p) || (q && prodStatus(q));
@@ -1711,14 +1717,18 @@ function viewHome() {
       ${openG ? "" : mixBar(group ? [p, q] : shown)}</button>`;
     const sub = openG ? `<div class="pc-subs">${[[p, "Main Unit"], [q, "2nd Unit"]].map(([x, label]) => `<button class="pc-sub" type="button" data-act="open" data-id="${esc(x.id)}"><span class="pc-top"><b>${label}</b>${x.docVer ? `<span class="pc-ver">Version ${x.docVer}</span>` : ""}</span><span class="meta"><span>${cnt(x)}</span></span>${mixBar(x)}</button>`).join("")}</div>` : "";
     return `<li><div class="prod-card${sel ? " picking" : ""}${on ? " picked" : ""}${group ? " grouped" : ""}${openG ? " expanded" : ""}" data-id="${esc(p.id)}">${head}${sub}</div></li>`;
-  }).join("");
+  };
+  const active = list.filter(p => !isArchived(p)), archived = list.filter(isArchived);
+  const cards = active.map(cardOf).join("");
+  const archOpen = !!(sel ? archived.some(x => sel.has(x.id)) : app.archOpen);
+  const archHtml = archived.length ? `<div class="arch"><button class="arch-h" type="button" data-act="arch-toggle" aria-expanded="${archOpen}"><span>Archive</span><span class="num">${archived.length}</span><span class="pc-chev${archOpen ? " open" : ""}" aria-hidden="true"></span></button>${archOpen ? `<ul class="prod-list">${archived.map(cardOf).join("")}</ul>` : `<span class="hint">Past productions are kept here. Nothing is deleted.</span>`}</div>` : "";
   const n = sel ? sel.size : 0;
   const selDock = sel ? `<div class="dock pad sel-dock"><div class="dock-in"><span class="summary-line"><b class="num">${n}</b> selected</span>
     <span class="grp"><button class="btn" type="button" data-act="sel-dup" ${n ? "" : "disabled"}>Duplicate</button><button class="btn danger" type="button" data-act="sel-del" ${n ? "" : "disabled"}>Delete</button><button class="btn ghost" type="button" data-act="sel-cancel">Cancel</button></span></div></div>` : "";
   return `<section class="pad">
     ${greetHtml()}
-    ${list.length ? `<div class="home-head"><h3 class="home-sec">Productions <span class="num">${list.length}</span></h3>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>` : ""}
-    ${list.length ? `<ul class="prod-list">${cards}</ul>${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
+    ${list.length ? `<div class="home-head"><h3 class="home-sec">Productions <span class="num">${active.length}</span></h3>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>` : ""}
+    ${list.length ? `${cards ? `<ul class="prod-list">${cards}</ul>` : `<p class="hint">No current productions.</p>`}${archHtml}${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
@@ -1742,6 +1752,7 @@ function prodMenu(id) {
   showModal(`<div class="sheet"><h3 class="plain">${esc(p.name || "Untitled production")}</h3>
     <div class="sheet-acts"><button class="btn" type="button" data-act="pm-edit" data-id="${esc(id)}">Edit details</button><button class="btn" type="button" data-act="pm-dup" data-id="${esc(id)}">Duplicate</button>
       <button class="btn" type="button" data-act="pm-select" data-id="${esc(id)}">Select several</button>
+      <button class="btn" type="button" data-act="pm-arch" data-id="${esc(id)}">${isArchived(p) ? "Restore from Archive" : "Move to Archive"}</button>
       <button class="btn danger" type="button" data-act="pm-del" data-id="${esc(id)}">Delete</button>
       <button class="btn ghost" type="button" data-act="modal-close">Cancel</button></div></div>`);
 }
@@ -4166,6 +4177,8 @@ document.addEventListener("click", e => {
       toast(act === "u2-copy" ? `2nd Unit list: a copy of the main list (${totals(q).lines} items)` : "2nd Unit list: empty");
       break;
     }
+    case "arch-toggle": app.archOpen = !app.archOpen; rerenderKeepScroll(); break;
+    case "pm-arch": { const x = findProd(id); if (!x) break; const was = x.arch, to = isArchived(x) ? "off" : "on"; x.arch = to; touch(x); closeModal(); render(); undoable(to === "on" ? "Archived" : "Restored", `“${x.name || "production"}”`, () => { if (was === undefined) delete x.arch; else x.arch = was; touch(x); render(); }); break; }
     case "pm-select": closeModal(); app.sel = new Set([id]); render(); break;
     case "pm-del": {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; break; }
