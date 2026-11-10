@@ -1741,6 +1741,16 @@ body.kb-room .app { padding-bottom: 70vh; }
 .arch-h .num { font-weight: 500; }
 .arch-h .pc-chev { margin-inline-start: auto; }
 .arch .prod-list { opacity: .92; }
+/* Tools sheet */
+.tools-sheet { display: grid; gap: 4px; }
+.tool-grp { margin-top: 10px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding-inline-start: 2px; }
+.tool-row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; background: transparent; border: 0; border-radius: 12px; padding: 8px 6px; color: inherit; font: inherit; min-height: 48px; }
+.tool-row:active { background: var(--sunken); }
+.tool-row .tr-i { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--sunken); color: var(--accent); }
+.tool-row .tr-t { display: grid; gap: 1px; min-width: 0; }
+.tool-row .tr-t b { font-size: 15px; font-weight: 500; }
+.tool-row .tr-t small { font-size: 12.5px; color: var(--muted); }
+.tools-sheet .sheet-acts { margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -3505,6 +3515,21 @@ function viewBrowse() {
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
+/* Tools: the less-used pages, in a sheet from the bottom bar. "This production" is about the open list; "Library" is the rest of the app */
+function toolsSheet() {
+  const row = (to, icon, t, sub) => `<button class="tool-row" type="button" data-act="tool-go" data-to="${to}"><span class="tr-i" aria-hidden="true">${icon}</span><span class="tr-t"><b>${t}</b><small>${sub}</small></span></button>`;
+  showModal(`<div class="sheet tools-sheet"><h3 class="plain">Tools</h3>
+    <span class="tool-grp">This production</span>
+    ${row("media", NAV_ICON.media, "Media Calculator", "Recording time for each camera's cards")}
+    <span class="tool-grp">Library</span>
+    ${row("home", NAV_ICON.list, "Productions", "All your lists")}
+    ${row("archive", NAV_SVG(`<rect x="3.5" y="4" width="17" height="4.5" rx="1.5"/><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5M10 12.5h4"/>`), "Archive", "Past productions")}
+    ${row("catalogs", NAV_SVG(`<path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>`), "Catalogs", "Browse a rental house")}
+    ${row("pkg", PKG_ICON, "Packages", "What comes with an item")}
+    ${row("clash", CLASH_ICON, "Doesn't work with", "And what to swap in")}
+    ${row("settings", NAV_ICON.tools, "Settings", "Your details and the catalog")}
+    <div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`);
+}
 function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
   try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
@@ -4008,8 +4033,8 @@ function viewProduction() {
   </section>
   ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "media" ? "" : extra}${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
-    ${[["add", "Add Gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""], ["media", "Media Calculator", ""]].map(([k, label, n]) =>
-      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
+    ${[["add", "Add Gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""]].map(([k, label, n]) =>
+      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}<button class="nav-tab" role="tab" type="button" data-act="tools" aria-haspopup="dialog" aria-selected="${app.tab === "media"}"><span class="nt-i">${NAV_ICON.tools}</span><span class="nt-l">Tools</span></button>
   </div></nav>`;
 }
 
@@ -5231,6 +5256,7 @@ const NAV_ICON = {
   add: NAV_SVG(`<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><path d="M12 8.5v7M8.5 12h7"/>`),
   fav: NAV_SVG(`<path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/>`),
   list: NAV_SVG(`<rect x="4.5" y="4.5" width="15" height="16" rx="3"/><path d="M9 3.5h6v2.5H9zM8.5 11h7M8.5 15h4.5"/>`),
+  tools: NAV_SVG(`<path d="M14.500 5.500a4 4 0 0 0-5 5L4 16l4 4 5.500-5.500a4 4 0 0 0 5-5l-2.500 2.500-2.500-.5-.5-2.500z"/>`),
   media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
 };
 /* My list | Any camera: drawn above the moving page, so a swipe between the two moves only the pill */
@@ -5960,6 +5986,15 @@ document.addEventListener("click", e => {
       if (act === "u2-copy") { q.items = clone(m.items); applyDefaults(q); touch(q); }
       app.pid = q.id; app.tab = "list"; render(); window.scrollTo(0, 0);
       toast(act === "u2-copy" ? `2nd Unit list: a copy of the main list (${totals(q).lines} items)` : "2nd Unit list: empty");
+      break;
+    }
+    case "tools": toolsSheet(); break;
+    case "tool-go": {
+      const to = b.dataset.to; closeModal(); closePreview();
+      if (to === "media") { app.tab = "media"; render(); window.scrollTo(0, 0); }
+      else if (to === "pkg" || to === "clash") { app.rulesTo = to; app.view = "rules"; render(); window.scrollTo(0, 0); }
+      else if (to === "settings") { app.setFrom = app.view === "production" ? app.pid : null; app.view = "settings"; render(); window.scrollTo(0, 0); }
+      else { app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; app.fq = ""; if (to === "archive") app.archOpen = true; render(); window.scrollTo(0, 0); if (to === "catalogs") setTimeout(() => document.querySelector(".browse-head")?.scrollIntoView({ block: "start" }), 30); }
       break;
     }
     case "arch-toggle": app.archOpen = !app.archOpen; rerenderKeepScroll(); break;
