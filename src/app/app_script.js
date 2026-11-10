@@ -313,6 +313,7 @@ function deleteCustom(h, k) {
   applyCatalog(); touchSettings();
 }
 function applyCatalog() {
+  RANK = null;
   ITEM.clear();
   for (const h of HOUSES) {
     const ed = peekEdits(h.id), io = ed.items || {}, heads = ed.heads || {};
@@ -2269,6 +2270,7 @@ function viewCatalog(p, h) {
       <button class="btn icon-btn spec-btn" type="button" data-act="fin-open" aria-label="Lens search: find a lens by focal length and stop" title="Lens search">${LENS_ICON}</button>
       <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
       <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
+      ${app.editCat ? `<p class="hint ed-note">The order you set here is also the order in your lists and in the document.</p>` : ""}
     </div>
 
     <div class="pad" id="tree">${treeHtml(p, h)}</div>`;
@@ -2999,13 +3001,24 @@ function favByCategory(h, rows) {
 }
 
 /* ----- Gear list: the production's list, in the user's section layout ----- */
+/* the order the catalog shows now (categories, subcategories, groups and items as the user arranged them in Add Gear): lists and documents follow it too */
+var RANK = null;
+function catRank() {
+  if (RANK) return RANK;
+  RANK = new Map(); let n = 0;
+  for (const h of HOUSES) for (const c of h.categories) for (const sub of [c.direct, ...c.subcategories]) {
+    for (const g of groupsOf(h, sub)) for (const it of sub.items) if (grpOf(it, sub) === g && !RANK.has(it.id)) RANK.set(it.id, n++);
+    for (const it of sub.items) if (!RANK.has(it.id)) RANK.set(it.id, n++);
+  }
+  return RANK;
+}
 function linesBySection(p) {
   const by = Object.fromEntries(allSections().map(s => [s.id, []]));
   // a line whose section was deleted goes back to its catalog section, or AKS
   for (const [id, l] of Object.entries(p.items)) (by[l.section] || by[ITEM.get(id)?.it.section] || by.aks).push([id, l]);
   // lines the user dragged keep their place; the rest follow catalog order, typed-in items last
-  const key = l => l.pos !== undefined ? [0, l.pos, 0] : [1, l.custom ? 1e9 : (l.ord || 0), l.added || 0];
-  for (const k in by) by[k].sort((a, b) => { const x = key(a[1]), y = key(b[1]); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; });
+  const key = (l, id) => l.pos !== undefined ? [0, l.pos, 0] : [1, l.custom ? 1e9 : (catRank().get(id) ?? l.ord ?? 0), l.added || 0];
+  for (const k in by) by[k].sort((a, b) => { const x = key(a[1], a[0]), y = key(b[1], b[0]); return x[0] - y[0] || x[1] - y[1] || x[2] - y[2]; });
   return by;
 }
 function lineHtml(p, id, l) {
