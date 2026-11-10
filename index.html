@@ -4067,6 +4067,29 @@ function groupItems(items, s) {
   return userOrder(out, s.gorder, e => e[0]);
 }
 const hay = (it, s) => norm(it.name + " " + (it.sku || "") + " " + noteOf(it.id) + " " + it.brand + " " + (it.group || "") + " " + s.name + " " + (it.site_name || "") + " " + (it.lens ? (it.lens.focals || "") + " " + (it.lens.coverage || "") : ""));
+/* forgiving search: when nothing matches exactly, a word may be a letter or two off (a swapped, missing or extra letter) and still count */
+function editDist(a, b, max) {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let p2 = null, p1 = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i]; let low = i;
+    for (let j = 1; j <= b.length; j++) {
+      let v = Math.min(p1[j] + 1, cur[j - 1] + 1, p1[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (p2 && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+      cur[j] = v; if (v < low) low = v;
+    }
+    if (low > max) return max + 1;
+    p2 = p1; p1 = cur;
+  }
+  return p1[b.length];
+}
+function fuzzyHit(text, q) {
+  const words = text.split(/[^a-z0-9.\u0590-\u05ff]+/).filter(Boolean);
+  return q.split(/\s+/).filter(Boolean).every(t => {
+    const L = t.length, tol = L >= 8 ? 2 : L >= 4 ? 1 : 0;
+    return words.some(w => w.includes(t) || (tol && w[0] === t[0] && (editDist(w, t, tol) <= tol || (w.length > L && editDist(w.slice(0, L), t, tol) <= tol))));
+  });
+}
 const GRIP = `<svg width="12" height="18" viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg>`;
 function editRowHtml(it, kB, q, brand) {
   return `<li class="item edit" data-drop="${esc(kB)}" data-row="${esc(it.id)}"${brand ? ` data-brand="${esc(brand)}"` : ""}><button class="handle" type="button" data-drag="cat" data-id="${esc(it.id)}" aria-label="Drag ${esc(it.name)} to another heading">${GRIP}</button>
@@ -4090,6 +4113,9 @@ function lensFormats(groups, s) {
 }
 function treeHtml(p, h) {
   const q = norm(app.q.trim()), searching = q.length > 0, ed = app.editCat;
+  // exact matches first; only when there are none does a slightly misspelled word still find its item
+  const fz = searching && !h.categories.some(c => [c.direct, ...c.subcategories].some(sub => sub.items.some(it => hay(it, sub).includes(q))));
+  const qHit = (it, sub) => { const t = hay(it, sub); return t.includes(q) || (fz && fuzzyHit(t, q)); };
   const pen = (k, label) => ed ? `<button class="iconbtn pen" type="button" data-act="rename-head" data-k="${esc(k)}" aria-label="Rename ${esc(label)}">✎</button>` : "";
   const dz = k => ed ? ` data-drop="${esc(k)}"` : "";
   const out = [];
@@ -4098,7 +4124,7 @@ function treeHtml(p, h) {
     const subs = [];
     let cn = 0;
     for (const s of c.subcategories) {
-      const items = searching ? s.items.filter(it => hay(it, s).includes(q)) : s.items;
+      const items = searching ? s.items.filter(it => qHit(it, s)) : s.items;
       if (!items.length && (!ed || searching)) continue;
       cn += items.length;
       const groups = groupItems(items, s);
@@ -4146,7 +4172,7 @@ function treeHtml(p, h) {
       const allBtn = !ed && !searching && nHeads >= 2 ? `<div class="sub-tools"><button class="btn ghost sm" type="button" data-act="sub-all" data-k="${esc(kS)}" data-open="${anyClosed ? 1 : 0}">${anyClosed ? "Open all" : "Close all"}</button></div>` : "";
       subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
     }
-    const dItems = searching ? c.direct.items.filter(it => hay(it, c.direct).includes(q)) : c.direct.items;
+    const dItems = searching ? c.direct.items.filter(it => qHit(it, c.direct)) : c.direct.items;
     cn += dItems.length;
     const direct = dItems.length ? `<ul class="items direct">${dItems.map(it => ed ? editRowHtml(it, c.direct.key, q) : rowHtml(p, it, q)).join("")}</ul>`
       : ed && !searching && !subs.length ? `<p class="drop-zone"${dz(c.direct.key)}>Drag items here to put them straight in ${esc(c.name)}</p>` : "";
