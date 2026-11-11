@@ -198,8 +198,9 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcSolo() : app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcSolo() : app.view === "favs" ? favSolo() : app.productions.find(p => p.id === app.pid);
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
+function favSolo() { const hid = houseById(app.settings.favHouse) ? app.settings.favHouse : HOUSES[0].id; if (!app.favP || app.favP.houseId !== hid) app.favP = { id: "fav", browse: true, name: "", houseId: hid, items: {} }; return app.favP; }
 function mcSolo() { const hid = houseById(app.settings.mcHouse) ? app.settings.mcHouse : HOUSES[0].id; if (!app.mcP || app.mcP.houseId !== hid) app.mcP = { id: "mc", browse: true, name: "", houseId: hid, items: {} }; return app.mcP; }  // browsing a catalog: a list that is never kept
 
 /* ---------- the user's catalog edits ----------
@@ -1709,18 +1710,19 @@ function render() {
   else if (app.view === "tools") v.innerHTML = viewTools();
   else if (app.view === "archive") v.innerHTML = viewHome(true);
   else if (app.view === "mcalc" && cur()) v.innerHTML = viewMcalc();
+  else if (app.view === "favs" && cur()) v.innerHTML = viewFavs();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
   document.body.classList?.toggle("nav-on", app.view === "production");
-  document.body.classList?.toggle("browse-on", app.view === "browse");
+  document.body.classList?.toggle("browse-on", app.view === "browse" || app.view === "favs");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null, tp = app.view === "tools" && app.toolPid ? findProd(app.toolPid) : null;
-  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc") && cur() ? cur().houseId : tp ? tp.houseId : hp ? hp.dataset.value : "");
+  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "favs") && cur() ? cur().houseId : tp ? tp.houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
-  document.body.classList?.toggle("in-prod", ["production", "tools", "archive", "mcalc", "browse"].includes(app.view));
+  document.body.classList?.toggle("in-prod", ["production", "tools", "archive", "mcalc", "browse", "favs"].includes(app.view));
   if (app.view === "production" && app.tab === "list") applyListFilter();
-  if (app.view === "production" && app.tab === "fav") applyFavFilter();
+  if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
 }
@@ -1830,7 +1832,7 @@ function viewTools() {
   <section class="pad tools-page">
     <button class="tool-ctx${p ? "" : " off"}" type="button" data-act="tool-link"><span class="tc-t"><small>${p ? "Working on" : "No production"}</small><b dir="auto">${p ? esc(p.name || "Untitled production") : "Pick one to use its list"}</b></span><span class="tc-do">${p ? "Change" : "Pick"}</span></button>
     <p class="tool-grp">${p ? "Uses this production" : "With or without a production"}</p>
-    <div class="tool-rows">${row("tool-media", NAV_ICON.media, "Media Calculator", p ? (nCams ? `${nCams} camera${nCams === 1 ? "" : "s"} from the list` : "No cameras on the list yet · compare any camera") : "Pick cameras by hand")}</div>
+    <div class="tool-rows">${row("tool-favs", NAV_ICON.fav, "Favorites", p ? "Saved lists and items for this list" : "Saved lists and items · start a list from one")}${row("tool-media", NAV_ICON.media, "Media Calculator", p ? (nCams ? `${nCams} camera${nCams === 1 ? "" : "s"} from the list` : "No cameras on the list yet · compare any camera") : "Pick cameras by hand")}</div>
     <p class="tool-grp">Catalogs</p>
     <div class="tool-rows">${HOUSES.map(h => row("browse", `<span class="tr-dot" style="--hc: var(--house-${esc(h.id)}, var(--accent))"></span>`, esc(h.name), `<span class="num">${houseCount(h)}</span> items`, ` data-house="${esc(h.id)}"`)).join("")}</div>
     <p class="tool-grp">Library</p>
@@ -1843,13 +1845,17 @@ function viewTools() {
 }
 /* which production the tools work on: any current one, or none */
 /* + Add while looking through a catalog: which production's list it goes on (one of that rental house), or a new production */
-function pickListFor(itemId) {
-  const e = ITEM.get(itemId); if (!e) return;
-  const list = app.productions.filter(x => x.houseId === e.h.id && !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+function pickListFor(itemId, o) {
+  o = o || { kind: "item" };
+  const e = o.kind === "item" ? ITEM.get(itemId) : null; if (o.kind === "item" && !e) return;
+  const L = o.kind === "list" ? savedLists().find(x => x.id === o.list) : null; if (o.kind === "list" && !L) return;
+  const house = houseById(e ? e.h.id : o.house); if (!house) return;
+  const what = e ? `<bdi>${esc(e.it.name)}</bdi>` : L ? `<bdi>${esc(L.name)}</bdi> · <span class="num">${L.items.length}</span> item${L.items.length === 1 ? "" : "s"}` : `<bdi>${esc(o.name)}</bdi>`;
+  const list = app.productions.filter(x => x.houseId === house.id && !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   const pre = list.find(x => x.id === app.toolPid) || list.find(x => x.id === app.lastAddTo) || list[0];
-  const opt = (x) => { const st = prodStatus(x), t = totals(x), on = !!(x.items[itemId]); return `<button class="pick-opt${x === pre ? " on" : ""}" type="button" data-act="pick-list-set" data-id="${esc(x.id)}" aria-pressed="${x === pre}"><span class="po-r" aria-hidden="true"></span><b dir="auto">${esc(x.name || "Untitled production")}${x.unit === "2nd Unit" ? " · 2nd Unit" : ""}</b><small>${[st && st.t, on ? `already has ${x.items[itemId].qty}` : `${t.lines} item${t.lines === 1 ? "" : "s"}`].filter(Boolean).map(esc).join(" · ")}</small></button>`; };
-  showModal(`<div class="sheet pick-sheet" data-item="${esc(itemId)}" data-to="${pre ? esc(pre.id) : ""}"><h3 class="plain">Add to which list?</h3><p class="hint">${esc(e.it.name)}</p>
-    <div class="pick-opts">${list.map(opt).join("")}<button class="pick-opt new${pre ? "" : " on"}" type="button" data-act="pick-list-set" data-id="" aria-pressed="${!pre}"><span class="po-r" aria-hidden="true"></span><b>+ New production</b><small>Start a ${esc(e.h.name)} list with it</small></button></div>
+  const opt = (x) => { const st = prodStatus(x), t = totals(x), on = !!(itemId && x.items[itemId]); return `<button class="pick-opt${x === pre ? " on" : ""}" type="button" data-act="pick-list-set" data-id="${esc(x.id)}" aria-pressed="${x === pre}"><span class="po-r" aria-hidden="true"></span><b dir="auto">${esc(x.name || "Untitled production")}${x.unit === "2nd Unit" ? " · 2nd Unit" : ""}</b><small>${[st && st.t, on ? `already has ${x.items[itemId].qty}` : `${t.lines} item${t.lines === 1 ? "" : "s"}`].filter(Boolean).map(esc).join(" · ")}</small></button>`; };
+  showModal(`<div class="sheet pick-sheet" data-kind="${o.kind}" data-item="${esc(itemId || "")}" data-list="${esc(o.list || "")}" data-name="${esc(o.name || "")}" data-section="${esc(o.section || "")}" data-house="${esc(house.id)}" data-to="${pre ? esc(pre.id) : ""}"><h3 class="plain">Add to which list?</h3><p class="hint">${what}</p>
+    <div class="pick-opts">${list.map(opt).join("")}<button class="pick-opt new${pre ? "" : " on"}" type="button" data-act="pick-list-set" data-id="" aria-pressed="${!pre}"><span class="po-r" aria-hidden="true"></span><b>+ New production</b><small>${L ? "Start a new production from this list" : `Start a ${esc(house.name)} list with it`}</small></button></div>
     <div class="modal-actions pair"><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="pick-list-add">Add</button></div></div>`);
 }
 function addToPicked(itemId, toId) {
@@ -1860,6 +1866,25 @@ function addToPicked(itemId, toId) {
   setQty(q, itemId, had + 1); touch(q); app.lastAddTo = q.id;
   undoable("Added", `${e.it.name} to ${q.name || "the list"}`, und);
 }
+/* a whole saved list: on a production (its Camera List, with the duplicates question), or the start of a new one */
+function addListToPicked(listId, toId) {
+  const L = savedLists().find(x => x.id === listId); if (!L) return; closeModal();
+  if (!toId) { app.formFor = null; app.dupFrom = null; app.formHouse = L.houseId; app.formStart = L.id; app.view = "form"; render(); app.formHouse = ""; app.formStart = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); return; }
+  const q = findProd(toId); if (!q) return;
+  const mult = (app.listMul || {})[L.id] || 1; app.lastAddTo = q.id;
+  app.pid = q.id; app.view = "production"; app.editing = null; app.tab = "list"; render(); window.scrollTo(0, 0);
+  if (listDupes(q, L).length) dupListDialog(q, L, mult); else runSavedList(q, L.id, mult, "add");
+}
+/* a typed-in favorite (not in the catalog): a line of its own on the production picked */
+function addCustomToPicked(name, section, house, toId) {
+  closeModal();
+  if (!toId) { app.pendingCustom = { name, section }; app.formFor = null; app.dupFrom = null; app.formHouse = house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); return; }
+  const q = findProd(toId); if (!q) return;
+  const und = snapItems(q), nid = uid("custom-");
+  q.items[nid] = { qty: 1, note: "", name, brand: "", section, cat: "", sub: "", custom: true, added: Date.now(), children: [] };
+  touch(q); app.lastAddTo = q.id;
+  undoable("Added", `${name} to ${q.name || "the list"}`, und);
+}
 function toolLinkSheet() {
   const list = app.productions.filter(x => !isArchived(x) && !(x.mainOf && findProd(x.mainOf))).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   const opt = (id, name, sub, on) => `<button class="pick-opt${on ? " on" : ""}" type="button" data-act="tool-link-set" data-id="${esc(id)}" aria-pressed="${on}"><span class="po-r" aria-hidden="true"></span><b dir="auto">${name}</b><small>${sub}</small></button>`;
@@ -1868,16 +1893,24 @@ function toolLinkSheet() {
       ${opt("", "No production", "Use the tools on their own", !app.toolPid)}</div>
     <div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`);
 }
+/* Favorites on its own, without a production: one rental house at a time; Add asks which list (or starts a new production from a saved list) */
+const houseSeg = (act, hid) => `<div class="seg sm house-seg" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="${act}" data-house="${esc(x.id)}" aria-pressed="${x.id === hid}">${esc(x.name.split(" ")[0])}</button>`).join("")}</div>`;
+function viewFavs() {
+  const p = cur(), h = houseById(p.houseId);
+  return `${pageHead("Favorites", "<span>Saved lists and items · add them to any list</span>")}
+    <section class="pad solo-house">${houseSeg("fav-house", h.id)}</section>
+    <div class="tabpane">${viewFavorites(p, h)}</div>`;
+}
 /* the Media Calculator on its own: cameras picked by hand, from one rental house's catalog at a time */
 function viewMcalc() {
   const p = cur(), h = houseById(p.houseId);
   return `${pageHead("Media Calculator", "<span>Recording time on each camera's cards</span>")}
-    <section class="pad mc-solo"><div class="seg sm mc-house" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="mc-house" data-house="${esc(x.id)}" aria-pressed="${x.id === h.id}">${esc(x.name.split(" ")[0])}</button>`).join("")}</div></section>
+    <section class="pad solo-house">${houseSeg("mc-house", h.id)}</section>
     <div class="tabpane">${viewMedia(p, h, true)}</div>`;
 }
 /* the start page's shortcuts: the Media Calculator, a catalog, packages, and every tool */
 const homeShortcuts = () => { const s = (act, icon, t, extra) => `<button class="hs-btn" type="button" data-act="${act}"${extra || ""}><span class="hs-i" aria-hidden="true">${icon}</span><span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("tool-media-solo", NAV_ICON.media, "Media calc")}${s("cat-pick", BOOK_ICON, "Catalogs")}${s("rules-open", PKG_ICON, "Packages", ` data-to="pkg"`)}${s("tools", NAV_ICON.grid, "All tools")}</div>`; };
+  return `<div class="home-shorts">${s("tool-media-solo", NAV_ICON.media, "Media calc")}${s("tool-favs-solo", NAV_ICON.fav, "Favorites")}${s("cat-pick", BOOK_ICON, "Catalogs")}${s("tools", NAV_ICON.grid, "All tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -1953,7 +1986,7 @@ function viewForm() {
       <div class="field"><span class="lbl" id="house-lbl">Rental house</span><div class="house-pick" id="housePick" role="group" aria-labelledby="house-lbl" data-value="${esc(p.houseId || "")}">${houses}</div>
         <span class="err" id="houseErr" hidden>Pick the rental house this list is for.</span>
         ${hasItems ? `<span class="hint">The rental house is locked while the list has items, since each list uses that house's catalog.</span>` : ""}</div>
-      ${!editing && !src && savedLists().length ? `<div class="field"><label for="f-start">Start from</label><select id="f-start" name="startList"><option value="">New list</option>${savedLists().map(L => `<option value="${esc(L.id)}">${esc(L.name)} · ${esc((houseById(L.houseId) || {}).name || "")}</option>`).join("")}</select></div>` : ""}
+      ${!editing && !src && savedLists().length ? `<div class="field"><label for="f-start">Start from</label><select id="f-start" name="startList"><option value="">New list</option>${savedLists().map(L => `<option value="${esc(L.id)}"${app.formStart === L.id ? " selected" : ""}>${esc(L.name)} · ${esc((houseById(L.houseId) || {}).name || "")}</option>`).join("")}</select></div>` : ""}
       <div class="row3">
         <div class="field"><label for="f-dp">DP</label><input data-sug="dp" id="f-dp" name="dp" value="${esc(p.dp)}"></div>
         <div class="field"><label for="f-ac">1st AC</label><input data-sug="ac" id="f-ac" name="ac" value="${esc(p.ac)}"></div>
@@ -4405,11 +4438,19 @@ document.addEventListener("click", e => {
       const tp = app.toolPid && findProd(app.toolPid);
       if (tp) { app.pid = tp.id; app.view = "production"; app.tab = "media"; app.mcMode = "list"; app.editing = null; render(); window.scrollTo(0, 0); break; }
     } // falls through: no production, the calculator on its own
+    case "tool-favs": { const tp = app.toolPid && findProd(app.toolPid);
+      if (tp) { app.pid = tp.id; app.view = "production"; app.tab = "fav"; app.editing = null; render(); window.scrollTo(0, 0); break; } }
+    // falls through: no production, Favorites on its own
+    case "tool-favs-solo": closeModal(); app.openList = null; app.view = "favs"; render(); window.scrollTo(0, 0); break;
+    case "fav-house": if (app.settings.favHouse !== b.dataset.house) { app.settings.favHouse = b.dataset.house; touchSettings(); app.openList = null; render(); } break;
     case "tool-media-solo": closeModal(); mcOpen = null; app.view = "mcalc"; render(); window.scrollTo(0, 0); break;
     case "mc-house": if (app.settings.mcHouse !== b.dataset.house) { app.settings.mcHouse = b.dataset.house; touchSettings(); mcOpen = null; render(); } break;
     case "cat-pick": showModal(`<div class="sheet pick-sheet"><h3 class="plain">Which catalog?</h3><div class="pick-opts">${HOUSES.map(h => `<button class="pick-opt" type="button" data-act="browse" data-house="${esc(h.id)}"><span class="po-dot" style="--hc: var(--house-${esc(h.id)})" aria-hidden="true"></span><b>${esc(h.name)}</b><small><span class="num">${houseCount(h)}</span> items</small></button>`).join("")}</div><div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`); break;
     case "pick-list-set": { const sh = b.closest(".pick-sheet"); if (sh) { sh.querySelectorAll(".pick-opt").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); }); sh.dataset.to = b.dataset.id; } break; }
-    case "pick-list-add": { const sh = b.closest(".pick-sheet"); if (sh) addToPicked(sh.dataset.item, sh.dataset.to || ""); break; }
+    case "pick-list-add": { const sh = b.closest(".pick-sheet"); if (!sh) break; const d = sh.dataset;
+      if (d.kind === "list") addListToPicked(d.list, d.to || "");
+      else if (d.kind === "custom") addCustomToPicked(d.name, d.section, d.house, d.to || "");
+      else addToPicked(d.item, d.to || ""); break; }
     case "arch-toggle": app.archOpen = !app.archOpen; rerenderKeepScroll(); break;
     case "pm-arch": { const x = findProd(id); if (!x) break; const was = x.arch, to = isArchived(x) ? "off" : "on"; x.arch = to; touch(x); closeModal(); render(); undoable(to === "on" ? "Archived" : "Restored", `“${x.name || "production"}”`, () => { if (was === undefined) delete x.arch; else x.arch = was; touch(x); render(); }); break; }
     case "pm-select": closeModal(); app.sel = new Set([id]); render(); break;
@@ -4429,6 +4470,7 @@ document.addEventListener("click", e => {
     case "list-mul": { app.listMul = app.listMul || {}; app.listMul[id] = Math.max(1, Math.min(9, (app.listMul[id] || 1) + (+b.dataset.d || 0))); rerenderKeepScroll(); break; }
     case "list-add": {
       const L = savedLists().find(x => x.id === id); if (!L) break;
+      if (p && p.browse) { pickListFor("", { kind: "list", list: L.id, house: L.houseId }); break; }
       const mult = (app.listMul || {})[id] || 1;
       if (listDupes(p, L).length) dupListDialog(p, L, mult); else runSavedList(p, id, mult, "add");
       break;
@@ -4539,7 +4581,7 @@ document.addEventListener("click", e => {
       if (inp) inp.value = Math.max(0, Math.min(9, (parseInt(inp.value, 10) || 0) + (act === "pk-inc" ? 1 : -1)));
       break;
     }
-    case "cinc": case "cdec": if (p && p.browse && act === "cinc" && app.view === "browse") { pickListFor(id); break; } {
+    case "cinc": case "cdec": if (p && p.browse && act === "cinc" && (app.view === "browse" || app.view === "favs")) { pickListFor(id); break; } {
       const l = p.items[id];
       const cur0 = l ? (f ? l[f] : lineQty(l)) : 0;
       const ids = setQty(p, id, cur0 + (act === "cinc" ? 1 : -1), l ? f : undefined);
@@ -4556,7 +4598,7 @@ document.addEventListener("click", e => {
       if (app.tab === "fav") rerenderKeepScroll();
       break;
     }
-    case "addfav": {
+    case "addfav": if (p && p.browse) { pickListFor("", { kind: "custom", name: b.dataset.name, section: b.dataset.section, house: p.houseId }); break; } {
       const nid = uid("custom-");
       p.items[nid] = { qty: 1, note: "", name: b.dataset.name, brand: "", section: b.dataset.section, cat: "", sub: "", custom: true, added: Date.now(), children: [] };
       touch(p); rerenderKeepScroll();
@@ -5001,6 +5043,7 @@ document.addEventListener("submit", e => {
       p = newProduction(fields); app.productions.push(p); app.tab = "add";
       if (app.pendingAdd && ITEM.has(app.pendingAdd) && ITEM.get(app.pendingAdd).h.id === p.houseId) { setQty(p, app.pendingAdd, 1); app.tab = "list"; toast(`Started with ${ITEM.get(app.pendingAdd).it.name}`); }
       app.pendingAdd = null;
+      if (app.pendingCustom) { const c = app.pendingCustom; p.items[uid("custom-")] = { qty: 1, note: "", name: c.name, brand: "", section: c.section, cat: "", sub: "", custom: true, added: Date.now(), children: [] }; app.tab = "list"; app.pendingCustom = null; }
       const sl = v.startList && savedLists().find(x => x.id === v.startList);
       if (sl) { if (sl.houseId === p.houseId) { const r = applySavedList(p, sl, 1, "add"); app.tab = "list"; toast(`Started from “${sl.name}” · ${r.n} items`); } else toast(`“${sl.name}” is for another rental house, so the list starts empty.`); }
     }
