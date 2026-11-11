@@ -1474,7 +1474,7 @@ body.kb-room .app { padding-bottom: 70vh; }
 .l-grid > .l-bottom { grid-area: q; justify-self: end; }
 .l-grid.wide > .l-bottom { justify-self: stretch; }
 /* browsing a catalog without a production: look, search, star; nothing to add */
-.browse-on .item .ctl, .browse-on .item .add, .browse-on .f-row .ctl { display: none; }
+/* looking through a catalog: + Add asks which list (the quantity lives on that list) */
 .browse-on .item .nm-btn { pointer-events: none; }
 .browse-pane { padding-bottom: 24px; }
 .browse-head { margin-top: 32px; }
@@ -1715,6 +1715,56 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lt-ico svg { width: 18px; height: 18px; }
 /* Tools: the app's own buttons the same size as the rest */
 .tool-row .tr-i svg { width: 24px; height: 24px; }
+/* round 14: the bottom bar's three tabs, then Tools apart; the Tools page; the start page's shortcuts; which list to add to */
+.navbar-in { grid-template-columns: repeat(3, minmax(max-content, 1fr)) auto; }
+.nav-tab.nav-tools { padding-inline: 14px 10px; margin-block: 8px; padding-block: 0 2px; border-inline-start: 1px solid var(--line); color: var(--fg); }
+.nav-tab.nav-tools .nt-i { width: 44px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); }
+.nav-tab.nav-tools[aria-current="page"] .nt-i { background: var(--accent); color: var(--accent-fg); }
+.tools-page { padding-bottom: 40px; }
+.tool-ctx { display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; margin-top: 8px; padding: 12px 16px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.tool-ctx .tc-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.tool-ctx small { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.tool-ctx b { font-size: 17px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; text-align: left; }
+.tool-ctx .tc-do { flex: none; font-size: 14px; font-weight: 600; color: var(--accent); }
+.tool-ctx.off { border-style: dashed; background: var(--surface); }
+.tool-ctx.off small { color: var(--muted); }
+.tools-page .tool-grp { display: block; margin: 20px 2px 8px; }
+.tool-rows { display: grid; gap: 8px; }
+.tool-row.card { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--frame-shadow); padding: 8px 12px; min-height: 60px; box-sizing: border-box; cursor: pointer; }
+.tool-row .tr-go { margin-inline-start: auto; flex: none; display: grid; color: var(--muted); }
+.tool-row .tr-t { flex: 1; }
+.tool-row .tr-dot { width: 12px; height: 12px; border-radius: 4px; background: var(--hc); }
+.tool-row .num { font-weight: 600; color: var(--fg); }
+/* the start page: four shortcuts above the productions; the archive as one row */
+.home-shorts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 2px 0 20px; }
+.hs-btn { display: grid; justify-items: center; gap: 6px; padding: 10px 2px 9px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 12px; font-weight: 500; line-height: 15px; box-shadow: var(--frame-shadow); cursor: pointer; min-width: 0; }
+.hs-btn .hs-i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--accent-soft); color: var(--accent); }
+.hs-btn .hs-i svg { width: 21px; height: 21px; }
+.hs-btn .hs-t { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hs-btn:active { transform: scale(.97); }
+.arch-row { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; margin-top: 12px; padding: 0 14px 0 16px; min-height: 52px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; text-align: left; cursor: pointer; box-shadow: var(--frame-shadow); }
+.arch-row b { font-weight: 600; } .arch-row .num { color: var(--muted); margin-inline-start: 4px; }
+.arch-row .hint { margin: 0 0 0 auto; font-size: 13px; }
+.arch-row svg { flex: none; color: var(--muted); }
+/* a choice of lists or productions, one tap each */
+.pick-sheet .hint { margin: 0 0 12px; }
+.pick-opts { display: grid; gap: 8px; max-height: 52vh; overflow-y: auto; }
+.pick-opt { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: 2px 12px; width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.pick-opt .po-r, .pick-opt .po-dot { grid-row: 1 / span 2; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); box-sizing: border-box; }
+.pick-opt .po-dot { border: 0; border-radius: 6px; width: 14px; height: 14px; background: var(--hc); justify-self: center; }
+.pick-opt b { font-size: 15.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; text-align: left; }
+.pick-opt small { font-size: 12.5px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-opt.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.pick-opt.on .po-r { border: 6px solid var(--accent); }
+.pick-opt.new { border-style: dashed; } .pick-opt.new b { color: var(--accent); }
+.modal-actions.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.modal-actions.pair .btn { justify-content: center; min-height: 46px; }
+/* the Media Calculator on its own: which rental house's cameras */
+.mc-solo { padding-top: 6px; padding-bottom: 4px; }
+.mc-house { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+.mc-house button { justify-content: center; text-align: center; }
+/* a page without an Export button: the title gets the room */
+.prod-head.ph-one.ph-page { grid-template-columns: 44px minmax(0, 1fr) 44px; }
 </style>
 
 <div class="app">
@@ -1760,6 +1810,9 @@ function hl(text, q) {
   if (i < 0) return esc(text);
   return esc(text.slice(0, i)) + "<mark>" + esc(text.slice(i, i + q.length)) + "</mark>" + esc(text.slice(i + q.length));
 }
+const CHEV_R = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>`;
+const ARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4" width="17" height="4.5" rx="1.5"/><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5M10 12.5h4"/></svg>`;
+const BOOK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/></svg>`;
 const CHEV = `<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>`;
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function parseDate(s) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ""); return m ? { y: +m[1], m: +m[2], d: +m[3] } : null; }
@@ -1927,7 +1980,9 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "browse" ? app.browseP : app.productions.find(p => p.id === app.pid);  // browsing a catalog: a list that is never kept
+const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcSolo() : app.productions.find(p => p.id === app.pid);
+// the Media Calculator on its own works on a list that is never kept, in the rental house picked last
+function mcSolo() { const hid = houseById(app.settings.mcHouse) ? app.settings.mcHouse : HOUSES[0].id; if (!app.mcP || app.mcP.houseId !== hid) app.mcP = { id: "mc", browse: true, name: "", houseId: hid, items: {} }; return app.mcP; }  // browsing a catalog: a list that is never kept
 
 /* ---------- the user's catalog edits ----------
    Per rental house: renamed items and headings, items moved elsewhere, the user's own categories, subcategories
@@ -3250,19 +3305,37 @@ function navSync() {
     else if (!deep && NAV.guard) { NAV.guard = false; NAV.skip = true; history.back(); }  // back on the first screen: drop the extra step
   } catch (e) {}
 }
+/* where you've been: back (the phone's or the ‹ on the page) returns to the page you came from, as you left it.
+   The productions page is the start: arriving there clears the way back, and back there leaves the app.
+   A tab inside a production isn't a page of its own, and the production form is passed over on the way back */
+const hist = { stack: [], last: null, popping: false };
+const pageKey = () => { const p = app.view === "production" ? cur() : null;
+  return app.view === "production" ? "p:" + ((p && mainOf(p)) || p || {}).id : app.view === "browse" ? "b:" + (app.browseP || {}).houseId : app.view === "rules" ? "r:" + app.rulesTo : app.view; };
+const pageSnap = () => ({ key: pageKey(), view: app.view, pid: app.pid, tab: app.tab, mcMode: app.mcMode, rulesTo: app.rulesTo, browseP: app.browseP, toolPid: app.toolPid, setFrom: app.setFrom, scroll: 0 });
+function histTrack() {
+  const key = pageKey(), last = hist.last;
+  if (last && last.key !== key && !hist.popping) {
+    const top = hist.stack[hist.stack.length - 1];
+    if (["form", "welcome"].includes(last.view)) { if (top && top.key === key) hist.stack.pop(); }  // a form passed over: back on the page it came from
+    else { hist.stack.push(last); if (hist.stack.length > 30) hist.stack.shift(); }
+  }
+  if (app.view === "home" || app.view === "welcome") hist.stack.length = 0;
+}
+function histPop() {
+  const s = hist.stack.pop();
+  if (!s || (s.view === "production" && !findProd(s.pid)) || (s.view === "browse" && !s.browseP)) { hist.stack.length = 0; app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; app.fq = ""; render(); window.scrollTo(0, 0); return; }
+  hist.popping = true;
+  try { Object.assign(app, { view: s.view, pid: s.pid, tab: s.tab, mcMode: s.mcMode, rulesTo: s.rulesTo, browseP: s.browseP, toolPid: s.toolPid, setFrom: s.setFrom, editing: null, dupFrom: null }); render(); }
+  finally { hist.popping = false; }
+  window.scrollTo(0, s.scroll || 0);
+}
 function stepBack() {
   if (document.getElementById("modal")) { closeModal(); return; }
   if (document.getElementById("preview")) { closePreview(); return; }
   if (app.view === "production" && app.tab === "add" && fin().on) { fin().on = false; render(); return; }
   if (app.view === "production" && app.editing) { app.editing = null; rerenderKeepScroll(); return; }
   if (app.sel) { app.sel = null; render(); return; }
-  if (app.view === "form") {
-    const ed = app.formFor && app.productions.some(x => x.id === app.formFor);
-    app.view = ed ? "production" : "home"; app.pid = ed ? app.formFor : null; app.dupFrom = null;
-    render(); window.scrollTo(0, 0); return;
-  }
-  if (app.view === "settings" && app.setFrom && app.productions.some(x => x.id === app.setFrom)) { app.pid = app.setFrom; app.setFrom = null; app.view = "production"; render(); window.scrollTo(0, 0); return; }
-  if (app.view !== "home") { app.view = "home"; app.pid = null; app.editing = null; app.lq = ""; app.fq = ""; app.setFrom = null; render(); window.scrollTo(0, 0); }
+  if (app.view !== "home") histPop();
 }
 window.addEventListener("popstate", () => {
   if (!NAV.on) return;
@@ -3406,6 +3479,7 @@ function houseTheme(id) {
 }
 function render() {
   sugHide();
+  if (hist.last && !hist.popping) hist.last.scroll = window.scrollY;  // where this page was, before it's drawn again
   const v = document.getElementById("view");
   if (app.view === "welcome" && !needsWelcome()) app.view = "home";
   if (app.view === "welcome") v.innerHTML = viewWelcome();
@@ -3414,18 +3488,22 @@ function render() {
   else if (app.view === "rules") v.innerHTML = viewRules();
   else if (app.view === "production" && cur()) v.innerHTML = viewProduction();
   else if (app.view === "browse" && cur()) v.innerHTML = viewBrowse();
+  else if (app.view === "tools") v.innerHTML = viewTools();
+  else if (app.view === "archive") v.innerHTML = viewHome(true);
+  else if (app.view === "mcalc" && cur()) v.innerHTML = viewMcalc();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
   document.body.classList?.toggle("nav-on", app.view === "production");
   document.body.classList?.toggle("browse-on", app.view === "browse");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
-  const hp = app.view === "form" ? document.getElementById("housePick") : null;
-  houseTheme((app.view === "production" || app.view === "browse") && cur() ? cur().houseId : hp ? hp.dataset.value : "");
+  const hp = app.view === "form" ? document.getElementById("housePick") : null, tp = app.view === "tools" && app.toolPid ? findProd(app.toolPid) : null;
+  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc") && cur() ? cur().houseId : tp ? tp.houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
-  document.body.classList?.toggle("in-prod", app.view === "production");
+  document.body.classList?.toggle("in-prod", ["production", "tools", "archive", "mcalc", "browse"].includes(app.view));
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if (app.view === "production" && app.tab === "fav") applyFavFilter();
+  histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
 }
 
@@ -3467,7 +3545,7 @@ function isArchived(p) {
   if (p.arch === "on") return true; if (p.arch === "off") return false;
   const e = lastDayOf(p); return !!e && dayGap(e, todayIso()) >= 2;
 }
-function viewHome() {
+function viewHome(archPage) {
   const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
   const sel = app.sel;
   if (sel) for (const id of [...sel]) if (!app.productions.some(p => p.id === id)) sel.delete(id);
@@ -3492,50 +3570,99 @@ function viewHome() {
   };
   const active = list.filter(p => !isArchived(p)), archived = list.filter(isArchived);
   const cards = active.map(cardOf).join("");
-  const archOpen = !!(sel ? archived.some(x => sel.has(x.id)) : app.archOpen);
-  const archHtml = archived.length ? `<div class="arch"><button class="arch-h" type="button" data-act="arch-toggle" aria-expanded="${archOpen}"><span>Archive</span><span class="num">${archived.length}</span><span class="pc-chev${archOpen ? " open" : ""}" aria-hidden="true"></span></button>${archOpen ? `<ul class="prod-list">${archived.map(cardOf).join("")}</ul>` : `<span class="hint">Past productions are kept here. Nothing is deleted.</span>`}</div>` : "";
+  if (archPage) return `${pageHead("Archive", `<span><span class="num">${archived.length}</span> past production${archived.length === 1 ? "" : "s"} · nothing is deleted</span>`)}
+    <section class="pad">${archived.length ? `<ul class="prod-list">${archived.map(cardOf).join("")}</ul><p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>` : `<p class="hint">When a production's shoot is over it moves here. Nothing is deleted.</p>`}</section>${(() => { const n = sel ? sel.size : 0; return sel ? `<div class="dock pad sel-dock"><div class="dock-in"><span class="summary-line"><b class="num">${n}</b> selected</span>
+    <span class="grp"><button class="btn" type="button" data-act="sel-dup" ${n ? "" : "disabled"}>Duplicate</button><button class="btn danger" type="button" data-act="sel-del" ${n ? "" : "disabled"}>Delete</button><button class="btn ghost" type="button" data-act="sel-cancel">Cancel</button></span></div></div>` : ""; })()}`;
+  const archOpen = false;
+  const archRow = archived.length && !sel ? `<button class="arch-row" type="button" data-act="archive"><span><b>Archive</b> <span class="num">${archived.length}</span></span><span class="hint">Past productions</span>${CHEV_R}</button>` : "";
+  const archHtml = archived.length && sel ? `<div class="arch"><button class="arch-h" type="button" data-act="arch-toggle" aria-expanded="${archOpen}"><span>Archive</span><span class="num">${archived.length}</span><span class="pc-chev${archOpen ? " open" : ""}" aria-hidden="true"></span></button>${archOpen ? `<ul class="prod-list">${archived.map(cardOf).join("")}</ul>` : `<span class="hint">Past productions are kept here. Nothing is deleted.</span>`}</div>` : "";
   const n = sel ? sel.size : 0;
   const selDock = sel ? `<div class="dock pad sel-dock"><div class="dock-in"><span class="summary-line"><b class="num">${n}</b> selected</span>
     <span class="grp"><button class="btn" type="button" data-act="sel-dup" ${n ? "" : "disabled"}>Duplicate</button><button class="btn danger" type="button" data-act="sel-del" ${n ? "" : "disabled"}>Delete</button><button class="btn ghost" type="button" data-act="sel-cancel">Cancel</button></span></div></div>` : "";
   return `<section class="pad">
     ${greetHtml()}
+    ${sel ? "" : homeShortcuts()}
     ${list.length ? `<div class="home-head"><h3 class="home-sec">Productions <span class="num">${active.length}</span></h3>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>` : ""}
-    ${list.length ? `${cards ? `<ul class="prod-list">${cards}</ul>` : `<p class="hint">No current productions.</p>`}${archHtml}${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
+    ${list.length ? `${cards ? `<ul class="prod-list">${cards}</ul>` : `<p class="hint">No current productions.</p>`}${archRow}${archHtml}${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
       <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
-    ${sel ? "" : browseHtml() + rulesHomeHtml()}
   </section>${selDock}`;
 }
-/* a rental house's catalog, to look through without a production: search, filters and stars work; nothing is added */
+/* the top of a page outside a production: back, the title, and a line under it (the same row as a production's) */
+const pageHead = (title, sub) => `<section class="pad" data-keep="head"><div class="prod-head ph-one ph-page">
+    <span class="ph-side"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button></span>
+    <div class="ph-title"><h2 class="ph-name">${title}</h2></div><span class="ph-side end"></span>
+    ${sub ? `<p class="ph-sub">${sub}</p>` : ""}</div></section>`;
+/* a rental house's catalog, to look through without a production: search, filters and stars work; Add asks which list it goes on */
 function viewBrowse() {
   const p = cur(), h = houseById(p.houseId);
-  return `<section class="pad"><div class="prod-head">
-      <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="browse-new" data-house="${esc(h.id)}">+ Start a list here</button></div>
-      <div class="ph-title"><h2 class="ph-name">${esc(h.name)}</h2><p class="ph-co">Catalog · ${houseCount(h)} items</p></div></div></section>
+  return `${pageHead(esc(h.name), `<span>Catalog · <span class="num">${houseCount(h)}</span> items</span>`)}
     <div class="tabpane browse-pane">${viewCatalog(p, h)}</div>`;
 }
+/* Tools: everything that isn't Add Gear, Favorites or the Camera List, in one place.
+   Opened from a production it works on that production; from the start page, on none (pick one, or use the tools on their own) */
+function viewTools() {
+  const p = app.toolPid ? findProd(app.toolPid) : null; if (!p) app.toolPid = null;
+  const row = (act, icon, t, sub, extra) => `<button class="tool-row card" type="button" data-act="${act}"${extra || ""}><span class="tr-i" aria-hidden="true">${icon}</span><span class="tr-t"><b>${t}</b><small>${sub}</small></span><span class="tr-go" aria-hidden="true">${CHEV_R}</span></button>`;
+  const nCams = p ? (() => { const m = mainOf(p) || p, u = unit2Of(m); return [m, u].filter(Boolean).reduce((a, q) => a + Object.keys(q.items).filter(id => hasRec(ITEM.get(id))).length, 0); })() : 0;
+  const archived = app.productions.filter(x => isArchived(x) && !(x.mainOf && findProd(x.mainOf))).length;
+  const [np, nc] = rulesCounts();
+  return `${pageHead("Tools", "")}
+  <section class="pad tools-page">
+    <button class="tool-ctx${p ? "" : " off"}" type="button" data-act="tool-link"><span class="tc-t"><small>${p ? "Working on" : "No production"}</small><b dir="auto">${p ? esc(p.name || "Untitled production") : "Pick one to use its list"}</b></span><span class="tc-do">${p ? "Change" : "Pick"}</span></button>
+    <p class="tool-grp">${p ? "Uses this production" : "With or without a production"}</p>
+    <div class="tool-rows">${row("tool-media", NAV_ICON.media, "Media Calculator", p ? (nCams ? `${nCams} camera${nCams === 1 ? "" : "s"} from the list` : "No cameras on the list yet · compare any camera") : "Pick cameras by hand")}</div>
+    <p class="tool-grp">Catalogs</p>
+    <div class="tool-rows">${HOUSES.map(h => row("browse", `<span class="tr-dot" style="--hc: var(--house-${esc(h.id)}, var(--accent))"></span>`, esc(h.name), `<span class="num">${houseCount(h)}</span> items`, ` data-house="${esc(h.id)}"`)).join("")}</div>
+    <p class="tool-grp">Library</p>
+    <div class="tool-rows">${row("rules-open", PKG_ICON, "Packages", `${np ? `<span class="num">${np}</span> saved · ` : ""}What comes with an item`, ` data-to="pkg"`)}${row("rules-open", CLASH_ICON, "Doesn't work with", `${nc ? `<span class="num">${nc}</span> rules · ` : ""}And what to swap in`, ` data-to="clash"`)}${row("archive", ARCH_ICON, "Archive", archived ? `<span class="num">${archived}</span> past production${archived === 1 ? "" : "s"}` : "Past productions land here")}</div>
+    <p class="tool-grp">App</p>
+    <div class="tool-rows">${row("settings", NAV_ICON.tools, "Settings", "You, your account, the catalogs")}
+      <button class="tool-row card" type="button" data-act="theme" id="toolTheme"><span class="tr-i" aria-hidden="true">${THEME_ICONS[theme.pref]}</span><span class="tr-t"><b>Theme</b><small>${THEME_NAMES[theme.pref]} · tap to change</small></span></button>
+      <button class="tool-row card" type="button" data-act="share-app"><span class="tr-i" aria-hidden="true">${SHARE_ICON}</span><span class="tr-t"><b>Share AC Cam List</b><small>Send the app to a colleague</small></span></button></div>
+  </section>`;
+}
+/* which production the tools work on: any current one, or none */
+/* + Add while looking through a catalog: which production's list it goes on (one of that rental house), or a new production */
+function pickListFor(itemId) {
+  const e = ITEM.get(itemId); if (!e) return;
+  const list = app.productions.filter(x => x.houseId === e.h.id && !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const pre = list.find(x => x.id === app.toolPid) || list.find(x => x.id === app.lastAddTo) || list[0];
+  const opt = (x) => { const st = prodStatus(x), t = totals(x), on = !!(x.items[itemId]); return `<button class="pick-opt${x === pre ? " on" : ""}" type="button" data-act="pick-list-set" data-id="${esc(x.id)}" aria-pressed="${x === pre}"><span class="po-r" aria-hidden="true"></span><b dir="auto">${esc(x.name || "Untitled production")}${x.unit === "2nd Unit" ? " · 2nd Unit" : ""}</b><small>${[st && st.t, on ? `already has ${x.items[itemId].qty}` : `${t.lines} item${t.lines === 1 ? "" : "s"}`].filter(Boolean).map(esc).join(" · ")}</small></button>`; };
+  showModal(`<div class="sheet pick-sheet" data-item="${esc(itemId)}" data-to="${pre ? esc(pre.id) : ""}"><h3 class="plain">Add to which list?</h3><p class="hint">${esc(e.it.name)}</p>
+    <div class="pick-opts">${list.map(opt).join("")}<button class="pick-opt new${pre ? "" : " on"}" type="button" data-act="pick-list-set" data-id="" aria-pressed="${!pre}"><span class="po-r" aria-hidden="true"></span><b>+ New production</b><small>Start a ${esc(e.h.name)} list with it</small></button></div>
+    <div class="modal-actions pair"><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="pick-list-add">Add</button></div></div>`);
+}
+function addToPicked(itemId, toId) {
+  const e = ITEM.get(itemId); if (!e) return; closeModal();
+  if (!toId) { app.pendingAdd = itemId; app.formFor = null; app.dupFrom = null; app.formHouse = e.h.id; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); return; }
+  const q = findProd(toId); if (!q) return;
+  const und = snapItems(q), had = q.items[itemId] ? q.items[itemId].qty : 0;
+  setQty(q, itemId, had + 1); touch(q); app.lastAddTo = q.id;
+  undoable("Added", `${e.it.name} to ${q.name || "the list"}`, und);
+}
+function toolLinkSheet() {
+  const list = app.productions.filter(x => !isArchived(x) && !(x.mainOf && findProd(x.mainOf))).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const opt = (id, name, sub, on) => `<button class="pick-opt${on ? " on" : ""}" type="button" data-act="tool-link-set" data-id="${esc(id)}" aria-pressed="${on}"><span class="po-r" aria-hidden="true"></span><b dir="auto">${name}</b><small>${sub}</small></button>`;
+  showModal(`<div class="sheet pick-sheet"><h3 class="plain">Work on which production?</h3><p class="hint">The tools use its list. Change it any time.</p>
+    <div class="pick-opts">${list.map(x => { const st = prodStatus(x), t = totals(x); return opt(x.id, esc(x.name || "Untitled production"), [st && st.t, `${t.lines} item${t.lines === 1 ? "" : "s"}`, houseById(x.houseId)?.name].filter(Boolean).map(esc).join(" · "), x.id === app.toolPid); }).join("")}
+      ${opt("", "No production", "Use the tools on their own", !app.toolPid)}</div>
+    <div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`);
+}
+/* the Media Calculator on its own: cameras picked by hand, from one rental house's catalog at a time */
+function viewMcalc() {
+  const p = cur(), h = houseById(p.houseId);
+  return `${pageHead("Media Calculator", "<span>Recording time on each camera's cards</span>")}
+    <section class="pad mc-solo"><div class="seg sm mc-house" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="mc-house" data-house="${esc(x.id)}" aria-pressed="${x.id === h.id}">${esc(x.name.split(" ")[0])}</button>`).join("")}</div></section>
+    <div class="tabpane">${viewMedia(p, h, true)}</div>`;
+}
+/* the start page's shortcuts: the Media Calculator, a catalog, packages, and every tool */
+const homeShortcuts = () => { const s = (act, icon, t, extra) => `<button class="hs-btn" type="button" data-act="${act}"${extra || ""}><span class="hs-i" aria-hidden="true">${icon}</span><span class="hs-t">${t}</span></button>`;
+  return `<div class="home-shorts">${s("tool-media-solo", NAV_ICON.media, "Media calc")}${s("cat-pick", BOOK_ICON, "Catalogs")}${s("rules-open", PKG_ICON, "Packages", ` data-to="pkg"`)}${s("tools", NAV_ICON.grid, "All tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
-/* Tools: the less-used pages, in a sheet from the bottom bar. "This production" is about the open list; "Library" is the rest of the app */
-function toolsSheet() {
-  const row = (to, icon, t, sub) => `<button class="tool-row" type="button" data-act="tool-go" data-to="${to}"><span class="tr-i" aria-hidden="true">${icon}</span><span class="tr-t"><b>${t}</b><small>${sub}</small></span></button>`;
-  showModal(`<div class="sheet tools-sheet"><h3 class="plain">Tools</h3>
-    <span class="tool-grp">This production</span>
-    ${row("media", NAV_ICON.media, "Media Calculator", "Recording time for each camera's cards")}
-    <span class="tool-grp">Library</span>
-    ${row("home", NAV_ICON.list, "Productions", "All your lists")}
-    ${row("archive", NAV_SVG(`<rect x="3.5" y="4" width="17" height="4.5" rx="1.5"/><path d="M5 8.5V19a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V8.5M10 12.5h4"/>`), "Archive", "Past productions")}
-    ${row("catalogs", NAV_SVG(`<path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>`), "Catalogs", "Browse a rental house")}
-    ${row("pkg", PKG_ICON, "Packages", "What comes with an item")}
-    ${row("clash", CLASH_ICON, "Doesn't work with", "And what to swap in")}
-    <span class="tool-grp">App</span>
-    ${row("settings", NAV_ICON.tools, "Settings", "Your details and the catalog")}
-    <button class="tool-row" type="button" data-act="theme" id="toolTheme"><span class="tr-i" aria-hidden="true">${THEME_ICONS[theme.pref]}</span><span class="tr-t"><b>Theme</b><small>${THEME_NAMES[theme.pref]} · tap to change</small></span></button>
-    <button class="tool-row" type="button" data-act="tool-share"><span class="tr-i" aria-hidden="true">${SHARE_ICON}</span><span class="tr-t"><b>Share AC Cam List</b><small>Send the app to a colleague</small></span></button>
-    <div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`);
-}
 function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
   try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
@@ -3806,7 +3933,7 @@ const rulesCounts = () => { const w = new Set(app.settings.rules.map(r => r.kind
 function viewRules() {
   const clash = app.rulesTo === "clash";
   return `<section class="pad"><div class="prod-head">
-      <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button></div>
+      <div class="ph-top"><button class="btn ghost back" type="button" data-act="back">← Back</button></div>
       <div class="ph-title"><h2 class="ph-name">${clash ? "Doesn't work with" : "Packages"}</h2><p class="ph-co">${clash ? "And what to swap in" : "What comes with a camera"}</p></div></div>
     <div class="settings rules-page">${rulesGroups(clash ? "clash" : "pkg")}</div></section>`;
 }
@@ -3823,7 +3950,7 @@ function viewSettings() {
   const meOpen = app.open.has("me") || !(me.name || "").trim();  // filled in once: folded away after that
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
-    <div class="prod-head">${app.setFrom && app.productions.some(x => x.id === app.setFrom) ? `<button class="btn ghost back" type="button" data-act="open" data-id="${esc(app.setFrom)}" data-keep="1">← Back to the list</button>` : `<button class="btn ghost back" type="button" data-act="home">← Productions</button>`}<div class="set-title"><h2 class="page">Settings</h2>${acct}</div></div>
+    <div class="prod-head"><button class="btn ghost back" type="button" data-act="back">← Back</button><div class="set-title"><h2 class="page">Settings</h2>${acct}</div></div>
     <div class="set-group me-group${meOpen ? " open" : ""}"><button class="me-head" type="button" data-act="me-toggle" aria-expanded="${meOpen}" aria-controls="meForm">
         <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
         <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
@@ -4026,7 +4153,7 @@ function viewProduction() {
   const ou2 = otherUnit(p), ost = ou2 ? prodStatus(ou2) : null;
   const sub = (p.company ? `<span class="ph-co" dir="auto">${esc(p.company)}</span>` : "") + (st ? `<span class="ph-st ${st.k}">${esc(st.t)}</span>` : "");
   const head = finder ? "" : `<div class="prod-head ph-one">
-      <span class="ph-side"><button class="iconbtn ph-back" type="button" data-act="home" aria-label="Back to Productions" title="Productions">${BACK_ICON_L}</button></span>
+      <span class="ph-side"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button></span>
       <div class="ph-title"><h2 class="ph-name" dir="auto">${esc(p.name || "Untitled production")}</h2></div>
       <span class="ph-side end"><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Export</button></span>
       ${sub ? `<p class="ph-sub">${sub}</p>` : ou2 && (ou2.company || ost) ? `<p class="ph-sub" aria-hidden="true">&nbsp;</p>` : ""}
@@ -4046,7 +4173,7 @@ function viewProduction() {
   ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "media" || app.tab === "fav" ? "" : extra}${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
     ${[["add", "Add Gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""]].map(([k, label, n]) =>
-      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}<button class="nav-tab" role="tab" type="button" data-act="tools" aria-haspopup="dialog" aria-selected="${app.tab === "media"}"><span class="nt-i">${NAV_ICON.tools}</span><span class="nt-l">Tools</span></button>
+      `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}<button class="nav-tab nav-tools" type="button" data-act="tools" aria-current="${app.tab === "media" ? "page" : "false"}"><span class="nt-i">${NAV_ICON.grid}</span><span class="nt-l">Tools</span></button>
   </div></nav>`;
 }
 
@@ -5169,9 +5296,10 @@ document.addEventListener("input", e => {
 const tabKey = (tab, mode) => (app.pid || "") + ":" + tab + (tab === "media" ? ":" + (mode || "list") : "");
 function tabSave() { if (app.view === "production") (app.scrolls || (app.scrolls = {}))[tabKey(app.tab, app.mcMode)] = window.scrollY; }
 const tabSaved = (tab, mode) => (app.scrolls || {})[tabKey(tab, mode)] || 0;
-const SWIPE_STOPS = [["add"], ["fav"], ["list"], ["media", "list"], ["media", "free"]];
+const SWIPE_TABS = [["add"], ["fav"], ["list"]], SWIPE_MEDIA = [["media", "list"], ["media", "free"]];
+const swStops = () => app.tab === "media" ? SWIPE_MEDIA : SWIPE_TABS;
 const sw = { x: 0, y: 0, t: 0, ok: false, dir: 0, ghost: null, side: 0, gTop: 0 };
-const swHere = () => SWIPE_STOPS.findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
+const swHere = () => swStops().findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
 const swCalm = () => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
 const swPane = () => document.getElementById("tabpane");
 let swExtra = "";  // what sits under the production's name (dates, unit, info), drawn into the page beside
@@ -5190,7 +5318,7 @@ function swMove(x, how, side) {
   }
   // with no picture beside it (at the first or last page) the bar under the name goes along with its page
   if (!sw.ghost) { const seg = swSeg(); if (seg) { seg.style.transition = how; seg.style.transform = x ? `translateX(${x}px)` : ""; } }
-  const seg = swSeg(), to = SWIPE_STOPS[swHere() + side], segKept = (sw.keeps || []).some(q => q.kept && q.live === seg);
+  const seg = swSeg(), to = swStops()[swHere() + side], segKept = (sw.keeps || []).some(q => q.kept && q.live === seg);
   if (seg) { const m = seg.querySelector(".mc-mode"), base = (app.mcMode || "list") === "free" ? 1 : 0;
     if (m) { m.style.setProperty("--mcd", how === "none" ? "0s" : ".2s"); m.style.setProperty("--mcp", segKept && to && to[0] === "media" ? Math.min(1, Math.max(0, base - x / innerWidth)) : base); } }
 }
@@ -5205,7 +5333,7 @@ function swPageHtml(stop) {
 }
 function swGhost(side) {
   swDropGhost();
-  const to = SWIPE_STOPS[swHere() + side], pane = swPane(), head = document.querySelector('#view > [data-keep="head"]');
+  const to = swStops()[swHere() + side], pane = swPane(), head = document.querySelector('#view > [data-keep="head"]');
   if (!to || !pane || !head) return;
   const [segHtml, body] = swPageHtml(to);
   const g = document.createElement("div");
@@ -5248,7 +5376,7 @@ document.addEventListener("touchmove", e => {
   const dx = e.touches[0].clientX - sw.x, dy = e.touches[0].clientY - sw.y;
   if (!sw.dir) { if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { sw.ok = false; return; } if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.8) sw.dir = 1; else return; }
   const pane = swPane(); if (!pane || swCalm()) return;
-  const side = dx < 0 ? 1 : -1, edge = !SWIPE_STOPS[swHere() + side];
+  const side = dx < 0 ? 1 : -1, edge = !swStops()[swHere() + side];
   if (!edge && sw.side !== side) swGhost(side);
   if (edge) swDropGhost();
   const x = edge ? dx * 0.25 : dx;  // at the first or last page it gives a little, then springs back
@@ -5283,7 +5411,7 @@ document.addEventListener("touchend", e => {
   if (!sw.ok) return; sw.ok = false;
   if (typeof drag !== "undefined" && drag.on) { swBack(); return; }
   const c = e.changedTouches[0], dx = c.clientX - sw.x, dy = c.clientY - sw.y, dt = Date.now() - sw.t;
-  const side = dx < 0 ? 1 : -1, here = swHere(), to = SWIPE_STOPS[here + side];
+  const side = dx < 0 ? 1 : -1, here = swHere(), to = swStops()[here + side];
   // far enough, or a quick flick
   const go = here >= 0 && to && Math.abs(dx) >= Math.abs(dy) * 1.8 && (Math.abs(dx) > innerWidth * 0.3 || (Math.abs(dx) > 50 && dt < 300));
   if (!go) { swBack(); return; }
@@ -5301,6 +5429,7 @@ const NAV_ICON = {
   fav: NAV_SVG(`<path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6-5-2.6-5 2.6.9-5.6-4-3.9 5.6-.8z"/>`),
   list: NAV_SVG(`<rect x="4.5" y="4.5" width="15" height="16" rx="3"/><path d="M9 3.5h6v2.5H9zM8.5 11h7M8.5 15h4.5"/>`),
   tools: NAV_SVG(`<path d="M14.500 5.500a4 4 0 0 0-5 5L4 16l4 4 5.500-5.500a4 4 0 0 0 5-5l-2.500 2.500-2.500-.5-.5-2.500z"/>`),
+  grid: NAV_SVG(`<rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/>`),
   media: NAV_SVG(`<path d="M8.5 3.5h7l3.5 3.5v12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 7 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M10.5 7v2.5M13 7v2.5M15.5 7.5v2"/>`)
 };
 /* My list | Any camera: drawn above the moving page, so a swipe between the two moves only the pill */
@@ -5308,8 +5437,8 @@ function mcSegHtml(id) {
   const on = (app.mcMode || "list") === "free" ? 1 : 0;
   return `<section class="pad mc-segwrap" data-keep="seg"${id ? ` id="mcseg"` : ""}><div class="mc-mode" role="tablist" style="--mcp:${on}"><span class="mc-pill" aria-hidden="true"></span>${[["list", "My list"], ["free", "Any camera"]].map(([v, t]) => `<button type="button" role="tab" data-act="mc-mode" data-v="${v}" aria-selected="${(app.mcMode || "list") === v}">${t}</button>`).join("")}</div></section>`;
 }
-function viewMedia(p, h) {
-  const freeMode = app.mcMode === "free";
+function viewMedia(p, h, solo) {
+  const freeMode = solo || app.mcMode === "free";
   if (mcOpen && (freeMode ? !isFree(mcOpen.id) : (() => { const R = mcRoute(p, mcOpen.id); return !R.p.items[R.id]; })())) mcOpen = null;
   const m = mainOf(p), u2 = unit2Of(p), camsOf = (q, pre) => Object.entries(q.items).filter(([id]) => hasRec(ITEM.get(id))).map(([id]) => pre + id);
   const cams = u2 ? [...camsOf(m, "m~"), ...camsOf(u2, "u2~")] : camsOf(p, "");
@@ -5327,7 +5456,7 @@ function recApply(p, id, fn) {
   touch(p); mediaRedraw(home);
 }
 function mediaRedraw(p) {
-  if (app.tab !== "media") return;
+  if (app.tab !== "media" && app.view !== "mcalc") return;
   document.querySelectorAll(".media-cam").forEach(el => { const id = el.id.slice(3); const html = mediaCamHtml(p, id); if (html) el.outerHTML = html; });
   refreshRows(p, []);
 }
@@ -5988,13 +6117,13 @@ document.addEventListener("click", e => {
   const p = cur();
   switch (act) {
     case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; app.fq = ""; render(); window.scrollTo(0, 0); break;
-    case "settings": if (app.view === "settings") break; closePreview(); app.setFrom = app.view === "production" ? app.pid : null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
+    case "settings": if (app.view === "settings") break; closePreview(); closeModal(); app.setFrom = null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
-    case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break;
+    case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break; closeModal();
       app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
-    case "rules-open": closePreview(); app.rulesTo = b.dataset.to === "clash" ? "clash" : "pkg"; app.view = "rules"; render(); window.scrollTo(0, 0); break;
+    case "rules-open": closePreview(); closeModal(); app.rulesTo = b.dataset.to === "clash" ? "clash" : "pkg"; app.view = "rules"; render(); window.scrollTo(0, 0); break;
     case "browse-new": app.formFor = null; app.dupFrom = null; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "open": {
@@ -6049,15 +6178,20 @@ document.addEventListener("click", e => {
       toast(act === "u2-copy" ? `2nd Unit list: a copy of the main list (${totals(q).lines} items)` : "2nd Unit list: empty");
       break;
     }
-    case "tools": toolsSheet(); break;
-    case "tool-go": {
-      const to = b.dataset.to; closeModal(); closePreview();
-      if (to === "media") { app.tab = "media"; render(); window.scrollTo(0, 0); }
-      else if (to === "pkg" || to === "clash") { app.rulesTo = to; app.view = "rules"; render(); window.scrollTo(0, 0); }
-      else if (to === "settings") { app.setFrom = app.view === "production" ? app.pid : null; app.view = "settings"; render(); window.scrollTo(0, 0); }
-      else { app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; app.fq = ""; if (to === "archive") app.archOpen = true; render(); window.scrollTo(0, 0); if (to === "catalogs") setTimeout(() => document.querySelector(".browse-head")?.scrollIntoView({ block: "start" }), 30); }
-      break;
-    }
+    case "tools": closePreview(); closeModal(); app.toolPid = app.view === "production" && p ? p.id : null; app.view = "tools"; render(); window.scrollTo(0, 0); break;
+    case "back": closePreview(); closeModal(); histPop(); break;
+    case "archive": closeModal(); app.sel = null; app.view = "archive"; render(); window.scrollTo(0, 0); break;
+    case "tool-link": toolLinkSheet(); break;
+    case "tool-link-set": app.toolPid = id || null; closeModal(); render(); break;
+    case "tool-media": {
+      const tp = app.toolPid && findProd(app.toolPid);
+      if (tp) { app.pid = tp.id; app.view = "production"; app.tab = "media"; app.mcMode = "list"; app.editing = null; render(); window.scrollTo(0, 0); break; }
+    } // falls through: no production, the calculator on its own
+    case "tool-media-solo": closeModal(); mcOpen = null; app.view = "mcalc"; render(); window.scrollTo(0, 0); break;
+    case "mc-house": if (app.settings.mcHouse !== b.dataset.house) { app.settings.mcHouse = b.dataset.house; touchSettings(); mcOpen = null; render(); } break;
+    case "cat-pick": showModal(`<div class="sheet pick-sheet"><h3 class="plain">Which catalog?</h3><div class="pick-opts">${HOUSES.map(h => `<button class="pick-opt" type="button" data-act="browse" data-house="${esc(h.id)}"><span class="po-dot" style="--hc: var(--house-${esc(h.id)})" aria-hidden="true"></span><b>${esc(h.name)}</b><small><span class="num">${houseCount(h)}</span> items</small></button>`).join("")}</div><div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`); break;
+    case "pick-list-set": { const sh = b.closest(".pick-sheet"); if (sh) { sh.querySelectorAll(".pick-opt").forEach(x => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); }); sh.dataset.to = b.dataset.id; } break; }
+    case "pick-list-add": { const sh = b.closest(".pick-sheet"); if (sh) addToPicked(sh.dataset.item, sh.dataset.to || ""); break; }
     case "arch-toggle": app.archOpen = !app.archOpen; rerenderKeepScroll(); break;
     case "pm-arch": { const x = findProd(id); if (!x) break; const was = x.arch, to = isArchived(x) ? "off" : "on"; x.arch = to; touch(x); closeModal(); render(); undoable(to === "on" ? "Archived" : "Restored", `“${x.name || "production"}”`, () => { if (was === undefined) delete x.arch; else x.arch = was; touch(x); render(); }); break; }
     case "pm-select": closeModal(); app.sel = new Set([id]); render(); break;
@@ -6187,7 +6321,7 @@ document.addEventListener("click", e => {
       if (inp) inp.value = Math.max(0, Math.min(9, (parseInt(inp.value, 10) || 0) + (act === "pk-inc" ? 1 : -1)));
       break;
     }
-    case "cinc": case "cdec": {
+    case "cinc": case "cdec": if (p && p.browse && act === "cinc" && app.view === "browse") { pickListFor(id); break; } {
       const l = p.items[id];
       const cur0 = l ? (f ? l[f] : lineQty(l)) : 0;
       const ids = setQty(p, id, cur0 + (act === "cinc" ? 1 : -1), l ? f : undefined);
@@ -6647,6 +6781,8 @@ document.addEventListener("submit", e => {
     else if (src) { p = copyProduction(src, fields); delete p.unit2; app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
     else {
       p = newProduction(fields); app.productions.push(p); app.tab = "add";
+      if (app.pendingAdd && ITEM.has(app.pendingAdd) && ITEM.get(app.pendingAdd).h.id === p.houseId) { setQty(p, app.pendingAdd, 1); app.tab = "list"; toast(`Started with ${ITEM.get(app.pendingAdd).it.name}`); }
+      app.pendingAdd = null;
       const sl = v.startList && savedLists().find(x => x.id === v.startList);
       if (sl) { if (sl.houseId === p.houseId) { const r = applySavedList(p, sl, 1, "add"); app.tab = "list"; toast(`Started from “${sl.name}” · ${r.n} items`); } else toast(`“${sl.name}” is for another rental house, so the list starts empty.`); }
     }
