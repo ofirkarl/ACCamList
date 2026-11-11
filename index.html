@@ -1957,6 +1957,9 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .to-cat { border: 0; background: none; padding: 0; margin: 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--accent); cursor: pointer; white-space: nowrap; }
 .item .specs .to-cat, .l-meta .to-cat { margin-inline-start: 2px; }
 .item .specs .to-cat::before, .l-meta .to-cat::before { content: "+ "; }
+/* Favorites: which rental house these belong to, in one quiet line */
+.fav-house-note { margin: 10px 2px 0; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+.fav-pad > .fav-house-note + .fav-tabs { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -4883,7 +4886,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
   if (!sub) { const c0 = h.categories.find(c => c.id === app.cat && c.subcategories.length) || h.categories.find(c => c.subcategories.length); sub = c0.subcategories[0]; }
   const cat = catOfSub(h, sub), [hc, hs] = splitKey(sub.key);
   const gsel = mode === "base" ? (!sub.groupBy && grpOf(e.it, e.s) === e.it.brand ? "__brand" : grpOf(e.it, e.s)) : own && own.g ? own.g : pg && sub === subByKey(h, pc + "/" + ps) ? pg : sub.groupBy ? defaultGroup({}, sub, h) : "__brand";
-  const sec = e ? e.it.section : opts.addTo || opts.fromSec || typicalSection(h, hc, hs, "accessories");
+  const sec = e ? e.it.section : opts.addTo || typicalSection(h, hc, hs, "accessories");
   const secs = optList(allSections().map(s => [s.id, secName(s.id)]), sec);
   const hint = mode === "base" ? `On the ${esc(h.name)} site: ${esc(base.site_name || base.name)}${base.sku ? ` · SKU ${esc(base.sku)}` : ""}`
     : mode === "own" ? "" : opts.addTo ? `It goes on the Camera List, and into ${esc(h.name)}'s catalog for next time. Check where it should live.` : `Added to ${esc(h.name)}'s catalog for you. Add it to any list like other items.`;
@@ -4910,7 +4913,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
       ${opts.addTo ? "" : `<div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the Camera List.">${esc(id ? noteOf(id) : "")}</textarea></div>`}
       ${opts.addTo ? "" : `<div class="field"><label for="ci-sku">SKU</label><input id="ci-sku" name="sku" maxlength="40" value="${esc(mode === "base" ? e.it.sku || "" : own && own.sku || "")}" placeholder="Optional"></div>`}
       ${mode !== "base" && !opts.addTo ? `<div class="field"><label for="ci-url">Link</label><input id="ci-url" name="url" type="url" inputmode="url" maxlength="500" value="${esc(own && own.url || "")}" placeholder="Optional: the product page"></div>` : ""}
-      ${mode === "new" && !opts.addTo ? `<div class="field"><label for="ci-sec">Camera List section</label><select id="ci-sec" name="section">${secs}</select><span class="hint">Where it goes on the Camera List and in the exports.</span></div>` : `<input type="hidden" id="ci-sec" name="section" value="${esc(sec)}">`}
+      <input type="hidden" id="ci-sec" name="section" value="${esc(sec)}">
       ${resetBtn}
     </div></details>
     ${mode === "new" ? `<div class="modal-actions">${actions}<span class="grow"></span>
@@ -5187,8 +5190,8 @@ function savedListOpenHtml(L) {
       ${listSub(L)}<span class="sl-bar">${mixBar(pp)}</span>
       <div class="sl-act wide">${listMulHtml(L, m)}<button class="btn primary sl-add" type="button" data-act="list-add" data-id="${esc(L.id)}">${ADD_ICON}<span>Add to list</span></button></div></div>${secs}</div>`;
 }
-function favTabsHtml() { const f = favoritesFor(cur()), n = f.starred.length + f.custom.length, nl = savedLists().filter(L => L.houseId === cur().houseId).length;
-  return `<div class="seg sm fav-tabs" role="group" aria-label="Favorites">${[["items", "Items", n], ["lists", "Lists", nl]].map(([v, t, k]) => `<button type="button" data-act="fav-tab" data-v="${v}" aria-pressed="${(app.favTab || "items") === v}">${t}${k ? ` <span class="num">${k}</span>` : ""}</button>`).join("")}</div>`; }
+function favTabsHtml() { const f = favoritesFor(cur()), n = f.starred.length + f.custom.length, nl = savedLists().filter(L => L.houseId === cur().houseId).length, hn = (houseById(cur().houseId) || {}).name || "";
+  return `<p class="fav-house-note">Saved per rental house. These are ${esc(hn)}'s.</p><div class="seg sm fav-tabs" role="group" aria-label="Favorites">${[["items", "Items", n], ["lists", "Lists", nl]].map(([v, t, k]) => `<button type="button" data-act="fav-tab" data-v="${v}" aria-pressed="${(app.favTab || "items") === v}">${t}${k ? ` <span class="num">${k}</span>` : ""}</button>`).join("")}</div>`; }
 function viewFavorites(p, h) {
   const f = favoritesFor(p);
   const cRows = f.custom.map(c => {
@@ -5682,7 +5685,7 @@ function fromCustomDone(p, o, id, made) {
       if (!l.custom || (lid !== o.lineId && flat(l.name) !== n)) continue;
       const had = q.items[id] ? lineQty(q.items[id]) : 0;
       setQty(q, id, had + lineQty(l));
-      const nl = q.items[id]; if (nl) { if (!nl.note && l.note) nl.note = l.note; nl.section = l.section; if ((l.children || []).length && !(nl.children || []).length) nl.children = l.children; }
+      const nl = q.items[id]; if (nl) { if (!nl.note && l.note) nl.note = l.note; if ((l.children || []).length && !(nl.children || []).length) nl.children = l.children; }
       delete q.items[lid]; touch(q);
     }
   }

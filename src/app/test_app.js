@@ -828,3 +828,9 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.fromCustomDone(q, { name: "Gizmo Cart", section: "display", favKey: A.favKeyCustom("Gizmo Cart", "display") }, nid, true);
   ok(!A.app.settings.favorites[A.favKeyCustom("Gizmo Cart", "display")] && A.app.settings.favorites[nid] && q.items[nid] && q.items[nid].qty === 3 && q.items[nid].note === "blue" && !q.items[lid], "saved: the star and the line (quantity and note kept) are the catalog item now");
   delete A.app.settings.favorites[nid]; A.app.view = "home"; }
+
+// --- the item dialog never asks for a Camera List section (the category decides); Favorites says which rental house it shows
+{ const U = A.houseById("utopia"); modals.length = 0; A.catEditDialog(U, null, null, { name: "X" }); const d = modals.pop() || "";
+  ok(!/<select id="ci-sec"/.test(d) && /type="hidden" id="ci-sec" name="section"/.test(d), "New item: no Camera List section field, it follows the category");
+  const q = A.newProduction({ name: "Note", houseId: "utopia" }); A.app.productions.push(q); A.app.pid = q.id; A.app.view = "production"; A.app.tab = "fav";
+  ok(/Saved per rental house. These are Utopia's./.test(A.viewFavorites(q, U)), "Favorites: one line on which rental house these belong to"); A.app.view = "home"; }
