@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, viewFavs, viewTools, viewHome, pickListFor, pageKey, waFmt, savedLists, catEditDialog, modalsSeen: () => 0 };`)();
+;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, modalsSeen: () => 0 };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -627,7 +627,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   { const t = JSON.parse(JSON.stringify(l.rec)); A.recSet(l, e, pc, "fps", "120"); A.recSet(l, e, pc, "mode", "4K 16:9 → UHD"); ok(l.rec.mode === "4K 16:9 → UHD" && l.rec.fps <= 120, "choosing a value sets it on the camera's line"); l.rec = t; }
   l.rec = { card: cdx2, codec: "ARRIRAW", mode: "4.6K 3:2 Open Gate", fps: 24 };
   A.setQty(pc, cdx2, 8); ok(/<b>8<\/b>/.test(A.mediaCamHtml(pc, a35)) && /<span class="t-l">Total<\/span><b>7 h 28 min<\/b>/.test(A.mediaCamHtml(pc, a35)), "with 8 on the list: how long they record together");
-  ok(/No cameras on the list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
+  ok(/No cameras on this list yet/.test(A.viewMedia(A.newProduction({ name: "x", houseId: "utopia" }), A.houseById("utopia"))), "the Media tab with no camera says what to do");
   const lf = find("utopia", /^ARRI Alexa Mini LF$/); A.setQty(pc, lf, 1); const ll = pc.items[lf]; ll.rec = { card: cdx1, codec: "ProRes 4444", mode: "3.8K LF 16:9 → UHD", fps: 24 };
   ok(Math.floor(A.recResult(ll, A.ITEM.get(lf)).per / 60) === 121, "Mini LF ProRes 4444 UHD 24 fps: 2 h 1 min on 1TB, as ARRI's sheet says");
   const v2 = find("utopia", /^Sony Venice 2/), axs = find("utopia", /1TB AXS S66/);
@@ -778,7 +778,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 { const q = A.newProduction({ name: "Top", company: "Keshet", houseId: "utopia", prep: "2099-11-18", shootStart: "2099-11-20", shootEnd: "2099-11-25" }); A.app.productions.push(q); A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list";
   for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 2); break; }
   const v = A.viewProduction();
-  ok(/ph-one/.test(v) && /data-act="back" aria-label="Back"/.test(v) && /ph-co" dir="auto">Keshet/.test(v) && /class="ph-st soon">Prep in/.test(v), "one header row: back, name, company and status, Export");
+  ok(/ph-stack/.test(v) && /data-act="back" aria-label="Back"/.test(v) && /ph-co" dir="auto">Keshet/.test(v) && /class="ph-st soon">Prep in/.test(v), "the top: back, Export, the name, company and status under it");
   ok(/class="pdates1"/.test(v) && /Shoot 20–25 Nov/.test(v) && /pd1-m"> \d days/.test(v) && /Prep 18 Nov/.test(v) && !/class="pdates two"|class="ph-status/.test(v), "shoot and prep on one slim row");
   ok(/placeholder="Search 1 item"/.test(v) && /data-act="sec-all" data-open="0" aria-label="Close all"/.test(v) && /data-act="list-save" aria-label="Save as a list/.test(v) && !/class="btn save-list"|summary-line/.test(v), "search with Close all, Save as a list and Clear beside it; no big Save button");
   q.shootStart = q.shootEnd = q.prep = ""; ok(/pdates1 ph-add/.test(A.viewProduction()), "no dates: Add dates in the same row");
@@ -786,31 +786,21 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- the lens finder opens with the focal length empty
 { const keep = A.app.finder; A.app.finder = null; ok(A.fin().f === "" && A.fin().t === "", "Find a lens: focal length starts empty, not 50mm"); A.app.finder = keep; }
 
-// --- round 14: Tools as a page, the start page's shortcuts, the bottom bar, which list to add to
-{ const q = A.newProduction({ name: "Linked", houseId: "utopia", shootStart: "2099-11-20", shootEnd: "2099-11-21" }); A.app.productions.push(q);
+// --- round 16: each tool in one place. The work bar: Add Gear, Favorites, Camera List. The start page: Media Calculator, Catalogs, Packages
+{ const q = A.newProduction({ name: "Linked", company: "Keshet", houseId: "utopia", shootStart: "2099-11-20", shootEnd: "2099-11-21" }); A.app.productions.push(q); q.updatedAt = Date.now() + 1e6;
   for (const [id, e] of A.ITEM) if (e.h.id === "utopia" && A.hasRec(e)) { A.setQty(q, id, 1); break; }
   A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list"; const v = A.viewProduction();
-  ok((v.match(/class="nav-tab" role="tab"/g) || []).length === 3 && /class="nav-tab nav-tools" type="button" data-act="tools"/.test(v) && !/aria-haspopup="dialog"/.test(v), "the bottom bar: Add Gear, Favorites, Camera List, then Tools apart");
+  ok((v.match(/class="nav-tab" role="tab"/g) || []).length === 3 && !/data-act="tools"/.test(v), "the work bar: Add Gear, Favorites, Camera List, nothing else");
+  ok(/class="prod-head ph-stack"/.test(v) && /class="ph-nav"><button class="iconbtn ph-back"[^]*?Export<\/button><\/div>\s*<h2 class="ph-name"/.test(v) && /ph-co" dir="auto">Keshet/.test(v), "the production's top: back and Export, the name on its own line, the company under it");
+  A.app.tab = "media"; A.viewProduction(); ok(A.app.tab === "list", "a production never opens on the old Media tab");
   ok(A.pageKey() === "p:" + q.id, "a production is one page whatever its tab");
-  A.app.view = "tools"; A.app.toolPid = q.id; let t = A.viewTools();
-  ok(/Working on/.test(t) && /Linked/.test(t) && /data-act="tool-media"/.test(t) && /1 camera from the list/.test(t) && /data-act="browse" data-house="fitussi"/.test(t) && /data-act="archive"/.test(t) && /data-act="settings"/.test(t), "Tools from a production: works on it; the calculator, the catalogs, the library and the app");
-  A.app.toolPid = null; t = A.viewTools(); ok(/No production/.test(t) && /Pick cameras by hand/.test(t), "Tools from the start page: no production, the calculator on its own");
   A.app.view = "home"; const hm = A.viewHome();
-  ok(/class="home-shorts"/.test(hm) && /data-act="tool-media-solo"/.test(hm) && /data-act="cat-pick"/.test(hm) && /data-act="tools"/.test(hm) && !/browse-head/.test(hm), "the start page: Media calc, Catalogs, Packages and All tools above the productions");
-  modals.length = 0; let itemId = Object.keys(q.items)[0]; A.pickListFor(itemId); const sh = modals.pop() || "";
-  ok(/Add to which list\?/.test(sh) && /Linked/.test(sh) && /already has 1/.test(sh) && /\+ New production/.test(sh), "+ Add in a catalog asks which list: that house's productions, or a new one");
+  ok(/class="home-shorts"/.test(hm) && /data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm) && /data-act="rules-open" data-to="pkg"/.test(hm) && !/data-act="tools"|tool-favs|browse-head/.test(hm), "the start page: Media Calculator, Catalogs and Packages above the productions");
+  A.app.settings.mcList = undefined; A.app.view = "mcalc";
+  ok(A.mcListId() === q.id, "the Media Calculator starts on the production worked on most recently");
+  let mc = A.viewMcalc(); ok(/<select id="mc-list"/.test(mc) && /<option value="none">No list · any camera<\/option>/.test(mc) && new RegExp(`<option value="${q.id}" selected>Linked`).test(mc) && /media-cam/.test(mc), "one choice: which list, or none");
+  A.app.settings.mcList = "none"; mc = A.viewMcalc(); ok(A.mcListId() === "" && /<option value="none" selected>/.test(mc) && /data-act="mc-add"/.test(mc), "no list: any camera, from every catalog");
+  A.app.settings.mcList = undefined;
+  A.app.browseP = { id: "browse", browse: true, name: "", houseId: "fitussi", items: {} }; A.app.view = "browse"; const br = A.viewBrowse();
+  ok(/data-act="browse" data-house="fitussi" aria-pressed="true"/.test(br) && /data-act="browse" data-house="utopia" aria-pressed="false"/.test(br), "Catalogs: one page, the rental house a switch at its top");
   A.app.view = "home"; A.app.pid = null; }
-
-// --- Favorites without a production: one rental house at a time; Add asks which list; a saved list can start a new production
-{ A.app.settings.favHouse = "utopia"; A.app.favP = null; A.app.view = "favs"; A.app.favTab = "items";
-  const ids = []; for (const [id, e] of A.ITEM) if (e.h.id === "utopia" && ids.length < 2) ids.push(id);
-  for (const id of ids) A.app.settings.favorites[id] = { name: A.ITEM.get(id).it.name, section: A.ITEM.get(id).it.section };
-  A.app.settings.lists = [{ id: "LS", name: "Kit", houseId: "utopia", items: ids.map(id => ({ id, qty: 1 })) }];
-  let f = A.viewFavs();
-  ok(/data-act="fav-house" data-house="utopia" aria-pressed="true"/.test(f) && /data-act="fav-tab"/.test(f) && /data-act="cinc"/.test(f), "Favorites on its own: a rental house switch, Items and Lists, + Add on each");
-  A.app.favTab = "lists"; f = A.viewFavs(); ok(/data-act="list-add" data-id="LS"/.test(f), "its saved lists, each with Add");
-  const q = A.newProduction({ name: "Target U", houseId: "utopia" }); A.app.productions.push(q);
-  modals.length = 0; A.pickListFor("", { kind: "list", list: "LS", house: "utopia" }); const sh = modals.pop() || "";
-  ok(/data-kind="list"/.test(sh) && /Target U/.test(sh) && /Start a new production from this list/.test(sh), "a saved list: which production it goes on, or a new production that starts from it");
-  A.app.formStart = "LS"; A.app.view = "form"; ok(/<option value="LS" selected>/.test(A.viewForm()), "a new production from a saved list: Start from is filled in"); A.app.formStart = "";
-  for (const id of ids) delete A.app.settings.favorites[id]; A.app.settings.lists = []; A.app.view = "home"; A.app.favTab = "items"; }
