@@ -1474,7 +1474,7 @@ body.kb-room .app { padding-bottom: 70vh; }
 .l-grid > .l-bottom { grid-area: q; justify-self: end; }
 .l-grid.wide > .l-bottom { justify-self: stretch; }
 /* browsing a catalog without a production: look, search, star; nothing to add */
-.browse-on .item .ctl, .browse-on .item .add, .browse-on .f-row .ctl { display: none; }
+.browse-on .item .ctl, .browse-on .item .add, .browse-on .f-row .ctl, .browse-on .f-card .ctl { display: none; }
 .browse-on .item .nm-btn { pointer-events: none; }
 .browse-pane { padding-bottom: 24px; }
 .browse-head { margin-top: 32px; }
@@ -1774,7 +1774,9 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .ph-stack .ph-export { min-height: 40px; padding-inline: 16px; }
 .prod-head.ph-stack .ph-name { margin: 2px 0 0; max-width: 100%; font-size: 24px; line-height: 1.15; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ph-stack .ph-sub { margin-top: 4px; max-width: 100%; }
-.home-shorts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Find a lens from the start page: the page's own title row replaces the finder's (no Done: back goes home) */
+.lens-solo .finder .f-head { display: none; }
+.lens-solo .finder { padding-top: 4px; }
 .mc-pick { padding-top: 8px; padding-bottom: 4px; }
 .mc-pick .field { margin: 0; }
 .rules-seg { margin: 8px 0 4px; }
@@ -1993,7 +1995,7 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.productions.find(p => p.id === app.pid);
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
 /* the Media Calculator works on one list, or on none (any camera, from every catalog). The choice is kept: the list picked last,
    or at first the production worked on most recently */
@@ -3508,16 +3510,17 @@ function render() {
   else if (app.view === "browse" && cur()) v.innerHTML = viewBrowse();
   else if (app.view === "archive") v.innerHTML = viewHome(true);
   else if (app.view === "mcalc" && cur()) v.innerHTML = viewMcalc();
+  else if (app.view === "lensfind" && cur()) v.innerHTML = viewLensFind();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
   document.body.classList?.toggle("nav-on", app.view === "production");
-  document.body.classList?.toggle("browse-on", app.view === "browse");
+  document.body.classList?.toggle("browse-on", app.view === "browse" || app.view === "lensfind");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
-  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc") && cur() ? cur().houseId : hp ? hp.dataset.value : "");
+  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "lensfind") && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
-  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules"].includes(app.view));
+  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind"].includes(app.view));
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if (app.view === "production" && app.tab === "fav") applyFavFilter();
   histTrack(); hist.last = pageSnap();
@@ -3619,6 +3622,14 @@ function viewBrowse() {
     <section class="pad solo-house">${houseSeg("browse", h.id)}</section>
     <div class="tabpane browse-pane">${viewCatalog(p, h)}</div>`;
 }
+/* Find a lens on its own, from the start page: one rental house's lenses at a time, to look up (nothing is added) */
+function lensSolo() { const hid = houseById(app.settings.lensHouse) ? app.settings.lensHouse : HOUSES[0].id; if (!app.lensP || app.lensP.houseId !== hid) app.lensP = { id: "lens", browse: true, name: "", houseId: hid, items: {} }; return app.lensP; }
+function viewLensFind() {
+  const p = cur(), h = houseById(p.houseId);
+  return `${pageHead("Find a lens", `<span>Your focal length first · shorter above it, longer below</span>`)}
+    <section class="pad solo-house">${houseSeg("lens-house", h.id)}</section>
+    <div class="tabpane lens-solo">${finderHtml(p, h)}</div>`;
+}
 /* the Media Calculator: which list it works on (or none: any camera), then the cameras */
 function viewMcalc() {
   const p = cur(), h = houseById(p.houseId), id = mcListId();
@@ -3629,7 +3640,7 @@ function viewMcalc() {
 }
 /* the start page's tools, each in one place: the Media Calculator, the catalogs, packages and rules */
 const homeShortcuts = () => { const s = (act, icon, t, extra) => `<button class="hs-btn" type="button" data-act="${act}"${extra || ""}><span class="hs-i" aria-hidden="true">${icon}</span><span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", NAV_ICON.media, "Media calc")}${s("catalogs", BOOK_ICON, "Catalogs")}${s("rules-open", PKG_ICON, "Packages", ` data-to="pkg"`)}</div>`; };
+  return `<div class="home-shorts">${s("mcalc", NAV_ICON.media, "Media calc")}${s("lensfind", LENS_ICON, "Find a lens")}${s("catalogs", BOOK_ICON, "Catalogs")}${s("rules-open", PKG_ICON, "Packages", ` data-to="pkg"`)}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -4123,7 +4134,7 @@ function viewProduction() {
   const ou2 = otherUnit(p), ost = ou2 ? prodStatus(ou2) : null;
   const sub = (p.company ? `<span class="ph-co" dir="auto">${esc(p.company)}</span>` : "") + (st ? `<span class="ph-st ${st.k}">${esc(st.t)}</span>` : "");
   const head = finder ? "" : `<div class="prod-head ph-stack">
-      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Export</button></div>
+      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
       <h2 class="ph-name" dir="auto">${esc(p.name || "Untitled production")}</h2>
       ${sub ? `<p class="ph-sub">${sub}</p>` : ou2 && (ou2.company || ost) ? `<p class="ph-sub" aria-hidden="true">&nbsp;</p>` : ""}
     </div>`;
@@ -6151,6 +6162,8 @@ document.addEventListener("click", e => {
     case "back": closePreview(); closeModal(); histPop(); break;
     case "archive": closeModal(); app.sel = null; app.view = "archive"; render(); window.scrollTo(0, 0); break;
     case "mcalc": closeModal(); mcOpen = null; app.view = "mcalc"; render(); window.scrollTo(0, 0); break;
+    case "lensfind": closeModal(); fin().more = {}; app.view = "lensfind"; render(); window.scrollTo(0, 0); break;
+    case "lens-house": if (app.settings.lensHouse !== b.dataset.house) { app.settings.lensHouse = b.dataset.house; touchSettings(); fin().more = {}; render(); } break;
     case "catalogs": { const hid = houseById(app.settings.catHouse) ? app.settings.catHouse : HOUSES[0].id; app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
     case "arch-toggle": app.archOpen = !app.archOpen; rerenderKeepScroll(); break;
     case "pm-arch": { const x = findProd(id); if (!x) break; const was = x.arch, to = isArchived(x) ? "off" : "on"; x.arch = to; touch(x); closeModal(); render(); undoable(to === "on" ? "Archived" : "Restored", `“${x.name || "production"}”`, () => { if (was === undefined) delete x.arch; else x.arch = was; touch(x); render(); }); break; }
