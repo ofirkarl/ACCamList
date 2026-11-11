@@ -1814,6 +1814,10 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .line .l-grid > .nm-col .nm { font-weight: 400; }
 .line .l-bottom .stepper input { width: 30px; }
 .line .l-bottom .stepper button { width: 29px; }
+/* a typed-in item: one small link to put it in the catalog */
+.to-cat { border: 0; background: none; padding: 0; margin: 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--accent); cursor: pointer; white-space: nowrap; }
+.item .specs .to-cat, .l-meta .to-cat { margin-inline-start: 2px; }
+.item .specs .to-cat::before, .l-meta .to-cat::before { content: "+ "; }
 </style>
 
 <div class="app">
@@ -4739,7 +4743,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
   if (!sub) { const c0 = h.categories.find(c => c.id === app.cat && c.subcategories.length) || h.categories.find(c => c.subcategories.length); sub = c0.subcategories[0]; }
   const cat = catOfSub(h, sub), [hc, hs] = splitKey(sub.key);
   const gsel = mode === "base" ? (!sub.groupBy && grpOf(e.it, e.s) === e.it.brand ? "__brand" : grpOf(e.it, e.s)) : own && own.g ? own.g : pg && sub === subByKey(h, pc + "/" + ps) ? pg : sub.groupBy ? defaultGroup({}, sub, h) : "__brand";
-  const sec = e ? e.it.section : opts.addTo || typicalSection(h, hc, hs, "accessories");
+  const sec = e ? e.it.section : opts.addTo || opts.fromSec || typicalSection(h, hc, hs, "accessories");
   const secs = optList(allSections().map(s => [s.id, secName(s.id)]), sec);
   const hint = mode === "base" ? `On the ${esc(h.name)} site: ${esc(base.site_name || base.name)}${base.sku ? ` · SKU ${esc(base.sku)}` : ""}`
     : mode === "own" ? "" : opts.addTo ? `It goes on the Camera List, and into ${esc(h.name)}'s catalog for next time. Check where it should live.` : `Added to ${esc(h.name)}'s catalog for you. Add it to any list like other items.`;
@@ -4749,7 +4753,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
     : opts.addTo ? `<button class="btn ghost" type="button" data-act="ci-listonly" data-to="${esc(opts.addTo)}">Only on this list</button>` : "";
   const resetBtn = mode === "base" && e.it.edited ? `<div class="more-acts"><button class="btn ghost" type="button" data-act="cat-item-reset" data-id="${esc(id)}">Undo edits</button></div>` : "";
   const brands = [...new Set([...ITEM.values()].filter(x => x.h === h).map(x => x.it.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
-  showModal(`<datalist id="ci-brands">${brands.map(b => `<option value="${esc(b)}"></option>`).join("")}</datalist><form class="form dialog" id="catItemForm" data-id="${esc(id || "")}" data-mode="${mode}"${opts.addTo ? ` data-addto="${esc(opts.addTo)}"` : ""} autocomplete="off">
+  showModal(`<datalist id="ci-brands">${brands.map(b => `<option value="${esc(b)}"></option>`).join("")}</datalist><form class="form dialog" id="catItemForm" data-id="${esc(id || "")}" data-mode="${mode}"${opts.addTo ? ` data-addto="${esc(opts.addTo)}"` : ""}${opts.fromFav ? ` data-fromfav="${esc(opts.fromFav)}"` : ""}${opts.fromLine ? ` data-fromline="${esc(opts.fromLine)}"` : ""}${opts.fromName ? ` data-fromname="${esc(opts.fromName)}" data-fromsec="${esc(opts.fromSec || "")}"` : ""} autocomplete="off">
     <h3 class="plain">${mode === "new" ? opts.addTo ? "Add to the list and the catalog" : "New item" : "Edit item"}</h3>
     <div class="field"><label for="ci-name">Name</label><input id="ci-name" name="name" maxlength="160" value="${esc(e ? e.it.name : opts.name || "")}" required>
       ${hint ? `<span class="hint">${hint}</span>` : ""}</div>
@@ -5050,7 +5054,7 @@ function viewFavorites(p, h) {
   const cRows = f.custom.map(c => {
     const lid = customLineId(p, c.name, c.section);
     const ctl = lid ? stepper("l", lid, p.items[lid].qty, null, false) : `<button class="add" type="button" data-act="addfav" data-name="${esc(c.name)}" data-section="${esc(c.section)}">+ Add</button>`;
-    return `<li class="item ${lid ? "on" : ""}">${starBtn(c.key, c)}<span class="info"><span class="nm">${esc(c.name)}</span><span class="specs"><span>${esc(secName(c.section))}</span></span></span><span class="ctl">${ctl}</span></li>`;
+    return `<li class="item ${lid ? "on" : ""}">${starBtn(c.key, c)}<span class="info"><span class="nm">${esc(c.name)}</span><span class="specs"><span>${esc(secName(c.section))}</span><button class="to-cat" type="button" data-act="to-catalog" data-fav="${esc(c.key)}" data-name="${esc(c.name)}" data-section="${esc(c.section)}">Add to catalog</button></span></span><span class="ctl">${ctl}</span></li>`;
   }).join("");
   const starred = favByCategory(h, f.starred.map(e => [e, rowHtml(p, e.it, "")]));
   const typed = cRows ? favCatHtml("custom", "Not in the catalog", "var(--tape-custom)", tapeIcon("custom"), f.custom.length, cRows) : "";
@@ -5130,7 +5134,7 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid${l.tx !== undefined ? " wide" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : ""}</span>
+      <div class="l-grid${l.tx !== undefined ? " wide" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}</span>
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
       <div class="l-bottom">${qtys}</div></div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
@@ -5518,6 +5522,32 @@ function applyListFilter() {
   });
   const none = document.getElementById("lqNone"); if (none) none.hidden = !q || shown > 0;
   stripe(wrap);
+}
+/* a typed-in item (a favorite "Not in the catalog", or a line on the Camera List) joins the rental house's catalog:
+   if the catalog already has it, it's linked at once; otherwise the new-item dialog opens with its name and a best guess of where it goes */
+function toCatalog(p, o) {
+  const h = houseById(p.houseId); if (!h || !o.name) return;
+  const g = catalogGuess(h, o.name, o.section) || {};
+  if (g.match) { fromCustomDone(p, o, g.match, false); return; }
+  catEditDialog(h, null, g.sub ? g.sub.key + (g.group ? "/" + g.group : "") : null, { name: o.name, brand: g.brand, fromName: o.name, fromSec: o.section, fromFav: o.favKey, fromLine: o.lineId });
+}
+/* the star and this production's lines move from the typed-in item to the catalog item; nothing is left twice */
+function fromCustomDone(p, o, id, made) {
+  const e = ITEM.get(id); if (!e) return;
+  const fav = app.settings.favorites, fk = o.favKey || favKeyCustom(o.name, o.section);
+  if (fav[fk]) { delete fav[fk]; fav[id] = { name: e.it.name, section: e.it.section }; touchSettings(); }
+  const n = flat(o.name);
+  for (const q of [mainOf(p) || p, unit2Of(mainOf(p) || p)].filter(Boolean)) {
+    for (const [lid, l] of Object.entries(q.items)) {
+      if (!l.custom || (lid !== o.lineId && flat(l.name) !== n)) continue;
+      const had = q.items[id] ? lineQty(q.items[id]) : 0;
+      setQty(q, id, had + lineQty(l));
+      const nl = q.items[id]; if (nl) { if (!nl.note && l.note) nl.note = l.note; nl.section = l.section; if ((l.children || []).length && !(nl.children || []).length) nl.children = l.children; }
+      delete q.items[lid]; touch(q);
+    }
+  }
+  rerenderKeepScroll();
+  toast(made ? `In ${e.h.name}'s catalog now › ${e.c.name}${e.s.direct ? "" : " › " + e.s.name}` : `${e.h.name}'s catalog already has ${e.it.name}: linked to it`);
 }
 function addCustomLine(p, name, sec) {
   const id = uid("custom-");
@@ -6409,6 +6439,8 @@ document.addEventListener("click", e => {
       toast("Copy made. Rename it here.");
       break;
     }
+    case "to-catalog": if (p) { const l = id && p.items[id];
+      toCatalog(p, l ? { name: l.name, section: l.section, lineId: id, favKey: favKeyCustom(l.name, l.section) } : { name: b.dataset.name, section: b.dataset.section, favKey: b.dataset.fav }); } break;
     case "ci-listonly": {  // a typed-in item that stays off the catalog
       const f2 = document.getElementById("catItemForm"), nm = (f2?.elements.name.value || "").trim();
       if (!nm) { f2?.elements.name.focus(); break; }
@@ -6664,6 +6696,7 @@ document.addEventListener("submit", e => {
     if (id) setNote(id, v.note);
     const e2 = id && ITEM.get(id);
     if (e2) { app.open.add(e2.c.id); app.open.add(e2.s.key); app.open.add(e2.s.key + "/" + grpOf(e2.it, e2.s)); }
+    if (e2 && f.dataset.fromname) { closeModal(); fromCustomDone(p, { name: f.dataset.fromname, section: f.dataset.fromsec, favKey: f.dataset.fromfav, lineId: f.dataset.fromline }, id, true); return; }
     const addTo = f.dataset.addto;
     if (addTo && e2) { setQty(p, id, 1); if (p.items[id]) p.items[id].section = addTo; touch(p); }  // typed into the Cam list: it goes on the list too
     closeModal(); rerenderKeepScroll();
