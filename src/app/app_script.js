@@ -1625,6 +1625,7 @@ const THEME_ICONS = {
   auto: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>`,
   light: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`,
   dark: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>` };
+const SHARE_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"></path><path d="m7.5 7.5 4.5-4.5 4.5 4.5"></path><path d="M5 12v6.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V12"></path></svg>`;
 const THEME_NAMES = { auto: "Auto (follows your device)", light: "Light", dark: "Dark" };
 const theme = { pref: "light", host: document.documentElement ? document.documentElement.getAttribute("data-theme") : null };
 try { const v = localStorage.getItem("acTheme"); if (v === "light" || v === "dark" || v === "auto") theme.pref = v; } catch (err) {}
@@ -1634,6 +1635,7 @@ function applyTheme() {
   if (want) { if (root.getAttribute("data-theme") !== want) root.setAttribute("data-theme", want); } else root.removeAttribute("data-theme");
   const b = document.getElementById("themeBtn");
   if (b) { b.innerHTML = THEME_ICONS[theme.pref]; b.setAttribute("aria-label", "Theme: " + THEME_NAMES[theme.pref] + ". Tap to change."); b.title = "Theme: " + THEME_NAMES[theme.pref]; }
+  const tt = document.getElementById("toolTheme"); if (tt) { tt.querySelector(".tr-i").innerHTML = THEME_ICONS[theme.pref]; tt.querySelector("small").textContent = THEME_NAMES[theme.pref] + " · tap to change"; }
 }
 function setTheme(v) {
   if (!["light", "dark", "auto"].includes(v)) return;
@@ -1689,6 +1691,7 @@ function render() {
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
   houseTheme((app.view === "production" || app.view === "browse") && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
+  document.body.classList?.toggle("in-prod", app.view === "production");
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if (app.view === "production" && app.tab === "fav") applyFavFilter();
   uiSave(); navSync();
@@ -1795,7 +1798,10 @@ function toolsSheet() {
     ${row("catalogs", NAV_SVG(`<path d="M5 4.5h10a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>`), "Catalogs", "Browse a rental house")}
     ${row("pkg", PKG_ICON, "Packages", "What comes with an item")}
     ${row("clash", CLASH_ICON, "Doesn't work with", "And what to swap in")}
+    <span class="tool-grp">App</span>
     ${row("settings", NAV_ICON.tools, "Settings", "Your details and the catalog")}
+    <button class="tool-row" type="button" data-act="theme" id="toolTheme"><span class="tr-i" aria-hidden="true">${THEME_ICONS[theme.pref]}</span><span class="tr-t"><b>Theme</b><small>${THEME_NAMES[theme.pref]} · tap to change</small></span></button>
+    <button class="tool-row" type="button" data-act="tool-share"><span class="tr-i" aria-hidden="true">${SHARE_ICON}</span><span class="tr-t"><b>Share AC Cam List</b><small>Send the app to a colleague</small></span></button>
     <div class="sheet-acts"><button class="btn ghost" type="button" data-act="modal-close">Close</button></div></div>`);
 }
 function prodMenu(id) {
@@ -2281,19 +2287,25 @@ function viewProduction() {
   // shoot and prep: one slim bar, a small label over each date; tap it to change the dates
   const dCell = (icon, label, val) => `<span class="pd-cell"><span class="pd-l">${icon}<span>${label}</span></span><span class="pd-v">${esc(val)}</span></span>`;
 
-  const shootTxt = p.shootStart ? dCell(CHIP_CAL, `Shoot${days > 1 ? ` · ${days} days` : ""}`, fmtSpan(p.shootStart, p.shootEnd)) : "";
-  const prepTxt = p.prep ? dCell(PREP_ICON, "Prep", fmtDM(p.prep)) : "";
   // the lens finder gets the whole screen: nothing above the tabs
   const finder = app.tab === "add" && fin().on;
-  // the top is the same on every page (and stays put on a swipe); what's under the name slides with its page
-  const head = finder ? "" : `<div class="prod-head">
-      <div class="ph-top"><button class="btn ghost back" type="button" data-act="home">← Productions</button><button class="btn primary sm" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
-      <div class="ph-title"><h2 class="ph-name">${esc(p.name || "Untitled production")}</h2>${p.company ? `<p class="ph-co">${esc(p.company)}</p>` : ""}</div>
+  /* one row at the top, the same on every page (and it stays put on a swipe): back, the name with the company and where the production stands, Export.
+     With two units, a unit without a company or status keeps the empty line, so switching units doesn't move the page */
+  const ou2 = otherUnit(p), ost = ou2 ? prodStatus(ou2) : null;
+  const sub = (p.company ? `<span class="ph-co" dir="auto">${esc(p.company)}</span>` : "") + (st ? `<span class="ph-st ${st.k}">${esc(st.t)}</span>` : "");
+  const head = finder ? "" : `<div class="prod-head ph-one">
+      <span class="ph-side"><button class="iconbtn ph-back" type="button" data-act="home" aria-label="Back to Productions" title="Productions">${BACK_ICON_L}</button></span>
+      <div class="ph-title"><h2 class="ph-name" dir="auto">${esc(p.name || "Untitled production")}</h2></div>
+      <span class="ph-side end"><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Export</button></span>
+      ${sub ? `<p class="ph-sub">${sub}</p>` : ou2 && (ou2.company || ost) ? `<p class="ph-sub" aria-hidden="true">&nbsp;</p>` : ""}
     </div>`;
+  // shoot and prep on one slim row; tap it to change the dates
+  const dPart = (icon, label, val, more) => `<span class="pd1"><span class="pd1-i">${icon}</span><span class="pd1-t"><b>${label} ${esc(val)}</b>${more ? `<span class="pd1-m"> ${more}</span>` : ""}</span></span>`;
+  const shootTxt = p.shootStart ? dPart(CHIP_CAL, "Shoot", fmtSpan(p.shootStart, p.shootEnd), days > 1 ? `${days} days` : "") : "";
+  const prepTxt = p.prep ? dPart(PREP_ICON, "Prep", fmtDM(p.prep), "") : "";
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
-      ${st ? `<p class="ph-status ${st.k}">${esc(st.t)}</p>` : otherUnit(p) && prodStatus(otherUnit(p)) ? `<p class="ph-status ph-hold" aria-hidden="true">&nbsp;</p>` : ""}
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
-      <div class="ph-chips">${shootTxt || prepTxt ? `<button class="pdates${shootTxt && prepTxt ? " two" : ""}" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${prepTxt}</button>` : `<button class="ph-chip ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}</div>
+      ${shootTxt || prepTxt ? `<button class="pdates1" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${shootTxt && prepTxt ? `<span class="pd1-sep" aria-hidden="true"></span>` : ""}${prepTxt}</button>` : `<button class="pdates1 ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
     </div></section>`;
   swExtra = extra;
   return `<section class="pad" data-keep="head">
@@ -3129,6 +3141,11 @@ function runSavedList(p, id, mult, mode) {
 const listProd = L => ({ items: Object.fromEntries(L.items.map((it, i) => [it.id || "c" + i, { section: it.id ? (ITEM.get(it.id) ? ITEM.get(it.id).it.section : "accessories") : it.section, qty: it.qty, name: listItemName(it) }])) });
 const listMulHtml = (L, m) => `<span class="stepper sm sl-mul"><button type="button" data-act="list-mul" data-id="${esc(L.id)}" data-d="-1" aria-label="One set less">−</button><span class="sl-x" aria-label="${m} set${m === 1 ? "" : "s"}">×${m}</span><button type="button" data-act="list-mul" data-id="${esc(L.id)}" data-d="1" aria-label="One set more">+</button></span>`;
 const listMeta = L => `<span class="meta"><span><span class="num">${L.items.length}</span> item${L.items.length === 1 ? "" : "s"} · <span class="num">${listPcs(L)}</span> pcs</span></span>`;
+/* Close all / Open all: one icon button, the same on the Camera List and in Favorites */
+const FOLD_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20l5-5 5 5M7 4l5 5 5-5"/></svg>`;
+const UNFOLD_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>`;
+const allBtn = (act, anyOpen) => `<button class="btn icon-btn lt-ico" type="button" data-act="${act}" data-open="${anyOpen ? 0 : 1}" aria-label="${anyOpen ? "Close all" : "Open all"}" title="${anyOpen ? "Close all" : "Open all"}">${anyOpen ? FOLD_ICON : UNFOLD_ICON}</button>`;
+const BACK_ICON_L = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;
 const ADD_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>`;
 const BACK_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>`;
 const listSub = L => `<span class="sl-sub">${L.note ? `<span class="sl-note" dir="auto">${esc(L.note)}</span><span class="sl-dot" aria-hidden="true">·</span>` : ""}<span class="sl-cnt"><span class="num">${L.items.length}</span> item${L.items.length === 1 ? "" : "s"} · <span class="num">${listPcs(L)}</span> pcs</span></span>`;
@@ -3171,7 +3188,7 @@ function viewFavorites(p, h) {
     <div class="list-tools fav-tools" data-keep="tools">
       <label class="search lsearch" for="fq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input data-sug="search" id="fq" type="search" placeholder="Search favorites" autocomplete="off" value="${esc(app.fq || "")}" aria-label="Search Favorites"></label>
-      ${keys.length > 1 ? `<button class="btn ghost sm" type="button" data-act="fav-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button>` : ""}</div>
+      ${keys.length > 1 ? allBtn("fav-all", anyOpen) : ""}</div>
     <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
     <div class="fav-group" data-fg="star">
       ${starred || typed ? starred + typed : `<p class="hint">Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</p>`}</div>
@@ -3598,12 +3615,10 @@ function viewList(p, h) {
     </div>`;
   }).join("");
   return `<section class="pad">
-    <div class="list-tools" data-keep="tools">
+    <div class="list-tools lt-one" data-keep="tools">
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-        <input data-sug="search" id="lq" type="search" placeholder="Search the list" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List"></label>
-      <div class="lt-row"><span class="summary-line"><b class="num">${t.lines}</b> items · <span class="num">${t.pcs}</span> pcs · ${esc(h.name)}</span>
-        ${t.lines ? `<span class="grp"><button class="btn ghost sm" type="button" data-act="sec-all" data-open="${anyOpen ? 0 : 1}">${anyOpen ? "Close all" : "Open all"}</button><button class="btn ghost sm clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button></span>` : ""}</div></div>
-    ${t.lines ? `<button class="btn save-list" type="button" data-act="list-save">${LIST_ICON}<span>Save as a list</span><small>to Favorites</small></button>` : ""}
+        <input data-sug="search" id="lq" type="search" placeholder="${t.lines ? `Search ${t.lines} item${t.lines === 1 ? "" : "s"}` : "Search the list"}" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List (${t.lines} items, ${t.pcs} pcs)"></label>
+      ${t.lines ? allBtn("sec-all", anyOpen) + `<button class="btn icon-btn lt-ico" type="button" data-act="list-save" aria-label="Save as a list in Favorites" title="Save as a list">${LIST_ICON}</button><button class="btn icon-btn lt-ico clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button>` : ""}</div>
     ${mainSrc && Object.keys(mainSrc.items || {}).length ? `<button class="btn ghost sm u2-pull" type="button" data-act="u2-pull" data-id="${esc(p.id)}">${COPY_ICON}<span>Copy from Main Unit</span></button>` : ""}
     <div id="copyFallback"></div>
     ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
@@ -4598,6 +4613,7 @@ document.addEventListener("click", e => {
       break;
     }
     case "share-app": shareApp(); break;
+    case "tool-share": closeModal(); shareApp(); break;
     case "pk-hit": {  // the match goes into the menus, as if picked there
       const k = b.dataset.k; dd[k] = pickOf(b.dataset.id);
       const wrap = document.getElementById("pk-" + k); if (!wrap) break;

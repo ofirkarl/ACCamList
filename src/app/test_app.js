@@ -471,7 +471,7 @@ ok(rdr && rdr[1].qty === 1 && /CFast/.test(rdr[1].autoWhy || ""), `a CFast reade
 // --- production header and Cam list
 A.app.pid = p.id; A.app.view = "production"; A.app.tab = "list";
 const vp = A.viewProduction();
-ok(/data-act="preview"/.test(vp) && /Preview &amp; export/.test(vp) && !/data-act="dup"/.test(vp) && !/>Details</.test(vp) && !/data-act="copy"/.test(vp), "header: Preview & export at the top; no Details, Duplicate or Copy text");
+ok(/data-act="preview"/.test(vp) && /class="btn primary sm ph-export"[^>]*>Export</.test(vp) && !/data-act="dup"/.test(vp) && !/>Details</.test(vp) && !/data-act="copy"/.test(vp), "header: Export at the top; no Details, Duplicate or Copy text");
 ok(/class="ph-name"/.test(vp) && !/data-act="pinfo"/.test(vp) && !/class="pinfo/.test(vp) && /Camera List/.test(vp), "header: name and a slim dates bar, no Info panel; tab named Camera List");
 ok(/id="lq"/.test(vp) && /data-act="sec-toggle"/.test(vp) && /data-act="sec-all"/.test(vp) && !/Wireless video/.test(vp), "Cam list: search, sections that close, no wireless box");
 A.app.tab = "add"; A.fin().on = true; ok(!/class="prod-head"/.test(A.viewProduction()), "the lens finder hides everything above the tabs"); A.fin().on = false;
@@ -752,12 +752,12 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.app.tab = "list"; ok(/class="pdates/.test(A.viewProduction()), "the Camera List still shows the dates");
   A.app.tab = "fav";
   let fh = A.viewFavorites(fp, U);
-  ok((fh.match(/data-act="fav-cat"/g) || []).length >= 6 && /data-act="fav-all" data-open="0">Close all/.test(fh), "favorite categories close one by one, or all at once");
+  ok((fh.match(/data-act="fav-cat"/g) || []).length >= 6 && /data-act="fav-all" data-open="0" aria-label="Close all"/.test(fh), "favorite categories close one by one, or all at once");
   ok(!/fav-gh|summary-line/.test(fh), "no extra heading or count line at the top of Favorites");
   A.app.open.add("favx/" + A.ITEM.get(ids[0]).c.id); fh = A.viewFavorites(fp, U);
-  ok(/class="fav-cat closed"/.test(fh) && /data-open="0">Close all/.test(fh), "a closed category is marked, Close all stays while others are open");
+  ok(/class="fav-cat closed"/.test(fh) && /data-open="0" aria-label="Close all"/.test(fh), "a closed category is marked, Close all stays while others are open");
   const allK = [...new Set(A.favoritesFor(fp).starred.map(e => e.c.id)), "custom"]; for (const k of allK) A.app.open.add("favx/" + k);
-  ok(/data-open="1">Open all/.test(A.viewFavorites(fp, U)), "all closed: Open all"); for (const k of allK) A.app.open.delete("favx/" + k);
+  ok(/data-open="1" aria-label="Open all"/.test(A.viewFavorites(fp, U)), "all closed: Open all"); for (const k of allK) A.app.open.delete("favx/" + k);
   A.app.settings.lists = [{ id: "L1", name: "Doc kit", note: "Light", houseId: "utopia", items: [{ id: ids[0], qty: 2 }] }];
   A.app.favTab = "lists"; fh = A.viewFavorites(fp, U);
   ok(/sl-head/.test(fh) && /sl-add/.test(fh) && !/sl-mul/.test(fh) && /Light/.test(fh), "a saved list card: name, note, Add; the sets are chosen inside the list");
@@ -773,3 +773,13 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   store["accam-send-helper"] = "1"; ok(A.waFmt() === "docx", "with the helper app on, WhatsApp sends the Word file");
   delete store["accam-send-helper"]; if (nav) Object.defineProperty(globalThis, "navigator", nav); else delete globalThis.navigator;
   A.app.settings.send = undefined; A.app.view = "home"; }
+
+// --- round 13: one header row, one dates row, search with its actions
+{ const q = A.newProduction({ name: "Top", company: "Keshet", houseId: "utopia", prep: "2099-11-18", shootStart: "2099-11-20", shootEnd: "2099-11-25" }); A.app.productions.push(q); A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list";
+  for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 2); break; }
+  const v = A.viewProduction();
+  ok(/ph-one/.test(v) && /data-act="home" aria-label="Back to Productions"/.test(v) && /ph-co" dir="auto">Keshet/.test(v) && /class="ph-st soon">Prep in/.test(v), "one header row: back, name, company and status, Export");
+  ok(/class="pdates1"/.test(v) && /Shoot 20–25 Nov/.test(v) && /pd1-m"> \d days/.test(v) && /Prep 18 Nov/.test(v) && !/class="pdates two"|class="ph-status/.test(v), "shoot and prep on one slim row");
+  ok(/placeholder="Search 1 item"/.test(v) && /data-act="sec-all" data-open="0" aria-label="Close all"/.test(v) && /data-act="list-save" aria-label="Save as a list/.test(v) && !/class="btn save-list"|summary-line/.test(v), "search with Close all, Save as a list and Clear beside it; no big Save button");
+  q.shootStart = q.shootEnd = q.prep = ""; ok(/pdates1 ph-add/.test(A.viewProduction()), "no dates: Add dates in the same row");
+  A.app.view = "home"; }
