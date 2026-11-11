@@ -1780,6 +1780,40 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .mc-pick { padding-top: 8px; padding-bottom: 4px; }
 .mc-pick .field { margin: 0; }
 .rules-seg { margin: 8px 0 4px; }
+/* round 18: one look for the gear on Add Gear, Favorites and the Camera List. Favorites' compact rows are the rule:
+   the category heading (color tile, name 15px, count, chevron), a sub-heading band in small capitals, and rows of the same height */
+#tree > details.cat > summary { padding-block: 7px; gap: 10px; }
+#tree .cat-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; gap: 10px; line-height: 1.2; }
+#listSecs .section h3, .sl-open .section h3 { background: none; padding: 0; border-radius: 0; min-height: 30px; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--fg); }
+#listSecs .section h3 > span:first-child, .sl-open .section h3 > span:first-child { gap: 10px; }
+#listSecs .section h3 .tape, .sl-open .section h3 .tape { margin-inline-end: 0; }
+#listSecs .section, .sl-open .section { gap: 6px; padding-top: 12px; }
+#tree details.sub > summary { padding: 9px 14px; min-height: 40px; box-sizing: border-box; background: var(--tint-soft); color: var(--ink); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+#tree details.sub > summary .sub-title, #tree details.sub > summary .sub-title > span { font: inherit; letter-spacing: inherit; text-transform: inherit; }
+#tree details.sub > summary .cnt { letter-spacing: 0; }
+#tree details.brand > summary { padding: 8px 14px; min-height: 36px; box-sizing: border-box; font-size: 13px; }
+#tree li.item { padding: 9px 16px 9px 8px; }
+/* the chevrons: closed points right, open points down, on all three pages */
+#tree details > summary .chev { transform: rotate(-90deg); }
+#tree details[open] > summary .chev { transform: none; }
+#listSecs .section.closed h3, .sl-open .section.closed h3 { background: none; }
+/* the counts beside a heading: the same small grey numbers on all three pages */
+#listSecs .section h3 .cnt, .sl-open .section h3 .cnt, #tree > details.cat > summary .cnt { font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--muted); }
+/* a Camera List line, like a Favorites row: the star before the name, the stepper on the right; the product page, edit and remove small in the corner */
+.lines li.line { padding: 9px 16px 9px 8px; position: relative; }
+.line .l-grid { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "h s n q"; column-gap: 6px; row-gap: 6px; }
+.line .l-grid.wide { grid-template-areas: "h s n n" "q q q q"; }
+.line .l-grid > .handle { margin-inline-start: -2px; }
+.line .l-grid > .star { grid-area: s; align-self: center; }
+.line .l-grid { position: relative; }
+.line .l-grid > .tools { grid-area: auto; position: absolute; top: -6px; right: -8px; margin: 0; gap: 0; }
+.line .l-grid > .tools > .ext, .line .l-grid > .tools > .ext-gap, .line .l-grid > .tools > .iconbtn, .line .l-grid > .tools > .x { width: 26px; height: 24px; min-height: 0; font-size: 15px; display: inline-grid; place-items: center; }
+.line .l-grid > .tools svg { width: 15px; height: 15px; }
+.line .l-grid > .l-bottom { align-self: center; margin-top: 20px; }
+.line .l-grid.wide > .l-bottom { margin-top: 0; }
+.line .l-grid > .nm-col .nm { font-weight: 400; }
+.line .l-bottom .stepper input { width: 30px; }
+.line .l-bottom .stepper button { width: 29px; }
 </style>
 
 <div class="app">
@@ -5096,8 +5130,8 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid${l.tx !== undefined ? " wide" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button><span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : ""}</span>
-        <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}${starBtn(key, { name: l.name, section: l.section })}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
+      <div class="l-grid${l.tx !== undefined ? " wide" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : ""}</span>
+        <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
       <div class="l-bottom">${qtys}</div></div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}

@@ -809,3 +809,9 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 { A.app.settings.lensHouse = "fitussi"; A.app.lensP = null; A.app.view = "lensfind"; const v = A.viewLensFind();
   ok(/data-act="lens-house" data-house="fitussi" aria-pressed="true"/.test(v) && /class="tabpane lens-solo"/.test(v) && /data-fin="f"/.test(v) && /Find a lens/.test(v), "Find a lens on its own: the rental house switch, then the finder");
   A.app.view = "home"; const hm = A.viewHome(); ok(/data-act="lensfind"/.test(hm) && /data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm), "the start page: Media calc, Find a lens, Catalogs, Packages"); }
+
+// --- round 18: a Camera List line like a Favorites row: the star before the name, the page, edit and remove in the corner
+{ const q = A.newProduction({ name: "Rows", houseId: "utopia" }); A.app.productions.push(q); let id0; for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 1); id0 = id; break; }
+  A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list"; const v = A.viewProduction();
+  ok(/<button class="handle"[^]*?<\/button><button class="star"[^]*?<span class="nm-col">/.test(v) && /<span class="tools">[^]*?data-act="edit-line"[^]*?data-act="remove"/.test(v) && !/<span class="tools">[^<]*(<a[^]*?<\/a>)?<button class="star"/.test(v), "Camera List line: handle, star, name, stepper; product page, edit and remove in the corner");
+  A.app.view = "home"; }
