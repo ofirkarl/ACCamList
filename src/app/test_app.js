@@ -783,3 +783,5 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(/placeholder="Search 1 item"/.test(v) && /data-act="sec-all" data-open="0" aria-label="Close all"/.test(v) && /data-act="list-save" aria-label="Save as a list/.test(v) && !/class="btn save-list"|summary-line/.test(v), "search with Close all, Save as a list and Clear beside it; no big Save button");
   q.shootStart = q.shootEnd = q.prep = ""; ok(/pdates1 ph-add/.test(A.viewProduction()), "no dates: Add dates in the same row");
   A.app.view = "home"; }
+// --- the lens finder opens with the focal length empty
+{ const keep = A.app.finder; A.app.finder = null; ok(A.fin().f === "" && A.fin().t === "", "Find a lens: focal length starts empty, not 50mm"); A.app.finder = keep; }
