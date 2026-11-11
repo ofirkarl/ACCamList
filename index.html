@@ -1960,6 +1960,15 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 /* Favorites: which rental house these belong to, in one quiet line */
 .fav-house-note { margin: 10px 2px 0; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
 .fav-pad > .fav-house-note + .fav-tabs { margin-top: 8px; }
+/* the start page's spacing, by how things belong together: 4px inside a group (the date and hello),
+   12px between parts of one block (the Productions heading, its cards, the archive, the hint), 24px between blocks */
+.greet { padding-block: 18px 0; gap: 4px; }
+.greet + .home-shorts { margin: 24px 0 0; }
+.home-shorts + .home-head { padding-block: 0; margin: 24px 0 12px; }
+.home-shorts + .empty-state { margin-top: 24px; }
+.prod-list { gap: 12px; }
+.prod-list + .arch-row { margin-top: 12px; }
+.home-head ~ .lp-hint { margin: 12px 2px 0; }
 </style>
 </head>
 <body>
