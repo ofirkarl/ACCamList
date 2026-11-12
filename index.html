@@ -5428,8 +5428,8 @@ function mediaCamHtml(p, id) {
     set += pair(tap("codec", "Format", esc(c.n)), info("Color sampling", r.cs ? esc(r.cs) : "–"), "codec");
     // the recording resolution: its size, and after it the file's name (UHD, 2K…) or a note on a size the maker doesn't give
     const rr = x => { const t = x.out ? esc(x.out) : note(x); return px(x) + (t ? ` <span class="t-b">${t}</span>` : ""); };
-    if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("Recording resolution", px(now)), "mode")
-      : pair(tap("sensor", "Sensor", esc(sensorText(now.sensor))), parts.filter(x => x.sensor === now.sensor).length > 1 ? tap("mode", "Recording resolution", rr(now)) : info("Recording resolution", rr(now)), "sensor", "mode");
+    if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("File resolution", px(now)), "mode")
+      : pair(tap("sensor", "Sensor coverage", esc(sensorText(now.sensor))), parts.filter(x => x.sensor === now.sensor).length > 1 ? tap("mode", "File resolution", rr(now)) : info("File resolution", rr(now)), "sensor", "mode");
     set += pair(tap("fps", "Frame rate", `${fpsLabel(l.rec.fps)} fps`), info("Bit rate", mbps ? `${Math.round(mbps).toLocaleString("en-US")} Mbps` : "–"), "fps");
   } else set += `<div class="mc-pair one"><label class="mc-tile tap mc-inp"><span class="t-l">Bit rate</span><span class="t-v"><input type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></label></div>`;
   // the card, how many of it, and what they come to
