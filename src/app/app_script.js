@@ -198,7 +198,7 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" ? camCur() : app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.productions.find(p => p.id === app.pid);
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
 /* the Media Calculator works on one list, or on none (any camera, from every catalog). The choice is kept: the list picked last,
    or at first the production worked on most recently */
@@ -1717,6 +1717,7 @@ function render() {
   else if (app.view === "tools") v.innerHTML = viewTools();
   else if (app.view === "favs" && cur()) v.innerHTML = viewFavsSolo();
   else if (app.view === "cams" && cur()) v.innerHTML = viewCams();
+  else if (app.view === "camprint" && cur()) v.innerHTML = viewCamPrint();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
@@ -1724,9 +1725,9 @@ function render() {
   document.body.classList?.toggle("browse-on", app.view === "browse" || app.view === "lensfind" || app.view === "favs");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
-  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "lensfind" || app.view === "favs" || (app.view === "cams" && cur() && !cur().browse)) && cur() ? cur().houseId : hp ? hp.dataset.value : "");
+  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "lensfind" || app.view === "favs" || ((app.view === "cams" || app.view === "camprint") && cur() && !cur().browse)) && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
-  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind", "tools", "favs", "cams"].includes(app.view));
+  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind", "tools", "favs", "cams", "camprint"].includes(app.view));
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
@@ -1808,11 +1809,11 @@ function viewHome(archPage) {
   return `<section class="pad">
     ${greetHtml()}
     ${sel ? "" : homeShortcuts()}
-    ${list.length ? `<div class="home-head"><h3 class="home-sec">Productions <span class="num">${active.length}</span></h3>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ New production</button>`}</div>` : ""}
+    ${list.length ? `<div class="home-head"><h3 class="home-sec">Productions <span class="num">${active.length}</span></h3>${sel ? `<span class="hint">Tap productions to select them</span>` : `<button class="btn primary" type="button" data-act="new">+ Create list</button>`}</div>` : ""}
     ${list.length ? `${cards ? `<ul class="prod-list">${cards}</ul>` : `<p class="hint">No current productions.</p>`}${archRow}${archHtml}${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
-      <button class="btn primary" type="button" data-act="new">+ New production</button></div>`}
+      <button class="btn primary" type="button" data-act="new">+ Create list</button></div>`}
   </section>${selDock}`;
 }
 /* the top of a page outside a production: back, the title, and a line under it (the same row as a production's) */
@@ -3424,8 +3425,8 @@ function mediaCamHtml(p, id) {
     if (k === "codec") body = r.prof.map(x => opt(k, x.n, x === c, esc(x.n))).join("");
     else if (k === "fps") body = `<div class="mc-chips">${REC_FPS.filter(f => !md || f <= md[3]).map(f => opt(k, f, l.rec.fps === f, fpsLabel(f))).join("")}</div>`;
     else if (k === "mode" && outOnly) body = parts.map(x => opt(k, x.m[0], x === now, esc(x.sensor), px(x))).join("");
-    else if (k === "sensor") {  // only the sensor areas, one line each
-      body = [...new Set(parts.map(x => x.sensor))].map(sn => opt(k, sn, sn === now.sensor, esc(sensorText(sn)))).join("");
+    else if (k === "sensor") {  // each sensor area with the file it makes, one line each: the file resolution follows from it
+      body = parts.map(x => opt("mode", x.m[0], x === now, esc(sensorText(x.sensor)) + (x.out ? ` → ${esc(x.out)}` : ""), px(x) + (note(x) ? ` · ${note(x)}` : ""))).join("");
     } else if (k === "mode") {  // the recording resolutions this sensor area makes
       body = parts.filter(x => x.sensor === now.sensor).map(x => opt(k, x.m[0], x === now, esc(x.out || kOf(x.sensor) || px(x)), px(x) + (note(x) ? ` · ${note(x)}` : ""))).join("");
     } else if (k === "cam") return mcCamList(p, F, id);
@@ -3445,7 +3446,7 @@ function mediaCamHtml(p, id) {
     // the recording resolution: its size, and after it the file's name (UHD, 2K…) or a note on a size the maker doesn't give
     const rr = x => { const t = x.out ? esc(x.out) : note(x); return px(x) + (t ? ` <span class="t-b">${t}</span>` : ""); };
     if (now) set += outOnly ? pair(tap("mode", "Resolution", esc(now.sensor)), info("File resolution", px(now)), "mode")
-      : pair(tap("sensor", "Sensor coverage", esc(sensorText(now.sensor))), parts.filter(x => x.sensor === now.sensor).length > 1 ? tap("mode", "File resolution", rr(now)) : info("File resolution", rr(now)), "sensor", "mode");
+      : pair(tap("sensor", "Sensor coverage", esc(sensorText(now.sensor))), info("File resolution", rr(now)), "sensor");
     set += pair(tap("fps", "Frame rate", `${fpsLabel(l.rec.fps)} fps`), info("Bit rate", mbps ? `${Math.round(mbps).toLocaleString("en-US")} Mbps` : "–"), "fps");
   } else set += `<div class="mc-pair one"><label class="mc-tile tap mc-inp"><span class="t-l">Bit rate</span><span class="t-v"><input type="number" inputmode="decimal" min="1" max="20000" placeholder="0" data-rec="mbps" data-id="${u}" value="${l.rec.mbps || ""}"><i>Mbps</i></span></label></div>`;
   // the card, how many of it, and what they come to
@@ -3622,12 +3623,11 @@ const NAV_ICON = {
 /* ---------- More tools: the tools that aren't on the start page, one row each ---------- */
 const CARDS_ICON = NAV_SVG(`<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><rect x="5.8" y="8.3" width="4.6" height="4.6" rx="1"/><path d="M13 9h5M13 12h3.5M5.8 15.8h12.2"/>`);
 const COLS_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>`;
-const PRINT_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>`;
 function viewTools() {
   const row = (act, icon, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}><span class="hs-i" aria-hidden="true">${icon}</span><span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
   return `${pageHead("More tools", "<span>Everything that isn't on the start page</span>")}
     <section class="pad tools-list">
-      ${row("cams", CARDS_ICON, "Camera cards", "Each camera's setup, on a card")}
+      ${row("cams", CARDS_ICON, "Multicam management", "Each camera's setup, and its card")}
       ${row("lensfind", LENS_ICON, "Find a lens", "By focal length, per rental house")}
       ${row("rules-open", PKG_ICON, "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
@@ -3646,7 +3646,14 @@ function viewFavsSolo() {
    One camera at a time (A, B, C…); Compare sets them side by side; Print cards makes a PDF of cards to cut out and stick on the cameras.
    The cards belong to a list (kept on the production) or, with no list, to the app. Codec, sensor coverage, file resolution,
    frame rate and media are the Media Calculator's own choices, under the same names; the frame rate isn't printed */
-const CAM_COLORS = ["#e5484d", "#1e9be8", "#22b45e", "#f5a524", "#8b5cf6", "#14b8a6", "#f97316", "#d946ef"];
+const CAM_COLORS = ["#3ee24b", "#e8f20c", "#ff2e93", "#ff6a10", "#e5484d", "#1e9be8", "#8b5cf6", "#14b8a6"];  // fluorescent green, yellow, pink, orange (gaffer tape), red, blue, violet, teal
+/* the letter on a color: dark on the bright fluorescents, white on the rest */
+function camInk(hex) { const n = parseInt(String(hex || "").slice(1), 16); if (isNaN(n)) return "#fff"; const ch = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  const L = .2126 * ch(n >> 16 & 255) + .7152 * ch(n >> 8 & 255) + .0722 * ch(n & 255); return L > .35 ? "#18171d" : "#fff"; }
+/* the production on the cards: the list's, or with no list the name and date typed here */
+const camMeta = () => app.settings.camsMeta || (app.settings.camsMeta = { name: "", date: "" });
+const camProdName = p => p.browse ? (camMeta().name || "").trim() : p.name || "";
+const camProdWhen = p => p.browse ? fmtRange(camMeta().date, camMeta().date) : fmtRange(p.shootStart, p.shootEnd);
 const CAM_LETTERS = "ABCDEFGH".split("");
 function camListId() { const k = app.settings.camList; if (k === "none") return ""; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
 function camCur() { const id = camListId(); if (id) return findProd(id); if (!app.camP) app.camP = { id: "cams", browse: true, name: "", houseId: "any", items: {} }; return app.camP; }
@@ -3691,16 +3698,16 @@ function camVals(p, c) {
 function viewCams() {
   const p = cur(), id = camListId(), list = camsOf(p), c = camSel(p), cmp = !!app.camCmp && list.length > 1;
   const opts = `<option value="none"${id ? "" : " selected"}>No list</option>` + mcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}>${esc(x.name || "Untitled production")}</option>`).join("");
-  const n = list.filter(x => camE(x) || x.name).length;
-  const head = `<section class="pad" data-keep="head"><div class="prod-head ph-stack">
-      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><button class="btn primary sm ph-export" type="button" data-act="cam-print" ${n ? "" : "disabled"}>${PRINT_ICON}<span>Print cards</span></button></div>
-      <h2 class="ph-name">Camera cards</h2><p class="ph-sub"><span>Each camera's setup, on a card to stick on it</span></p></div></section>`;
-  const chips = list.map(x => `<button type="button" class="cam-chip${x === c && !cmp ? " on" : ""}" style="--k:${x.col}" data-act="cam-sel" data-k="${esc(x.k)}" aria-pressed="${x === c && !cmp}" aria-label="Camera ${x.L}">${esc(x.L)}</button>`).join("")
+  const head = pageHead("Multicam management", "<span>Each camera's setup, and its card</span>"), M = camMeta();
+  const chips = list.map(x => `<button type="button" class="cam-chip${x === c && !cmp ? " on" : ""}" style="--k:${x.col};--kf:${camInk(x.col)}" data-act="cam-sel" data-k="${esc(x.k)}" aria-pressed="${x === c && !cmp}" aria-label="Camera ${x.L}">${esc(x.L)}</button>`).join("")
     + (list.length < 8 ? `<button type="button" class="cam-chip add" data-act="cam-add" aria-label="Add a camera">+</button>` : "");
   const bar = `<div class="cam-chips"><div class="cc-in">${chips}</div>${list.length > 1 ? `<button type="button" class="cam-cmpbtn" data-act="cam-cmp" aria-pressed="${cmp}">${COLS_ICON}<span>Compare</span></button>` : ""}</div>`;
   const body = !c ? `<div class="empty-state"><h3>No cameras yet</h3><button class="btn primary" type="button" data-act="cam-add">+ Add a camera</button></div>` : cmp ? camCompareHtml(p, list) : camFormHtml(p, c);
-  return `${head}<section class="pad mc-pick cam-pick"><div class="field"><label for="cam-list">List</label><select id="cam-list" aria-label="Which list">${opts}</select></div></section>
-    <section class="pad cam-page">${bar}${body}</section>`;
+  const meta = id ? "" : `<div class="cam-meta"><div class="field"><label for="cam-pn">Production</label><input id="cam-pn" data-cammeta="name" maxlength="60" value="${esc(M.name || "")}" placeholder="Name" dir="auto" autocomplete="off" data-sug="camProd" enterkeyhint="next"></div>
+      <div class="field cm-date"><label for="cam-pd">Date</label><input id="cam-pd" type="date" data-cammeta="date" value="${esc(M.date || "")}"></div></div>`;
+  const make = c ? `<button type="button" class="btn primary cam-create" data-act="cam-create" ${camPrintable(p).length ? "" : "disabled"}>Create cards</button>` : "";
+  return `${head}<section class="pad mc-pick cam-pick"><div class="field"><label for="cam-list">List</label><select id="cam-list" aria-label="Which list">${opts}</select></div>${meta}</section>
+    <section class="pad cam-page">${bar}${body}${make}</section>`;
 }
 function camFormHtml(p, c) {
   const v = camVals(p, c), e = camE(c), k = esc(c.k), has = !!(e || c.name);
@@ -3713,7 +3720,7 @@ function camFormHtml(p, c) {
   if (!has) rec = `<p class="hint cam-first">Choose the camera, and its recording choices show here.</p>`;
   else if (v.prof) rec = `<div class="cam-grp">${pick("codec", "Codec", esc(v.codec))}
       ${v.outOnly ? txt("sensorT", "Sensor coverage", c.sensorT, "e.g. FF 4.2K") : pick("sensor", "Sensor coverage", esc(v.sensor))}
-      ${pick("mode", "File resolution", v.fileA ? `${esc(v.fileA)} <span class="mono">${v.px}</span>` : `<span class="mono">${v.px}</span>`)}
+      ${(fr => v.outOnly ? pick("mode", "File resolution", fr) : `<div class="cam-row info"><span class="cr-v"><span class="cr-l">File resolution</span><span class="cr-x">${fr}</span></span></div>`)(v.fileA ? `${esc(v.fileA)} <span class="mono">${v.px}</span>` : `<span class="mono">${v.px}</span>`)}
       ${pick("fps", "Frame rate", v.fps ? `${fpsLabel(v.fps)} fps` : "", ` <em class="cr-tag">Not printed</em>`)}</div>`;
   else rec = `<div class="cam-grp">${txt("codecT", "Codec", c.codecT, "e.g. ProRes 422 HQ")}${txt("sensorT", "Sensor coverage", c.sensorT, "e.g. S35 4K")}${txt("fileT", "File resolution", c.fileT, "e.g. UHD 3840×2160")}</div>`;
   const media = !has ? "" : v.cards.length ? `<div class="cam-grp">${pick("card", "Media", (() => { const [a, b] = splitTail(cardLabel(ITEM.get(c.rec.card)?.it.name || "", e.it.name)); return a ? esc(a) + (b ? ` ${dim("· " + esc(b))}` : "") : ""; })())}
@@ -3728,8 +3735,7 @@ function camFormHtml(p, c) {
     ${rec}${media}
     <div class="cam-grp">${two("t-sn", "Wireless video", inp("vid", c.vid, "Make and model", 'data-sug="camVid" enterkeyhint="next"'), "SN", inp("sn", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="done" aria-label="Last 4 digits of the serial number"', "sn"))}</div>
     <div class="cam-grp">${txt("fp", "Focus puller", c.fp, "Name, if there is one", 'data-sug="camCrew" enterkeyhint="done"')}
-      ${two("t-ch", "Focus", inp("foc", c.foc, "System", 'data-sug="camFoc" enterkeyhint="next"'), "Ch / freq", inp("ch", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"', "ch"))}</div>
-    <button type="button" class="btn ghost danger cam-del" data-act="cam-del">Remove camera ${esc(c.L)}</button>`;
+      ${two("t-ch", "Focus", inp("foc", c.foc, "System", 'data-sug="camFoc" enterkeyhint="next"'), "Ch / freq", inp("ch", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"', "ch"))}</div>`;
 }
 /* all the cameras side by side, one column each; two focus units on the same channel are marked */
 function camCompareHtml(p, list) {
@@ -3752,10 +3758,12 @@ function camCompareHtml(p, list) {
 function camPicker(k) {
   const p = cur(), c = camSel(p); if (!c) return;
   const e = camE(c);
-  const opt = (v, on, a, b, more) => `<button type="button" class="mc-opt${on ? " on" : ""}" data-act="cam-set" data-k="${k}" data-v="${esc(String(v))}" aria-pressed="${on}"${more || ""}><span class="t-a">${a}</span>${b ? `<span class="t-b">${b}</span>` : ""}</button>`;
+  const kk = k === "sensor" ? "mode" : k;  // a sensor area is picked with the file it makes: one line each
+  const opt = (v, on, a, b, more) => `<button type="button" class="mc-opt${on ? " on" : ""}" data-act="cam-set" data-k="${kk}" data-v="${esc(String(v))}" aria-pressed="${on}"${more || ""}><span class="t-a">${a}</span>${b ? `<span class="t-b">${b}</span>` : ""}</button>`;
   const grp = t => `<div class="mc-grp">${esc(t)}</div>`;
   let title = "", body = "", top = "";
-  if (k === "letter") { title = "Camera letter"; body = `<div class="mc-chips">${CAM_LETTERS.map(L => opt(L, c.L === L, L)).join("")}</div>`; }
+  if (k === "letter") { title = `Camera ${esc(c.L)}`; top = `<p class="hint cs-note">Its letter. A letter another camera has: the two swap.</p>`; body = `<div class="mc-chips">${CAM_LETTERS.map(L => opt(L, c.L === L, L)).join("")}</div>`;
+    showModal(`<div class="sheet cam-sheet"><div class="cs-head"><h3 class="plain">${title}</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>${top}<div class="mc-panel cs-list">${body}</div><button type="button" class="btn ghost danger cs-del" data-act="cam-del">Remove camera ${esc(c.L)}</button></div>`); return; }
   else if (k === "cam") {
     title = "Camera";
     const onList = camLines(p).map(([id]) => opt(id, c.id === id, esc(shortName(ITEM.get(id).it.name)), lineQty(p.items[id]) > 1 ? `${lineQty(p.items[id])} on the list` : "On the list")).join("");
@@ -3770,7 +3778,7 @@ function camPicker(k) {
     const parts = (cd ? cd.m : []).map(x => ({ m: x, ...modeParts(x[0]) })), now = parts.find(x => x.m === md) || parts[0];
     const outOnly = parts.length && parts.every(x => !x.out && OUT_ONLY.test(x.sensor)), px = x => `${x.m[1]}×${x.m[2]}`;
     if (k === "codec") { title = "Codec"; body = r.prof.map(x => opt(x.n, x === cd, esc(x.n))).join(""); }
-    else if (k === "sensor") { title = "Sensor coverage"; body = [...new Set(parts.map(x => x.sensor))].map(sn => opt(sn, now && sn === now.sensor, esc(sensorText(sn)))).join(""); }
+    else if (k === "sensor") { title = "Sensor coverage"; top = `<p class="hint cs-note">With the file each one makes.</p>`; body = parts.map(x => opt(x.m[0], x === now, esc(sensorText(x.sensor)) + (x.out ? ` → ${esc(x.out)}` : ""), px(x))).join(""); }
     else if (k === "mode") { title = "File resolution"; body = parts.filter(x => outOnly || x.sensor === now.sensor).map(x => opt(x.m[0], x === now, esc(outOnly ? x.sensor : x.out || (x.sensor.match(/\b\d+(?:\.\d+)?K\b/) || [""])[0] || px(x)), px(x))).join(""); }
     else if (k === "fps") { title = "Frame rate"; top = `<p class="hint cs-note">For the recording time only. It isn't printed on the card.</p>`; body = `<div class="mc-chips">${REC_FPS.filter(f => !md || f <= md[3]).map(f => opt(f, c.rec.fps === f, fpsLabel(f))).join("")}</div>`; }
     else if (k === "card") {
@@ -3803,8 +3811,8 @@ const CC_CLOCK = `<svg class="cc-ck" viewBox="0 0 24 24" fill="none" stroke="cur
 function camCardHtml(p, c, bw) {
   const v = camVals(p, c);
   const row = (l, a, d) => `<div class="cc-tr"><div class="cc-l">${l}</div><div class="cc-v">${a || `<span class="cc-na">—</span>`}</div><div class="cc-d">${d || ""}</div></div>`;
-  const when = p.browse ? "" : fmtRange(p.shootStart, p.shootEnd);
-  const prod = p.browse ? "" : `<div class="cc-prod"><div dir="auto">${esc(p.name || "")}</div>${when ? `<div>${esc(when)}</div>` : ""}</div>`;
+  const nm = camProdName(p), when = camProdWhen(p);
+  const prod = nm || when ? `<div class="cc-prod">${nm ? `<div dir="auto">${esc(nm)}</div>` : ""}${when ? `<div class="cc-when">${esc(when)}</div>` : ""}</div>` : "";
   return `<div class="ccard${bw ? " bw" : ""}" style="--c:${bw ? "#18171d" : c.col}">
     <div class="cc-top"><div class="cc-ring">${esc(c.L)}</div><div class="cc-cam">${v.mk ? `<div class="cc-mk">${esc(v.mk)}</div>` : ""}<div class="cc-md">${esc(v.md || "")}</div>
       <div class="cc-op"><span class="cc-l">Camera operator</span><span class="cc-n" dir="auto">${esc(c.op || "—")}</span></div></div>${prod}</div>
@@ -3813,16 +3821,18 @@ function camCardHtml(p, c, bw) {
       ${row("Focus puller", c.fp ? `<span dir="auto">${esc(c.fp)}</span>` : "", esc([c.foc, c.ch].filter(Boolean).join(" · ")))}</div></div>`;
 }
 const camPrintable = p => camsOf(p).filter(c => camE(c) || (c.name || "").trim());
-function camPrintSheet() {
-  const p = cur(), o = app.settings.camPrint || (app.settings.camPrint = { size: "a6", ink: "color" }), list = camPrintable(p); if (!list.length) return;
-  const per = o.size === "a7" ? 8 : 4, pages = Math.ceil(list.length / per), sel = camSel(p), show = list.includes(sel) ? sel : list[0];
-  const seg = (k, v, t, s) => `<button type="button" data-act="cp-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${s ? `<span>${s}</span>` : ""}</button>`;
-  showModal(`<div class="sheet cam-print"><div class="cs-head"><h3 class="plain">Print cards</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
-    <div class="cp-prev">${camCardHtml(p, show, o.ink === "bw")}</div>
-    <div class="cp-opts"><span class="cr-l">Size</span><div class="seg cp-seg">${seg("size", "a6", "A6", "13.6 × 9.3 cm")}${seg("size", "a7", "A7", "9.6 × 6.6 cm")}</div>
-      <span class="cr-l">Print in</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
-    <p class="hint cp-note"><span class="num">${list.length}</span> card${list.length === 1 ? "" : "s"} on <span class="num">${pages}</span> A4 page${pages === 1 ? "" : "s"}, with lines to cut along. Print at actual size (100%).</p>
-    <div class="sheet-acts"><button class="btn primary" type="button" data-act="cam-pdf">Make PDF</button></div></div>`);
+function viewCamPrint() {
+  const p = cur(), o = app.settings.camPrint || (app.settings.camPrint = { size: "a6", ink: "color" }), list = camPrintable(p);
+  const per = o.size === "a7" ? 8 : 4, pages = Math.ceil(list.length / per) || 0, nm = camProdName(p);
+  const seg = (k, v, t, sub) => `<button type="button" data-act="cp-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
+  return `${pageHead("Camera cards", nm ? `<span dir="auto">${esc(nm)}</span>` : `<span>Multicam management</span>`)}
+    <section class="pad cam-out">
+      ${list.length ? `<div class="co-cards">${list.map(c => `<div class="cp-prev">${camCardHtml(p, c, o.ink === "bw")}</div>`).join("")}</div>` : `<p class="hint">No cameras chosen yet.</p>`}
+      <div class="cp-opts"><span class="cr-l">Size</span><div class="seg cp-seg">${seg("size", "a6", "A6", "13.6 × 9.3 cm")}${seg("size", "a7", "A7", "9.6 × 6.6 cm")}</div>
+        <span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
+      <p class="hint cp-note"><span class="num">${list.length}</span> card${list.length === 1 ? "" : "s"} on <span class="num">${pages}</span> A4 page${pages === 1 ? "" : "s"}, with lines to cut along. Print at actual size (100%).</p>
+      <button class="btn primary co-make" type="button" data-act="cam-pdf" ${list.length ? "" : "disabled"}>Make PDF</button>
+    </section>`;
 }
 async function camPdf(p) {
   if (!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
@@ -3849,7 +3859,7 @@ async function camPdf(p) {
 async function camPdfGo(b) {
   const p = cur(); b.disabled = true; const was = b.textContent; b.textContent = "Making the PDF…";
   let blob; try { blob = await camPdf(p); } catch (err) { console.warn(err); toast("The PDF couldn't be made. Check the connection and try again."); b.disabled = false; b.textContent = was; return; }
-  const name = (p.browse ? "Camera cards" : `${(p.name || "Production").replace(/[\\/:*?"<>|]+/g, " ").trim()} - Camera cards`) + ".pdf";
+  const nm = camProdName(p).replace(/[\\/:*?"<>|]+/g, " ").trim(), name = (nm ? `${nm} - Camera cards` : "Camera cards") + ".pdf";
   const file = typeof File === "function" ? new File([blob], name, { type: "application/pdf" }) : null;
   let can = false; try { can = !!(file && isTouch() && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
   if (can) {
@@ -4646,7 +4656,7 @@ document.addEventListener("click", e => {
     case "cam-sel": app.camK = b.dataset.k; app.camCmp = false; rerenderKeepScroll(); break;
     case "cam-add": { const list = camsOf(p); if (list.length >= 8) break; const c = camNew(list, ""); list.push(c); app.camK = c.k; app.camCmp = false; camSave(p); render(); camPicker("cam"); break; }
     case "cam-del": {
-      const list = camsOf(p), c = camSel(p); if (!c) break;
+      closeModal(); const list = camsOf(p), c = camSel(p); if (!c) break;
       const i = list.indexOf(c); list.splice(i, 1); app.camK = (list[Math.min(i, list.length - 1)] || {}).k; camSave(p); rerenderKeepScroll();
       undoable("Removed", `camera ${c.L}`, () => { list.splice(Math.min(i, list.length), 0, c); app.camK = c.k; camSave(p); rerenderKeepScroll(); });
       break;
@@ -4655,8 +4665,8 @@ document.addEventListener("click", e => {
     case "cam-col": { const c = camSel(p); if (c) { c.col = b.dataset.v; camSave(p); rerenderKeepScroll(); } break; }
     case "cam-pick": camPicker(b.dataset.k); break;
     case "cam-set": { const c = camSel(p); if (!c) break; camSetVal(p, c, b.dataset.k, b.dataset.v); camSave(p); closeModal(); rerenderKeepScroll(); break; }
-    case "cam-print": camPrintSheet(); break;
-    case "cp-opt": { const o = app.settings.camPrint || (app.settings.camPrint = { size: "a6", ink: "color" }); o[b.dataset.k] = b.dataset.v; touchSettings(); camPrintSheet(); break; }
+    case "cam-create": closeModal(); app.view = "camprint"; render(); window.scrollTo(0, 0); break;
+    case "cp-opt": { const o = app.settings.camPrint || (app.settings.camPrint = { size: "a6", ink: "color" }); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
     case "cam-pdf": camPdfGo(b); break;
     case "lensfind": closeModal(); fin().more = {}; app.view = "lensfind"; render(); window.scrollTo(0, 0); break;
     case "lens-house": if (app.settings.lensHouse !== b.dataset.house) { app.settings.lensHouse = b.dataset.house; touchSettings(); fin().more = {}; render(); } break;
@@ -5009,6 +5019,7 @@ document.addEventListener("toggle", e => {
 document.addEventListener("input", e => {
   const t = e.target, p = cur();
   if (t.dataset && t.dataset.camf && p) { camField(p, t); return; }
+  if (t.dataset && t.dataset.cammeta) { camMeta()[t.dataset.cammeta] = t.value.slice(0, 60); touchSettings(); return; }
   if (t.hasAttribute && t.hasAttribute("data-camq")) { const q = norm(t.value.trim()); document.querySelectorAll("#modal .cs-all .mc-opt").forEach(o => { o.hidden = !!q && !(o.dataset.n || "").includes(q); }); return; }
   if (t.name === "colorHex" && t.form) { const r = t.form.querySelector('input[name="color"][value="custom"]'); if (r) r.checked = true; t.closest(".sw")?.style.setProperty("--sw", t.value); return; }
   if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.multiple ? [...t.selectedOptions].map(o => o.value).filter(Boolean).join("|") : t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!fin()[t.dataset.fin]); refreshFinder(); return; }
