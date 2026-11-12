@@ -875,15 +875,15 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(/Multicam management/.test(h) && !/data-act="cam-print"/.test(h) && /data-act="cam-create"/.test(h) && /id="cam-list"/.test(h) && (h.match(/class="cam-chip( on)?"/g) || []).length === 3 && /data-act="cam-cmp"/.test(h) && /data-camf="op"/.test(h) && /data-k="codec"/.test(h) && /Not printed/.test(h), "the page: Multicam management, the list, A B C, Compare, the camera's card to fill in, then Create cards");
   ok(/data-k="mode"/.test(h), "4K 16:9 in ProRes makes 4K, UHD, 2K or HD: there File resolution is a menu");
   A.camSetVal(pc, cs[0], "sensor", "4.6K 3:2 Open Gate"); const h1 = A.viewCams();
-  ok(!/data-k="mode"/.test(h1) && /class="cam-row info"><span class="cr-v"><span class="cr-l">File resolution/.test(h1), "a sensor area that makes one file: File resolution is just shown");
+  ok(!/data-k="mode"/.test(h1) && /<span class="cr-l">File resolution<\/span>[\s\S]*?<span class="cr-pv cr-info">4.6K <span class="mono">4608×3164/.test(h1), "a sensor area that makes one file: File resolution is just shown");
   A.camSetVal(pc, cs[0], "sensor", "4K 16:9"); A.camSetVal(pc, cs[0], "mode", "4K 16:9 → UHD");
   modals.length = 0; A.camPicker("sensor"); const ms = modals.pop() || "";
   ok(!/→/.test(ms) && (ms.match(/data-k="sensor"/g) || []).length === 8, "the Sensor coverage list: each sensor area once, no arrows");
-  ok(/<option value="none"[^>]*>Create<\/option>/.test(h) && /class="cam-dates"><span><b>Shoot<\/b> 20–25 Nov 2026/.test(h), "the list: Create instead of No list; a list's shoot (and prep) dates under it");
+  ok(/<label for="cam-list">Camera list<\/label>/.test(h) && /<option value="none"[^>]*><\/option>/.test(h) && /class="cam-dates"><span><b>Shoot<\/b> 20–25 Nov 2026/.test(h), "Camera list: an empty choice for no list; a list's shoot (and prep) dates under it");
   ok((h.match(/class="cam-chip( on)?"/g) || []).length === 3 && /grid-template-columns|cam-chips/.test(h) && /class="btn sm ph-export cam-cmpbtn"/.test(h), "the letters in a grid of their own; Compare at the top, beside back");
   ok(A.CAM_COLORS.slice(0, 6).join() === "#3ee24b,#e8f20c,#ff2e93,#ff6a10,#e5484d,#1e9be8" && A.camInk("#e8f20c") === "#18171d" && A.camInk("#1e9be8") === "#fff", "colors: fluorescent green, yellow, pink, orange, then red and blue; a dark letter on the bright ones");
   A.app.view = "camprint"; const pr = A.viewCamPrint(); A.app.view = "cams";
-  ok(/Camera cards/.test(pr) && (pr.match(/class="ccard/g) || []).length === 3 && /data-act="cam-save"[^>]*>Save PDF/.test(pr) && /data-act="cam-share"[^>]*>Share/.test(pr) && /10 × 6.6 cm/.test(pr) && /8.6 × 5.6 cm/.test(pr) && /Black &amp; white|Black & white/.test(pr), "Create cards: every camera's card, the size and colors, Save PDF and Share");
+  ok(/Camera cards/.test(pr) && (pr.match(/class="ccard/g) || []).length === 3 && /data-act="cam-save"[^>]*>Save PDF/.test(pr) && /data-act="cam-share"[^>]*>Share/.test(pr) && /8.6 × 5.7 cm/.test(pr) && /7.4 × 4.9 cm/.test(pr) && /Black &amp; white|Black & white/.test(pr), "Create cards: every camera's card, the size and colors, Save PDF and Share");
   A.app.settings.camList = "none"; const fp = A.camCur();
   ok(fp.browse && A.camsOf(fp).length >= 1 && A.camsOf(fp)[0].L === "A", "with no list: cameras of your own, starting with A");
   A.app.settings.camsMeta = { name: "Pilot", date: "2026-12-01" }; A.camsOf(fp)[0].id = a35;
@@ -906,9 +906,12 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   und(); ok(cs[1].vid !== "Teradek Bolt 6 LT 750", "and it can be undone");
   cs[0].notes = [{ t: "Lens", v: "Fujinon Premista 28-100" }];
   const cd = A.camCardHtml(pc, cs[0], false);
-  ok(/<div class="cc-f w"><div class="cc-l">Lens<\/div><div class="cc-v"><span dir="auto">Fujinon Premista 28-100/.test(cd), "a note prints with its own title");
+  ok(/<div class="cc-f"><div class="cc-l">Lens<\/div><div class="cc-v"><span dir="auto">Fujinon Premista 28-100/.test(cd) && (cd.match(/class="cc-f"/g) || []).length === 8, "a note prints with its own title, in the two-column grid");
   A.app.camK = cs[0].k; const hf = A.viewCams();
   ok(/data-camnote="t"[^>]*value="Lens"/.test(hf) && /data-act="cam-note-add"/.test(hf), "the note's title and text are edited in place; one more line can be added");
-  A.app.camK = cs[1].k; ok(/data-act="cam-copy" data-k="/.test(A.viewCams()), "Copy setup from: the other cameras' letters");
+  A.app.camK = cs[1].k; const hv = A.viewCams(); modals.length = 0; A.camPicker("copy"); const mc = modals.pop() || "";
+  ok(/data-act="cam-pick" data-k="copy"/.test(hv) && /data-act="cam-del"/.test(hv) && /data-act="cam-copy" data-k="/.test(mc) && /class="cam-mini"[^>]*>A</.test(mc), "Copy setup: an icon on the camera's card opens the other cameras to pick; delete beside it");
+  modals.length = 0; A.camPicker("letter"); const ml = modals.pop() || "";
+  ok(/data-act="cam-col"/.test(ml) && !/data-act="cam-col"/.test(hv) && !/data-act="cam-del"/.test(ml), "the color is picked in the letter's sheet, not on the page");
   A.app.view = "home"; A.app.settings.rules = keepRules; A.app.productions.splice(A.app.productions.indexOf(pc), 1); }
 
