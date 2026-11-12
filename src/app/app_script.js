@@ -3873,21 +3873,76 @@ function camField(p, t) {
 }
 /* ----- the printed card: white paper whatever the theme; sizes in --u (1mm on the standard card) ----- */
 const CC_CLOCK = `<svg class="cc-ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
-function camCardHtml(p, c, bw) {
+/* the card's layout: the order of its fields (two columns, left then right) and the ones hidden; one layout for every card */
+const CC_KEYS = ["op", "fp", "sensor", "file", "media", "vid", "foc", "notes"];
+const CC_NAMES = { op: "Camera operator", fp: "Focus puller", sensor: "Sensor coverage", file: "File resolution", media: "Media", vid: "Wireless video", foc: "Focus", notes: "Notes" };
+function camLayout() {
+  const L = app.settings.camLayout || {}, order = (L.order || []).filter(k => CC_KEYS.includes(k));
+  return { order: [...new Set([...order, ...CC_KEYS])], hidden: (L.hidden || []).filter(k => CC_KEYS.includes(k)) };
+}
+function camLayoutSet(order, hidden) { const L = camLayout(); app.settings.camLayout = { order: [...new Set([...(order || L.order).filter(k => CC_KEYS.includes(k)), ...CC_KEYS])], hidden: (hidden || L.hidden).filter(k => CC_KEYS.includes(k)) }; touchSettings(); }
+function camCardHtml(p, c, bw, edit) {
   const v = camVals(p, c), na = `<span class="cc-na">—</span>`;
-  const f = (l, a, s) => `<div class="cc-f"><div class="cc-l">${l}</div><div class="cc-v">${a || na}</div>${s !== undefined ? `<div class="cc-s">${s || "&nbsp;"}</div>` : ""}</div>`;
+  const f = (k, l, a, s) => `<div class="cc-f" data-fk="${k}"><div class="cc-l">${l}</div><div class="cc-v">${a || na}</div>${s !== undefined ? `<div class="cc-s">${s || "&nbsp;"}</div>` : ""}${edit ? `<button type="button" class="cc-hide" data-act="cl-hide" data-fk="${k}" aria-label="Hide ${CC_NAMES[k]}">×</button>` : ""}</div>`;
   const nm = camProdName(p), when = camProdWhen(p), notes = camNotes(c);
   const prod = nm || when ? `<div class="cc-prod">${nm ? `<div dir="auto">${esc(nm)}</div>` : ""}${when ? `<div class="cc-when">${esc(when)}</div>` : ""}</div>` : "";
   const dirs = x => x ? `<span dir="auto">${esc(x)}</span>` : "";
-  // two columns: the crew, how it records, the media and the video link, the focus and the notes
-  const cells = [f("Camera operator", dirs(c.op)), f("Focus puller", dirs(c.fp)),
-    f("Sensor coverage", esc(v.sensor), ""), f("File resolution", v.px ? `${v.fileA ? esc(v.fileA) + " " : ""}<span class="cc-mono">${v.px}</span>` : esc(v.file), esc(v.codec)),
-    f("Media", esc(v.media), v.per ? `${CC_CLOCK}${esc(v.per)} a card` : ""), f("Wireless video", dirs(c.vid), c.sn ? "SN " + esc(c.sn) : ""),
-    f("Focus", dirs(c.foc), esc(c.ch || "")), ...notes.map(x => f(esc(x.t || "Note"), dirs(x.v), ""))];
-  return `<div class="ccard${bw ? " bw" : ""}" style="--c:${bw ? "#18171d" : c.col}">
+  const cell = {
+    op: () => f("op", "Camera operator", dirs(c.op)), fp: () => f("fp", "Focus puller", dirs(c.fp)),
+    sensor: () => f("sensor", "Sensor coverage", esc(v.sensor), ""), file: () => f("file", "File resolution", v.px ? `${v.fileA ? esc(v.fileA) + " " : ""}<span class="cc-mono">${v.px}</span>` : esc(v.file), esc(v.codec)),
+    media: () => f("media", "Media", esc(v.media), v.per ? `${CC_CLOCK}${esc(v.per)} a card` : ""), vid: () => f("vid", "Wireless video", dirs(c.vid), c.sn ? "SN " + esc(c.sn) : ""),
+    foc: () => f("foc", "Focus", dirs(c.foc), esc(c.ch || "")),
+    // the notes: each its own field; while arranging, all of them as one field
+    notes: () => edit ? f("notes", notes.length ? esc(notes[0].t || "Note") : "Notes", notes.length ? dirs(notes[0].v) + (notes.length > 1 ? ` <span class="cc-more">+${notes.length - 1}</span>` : "") : `<span class="cc-na">Your notes</span>`, "") : notes.map(x => f("notes", esc(x.t || "Note"), dirs(x.v), "")).join("") };
+  const L = camLayout(), cells = L.order.filter(k => !L.hidden.includes(k)).map(k => cell[k]()).join("");
+  return `<div class="ccard${bw ? " bw" : ""}${edit ? " cc-edit" : ""}" style="--c:${bw ? "#18171d" : c.col}">
     <div class="cc-top"><div class="cc-ring">${esc(c.L)}</div><div class="cc-cam">${v.mk ? `<div class="cc-mk">${esc(v.mk)}</div>` : ""}<div class="cc-md">${esc(v.md || "")}</div></div>${prod}</div>
-    <div class="cc-g">${cells.join("")}</div></div>`;
+    <div class="cc-g">${cells}</div></div>`;
 }
+/* arranging the card: press a field and drag it; the fields in the way glide aside to make room (as icons do on a phone's home screen) */
+let ccDrag = null;
+function ccFlip(cells, move) {
+  const first = new Map(cells.map(el => [el, el.getBoundingClientRect()])); move();
+  for (const el of cells) {
+    const a = first.get(el), b = el.getBoundingClientRect(), dx = a.left - b.left, dy = a.top - b.top;
+    if (!dx && !dy) continue;
+    el.style.transition = "none"; el.style.transform = `translate(${dx}px, ${dy}px)`;
+    requestAnimationFrame(() => requestAnimationFrame(() => { el.style.transition = "transform .24s cubic-bezier(.2, .8, .2, 1)"; el.style.transform = ""; }));
+  }
+}
+document.addEventListener("pointerdown", e => {
+  const cell = e.target.closest && e.target.closest(".ccard.cc-edit .cc-f[data-fk]");
+  if (!cell || e.target.closest(".cc-hide") || ccDrag) return;
+  e.preventDefault();
+  const r = cell.getBoundingClientRect(), card = cell.closest(".ccard"), ghost = cell.cloneNode(true);
+  ghost.classList.add("cc-ghost"); ghost.querySelector(".cc-hide")?.remove();
+  Object.assign(ghost.style, { left: r.left + "px", top: r.top + "px", width: r.width + "px" });
+  ghost.style.setProperty("--u", getComputedStyle(card).getPropertyValue("--u")); ghost.style.setProperty("--c", getComputedStyle(card).getPropertyValue("--c"));
+  document.body.appendChild(ghost); cell.classList.add("cc-hole");  // on the page itself, so it follows the finger anywhere
+  ccDrag = { cell, grid: cell.parentElement, ghost, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+  try { cell.setPointerCapture(e.pointerId); } catch (x) {}
+  buzz("tap");
+});
+document.addEventListener("pointermove", e => {
+  if (!ccDrag) return;
+  const d = ccDrag; d.ghost.style.left = e.clientX - d.dx + "px"; d.ghost.style.top = e.clientY - d.dy + "px";
+  const over = document.elementFromPoint(e.clientX, e.clientY), el = over && over.closest && over.closest(".cc-f[data-fk]");
+  if (!el || el === d.cell || el.parentElement !== d.grid || el.classList.contains("cc-ghost") || el.style.transform) return;
+  const cells = [...d.grid.children], from = cells.indexOf(d.cell), to = cells.indexOf(el);
+  ccFlip(cells, () => { if (from < to) el.after(d.cell); else el.before(d.cell); });
+  d.moved = true; buzz("tick");
+});
+function ccDrop() {
+  if (!ccDrag) return;
+  const d = ccDrag; ccDrag = null;
+  d.ghost.remove(); d.cell.classList.remove("cc-hole");
+  if (!d.moved) return;
+  const shown = [...new Set([...d.grid.children].map(x => x.dataset.fk))], L = camLayout();
+  // the hidden fields keep their places among the shown ones
+  const order = []; let i = 0; for (const k of L.order) order.push(L.hidden.includes(k) ? k : shown[i++] || k);
+  camLayoutSet(order); camPdfMade = null; rerenderKeepScroll();
+}
+document.addEventListener("pointerup", ccDrop); document.addEventListener("pointercancel", ccDrop);
 const camPrintable = p => camsOf(p).filter(c => camE(c) || (c.name || "").trim());
 /* card sizes: the standard 10 × 6.6 cm card (8 on an A4), or small, 8.6 × 5.6 cm (10 on an A4) */
 const CAM_SIZES = { std: { s: 1, t: "Standard", d: "8.6 × 5.7 cm" }, sm: { s: .86, t: "Small", d: "7.4 × 4.9 cm" } };
@@ -3896,18 +3951,28 @@ const camPrintOpts = () => { const o = app.settings.camPrint || (app.settings.ca
 function viewCamPrint() {
   const p = cur(), o = camPrintOpts(), list = camPrintable(p), S = CAM_SIZES[o.size];
   const hmax = Math.max(57, ...list.map(c => camNotes(c).length > 1 ? 65 : 57)) * S.s, per = 2 * Math.max(1, Math.floor(297 / (hmax + 3)));
-  const pages = Math.ceil(list.length / per) || 0, nm = camProdName(p);
+  const pages = Math.ceil(list.length / per) || 0, nm = camProdName(p), head = pageHead("Camera cards", nm ? `<span dir="auto">${esc(nm)}</span>` : `<span>Multicam management</span>`);
+  if (app.camLayoutEdit && list.length) {  // arranging: one card, its fields to drag, the hidden ones to bring back
+    const L = camLayout(), c = list.includes(camSel(p)) ? camSel(p) : list[0];
+    return `${head}<section class="pad cam-out cl-edit">
+      <p class="hint cl-hint">Press a field and drag it to its place. × hides it. Every card follows this layout.</p>
+      <div class="cp-prev">${camCardHtml(p, c, o.ink === "bw", true)}</div>
+      ${L.hidden.length ? `<div class="cl-hidden"><span class="cr-l">Hidden</span>${L.hidden.map(k => `<button type="button" class="cl-chip" data-act="cl-show" data-fk="${k}">+ ${CC_NAMES[k]}</button>`).join("")}</div>` : ""}
+      <div class="co-acts"><button class="btn" type="button" data-act="cl-reset">Reset</button><button class="btn primary" type="button" data-act="cl-edit">Done</button></div>
+    </section>`;
+  }
   const seg = (k, v, t, sub) => `<button type="button" data-act="cp-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
   setTimeout(() => camPdfPrep(p), 400);  // made ahead, so Save and Share are ready at a tap
-  return `${pageHead("Camera cards", nm ? `<span dir="auto">${esc(nm)}</span>` : `<span>Multicam management</span>`)}
+  return `${head}
     <section class="pad cam-out${o.size === "sm" ? " sm" : ""}">
-      ${list.length ? `<div class="co-cards">${list.map(c => `<div class="cp-prev">${camCardHtml(p, c, o.ink === "bw")}</div>`).join("")}</div>` : `<p class="hint">No cameras chosen yet.</p>`}
+      ${list.length ? `<div class="cl-bar"><button class="btn sm cl-btn" type="button" data-act="cl-edit">${LAYOUT_ICON}<span>Edit layout</span></button></div><div class="co-cards">${list.map(c => `<div class="cp-prev">${camCardHtml(p, c, o.ink === "bw")}</div>`).join("")}</div>` : `<p class="hint">No cameras chosen yet.</p>`}
       <div class="cp-opts"><span class="cr-l">Size</span><div class="seg cp-seg">${seg("size", "std", CAM_SIZES.std.t, CAM_SIZES.std.d)}${seg("size", "sm", CAM_SIZES.sm.t, CAM_SIZES.sm.d)}</div>
         <span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
       <p class="hint cp-note"><span class="num">${list.length}</span> card${list.length === 1 ? "" : "s"} on <span class="num">${pages}</span> A4 page${pages === 1 ? "" : "s"}, with lines to cut along. Print at actual size (100%).</p>
       <div class="co-acts"><button class="btn primary" type="button" data-act="cam-save" ${list.length ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="cam-share" ${list.length ? "" : "disabled"}>Share</button></div>
     </section>`;
 }
+const LAYOUT_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><path d="M14 17h6M17 14v6"/></svg>`;
 const camPdfKey = p => { const o = camPrintOpts(); return JSON.stringify([o.size, o.ink, camPrintable(p).map(c => camCardHtml(p, c, o.ink === "bw"))]); };
 let camPdfMade = null;  // { key, blob }
 async function camPdfPrep(p) { if (app.view !== "camprint") return; const key = camPdfKey(p); if (camPdfMade && camPdfMade.key === key) return; try { const blob = await camPdf(p); if (camPdfKey(p) === key) camPdfMade = { key, blob }; } catch (e) {} }
@@ -4745,8 +4810,13 @@ document.addEventListener("click", e => {
     case "cam-col": { const c = camSel(p); if (c) { c.col = b.dataset.v; camSave(p); rerenderKeepScroll(); if (document.getElementById("modal")) camPicker("letter"); } break; }
     case "cam-pick": camPicker(b.dataset.k); break;
     case "cam-set": { const c = camSel(p); if (!c) break; camSetVal(p, c, b.dataset.k, b.dataset.v); camSave(p); closeModal(); rerenderKeepScroll(); break; }
-    case "cam-create": closeModal(); app.view = "camprint"; render(); window.scrollTo(0, 0); break;
+    case "cam-create": closeModal(); app.camLayoutEdit = false; app.view = "camprint"; render(); window.scrollTo(0, 0); break;
     case "cp-opt": { const o = camPrintOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
+    case "cl-edit": app.camLayoutEdit = !app.camLayoutEdit; render(); window.scrollTo(0, 0); break;
+    case "cl-hide": { const L = camLayout(); if (!L.hidden.includes(b.dataset.fk)) camLayoutSet(null, [...L.hidden, b.dataset.fk]); camPdfMade = null; rerenderKeepScroll(); break; }
+    case "cl-show": { const L = camLayout(); camLayoutSet(null, L.hidden.filter(k => k !== b.dataset.fk)); camPdfMade = null; rerenderKeepScroll(); break; }
+    case "cl-reset": { const was = app.settings.camLayout; delete app.settings.camLayout; touchSettings(); camPdfMade = null; rerenderKeepScroll();
+      undoable("Reset", "the card layout", () => { app.settings.camLayout = was; touchSettings(); rerenderKeepScroll(); }); break; }
     case "cam-save": camPdfGo(b, false); break;
     case "cam-share": camPdfGo(b, true); break;
     case "cam-copy": {
