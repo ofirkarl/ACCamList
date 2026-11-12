@@ -2074,6 +2074,50 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .cs-done { width: 100%; }
 .cs-unit { display: flex; width: 100%; box-sizing: border-box; margin-top: 2px; }
 .cs-unit button { flex: 1 1 0; padding: 8px 6px; font-size: 14px; }
+
+/* r30: Multicam's top, compact: one header row, the lists folded, a tab for each unit, small letters; TX and RX serials */
+.cam-bar { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; min-height: 44px; padding-top: calc(env(safe-area-inset-top, 0px) + 6px); }
+.cam-bar h2 { margin: 0; text-align: center; font-size: 18px; line-height: 22px; font-weight: 700; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cam-bar .cb-back { width: 44px; height: 44px; margin-inline-start: -10px; display: grid; place-items: center; color: var(--accent); border-radius: 12px; }
+.cam-bar .cb-cmp { justify-self: end; width: 40px; height: 40px; display: grid; place-items: center; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--frame-shadow); }
+.cam-bar .cb-cmp[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.cam-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding-top: 6px; }
+.cam-fold { display: flex; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 10px 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; font: inherit; color: var(--fg); text-align: start; }
+.cam-fold .cf-l { flex: none; font-size: 11px; line-height: 14px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+.cam-fold .cf-v { flex: 1 1 auto; min-width: 0; font-size: 14px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cam-fold .cf-ph { color: var(--muted); }
+.cam-fold .cf-caret { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.cam-fold.open { border-radius: 12px 12px 0 0; border-bottom-color: var(--hair); }
+.cam-fp { margin-top: -10px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 12px 12px; background: var(--surface); padding: 2px 12px 10px; }
+.cam-fp .cf-lists { max-height: 220px; overflow-y: auto; overscroll-behavior: contain; }
+.cf-li { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--hair); font: inherit; font-size: 14px; color: var(--fg); text-align: start; }
+.cf-li:last-child { border-bottom: 0; }
+.cf-li .cs-ck { flex: none; width: 20px; height: 20px; box-sizing: border-box; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; color: var(--accent-fg); }
+.cf-li.on .cs-ck { background: var(--accent); border-color: var(--accent); }
+.cf-li .cs-ck svg { width: 13px; height: 13px; }
+.cf-li .cf-n { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cf-li small { flex: none; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+.cam-fp .cf-meta { display: grid; gap: 2px; margin: 0; padding-top: 8px; border-top: 1px solid var(--hair); font-size: 12px; line-height: 17px; color: var(--muted); }
+.cam-fp .cf-meta b { color: var(--fg); font-weight: 600; margin-inline-end: 2px; }
+.cam-fp .cam-meta { margin-top: 0; padding-top: 8px; border-top: 1px solid var(--hair); }
+.cam-useg { display: flex; width: 100%; box-sizing: border-box; }
+.cam-useg button { flex: 1 1 0; min-height: 34px; font-size: 14px; padding: 6px 8px; color: var(--muted); }
+.cam-useg button[aria-pressed="true"] { color: var(--fg); font-weight: 600; }
+.cam-useg i { font-style: normal; font-weight: 400; color: var(--muted); margin-inline-start: 6px; }
+.cam-top .cam-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cam-top .cam-chip { width: 40px; height: 40px; aspect-ratio: auto; border-radius: 11px; font-size: 18px; }
+.cam-top .cam-chip.add { font-size: 20px; }
+.cam-page .cam-none { margin: 2px 2px 0; font-size: 14px; color: var(--muted); }
+.cam-head { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; padding: 6px 4px 6px 8px; }
+.cam-head .cam-ring { width: 40px; height: 40px; font-size: 22px; border-radius: 11px; }
+.cam-head .ch-cam { min-height: 40px; }
+.cam-row.dual.tri { grid-template-columns: minmax(0, 1fr) 56px 56px; }
+.cam-head .ch-md { font-size: 17px; }
+.cam-head .ch-ico { width: 36px; }
+.cam-head .ch-cam { gap: 4px; }
+.cam-row.dual.tri:not(.one) > * { padding-inline-start: 0; padding-inline-end: 0; border-inline-start: 0; }
+.cam-row.dual.tri:not(.one) > :nth-child(3n+1) { padding-inline-end: 10px; }
+.cam-row.dual.tri:not(.one) > :nth-child(3n+2), .cam-row.dual.tri:not(.one) > :nth-child(3n) { padding-inline-start: 10px; border-inline-start: 1px solid var(--hair); }
 </style>
 
 <div class="app">
@@ -5885,22 +5929,18 @@ function camSrcToggle(id) {
   home.camFrom = [...from, id]; touch(home);
 }
 const CS_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
-function camListsSheet() {
-  const hid = camListId(), home = hid ? findProd(hid) : null, on = home ? camSrcs(home) : [];
-  const row = (id, sel, name, sub) => `<button type="button" class="mc-opt cs-lst${sel ? " on" : ""}" data-act="cam-src" data-id="${esc(id)}" aria-pressed="${sel}"><span class="cs-ck" aria-hidden="true">${sel ? CS_CHECK : ""}</span><span class="cs-lt"><span class="t-a"><bdi>${name}</bdi></span>${sub ? `<span class="cs-ls">${sub}</span>` : ""}</span></button>`;
-  // the rows keep their places while the sheet is open (a list just ticked doesn't jump to the top)
-  const m = document.querySelector("#modal .cam-sheet.cs-lists"), was = m ? [...m.querySelectorAll(".cs-lst")].map(x => x.dataset.id) : [], at = x => { const i = was.indexOf(x.id); return i < 0 ? 1e9 : i; };
-  const rows = mcLists().map((x, i) => [x, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(([x]) => x).map(x => row(x.id, on.includes(x), esc(x.name || "Untitled production"), esc([unit2Of(x) ? "Main + 2nd Unit" : "", fmtRange(x.shootStart, x.shootEnd)].filter(Boolean).join(" · ")))).join("");
-  const body = `<div class="cs-head"><h3 class="plain">Camera lists</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
-    <p class="hint cs-note">One or more. Their cameras, wireless video and focus come in; a production's 2nd Unit comes with it.</p>
-    <div class="mc-panel cs-list">${rows}${row("none", !home, "No list", "A name and a date of your own")}</div>
-    <button class="btn primary cs-done" type="button" data-act="modal-close">Done</button>`;
-  if (m) { const y = m.querySelector(".cs-list")?.scrollTop || 0; m.innerHTML = body; const l = m.querySelector(".cs-list"); if (l) l.scrollTop = y; }
-  else showModal(`<div class="sheet cam-sheet cs-lists">${body}</div>`);
-}
 const camSave = p => p.browse ? touchSettings() : touch(p);
-function camSel(p) { const list = camsOf(p); return list.find(c => c.k === app.camK) || list[0] || null; }
+/* the unit shown when there are two: the one picked on its tab, or the tapped camera's */
+function camUnitShown(p) { if (typeof app.camU === "boolean") return app.camU; const l = camsOf(p), t = l.find(c => c.k === app.camK) || l[0]; return !!(t && t.u2); }
+/* the camera shown: the one tapped, within the unit shown when there are two (none while that unit has no cameras yet) */
+function camSel(p) {
+  const list = camsOf(p), t = list.find(c => c.k === app.camK) || list[0] || null;
+  if (!camTwo(p)) return t;
+  const u = camUnitShown(p); return t && !!t.u2 === u ? t : list.find(c => !!c.u2 === u) || null;
+}
 const camE = c => c && c.id ? ITEM.get(c.id) || null : null;
+/* the wireless video's serial numbers, the transmitter's and the receiver's (their last 4 digits) */
+const camSnText = c => { const t = (c.sn || "").trim(), r = (c.snr || "").trim(); return t || r ? "SN " + [t ? "TX " + t : "", r ? "RX " + r : ""].filter(Boolean).join(" · ") : ""; };
 const camNotes = c => (c.notes || []).filter(n => (n.t || "").trim() || (n.v || "").trim());
 /* a camera's name in two parts: its make, and the model */
 function camName(c) {
@@ -5929,32 +5969,38 @@ function camVals(p, c) {
 }
 /* the page: which list (its dates under it) or Create (a name and a date), the cameras as letters, then one camera's card to fill in */
 function viewCams() {
-  const p = cur(), id = camListId(), list = camsOf(p), c = camSel(p), cmp = !!app.camCmp && list.length > 1, M = camMeta(), two = camTwo(p);
-  // the lists read: the first one, the others picked beside it (a production's 2nd Unit comes with it and isn't named)
-  const named = camSrcs(p).filter(s => !(s.mainOf && findProd(s.mainOf)));
-  const caret = `<svg class="cl-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>`;
-  const pick = `<div class="field"><span class="lbl" id="cam-list-l">Camera list${named.length > 1 ? "s" : ""}</span><button type="button" class="f-pick cam-lists" id="cam-list" data-act="cam-lists" aria-haspopup="dialog" aria-labelledby="cam-list-l"><span>${named.map(x => `<bdi>${esc(x.name || "Untitled production")}</bdi>`).join(" + ")}</span>${caret}</button></div>`;
-  const head = `<section class="pad" data-keep="head"><div class="prod-head ph-stack">
-      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button>${list.length > 1 ? `<button class="btn sm ph-export cam-cmpbtn" type="button" data-act="cam-cmp" aria-pressed="${cmp}">${COLS_ICON}<span>Compare</span></button>` : ""}</div>
-      <h2 class="ph-name">Multicam management</h2><p class="ph-sub"><span>Each camera's setup, and its card</span></p></div></section>`;
-  const shoot = !p.browse && fmtRange(p.shootStart, p.shootEnd), prep = !p.browse && p.prep ? fmtDate(p.prep) : "";
-  // what the lists hold, a line for each unit when there are two
-  const holds = ss => { const nb = ss.reduce((t, s) => t + camLines(s).reduce((a, [, l]) => a + lineQty(l), 0), 0), nv = ss.reduce((t, s) => t + camDevOnList(s, "vid").length, 0), nf = ss.reduce((t, s) => t + camDevOnList(s, "foc").length, 0);
-    return nb + nv + nf ? `${nb} camera${nb === 1 ? "" : "s"} · ${nv} wireless video · ${nf} focus` : "Nothing on its list yet"; };
-  const S = camSrcs(p);
-  const found = !id ? "" : two ? [[false, "Main Unit"], [true, "2nd Unit"]].map(([u, t]) => `<span class="cd-u"><b>${t}</b> ${holds(S.filter(s => camSrcU2(p, s) === u))}</span>`).join("") : `<span class="cd-u"><b>On the list</b> ${holds(S)}</span>`;
-  const under = id ? `<p class="cam-dates">${shoot ? `<span><b>Shoot</b> ${esc(shoot)}</span>` : ""}${prep ? `<span><b>Prep</b> ${esc(prep)}</span>` : ""}${found}</p>`
-    : `<div class="cam-meta"><div class="field"><label for="cam-pn">Production</label><input id="cam-pn" data-cammeta="name" maxlength="60" value="${esc(M.name || "")}" placeholder="Name" dir="auto" autocomplete="off" data-sug="camProd" enterkeyhint="next"></div>
+  const p = cur(), id = camListId(), list = camsOf(p), c = camSel(p), cmp = !!app.camCmp && list.length > 1, M = camMeta(), two = camTwo(p), u = two && camUnitShown(p);
+  const S = camSrcs(p), isU2 = s => !!(s.mainOf && findProd(s.mainOf)), named = S.filter(s => !isU2(s)), open = !!app.camFold;
+  const caret = d => `<svg class="cf-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d ? "M7 14l5-5 5 5" : "M7 10l5 5 5-5"}"/></svg>`;
+  const head = `<section class="pad" data-keep="head"><div class="cam-bar"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>Multicam management</h2>${list.length > 1 ? `<button class="iconbtn cb-cmp" type="button" data-act="cam-cmp" aria-pressed="${cmp}" aria-label="Compare the cameras" title="Compare">${COLS_ICON}</button>` : "<span></span>"}</div></section>`;
+  // the lists, folded: one row with their names; open, the lists to tick, their dates and what each unit's list holds (no list: a name and a date)
+  const fv = id ? named.map(x => `<bdi>${esc(x.name || "Untitled production")}</bdi>`).join(" + ") : `<span class="cf-ph">No list</span>${M.name ? ` · <bdi>${esc(M.name)}</bdi>` : ""}`;
+  const fold = `<button type="button" class="cam-fold${open ? " open" : ""}" data-act="cam-fold" aria-expanded="${open}" aria-controls="cam-fp"><span class="cf-l">List${named.length > 1 ? "s" : ""}</span><span class="cf-v">${fv}</span>${caret(open)}</button>`;
+  let panel = "";
+  if (open) {
+    const at = x => { const i = (app.camFoldOrder || []).indexOf(x.id); return i < 0 ? 1e9 : i; };
+    const unitOf = x => unit2Of(x) ? "Main + 2nd Unit" : two ? (camSrcU2(p, x) ? "2nd Unit" : "Main Unit") : "";
+    const li = (xid, on, name, sub) => `<button type="button" class="cf-li${on ? " on" : ""}" data-act="cam-src" data-id="${esc(xid)}" aria-pressed="${on}"><span class="cs-ck" aria-hidden="true">${on ? CS_CHECK : ""}</span><span class="cf-n">${name}</span>${sub ? `<small>${sub}</small>` : ""}</button>`;
+    const rows = mcLists().map((x, i) => [x, i]).sort((a, b) => at(a[0]) - at(b[0]) || a[1] - b[1]).map(([x]) => { const on = S.includes(x); return li(x.id, on, `<bdi>${esc(x.name || "Untitled production")}</bdi>`, esc([on ? unitOf(x) : "", fmtRange(x.shootStart, x.shootEnd)].filter(Boolean).join(" · "))); }).join("");
+    const holds = ss => { const nb = ss.reduce((t, s) => t + camLines(s).reduce((a, [, l]) => a + lineQty(l), 0), 0), nv = ss.reduce((t, s) => t + camDevOnList(s, "vid").length, 0), nf = ss.reduce((t, s) => t + camDevOnList(s, "foc").length, 0);
+      return nb + nv + nf ? `${nb} camera${nb === 1 ? "" : "s"} · ${nv} wireless video · ${nf} focus` : "nothing on its list yet"; };
+    const shoot = id && fmtRange(p.shootStart, p.shootEnd), prep = id && p.prep ? fmtDate(p.prep) : "";
+    const meta = id ? `<p class="cf-meta">${shoot || prep ? `<span>${[shoot ? `<b>Shoot</b> ${esc(shoot)}` : "", prep ? `<b>Prep</b> ${esc(prep)}` : ""].filter(Boolean).join(" · ")}</span>` : ""}${two ? [[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<span><b>${t}</b> ${holds(S.filter(s => camSrcU2(p, s) === w))}</span>`).join("") : `<span><b>On the list</b> ${holds(S)}</span>`}</p>`
+      : `<div class="cam-meta"><div class="field"><label for="cam-pn">Production</label><input id="cam-pn" data-cammeta="name" maxlength="60" value="${esc(M.name || "")}" placeholder="Name" dir="auto" autocomplete="off" data-sug="camProd" enterkeyhint="next"></div>
       <div class="field cm-date"><label for="cam-pd">Date</label><input id="cam-pd" type="date" data-cammeta="date" value="${esc(M.date || "")}"></div></div>`;
-  const chip = x => `<button type="button" class="cam-chip${x === c && !cmp ? " on" : ""}" style="--k:${x.col};--kf:${camInk(x.col)}" data-act="cam-sel" data-k="${esc(x.k)}" aria-pressed="${x === c && !cmp}" aria-label="Camera ${esc(x.L)}${two ? (x.u2 ? ", 2nd Unit" : ", Main Unit") : ""}">${esc(x.L)}</button>`;
-  const add = u => list.length < 8 ? `<button type="button" class="cam-chip add" data-act="cam-add"${u ? ` data-u="2"` : ""} aria-label="Add a camera${two ? (u ? " to the 2nd Unit" : " to the Main Unit") : ""}">+</button>` : "";
-  // two units: a row of letters for each, its name over it
-  const chips = two ? [[false, "Main Unit"], [true, "2nd Unit"]].map(([u, t]) => `<div class="cam-unit"><span class="cu-l">${t}</span><div class="cam-chips">${list.filter(x => !!x.u2 === u).map(chip).join("")}${add(u)}</div></div>`).join("")
-    : `<div class="cam-chips">${list.map(chip).join("")}${add(false)}</div>`;
-  const body = !c ? `<div class="empty-state"><h3>No cameras yet</h3><button class="btn primary" type="button" data-act="cam-add">+ Add a camera</button></div>` : cmp ? camCompareHtml(p, camOrdered(p)) : camFormHtml(p, c);
-  const make = c ? `<button type="button" class="btn primary cam-create" data-act="cam-create" ${camPrintable(p).length ? "" : "disabled"}>Create cards</button>` : "";
-  return `${head}<section class="pad mc-pick cam-pick">${pick}${under}</section>
-    <section class="pad cam-page">${chips}${body}${make}</section>`;
+    panel = `<div class="cam-fp" id="cam-fp"><div class="cf-lists">${rows}${li("none", !id, "No list", "a name and a date")}</div>${meta}</div>`;
+  }
+  // two units: a tab for each (its number of cameras); the letters are the unit shown's
+  const useg = two ? `<div class="seg cam-useg" role="group" aria-label="Unit">${[[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<button type="button" data-act="cam-u" data-v="${w ? "2" : ""}" aria-pressed="${u === w}">${t}<i>${list.filter(x => !!x.u2 === w).length}</i></button>`).join("")}</div>` : "";
+  const shown = two ? list.filter(x => !!x.u2 === u) : list;
+  const chip = x => `<button type="button" class="cam-chip${x === c && !cmp ? " on" : ""}" style="--k:${x.col};--kf:${camInk(x.col)}" data-act="cam-sel" data-k="${esc(x.k)}" aria-pressed="${x === c && !cmp}" aria-label="Camera ${esc(x.L)}">${esc(x.L)}</button>`;
+  const chips = cmp ? "" : `<div class="cam-chips">${shown.map(chip).join("")}${list.length < 8 ? `<button type="button" class="cam-chip add" data-act="cam-add"${u ? ` data-u="2"` : ""} aria-label="Add a camera${two ? (u ? " to the 2nd Unit" : " to the Main Unit") : ""}">+</button>` : ""}</div>`;
+  const body = cmp ? camCompareHtml(p, camOrdered(p)) : c ? camFormHtml(p, c)
+    : two && list.length ? `<p class="hint cam-none">No ${u ? "2nd" : "Main"} Unit cameras yet. + adds one.</p>`
+    : `<div class="empty-state"><h3>No cameras yet</h3><button class="btn primary" type="button" data-act="cam-add">+ Add a camera</button></div>`;
+  const make = list.length ? `<button type="button" class="btn primary cam-create" data-act="cam-create" ${camPrintable(p).length ? "" : "disabled"}>Create cards</button>` : "";
+  return `${head}<section class="pad cam-top">${fold}${panel}${cmp ? "" : useg}${chips}</section>
+    <section class="pad cam-page">${body}${make}</section>`;
 }
 function camFormHtml(p, c) {
   const v = camVals(p, c), e = camE(c), k = esc(c.k), has = !!(e || c.name);
@@ -5967,6 +6013,7 @@ function camFormHtml(p, c) {
   const cIn = (f, label, val, ph, more, cls) => ({ l: label, h: inp(f, val, ph, more, cls) });
   const cInfo = (label, val) => ({ l: label, h: `<span class="cr-pv cr-info">${val || "—"}</span>` });
   const row = (a, b, cls) => `<div class="cam-row dual${cls ? " " + cls : ""}${b ? "" : " one"}"><span class="cr-l">${a.l}</span>${b ? `<span class="cr-l">${b.l}</span>` : ""}${a.h}${b ? b.h : ""}${a.sub !== undefined || (b && b.sub !== undefined) ? `<span class="cr-sub">${a.sub || ""}</span>${b ? `<span class="cr-sub">${b.sub || ""}</span>` : ""}` : ""}</div>`;
+  const row3 = (a, b, d) => `<div class="cam-row dual tri"><span class="cr-l">${a.l}</span><span class="cr-l">${b.l}</span><span class="cr-l">${d.l}</span>${a.h}${b.h}${d.h}</div>`;
   const fileHtml = v.fileA ? `${esc(v.fileA)} <span class="mono">${v.px}</span>` : `<span class="mono">${v.px}</span>`;
   let rec = "";
   if (!has) rec = `<p class="hint cam-first">Choose the camera, and its recording choices show here.</p>`;
@@ -5988,7 +6035,7 @@ function camFormHtml(p, c) {
     </div>
     <div class="cam-grp">${row(cIn("op", "Camera operator", c.op, "Name", 'data-sug="camCrew" enterkeyhint="next"'), cIn("fp", "Focus puller", c.fp, "Name", 'data-sug="camCrew" enterkeyhint="done"'))}</div>
     ${rec}
-    <div class="cam-grp">${row(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="done" aria-label="Last 4 digits of the serial number"'), "t-sn")}
+    <div class="cam-grp">${row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "Last 4", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
       ${row(cPick("foc", "Focus", c.foc ? esc(c.foc) : ""), cIn("ch", "Ch / freq", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"'), "t-ch")}</div>
     <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
 }
@@ -5996,7 +6043,9 @@ function camFormHtml(p, c) {
 /* two cameras that would fight: the same focus system on the same channel, or the same wireless video serial; the other camera's letter */
 function camClash(list, c, k) {
   if (k === "foc") { if (!(c.ch || "").trim()) return ""; const o = list.find(x => x !== c && norm(x.ch || "").trim() === norm(c.ch).trim() && norm(x.foc || "").trim() === norm(c.foc || "").trim()); return o ? o.L : ""; }
-  if (k === "vid") { if (!(c.sn || "").trim()) return ""; const o = list.find(x => x !== c && (x.sn || "").trim() === c.sn.trim() && norm(x.vid || "").trim() === norm(c.vid || "").trim()); return o ? o.L : ""; }
+  if (k === "vid") {  // the same transmitter or receiver (model and serial) on two cameras
+    const t = (c.sn || "").trim(), r = (c.snr || "").trim(); if (!t && !r) return "";
+    const o = list.find(x => x !== c && norm(x.vid || "").trim() === norm(c.vid || "").trim() && ((t && (x.sn || "").trim() === t) || (r && (x.snr || "").trim() === r))); return o ? o.L : ""; }
   return "";
 }
 function camCompareHtml(p, list) {
@@ -6008,7 +6057,7 @@ function camCompareHtml(p, list) {
     ["Sensor coverage", (c, v) => td(esc(v.sensor))],
     ["File resolution", (c, v) => td(v.px ? `<span class="mono">${v.px}</span>` : esc(v.file), esc([v.fileA, v.codec].filter(Boolean).join(" · ")))],
     ["Media", (c, v) => td(esc(v.media), v.per ? esc(v.per) : "")],
-    ["Wireless video", (c, v) => { const x = camClash(list, c, "vid"); return td(esc(c.vid || ""), x ? `SN ${esc(c.sn)} · same as ${x}!` : c.sn ? "SN " + esc(c.sn) : "", x ? "clash" : ""); }],
+    ["Wireless video", (c, v) => { const x = camClash(list, c, "vid"); return td(esc(c.vid || ""), [esc(camSnText(c)), x ? `same as ${x}!` : ""].filter(Boolean).join(" · "), x ? "clash" : ""); }],
     ["Focus puller", (c, v) => td(esc(c.fp || ""))],
     ["Focus", (c, v, i) => { const x = clash(c, i); return td(esc([c.foc, c.ch].filter(Boolean).join(" · ")), x ? `Same as ${x}!` : "", x ? "clash" : ""); }]];
   if (list.some(c => camNotes(c).length)) rows.push(["Notes", c => td(camNotes(c).map(x => esc([x.t, x.v].filter(Boolean).join(": "))).join("<br>"))]);
@@ -6091,7 +6140,7 @@ function camField(p, t) {
   const c = camsOf(p).find(x => x.k === t.dataset.k); if (!c) return;
   if (t.dataset.camnote) { const n = (c.notes || [])[Number(t.dataset.i)]; if (n) { n[t.dataset.camnote] = t.value.slice(0, t.dataset.camnote === "t" ? 24 : 60); camSave(p); } return; }
   const f = t.dataset.camf;
-  if (f === "sn") { const d = t.value.replace(/\D/g, "").slice(-4); if (d !== t.value) t.value = d; c.sn = d; }  // the last 4 digits, even from a whole serial pasted in
+  if (f === "sn" || f === "snr") { const d = t.value.replace(/\D/g, "").slice(-4); if (d !== t.value) t.value = d; c[f] = d; }  // the last 4 digits, even from a whole serial pasted in
   else c[f] = t.value.slice(0, 60);
   camSave(p);
 }
@@ -6114,7 +6163,7 @@ function camCardHtml(p, c, bw, edit) {
   const cell = {
     op: () => f("op", "Camera operator", dirs(c.op)), fp: () => f("fp", "Focus puller", dirs(c.fp)),
     sensor: () => f("sensor", "Sensor coverage", esc(v.sensor), ""), file: () => f("file", "File resolution", v.px ? `${v.fileA ? esc(v.fileA) + " " : ""}<span class="cc-mono">${v.px}</span>` : esc(v.file), esc(v.codec)),
-    media: () => f("media", "Media", esc(v.media), v.per ? `${CC_CLOCK}${esc(v.per)} a card` : ""), vid: () => f("vid", "Wireless video", dirs(c.vid), c.sn ? "SN " + esc(c.sn) : ""),
+    media: () => f("media", "Media", esc(v.media), v.per ? `${CC_CLOCK}${esc(v.per)} a card` : ""), vid: () => f("vid", "Wireless video", dirs(c.vid), esc(camSnText(c))),
     foc: () => f("foc", "Focus", dirs(c.foc), esc(c.ch || "")),
     // the notes: each its own field; while arranging, all of them as one field
     notes: () => edit ? f("notes", notes.length ? esc(notes[0].t || "Note") : "Notes", notes.length ? dirs(notes[0].v) + (notes.length > 1 ? ` <span class="cc-more">+${notes.length - 1}</span>` : "") : `<span class="cc-na">Your notes</span>`, "") : notes.map(x => f("notes", esc(x.t || "Note"), dirs(x.v), "")).join("") };
@@ -6213,7 +6262,7 @@ function camTableHtml(p, bw) {
     ["File resolution", (c, v) => v.px ? `${v.fileA ? esc(v.fileA) + " " : ""}<span class="ct-mono">${v.px}</span>` : esc(v.file)],
     ["Frame rate", (c, v) => v.fps ? `${fpsLabel(v.fps)} fps` : ""],
     ["Media", (c, v) => esc(v.media) + sub(v.per ? `${esc(v.per)} a card` : "")],
-    ["Wireless video", c => { const x = camClash(list, c, "vid"); return [dirs(c.vid) + sub(c.sn ? "SN " + esc(c.sn) + (x ? ` · same as ${x}!` : "") : ""), x]; }],
+    ["Wireless video", c => { const x = camClash(list, c, "vid"); return [dirs(c.vid) + sub([esc(camSnText(c)), x ? `same as ${x}!` : ""].filter(Boolean).join(" · ")), x]; }],
     ["Focus", c => { const x = camClash(list, c, "foc"); return [dirs(c.foc) + sub(esc(c.ch || "") + (x ? ` · same as ${x}!` : "")), x]; }]];
   if (list.some(c => camNotes(c).length)) rows.push(["Notes", c => camNotes(c).map(x => `<div><b>${esc(x.t || "Note")}</b> ${dirs(x.v)}</div>`).join("")]);
   if (camTwo(p)) rows.unshift(["Unit", c => c.u2 ? "2nd Unit" : "Main Unit"]);
@@ -7062,15 +7111,18 @@ document.addEventListener("click", e => {
       window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     }
     case "cams": closeModal(); app.view = "cams"; app.camCmp = false; render(); window.scrollTo(0, 0); break;
-    case "cam-sel": app.camK = b.dataset.k; app.camCmp = false; rerenderKeepScroll(); break;
-    case "cam-add": { const list = camsOf(p); if (list.length >= 8) break; const c = camNew(list, ""); if (b.dataset.u) c.u2 = 1; list.push(c); if (!p.browse) camAutoFill(p, [c]); app.camK = c.k; app.camCmp = false; camSave(p); render(); camPicker("cam"); break; }
-    case "cam-lists": camListsSheet(); break;
-    case "cam-src": camSrcToggle(id); app.camK = null; app.camCmp = false; render(); camListsSheet(); break;
-    case "cam-unit": { const c = camSel(p); if (!c) break; if (b.dataset.v) c.u2 = 1; else delete c.u2; camSave(p); rerenderKeepScroll(); camPicker("letter"); break; }
+    case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
+    case "cam-u": { const w = !!b.dataset.v, l = camsOf(p); app.camU = w; app.camK = (l.find(x => !!x.u2 === w) || {}).k || app.camK; app.camCmp = false; rerenderKeepScroll(); break; }
+    case "cam-fold": app.camFold = !app.camFold; if (app.camFold) app.camFoldOrder = mcLists().map(x => x.id); rerenderKeepScroll(); break;
+    case "cam-add": { const list = camsOf(p); if (list.length >= 8) break; const c = camNew(list, ""); if (b.dataset.u) c.u2 = 1; list.push(c); if (!p.browse) camAutoFill(p, [c]); app.camK = c.k; app.camU = undefined; app.camCmp = false; camSave(p); render(); camPicker("cam"); break; }
+    case "cam-src": camSrcToggle(id); app.camK = null; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
+    case "cam-unit": { const c = camSel(p); if (!c) break; if (b.dataset.v) c.u2 = 1; else delete c.u2; app.camK = c.k; app.camU = undefined; camSave(p); rerenderKeepScroll(); camPicker("letter"); break; }
     case "cam-del": {
       closeModal(); const list = camsOf(p), c = camSel(p); if (!c) break;
-      const i = list.indexOf(c); list.splice(i, 1); app.camK = (list[Math.min(i, list.length - 1)] || {}).k; camSave(p); rerenderKeepScroll();
-      undoable("Removed", `camera ${c.L}`, () => { list.splice(Math.min(i, list.length), 0, c); app.camK = c.k; camSave(p); rerenderKeepScroll(); });
+      // the next camera of the same unit takes its place (the page stays on that unit)
+      const i = list.indexOf(c), two = camTwo(p); list.splice(i, 1); const same = two ? list.filter(x => !!x.u2 === !!c.u2) : list;
+      app.camK = (same.find(x => list.indexOf(x) >= i) || same[same.length - 1] || list[Math.min(i, list.length - 1)] || {}).k; app.camU = two ? !!c.u2 : undefined; camSave(p); rerenderKeepScroll();
+      undoable("Removed", `camera ${c.L}`, () => { list.splice(Math.min(i, list.length), 0, c); app.camK = c.k; app.camU = undefined; camSave(p); rerenderKeepScroll(); });
       break;
     }
     case "cam-cmp": app.camCmp = !app.camCmp; rerenderKeepScroll(); break;
