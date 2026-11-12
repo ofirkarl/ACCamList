@@ -3780,16 +3780,22 @@ function camFormHtml(p, c) {
     <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
 }
 /* all the cameras side by side, one column each; two focus units on the same channel are marked */
+/* two cameras that would fight: the same focus system on the same channel, or the same wireless video serial; the other camera's letter */
+function camClash(list, c, k) {
+  if (k === "foc") { if (!(c.ch || "").trim()) return ""; const o = list.find(x => x !== c && norm(x.ch || "").trim() === norm(c.ch).trim() && norm(x.foc || "").trim() === norm(c.foc || "").trim()); return o ? o.L : ""; }
+  if (k === "vid") { if (!(c.sn || "").trim()) return ""; const o = list.find(x => x !== c && (x.sn || "").trim() === c.sn.trim() && norm(x.vid || "").trim() === norm(c.vid || "").trim()); return o ? o.L : ""; }
+  return "";
+}
 function camCompareHtml(p, list) {
   const vs = list.map(c => camVals(p, c)), n = list.length;
-  const clash = (c, i) => { if (!(c.ch || "").trim()) return ""; const o = list.find((x, j) => j !== i && norm(x.ch || "").trim() === norm(c.ch).trim() && norm(x.foc || "").trim() === norm(c.foc || "").trim()); return o ? o.L : ""; };
+  const clash = (c, i) => camClash(list, c, "foc");
   const td = (a, s, cls) => `<td${cls ? ` class="${cls}"` : ""}>${a ? `<span class="cv">${a}</span>` : `<span class="na">—</span>`}${s ? `<span class="s">${s}</span>` : ""}</td>`;
   const rows = [
     ["Camera operator", (c, v) => td(esc(c.op || ""))],
     ["Sensor coverage", (c, v) => td(esc(v.sensor))],
     ["File resolution", (c, v) => td(v.px ? `<span class="mono">${v.px}</span>` : esc(v.file), esc([v.fileA, v.codec].filter(Boolean).join(" · ")))],
     ["Media", (c, v) => td(esc(v.media), v.per ? esc(v.per) : "")],
-    ["Wireless video", (c, v) => td(esc(c.vid || ""), c.sn ? "SN " + esc(c.sn) : "")],
+    ["Wireless video", (c, v) => { const x = camClash(list, c, "vid"); return td(esc(c.vid || ""), x ? `SN ${esc(c.sn)} · same as ${x}!` : c.sn ? "SN " + esc(c.sn) : "", x ? "clash" : ""); }],
     ["Focus puller", (c, v) => td(esc(c.fp || ""))],
     ["Focus", (c, v, i) => { const x = clash(c, i); return td(esc([c.foc, c.ch].filter(Boolean).join(" · ")), x ? `Same as ${x}!` : "", x ? "clash" : ""); }]];
   if (list.some(c => camNotes(c).length)) rows.push(["Notes", c => td(camNotes(c).map(x => esc([x.t, x.v].filter(Boolean).join(": "))).join("<br>"))]);
@@ -3947,11 +3953,11 @@ const camPrintable = p => camsOf(p).filter(c => camE(c) || (c.name || "").trim()
 /* card sizes: the standard 10 × 6.6 cm card (8 on an A4), or small, 8.6 × 5.6 cm (10 on an A4) */
 const CAM_SIZES = { std: { s: 1, t: "Standard", d: "8.6 × 5.7 cm" }, sm: { s: .86, t: "Small", d: "7.4 × 4.9 cm" } };
 const CC_W = 86;  // the card's width in --u (mm on the standard card)
-const camPrintOpts = () => { const o = app.settings.camPrint || (app.settings.camPrint = {}); if (!CAM_SIZES[o.size]) o.size = "std"; if (o.ink !== "bw") o.ink = "color"; return o; };
+const camPrintOpts = () => { const o = app.settings.camPrint || (app.settings.camPrint = {}); if (!CAM_SIZES[o.size]) o.size = "std"; if (o.ink !== "bw") o.ink = "color"; if (o.what !== "table") o.what = "cards"; return o; };
 function viewCamPrint() {
   const p = cur(), o = camPrintOpts(), list = camPrintable(p), S = CAM_SIZES[o.size];
   const hmax = Math.max(57, ...list.map(c => camNotes(c).length > 1 ? 65 : 57)) * S.s, per = 2 * Math.max(1, Math.floor(297 / (hmax + 3)));
-  const pages = Math.ceil(list.length / per) || 0, nm = camProdName(p), head = pageHead("Camera cards", nm ? `<span dir="auto">${esc(nm)}</span>` : `<span>Multicam management</span>`);
+  const pages = Math.ceil(list.length / per) || 0, nm = camProdName(p), head = pageHead(o.what === "table" && !app.camLayoutEdit ? "Camera table" : "Camera cards", nm ? `<span dir="auto">${esc(nm)}</span>` : `<span>Multicam management</span>`);
   if (app.camLayoutEdit && list.length) {  // arranging: one card, its fields to drag, the hidden ones to bring back
     const L = camLayout(), c = list.includes(camSel(p)) ? camSel(p) : list[0];
     return `${head}<section class="pad cam-out cl-edit">
@@ -3962,9 +3968,17 @@ function viewCamPrint() {
     </section>`;
   }
   const seg = (k, v, t, sub) => `<button type="button" data-act="cp-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
+  const what = `<div class="seg cp-seg cp-what">${seg("what", "cards", "Cards", "One per camera")}${seg("what", "table", "Table", "All on one page")}</div>`;
   setTimeout(() => camPdfPrep(p), 400);  // made ahead, so Save and Share are ready at a tap
+  if (o.what === "table") return `${head}
+    <section class="pad cam-out">${what}
+      ${list.length ? `<button type="button" class="ct-prev${app.ctZoom ? " zoom" : ""}" data-act="ct-zoom" aria-label="${app.ctZoom ? "Fit the table to the screen" : "Zoom in on the table"}">${camTableHtml(p, o.ink === "bw")}</button><p class="hint ct-tip">${app.ctZoom ? "Swipe to see it all. Tap to fit it back." : "Tap the table to zoom in."}</p>` : `<p class="hint">No cameras chosen yet.</p>`}
+      <div class="cp-opts"><span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
+      <p class="hint cp-note">One A4 page, landscape. Two cameras on the same focus channel, or with the same video serial, are marked in red.</p>
+      <div class="co-acts"><button class="btn primary" type="button" data-act="cam-save" ${list.length ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="cam-share" ${list.length ? "" : "disabled"}>Share</button></div>
+    </section>`;
   return `${head}
-    <section class="pad cam-out${o.size === "sm" ? " sm" : ""}">
+    <section class="pad cam-out${o.size === "sm" ? " sm" : ""}">${what}
       ${list.length ? `<div class="cl-bar"><button class="btn sm cl-btn" type="button" data-act="cl-edit">${LAYOUT_ICON}<span>Edit layout</span></button></div><div class="co-cards">${list.map(c => `<div class="cp-prev">${camCardHtml(p, c, o.ink === "bw")}</div>`).join("")}</div>` : `<p class="hint">No cameras chosen yet.</p>`}
       <div class="cp-opts"><span class="cr-l">Size</span><div class="seg cp-seg">${seg("size", "std", CAM_SIZES.std.t, CAM_SIZES.std.d)}${seg("size", "sm", CAM_SIZES.sm.t, CAM_SIZES.sm.d)}</div>
         <span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
@@ -3972,14 +3986,44 @@ function viewCamPrint() {
       <div class="co-acts"><button class="btn primary" type="button" data-act="cam-save" ${list.length ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="cam-share" ${list.length ? "" : "disabled"}>Share</button></div>
     </section>`;
 }
+function camTableHtml(p, bw) {
+  const list = camPrintable(p), vs = list.map(c => camVals(p, c)), nm = camProdName(p), when = camProdWhen(p);
+  const dirs = x => x ? `<span dir="auto">${esc(x)}</span>` : "", sub = x => x ? `<span class="ct-s">${x}</span>` : "", na = `<span class="ct-na">—</span>`;
+  const rows = [
+    ["Camera operator", c => dirs(c.op)], ["Focus puller", c => dirs(c.fp)],
+    ["Codec", (c, v) => esc(v.codec)], ["Sensor coverage", (c, v) => esc(v.sensor)],
+    ["File resolution", (c, v) => v.px ? `${v.fileA ? esc(v.fileA) + " " : ""}<span class="ct-mono">${v.px}</span>` : esc(v.file)],
+    ["Frame rate", (c, v) => v.fps ? `${fpsLabel(v.fps)} fps` : ""],
+    ["Media", (c, v) => esc(v.media) + sub(v.per ? `${esc(v.per)} a card` : "")],
+    ["Wireless video", c => { const x = camClash(list, c, "vid"); return [dirs(c.vid) + sub(c.sn ? "SN " + esc(c.sn) + (x ? ` · same as ${x}!` : "") : ""), x]; }],
+    ["Focus", c => { const x = camClash(list, c, "foc"); return [dirs(c.foc) + sub(esc(c.ch || "") + (x ? ` · same as ${x}!` : "")), x]; }]];
+  if (list.some(c => camNotes(c).length)) rows.push(["Notes", c => camNotes(c).map(x => `<div><b>${esc(x.t || "Note")}</b> ${dirs(x.v)}</div>`).join("")]);
+  const made = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  return `<div class="ctable${bw ? " bw" : ""}">
+    <div class="ct-head"><div><div class="ct-title">Camera setup</div>${nm || when ? `<div class="ct-prod">${nm ? `<span dir="auto">${esc(nm)}</span>` : ""}${nm && when ? " · " : ""}${esc(when)}</div>` : ""}</div><div class="ct-n">${list.length} camera${list.length === 1 ? "" : "s"}</div></div>
+    <table class="ct"><thead><tr><th class="ct-lc"></th>${list.map((c, i) => `<th style="--c:${bw ? "#18171d" : c.col}"><span class="ct-ring">${esc(c.L)}</span><span class="ct-cam"><span class="ct-mk">${esc(vs[i].mk)}</span><span class="ct-md">${esc(vs[i].md || "—")}</span></span></th>`).join("")}</tr></thead>
+    <tbody>${rows.map(([label, f]) => `<tr><th class="ct-lc">${label}</th>${list.map((c, i) => { const r = f(c, vs[i]), [h, x] = Array.isArray(r) ? r : [r, ""]; return `<td${x ? ` class="ct-clash"` : ""}>${h || na}</td>`; }).join("")}</tr>`).join("")}</tbody></table>
+    <div class="ct-foot">AC Cam List · ${esc(made)}</div></div>`;
+}
 const LAYOUT_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><path d="M14 17h6M17 14v6"/></svg>`;
-const camPdfKey = p => { const o = camPrintOpts(); return JSON.stringify([o.size, o.ink, camPrintable(p).map(c => camCardHtml(p, c, o.ink === "bw"))]); };
+const camPdfKey = p => { const o = camPrintOpts(); return JSON.stringify(o.what === "table" ? ["table", o.ink, camTableHtml(p, o.ink === "bw")] : [o.size, o.ink, camPrintable(p).map(c => camCardHtml(p, c, o.ink === "bw"))]); };
 let camPdfMade = null;  // { key, blob }
 async function camPdfPrep(p) { if (app.view !== "camprint") return; const key = camPdfKey(p); if (camPdfMade && camPdfMade.key === key) return; try { const blob = await camPdf(p); if (camPdfKey(p) === key) camPdfMade = { key, blob }; } catch (e) {} }
 async function camPdf(p) {
   if (!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
   if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
   const o = camPrintOpts(), S = CAM_SIZES[o.size], bw = o.ink === "bw", list = camPrintable(p);
+  if (o.what === "table") {  // the table: one A4 page, landscape, 10 mm margins; a tall table is made smaller to fit
+    const host = document.createElement("div"); host.style.cssText = "position:fixed;left:-12000px;top:0;background:#fff"; host.innerHTML = camTableHtml(p, bw); document.body.appendChild(host);
+    try {
+      try { await document.fonts.ready; } catch (e) {}
+      const node = host.firstElementChild, cv = await window.html2canvas(node, { scale: 2.5, backgroundColor: "#ffffff" });
+      const pdf = new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+      let w = 277, h = w * node.offsetHeight / node.offsetWidth; if (h > 190) { w = w * 190 / h; h = 190; }
+      pdf.addImage(cv.toDataURL("image/jpeg", 0.92), "JPEG", (297 - w) / 2, 10, w, h);
+      return pdf.output("blob");
+    } finally { host.remove(); }
+  }
   const host = document.createElement("div"); host.style.cssText = "position:fixed;left:-12000px;top:0;background:#fff";
   host.innerHTML = list.map(c => camCardHtml(p, c, bw)).join(""); document.body.appendChild(host);
   try {
@@ -4004,7 +4048,8 @@ async function camPdfGo(b, share) {
   const p = cur(), key = camPdfKey(p), was = b.textContent;
   let blob = camPdfMade && camPdfMade.key === key ? camPdfMade.blob : null;
   if (!blob) { b.disabled = true; b.textContent = "Making the PDF…"; try { blob = await camPdf(p); camPdfMade = { key, blob }; } catch (err) { console.warn(err); toast("The PDF couldn't be made. Check the connection and try again."); b.disabled = false; b.textContent = was; return; } b.disabled = false; b.textContent = was; }
-  const nm = camProdName(p).replace(/[\\/:*?"<>|]+/g, " ").trim(), name = (nm ? `${nm} - Camera cards` : "Camera cards") + ".pdf";
+  const what = camPrintOpts().what === "table" ? "Camera table" : "Camera cards";
+  const nm = camProdName(p).replace(/[\\/:*?"<>|]+/g, " ").trim(), name = (nm ? `${nm} - ${what}` : what) + ".pdf";
   if (share) {
     const file = typeof File === "function" ? new File([blob], name, { type: "application/pdf" }) : null;
     let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
@@ -4813,6 +4858,7 @@ document.addEventListener("click", e => {
     case "cam-create": closeModal(); app.camLayoutEdit = false; app.view = "camprint"; render(); window.scrollTo(0, 0); break;
     case "cp-opt": { const o = camPrintOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
     case "cl-edit": app.camLayoutEdit = !app.camLayoutEdit; render(); window.scrollTo(0, 0); break;
+    case "ct-zoom": app.ctZoom = !app.ctZoom; rerenderKeepScroll(); break;
     case "cl-hide": { const L = camLayout(); if (!L.hidden.includes(b.dataset.fk)) camLayoutSet(null, [...L.hidden, b.dataset.fk]); camPdfMade = null; rerenderKeepScroll(); break; }
     case "cl-show": { const L = camLayout(); camLayoutSet(null, L.hidden.filter(k => k !== b.dataset.fk)); camPdfMade = null; rerenderKeepScroll(); break; }
     case "cl-reset": { const was = app.settings.camLayout; delete app.settings.camLayout; touchSettings(); camPdfMade = null; rerenderKeepScroll();
