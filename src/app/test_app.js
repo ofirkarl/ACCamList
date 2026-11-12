@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, viewCamPrint, camListId, camInk, CAM_COLORS, camCompareHtml, savedListsHtml, savedListOpenHtml, camCopy, camLayout, camLayoutSet, camTableHtml, camClash, modalsSeen: () => 0 };`)();
+;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, viewCamPrint, camListId, camInk, CAM_COLORS, camCompareHtml, savedListsHtml, savedListOpenHtml, camCopy, camLayout, camLayoutSet, camTableHtml, camClash, camDevOnList, camSrcs, camSrcU2, camTwo, camSrcToggle, camWhen, camOrdered, camHome, modalsSeen: () => 0 };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -879,7 +879,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.camSetVal(pc, cs[0], "sensor", "4K 16:9"); A.camSetVal(pc, cs[0], "mode", "4K 16:9 → UHD");
   modals.length = 0; A.camPicker("sensor"); const ms = modals.pop() || "";
   ok(!/→/.test(ms) && (ms.match(/data-k="sensor"/g) || []).length === 8, "the Sensor coverage list: each sensor area once, no arrows");
-  ok(/<label for="cam-list">Camera list<\/label>/.test(h) && /<option value="none"[^>]*><\/option>/.test(h) && /class="cam-dates"><span><b>Shoot<\/b> 20–25 Nov 2026/.test(h), "Camera list: an empty choice for no list; a list's shoot (and prep) dates under it");
+  ok(/id="cam-list-l">Camera list<\/span>/.test(h) && /data-act="cam-lists"/.test(h) && /class="cam-dates"><span><b>Shoot<\/b> 20–25 Nov 2026/.test(h), "Camera list: a field that opens the lists; a list's shoot (and prep) dates under it");
   ok((h.match(/class="cam-chip( on)?"/g) || []).length === 3 && /grid-template-columns|cam-chips/.test(h) && /class="btn sm ph-export cam-cmpbtn"/.test(h), "the letters in a grid of their own; Compare at the top, beside back");
   ok(A.CAM_COLORS.slice(0, 6).join() === "#3ee24b,#e8f20c,#ff2e93,#ff6a10,#e5484d,#1e9be8" && A.camInk("#e8f20c") === "#18171d" && A.camInk("#1e9be8") === "#fff", "colors: fluorescent green, yellow, pink, orange, then red and blue; a dark letter on the bright ones");
   A.app.view = "camprint"; const pr = A.viewCamPrint(); A.app.view = "cams";
@@ -931,4 +931,53 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(/Camera table/.test(tp) && /class="ct-prev[^"]*" data-act="ct-zoom"/.test(tp) && /data-act="cam-save"/.test(tp) && !/Edit layout/.test(tp) && /data-k="what" data-v="table" aria-pressed="true"/.test(tp), "Cards or Table: the table page, its preview to zoom, Save PDF and Share");
   A.app.settings.camPrint.what = "cards"; A.app.view = "cams";
   A.app.view = "home"; A.app.settings.rules = keepRules; A.app.productions.splice(A.app.productions.indexOf(pc), 1); }
+// --- Multicam from a list: its cameras, wireless video and focus come in by themselves
+{ const keepRules = A.app.settings.rules; A.app.settings.rules = [];
+  const pc = A.newProduction({ name: "Auto", houseId: "utopia" }); A.app.productions.push(pc); pc.updatedAt = Date.now() + 3e6;
+  const a35 = find("utopia", /^ARRI Alexa 35$/), fx9 = find("utopia", /^Sony PXW-FX9$/i), bolt = find("utopia", /^Teradek Bolt 6 LT 750 3G-SDI\/HDMI Wireless Video Set$/), hi5 = find("utopia", /^ARRI Hi-5 Hand Unit$/), ctrl5 = find("utopia", /^Teradek CTRL.5 Hand Unit$/);
+  A.setQty(pc, a35, 2); A.setQty(pc, fx9, 1); A.setQty(pc, bolt, 1); pc.items[bolt].tx = 2; A.setQty(pc, hi5, 2); A.setQty(pc, ctrl5, 1);
+  ok(A.camDevOnList(pc, "vid").join("|") === "Teradek Bolt 6 LT 750|Teradek Bolt 6 LT 750" && A.camDevOnList(pc, "foc").sort().join("|") === "ARRI Hi-5|ARRI Hi-5|Teradek RT CTRL.5", "on the list: two video transmitters (the set's TX count) and three focus hand units");
+  A.app.settings.camList = pc.id; A.app.view = "cams";
+  const cs = A.camsOf(pc);
+  ok(cs.length === 3 && cs[0].vid === "Teradek Bolt 6 LT 750" && cs[1].vid === "Teradek Bolt 6 LT 750" && !cs[2].vid && cs.every(c => c.foc) && cs.filter(c => c.foc === "ARRI Hi-5").length === 2, "the cards come with them: A and B get the two transmitters, all three a focus unit");
+  ok(/<b>On the list<\/b> 3 cameras · 2 wireless video · 3 focus/.test(A.viewCams()), "the page says what it found on the list");
+  A.setQty(pc, a35, 3); const cs2 = A.camsOf(pc);
+  ok(cs2.length === 4 && cs2[3].L === "D" && cs2[3].id === a35, "a camera added to the list later brings its card");
+  cs2.splice(3, 1); ok(A.camsOf(pc).length === 3, "a card deleted here stays deleted");
+  cs2[0].vid = "Hollyland Mars 4K"; ok(A.camsOf(pc)[0].vid === "Hollyland Mars 4K", "what was typed or picked stays as it is");
+  A.app.view = "home"; A.app.settings.rules = keepRules; A.app.productions.splice(A.app.productions.indexOf(pc), 1); }
+// --- Multicam across a production's two units, and across several lists
+{ const keepRules = A.app.settings.rules, keepList = A.app.settings.camList; A.app.settings.rules = [];
+  const a35 = find("utopia", /^ARRI Alexa 35$/), fx9 = find("utopia", /^Sony PXW-FX9$/i), hi5 = find("utopia", /^ARRI Hi-5 Hand Unit$/), ctrl5 = find("utopia", /^Teradek CTRL.5 Hand Unit$/), bolt = find("utopia", /^Teradek Bolt 6 LT 750 3G-SDI\/HDMI Wireless Video Set$/);
+  const made = [], mk = f => { const x = A.newProduction({ houseId: "utopia", ...f }); A.app.productions.push(x); made.push(x); return x; };
+  const m = mk({ name: "Units" }); m.updatedAt = Date.now() + 5e6;
+  const q = mk({ name: "Units", unit: "2nd Unit", mainOf: m.id, shootStart: "2026-12-02", shootEnd: "2026-12-03" }); m.unit2 = q.id; m.unit = "Main Unit";
+  A.setQty(m, a35, 2); A.setQty(m, hi5, 2); A.setQty(m, bolt, 1); m.items[bolt].tx = 2; A.setQty(q, fx9, 1); A.setQty(q, ctrl5, 1);
+  A.app.settings.camList = m.id; A.app.view = "cams";
+  const cs = A.camsOf(m);
+  ok(cs.length === 3 && cs.filter(c => !c.u2).map(c => c.L).join("") === "AB" && cs.filter(c => c.u2).map(c => c.L).join("") === "C" && cs[2].id === fx9 && cs[2].src === q.id, "a production with a 2nd Unit: the Main Unit's cameras are A and B, the 2nd Unit's C");
+  ok(cs[0].foc === "ARRI Hi-5" && cs[1].foc === "ARRI Hi-5" && cs[2].foc === "Teradek RT CTRL.5" && cs[0].vid && cs[1].vid && !cs[2].vid, "each unit's wireless video and focus go to its own cameras");
+  const h = A.viewCams();
+  ok(/class="cu-l">Main Unit/.test(h) && /class="cu-l">2nd Unit/.test(h) && /data-act="cam-add" data-u="2"/.test(h) && /<b>Main Unit<\/b> 2 cameras · 2 wireless video · 2 focus/.test(h) && /<b>2nd Unit<\/b> 1 camera · 0 wireless video · 1 focus/.test(h), "the page: a row of letters for each unit with its own +, and what each unit's list holds");
+  ok(/2nd Unit · 2–3 Dec 2026/.test(A.camCardHtml(m, cs[2])) && /Main Unit/.test(A.camCardHtml(m, cs[0])) && /<th class="ct-lc">Unit<\/th>/.test(A.camTableHtml(m)) && A.camOrdered(m).map(c => c.L).join("") === "ABC", "the card says its unit and that unit's dates; the table has a Unit row");
+  cs[2].u2 = undefined; delete cs[2].u2; ok(A.camOrdered(m)[2] === cs[2] && !/2nd Unit ·/.test(A.camCardHtml(m, cs[2])), "a camera moved to the Main Unit"); cs[2].u2 = 1;
+  // a 2nd Unit with nothing on its list: what is known comes in, and the 2nd Unit's row waits for its cameras
+  q.items = {}; delete m.cams; delete m.camsSeen; delete m.camsAuto; const cs1 = A.camsOf(m);
+  ok(cs1.length === 2 && cs1.every(c => !c.u2) && /<b>2nd Unit<\/b> Nothing on its list yet/.test(A.viewCams()) && /data-u="2"/.test(A.viewCams()), "an empty 2nd Unit: the Main Unit's cameras come in, the 2nd Unit's row is there to fill");
+  // another list beside it: its cameras come in as the 2nd Unit's, and go when it is taken off
+  const o = mk({ name: "Other" }); A.setQty(o, fx9, 2);
+  A.camSrcToggle(o.id); const cs3 = A.camsOf(m);
+  ok(A.camSrcs(m).includes(o) && cs3.filter(c => c.src === o.id).length === 2 && cs3.filter(c => c.src === o.id).every(c => c.u2), "a list picked beside: its cameras come in, as the 2nd Unit's");
+  ok(/Camera lists<\/span>/.test(A.viewCams()) && /<bdi>Units<\/bdi> \+ <bdi>Other<\/bdi>/.test(A.viewCams()), "the field names both lists");
+  A.camSrcToggle(o.id); ok(!A.camSrcs(m).includes(o) && A.camsOf(m).every(c => c.src !== o.id), "taken off: its cards go");
+  // the names tell the units: the first list called 2nd Unit, the other Main (in Hebrew too)
+  const a = mk({ name: "Night 2nd unit" }), b = mk({ name: "Night main" }); A.setQty(a, fx9, 1); A.setQty(b, a35, 1);
+  A.app.settings.camList = a.id; A.camSrcToggle(b.id); const cs4 = A.camsOf(a);
+  ok(cs4.some(c => c.id === a35 && !c.u2) && cs4.some(c => c.id === fx9 && c.u2), "names tell the units: \"Night 2nd unit\" and \"Night main\"");
+  const he = mk({ name: "צילומים יחידה ב'" }), he1 = mk({ name: "צילומים" });
+  he.camFrom = [he1.id]; ok(A.camSrcU2(he, he) && !A.camSrcU2(he, he1), "and in Hebrew: \"יחידה ב'\"");
+  // taking the first list off: the next list picked becomes the first
+  A.camSrcToggle(a.id); ok(A.app.settings.camList === b.id, "the first list off: the other one takes its place");
+  A.camSrcToggle(b.id); ok(A.app.settings.camList === "none" && A.camCur().browse, "the last list off: no list (a name and a date of your own)");
+  A.app.view = "home"; A.app.settings.rules = keepRules; A.app.settings.camList = keepList; for (const x of made) A.app.productions.splice(A.app.productions.indexOf(x), 1); }
 
