@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, modalsSeen: () => 0 };`)();
+;return { histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, camPrintSheet, camListId, camCompareHtml, savedListsHtml, savedListOpenHtml, modalsSeen: () => 0 };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -795,7 +795,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.app.tab = "media"; A.viewProduction(); ok(A.app.tab === "list", "a production never opens on the old Media tab");
   ok(A.pageKey() === "p:" + q.id, "a production is one page whatever its tab");
   A.app.view = "home"; const hm = A.viewHome();
-  ok(/class="home-shorts"/.test(hm) && /data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm) && /data-act="rules-open" data-to="pkg"/.test(hm) && !/data-act="tools"|tool-favs|browse-head/.test(hm), "the start page: Media Calculator, Catalogs and Packages above the productions");
+  ok(/class="home-shorts"/.test(hm) && (hm.match(/class="hs-btn"/g) || []).length === 4 && /data-act="mcalc"[\s\S]*data-act="catalogs"[\s\S]*data-act="favs"[\s\S]*data-act="tools"/.test(hm) && !/data-act="rules-open"|data-act="lensfind"|tool-favs|browse-head/.test(hm), "the start page: four tools, Media calc, Catalogs, Favorites and More tools, above the productions");
   A.app.settings.mcList = undefined; A.app.view = "mcalc";
   ok(A.mcListId() === q.id, "the Media Calculator starts on the production worked on most recently");
   let mc = A.viewMcalc(); ok(/<select id="mc-list"/.test(mc) && /<option value="none">No list · any camera<\/option>/.test(mc) && new RegExp(`<option value="${q.id}" selected>Linked`).test(mc) && /media-cam/.test(mc), "one choice: which list, or none");
@@ -808,7 +808,8 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- Find a lens from the start page: a rental house switch, nothing added
 { A.app.settings.lensHouse = "fitussi"; A.app.lensP = null; A.app.view = "lensfind"; const v = A.viewLensFind();
   ok(/data-act="lens-house" data-house="fitussi" aria-pressed="true"/.test(v) && /class="tabpane lens-solo"/.test(v) && /data-fin="f"/.test(v) && /Find a lens/.test(v), "Find a lens on its own: the rental house switch, then the finder");
-  A.app.view = "home"; const hm = A.viewHome(); ok(/data-act="lensfind"/.test(hm) && /data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm), "the start page: Media calc, Find a lens, Catalogs, Packages"); }
+  A.app.view = "home"; const hm = A.viewHome(); ok(!/data-act="lensfind"/.test(hm) && /data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm), "the start page: Find a lens moved to More tools");
+  A.app.view = "tools"; const tl = A.viewTools(); ok((tl.match(/class="tool-row"/g) || []).length === 3 && /data-act="cams"/.test(tl) && /data-act="lensfind"/.test(tl) && /data-act="rules-open" data-to="pkg"/.test(tl), "More tools: Camera cards, Find a lens and Packages, one row each"); A.app.view = "home"; }
 
 // --- round 18: a Camera List line like a Favorites row: the star before the name, the page, edit and remove in the corner
 { const q = A.newProduction({ name: "Rows", houseId: "utopia" }); A.app.productions.push(q); let id0; for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 1); id0 = id; break; }
@@ -834,3 +835,45 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(!/<select id="ci-sec"/.test(d) && /type="hidden" id="ci-sec" name="section"/.test(d), "New item: no Camera List section field, it follows the category");
   const q = A.newProduction({ name: "Note", houseId: "utopia" }); A.app.productions.push(q); A.app.pid = q.id; A.app.view = "production"; A.app.tab = "fav";
   ok(/Saved per rental house. These are Utopia's./.test(A.viewFavorites(q, U)), "Favorites: one line on which rental house these belong to"); A.app.view = "home"; }
+// --- Favorites from the start page: a rental house switch, no house note, a saved list starts a production
+{ A.app.settings.favHouse = "fitussi"; A.app.view = "favs"; A.app.favTab = "items"; const fp = A.favSolo();
+  const h = A.viewFavsSolo();
+  ok(fp.browse && fp.houseId === "fitussi" && /data-act="fav-house" data-house="fitussi" aria-pressed="true"/.test(h) && !/fav-house-note/.test(h) && /id="tabpane"/.test(h), "Favorites outside a production: one rental house at a time, picked with a switch");
+  const L = { id: "sl-t", name: "Basic", houseId: "fitussi", items: [] }; A.savedLists().push(L);
+  const sl = A.savedListsHtml(fp, A.houseById("fitussi"));
+  ok(/data-act="list-start" data-id="sl-t"/.test(sl) && !/data-act="list-add"/.test(sl), "a saved list there starts a new production with it");
+  A.savedLists().splice(A.savedLists().indexOf(L), 1); A.app.view = "home"; }
+// --- Camera cards: a card for each camera body on the list, the Media Calculator's choices, typed fields, the printed card
+{ const keepRules = A.app.settings.rules; A.app.settings.rules = [];
+  const pc = A.newProduction({ name: "Multi", houseId: "utopia", shootStart: "2026-11-20", shootEnd: "2026-11-25" }); A.app.productions.push(pc); pc.updatedAt = Date.now() + 1e6;
+  const a35 = find("utopia", /^ARRI Alexa 35$/), fx9 = find("utopia", /^Sony PXW-FX9$/i);
+  A.setQty(pc, a35, 2); A.setQty(pc, fx9, 1);
+  A.app.settings.camList = pc.id; A.app.view = "cams";
+  ok(A.camListId() === pc.id && A.camCur() === pc, "Camera cards work on the list picked");
+  const cs = A.camsOf(pc);
+  ok(cs.length === 3 && cs.map(c => c.L).join("") === "ABC" && cs[0].id === a35 && cs[2].id === fx9 && cs[0].col !== cs[1].col, "a card for each camera body on the list: A, B, C, each its own color");
+  const v = A.camVals(pc, cs[0]);
+  ok(v.mk === "ARRI" && v.codec && v.sensor && /^\d+×\d+$/.test(v.px) && v.media && /min|h/.test(v.per), "a card's recording side comes from the Media Calculator: codec, sensor coverage, file resolution, media and its recording time");
+  const vf = A.camVals(pc, cs[2]);
+  ok(/FF 6K|FFc 5K|S35 4K/.test(vf.sensor) && /3840×2160|4096×2160/.test(vf.px), "an FX9: the sensor coverage (FF 6K) apart from the file it makes (UHD)");
+  A.camSetVal(pc, cs[0], "codec", "ProRes 422 HQ"); A.camSetVal(pc, cs[0], "sensor", "4K 16:9"); A.camSetVal(pc, cs[0], "fps", "25");
+  const v2 = A.camVals(pc, cs[0]);
+  ok(v2.codec === "ProRes 422 HQ" && v2.sensor === "4K 16:9" && cs[0].rec.fps === 25, "choosing codec, sensor coverage and frame rate sets them on that camera only");
+  const t = (f, val) => ({ dataset: { camf: f, k: cs[0].k }, value: val });
+  A.camField(pc, t("op", "Yoni Cohen")); A.camField(pc, t("vid", "Teradek Bolt 6 XT 750")); A.camField(pc, t("sn", "SN 2210-4821")); A.camField(pc, t("fp", "Maya Bar")); A.camField(pc, t("foc", "ARRI Hi-5")); A.camField(pc, t("ch", "Ch 3"));
+  ok(cs[0].op === "Yoni Cohen" && cs[0].sn === "4821" && cs[0].ch === "Ch 3", "typed fields are kept as typed; the serial keeps its last 4 digits, even pasted whole");
+  const card = A.camCardHtml(pc, cs[0], false);
+  ok(/class="cc-ring">A</.test(card) && /Camera operator<\/span><span class="cc-n"[^>]*>Yoni Cohen/.test(card) && /Sensor coverage/.test(card) && /File resolution/.test(card) && /ProRes 422 HQ/.test(card) && /SN 4821/.test(card) && /Maya Bar/.test(card) && /ARRI Hi-5 · Ch 3/.test(card) && /Multi/.test(card) && !/25 fps|Frame rate/.test(card), "the printed card: letter, camera, operator, sensor coverage, file resolution with codec, media with time, wireless video with SN, focus puller with focus; no frame rate");
+  ok(/style="--c:#18171d"/.test(A.camCardHtml(pc, cs[0], true)) && /class="ccard bw"/.test(A.camCardHtml(pc, cs[0], true)), "black and white: no color on the card");
+  A.camSetVal(pc, cs[2], "letter", "A");
+  ok(cs[2].L === "A" && cs[0].L === "C", "picking a letter another camera has: the two swap");
+  A.camSetVal(pc, cs[2], "letter", "C"); A.camSetVal(pc, cs[0], "letter", "A");
+  cs[1].foc = "arri hi-5"; cs[1].ch = "ch 3";
+  const cmp = A.camCompareHtml(pc, cs);
+  ok(/class="clash"/.test(cmp) && /Same as A!/.test(cmp) && /Same as B!/.test(cmp) && (cmp.match(/<th scope="col"/g) || []).length === 3, "Compare: a column per camera; two on the same focus channel are marked");
+  const h = A.viewCams();
+  ok(/data-act="cam-print"/.test(h) && /id="cam-list"/.test(h) && (h.match(/class="cam-chip( on)?"/g) || []).length === 3 && /data-act="cam-cmp"/.test(h) && /data-camf="op"/.test(h) && /data-k="codec"/.test(h) && /Not printed/.test(h), "the page: Print cards, the list, A B C, Compare, then the camera's card to fill in");
+  A.app.settings.camList = "none"; const fp = A.camCur();
+  ok(fp.browse && A.camsOf(fp).length >= 1 && A.camsOf(fp)[0].L === "A", "with no list: cameras of your own, starting with A");
+  A.app.settings.camList = pc.id; A.app.view = "home"; A.app.settings.rules = keepRules; A.app.productions.splice(A.app.productions.indexOf(pc), 1); }
+
