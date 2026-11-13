@@ -864,6 +864,13 @@ async function removeRemote(id) {
   chains.set(id, run);
   await run;
 }
+/* signed in with Google, and no name typed yet: the Google account's name fills it in (once; the user can still change it) */
+function meFromAccount() {
+  const u = window.AC_AUTH && window.AC_AUTH.user ? window.AC_AUTH.user() : null, me = app.settings.me || {};
+  if (!u || !u.name || (me.name || "").trim() || app.settings.meFromGoogle) return;
+  app.settings.me = { ...me, name: u.name }; app.settings.meFromGoogle = true; touchSettings();
+  if (!typing() && (app.view === "home" || app.view === "settings")) render();
+}
 function typing() { const a = document.activeElement; return !!(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")); }
 async function initAccount() {
   if (!window.claude || typeof window.claude.use !== "function") return;
@@ -898,7 +905,12 @@ async function initAccount() {
     if (rset && !dirty.has(SETTINGS_ID) && !timers.has(SETTINGS_ID)) {
       const r = rset.data();
       const gone = goneMerge(app.settings.gone, r.gone);
-      if ((r.updatedAt || 0) > (app.settings.updatedAt || 0)) { app.settings = { favorites: {}, rules: [], ...r, gone }; applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); changed = true; }
+      if ((r.updatedAt || 0) > (app.settings.updatedAt || 0)) {
+        // the account's settings are newer, but a name and phone typed on this phone are never lost to an account that has none
+        // (signing in to a Google account that was used before, without them)
+        const mine = app.settings.me || {}, theirs = r.me || {}, keepMe = !!((mine.name || mine.phone) && !(theirs.name || theirs.phone));
+        app.settings = { favorites: {}, rules: [], ...r, gone }; if (keepMe) { app.settings.me = { ...mine }; app.settings.updatedAt = Date.now(); schedule(SETTINGS_ID); }
+        applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); changed = true; }
     }
     const remoteIds = new Set(remote.map(r => r.id));
     for (const r of remote) {
@@ -919,6 +931,7 @@ async function initAccount() {
       if (app.view === "production" && !cur()) app.view = "home";
       if (!typing()) render();
     }
+    if (settled) meFromAccount();
   }, () => { settled = true; clearTimeout(slow); COL = null; app.storage = "local"; setSaveState("saved"); });
 }
 
