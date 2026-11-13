@@ -1296,7 +1296,7 @@ if (typeof document !== "undefined" && document.addEventListener && typeof Mutat
     if (!e.target.classList || !e.target.classList.contains("nsel-q")) return;
     e.stopPropagation();
     const q = norm(e.target.value.trim()), list = e.target.closest(".nsel-list");
-    list.querySelectorAll(".nsel-opt").forEach((b, i) => { b.hidden = !!q && i > 0 && b.getAttribute("aria-selected") !== "true" && !norm(b.textContent).includes(q); });
+    list.querySelectorAll(".nsel-opt").forEach((b, i) => { b.hidden = !!q && i > 0 && b.getAttribute("aria-selected") !== "true" && !qHit(b.textContent, q, true); });
   }, true);
 }
 /* a notice slides in when defaults add something: what, and why */
@@ -1460,7 +1460,7 @@ function histAdd(key, val) {
 function histFor(key, typed) {
   const list = (app.settings.hist || {})[key] || [], q = histNorm(typed);
   if (!q) return [];  // nothing typed yet: no list, suggestions only appear once typing starts
-  return list.filter(x => histNorm(x) !== q && (!q || histNorm(x).includes(q))).slice(0, 5);
+  return list.filter(x => histNorm(x) !== q && (!q || histNorm(x).includes(q) || qHit(x, q))).slice(0, 5);
 }
 function histDrop(key, val) {
   const list = (app.settings.hist || {})[key]; if (!list) return;
@@ -2016,6 +2016,15 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const calField = (f, name) => f.elements[(cal.target ? cal.target + "_" : "") + name];
 const calBtnId = kind => "f-" + (cal.target ? cal.target + "-" : "") + kind;
 function calOpen(mode, target) {
+  if (mode === "day") {  // Multicam with no list: one day, its own (the same calendar, no production behind it)
+    Object.assign(cal, { mode: "prep", one: true, target: "", start: "", end: "", days: {}, ref: null, prep: camMeta().date || "" });
+    const now = new Date(), base = parseDate(cal.prep) || { y: now.getFullYear(), m: now.getMonth() + 1 };
+    cal.y = base.y; cal.m = base.m; cal.stage = "start";
+    showModal(`<div class="cal" id="cal">${calHtml()}</div>`); document.querySelector("#modal .modal-card")?.classList.add("cal-card");
+    (document.querySelector("#cal .cal-day.pick") || document.querySelector("#cal .cal-day.today") || document.querySelector("#cal .cal-day"))?.focus({ preventScroll: true });
+    return;
+  }
+  cal.one = false;
   const f = document.getElementById("prodForm"); if (!f) return;
   cal.mode = mode === "prep" ? "prep" : "shoot"; cal.target = target || "";
   cal.start = calField(f, "shootStart").value; cal.end = calField(f, "shootEnd").value || cal.start; cal.prep = calField(f, "prep").value;
@@ -2051,20 +2060,20 @@ function calHtml() {
       : ["cal-day", wk ? "wknd" : "", inR ? "in" : "", inR && !on ? "off" : "", on ? "on" : "", s === cal.start ? "start" : "", end && s === end ? "end" : "", s === today ? "today" : "", s === cal.prep ? "prepday" : ""];
     const ref = cal.ref && cal.ref.on.has(s), refPrep = cal.ref && cal.ref.prep === s;
     if (ref) cls.push("ref"); if (refPrep) cls.push("refprep");
-    const lbl = `${d} ${MONTHS[cal.m - 1]}${prep ? s === cal.prep ? ", prep day" : on ? ", shoot day" : "" : inR ? on ? ", shoot day" : ", day off" : ""}${ref ? ", Main Unit shoot day" : refPrep ? ", Main Unit prep day" : ""}`;
+    const lbl = `${d} ${MONTHS[cal.m - 1]}${prep ? s === cal.prep ? (cal.one ? ", picked" : ", prep day") : on ? ", shoot day" : "" : inR ? on ? ", shoot day" : ", day off" : ""}${ref ? ", Main Unit shoot day" : refPrep ? ", Main Unit prep day" : ""}`;
     cells += `<button class="${cls.filter(Boolean).join(" ")}" type="button" data-act="cal-day" data-d="${s}" aria-pressed="${prep ? s === cal.prep : on}" aria-label="${lbl}">${d}</button>`;
   }
   let sum, tip, any;
   if (prep) {
-    any = !!cal.prep; sum = cal.prep ? `Prep <b>${esc(fmtShort(cal.prep))}</b> · ${WEEKDAYS[weekday(cal.prep)]}` : "No prep day yet";
-    tip = cal.start ? "Tap the prep day. The shoot days show faintly." : "Tap the prep day.";
+    any = !!cal.prep; sum = cal.prep ? `${cal.one ? "" : "Prep "}<b>${esc(fmtShort(cal.prep))}</b> · ${WEEKDAYS[weekday(cal.prep)]}` : cal.one ? "No date yet" : "No prep day yet";
+    tip = cal.one ? "Tap the day." : cal.start ? "Tap the prep day. The shoot days show faintly." : "Tap the prep day.";
   } else {
     const count = cal.start ? countShootDays(cal.start, end || cal.start, cal.days) : 0, r = shootTrim(cal.start, end || cal.start, cal.days);
     const range = r.a ? (r.b !== r.a ? `${fmtShort(r.a)} – ${fmtShort(r.b)}` : fmtShort(r.a)) : "";
     any = !!cal.start; sum = range ? `<b>${esc(range)}</b> · <b class="num">${count}</b> shoot day${count === 1 ? "" : "s"}` : "No dates yet";
     tip = cal.stage === "start" ? "Tap the first shoot day." : cal.stage === "end" ? "Now tap the last shoot day." : "Tap a day in the range to switch it on or off. Fridays and Saturdays start off.";
   }
-  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${prep ? "Prep day · " : "Shoot days · "}${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
+  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${cal.one ? "" : prep ? "Prep day · " : "Shoot days · "}${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
     <div class="cal-grid${prep ? " prep" : ""}" role="group" aria-label="${prep ? "Prep day" : "Shoot days"}">${WEEKDAYS.map((w, i) => `<span class="cal-wd${i >= 5 ? " wknd" : ""}">${w}</span>`).join("")}${cells}</div>
     <p class="cal-sum" aria-live="polite">${sum}</p>
     ${cal.ref ? `<p class="cal-legend"><span class="lg lg-ref" aria-hidden="true"></span>Main Unit shoot days${cal.ref.prep ? ` · <span class="lg-p" aria-hidden="true">P</span> Main Unit prep` : ""}</p>` : ""}
@@ -2097,6 +2106,7 @@ function calPick(s) {
   calRefresh(s);
 }
 function calDone() {
+  if (cal.one) { camMeta().date = cal.prep || ""; touchSettings(); closeModal(); rerenderKeepScroll(); return; }
   const f = document.getElementById("prodForm");
   if (f && cal.mode === "prep") {
     calField(f, "prep").value = cal.prep;
@@ -2459,6 +2469,15 @@ function editDist(a, b, max) {
   }
   return p1[b.length];
 }
+/* the app's search, one rule everywhere: every typed word somewhere in the text, in any order, spaces and hyphens aside
+   ("fx-6" finds FX6, "canon c400" finds "Canon EOS C400 6K"); `loose` also lets a word be a letter off (two in long words) */
+const qKey = s => norm(s).replace(/[^a-z0-9\u0590-\u05ff]+/g, "");
+function qHit(text, q, loose) {
+  const toks = norm(q).split(/\s+/).filter(Boolean); if (!toks.length) return true;
+  const t = norm(text), key = qKey(t);
+  if (toks.every(w => t.includes(w) || key.includes(qKey(w)))) return true;
+  return !!loose && fuzzyHit(t, toks.join(" "));
+}
 function fuzzyHit(text, q) {
   const words = text.split(/[^a-z0-9.\u0590-\u05ff]+/).filter(Boolean);
   return q.split(/\s+/).filter(Boolean).every(t => {
@@ -2490,8 +2509,8 @@ function lensFormats(groups, s) {
 function treeHtml(p, h) {
   const q = norm(app.q.trim()), searching = q.length > 0, ed = app.editCat;
   // exact matches first; only when there are none does a slightly misspelled word still find its item
-  const fz = searching && !h.categories.some(c => [c.direct, ...c.subcategories].some(sub => sub.items.some(it => hay(it, sub).includes(q))));
-  const qHit = (it, sub) => { const t = hay(it, sub); return t.includes(q) || (fz && fuzzyHit(t, q)); };
+  const fz = searching && !h.categories.some(c => [c.direct, ...c.subcategories].some(sub => sub.items.some(it => qHit(hay(it, sub), q))));
+  const itHit = (it, sub) => { const t = hay(it, sub); return qHit(t, q) || (fz && fuzzyHit(t, q)); };
   const pen = (k, label) => ed ? `<button class="iconbtn pen" type="button" data-act="rename-head" data-k="${esc(k)}" aria-label="Rename ${esc(label)}">✎</button>` : "";
   const dz = k => ed ? ` data-drop="${esc(k)}"` : "";
   const out = [];
@@ -2500,7 +2519,7 @@ function treeHtml(p, h) {
     const subs = [];
     let cn = 0;
     for (const s of c.subcategories) {
-      const items = searching ? s.items.filter(it => qHit(it, s)) : s.items;
+      const items = searching ? s.items.filter(it => itHit(it, s)) : s.items;
       if (!items.length && (!ed || searching)) continue;
       cn += items.length;
       const groups = groupItems(items, s);
@@ -2548,7 +2567,7 @@ function treeHtml(p, h) {
       const allBtn = !ed && !searching && nHeads >= 2 ? `<div class="sub-tools"><button class="btn ghost sm" type="button" data-act="sub-all" data-k="${esc(kS)}" data-open="${anyClosed ? 1 : 0}">${anyClosed ? "Open all" : "Close all"}</button></div>` : "";
       subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
     }
-    const dItems = searching ? c.direct.items.filter(it => qHit(it, c.direct)) : c.direct.items;
+    const dItems = searching ? c.direct.items.filter(it => itHit(it, c.direct)) : c.direct.items;
     cn += dItems.length;
     const direct = dItems.length ? `<ul class="items direct">${dItems.map(it => ed ? editRowHtml(it, c.direct.key, q) : rowHtml(p, it, q)).join("")}</ul>`
       : ed && !searching && !subs.length ? `<p class="drop-zone"${dz(c.direct.key)}>Drag items here to put them straight in ${esc(c.name)}</p>` : "";
@@ -3125,7 +3144,7 @@ function applyFavFilter() {
       const flush = () => { if (head) head.hidden = !!q && !hn; };
       cat.querySelectorAll(".fav-list > li").forEach(li => {
         if (li.classList.contains("fav-head")) { flush(); head = li; hn = 0; return; }
-        const hit = !q || norm(li.querySelector(".nm")?.textContent || "").includes(q);
+        const hit = !q || qHit(li.querySelector(".nm")?.textContent || "", q, true);
         li.hidden = !hit; if (hit) { cn++; hn++; }
       });
       flush(); cat.hidden = !!q && !cn; cat.classList.toggle("q", !!q); gn += cn;
@@ -3483,7 +3502,7 @@ const mcFreeHead = (list, id) => list.length > 1 ? `<div class="mc-head"><span>C
 /* the camera list for "Any camera": a search field over every camera of the house, one per line */
 const mcCamList = (p, F, fid) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input data-sug="search" type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="${fid}" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
 const mcFreeCams = houseId => { const seen = new Set();
-  return [...ITEM.keys()].filter(k => { const x = ITEM.get(k); if (!(houseId === "any" || x.h.id === houseId) || !hasRec(x) || /\bfor\b/i.test(x.it.name)) return false; const n = x.it.name.toLowerCase(); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name)); };
+  return [...ITEM.keys()].filter(k => { const x = ITEM.get(k); if (!(houseId === "any" || x.h.id === houseId) || !hasRec(x) || /\bfor\b/i.test(x.it.name)) return false; const n = qKey(x.it.name); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name)); };
 function mediaCamHtml(p, id) {
   const key = id; ({ p, id } = mcRoute(p, id));
   const unitTag = key !== id ? (/^u2~/.test(key) ? "2nd Unit" : "Main Unit") : "";
@@ -3836,17 +3855,50 @@ function camHome(p, c) {
 /* the cards in order: the Main Unit's, then the 2nd Unit's */
 const camOrdered = p => { const l = camsOf(p); return [...l.filter(c => !c.u2), ...l.filter(c => c.u2)]; };
 /* give cameras with no wireless video or focus yet the units on their unit's lists that no camera of that unit has, in letter order */
-function camAutoFill(p, cards) {
-  const S = camSrcs(p).length ? camSrcs(p) : [p], two = camTwo(p);
+/* wireless video and focus follow each unit's lists: a value the user set stays (and uses up a unit if the list has it); one put
+   in from the list goes when its device leaves the list; empty fields the user never touched take the list's free ones, in letter
+   order. (A value with no mark from before is the user's when the list doesn't have it, the first time.) */
+function camAutoFill(p) {
+  if (p.browse || !Array.isArray(p.cams)) return;
+  const S = camSrcs(p).length ? camSrcs(p) : [p], two = camTwo(p), first = p.camsDevV !== 1;
   for (const u2 of two ? [false, true] : [null]) {
-    const mine = u2 === null ? S : S.filter(s => camSrcU2(p, s) === u2), inU = c => u2 === null || !!c.u2 === u2;
+    const mine = u2 === null ? S : S.filter(s => camSrcU2(p, s) === u2), cards = p.cams.filter(c => u2 === null || !!c.u2 === u2).sort((a, b) => a.L.localeCompare(b.L));
     for (const k of ["vid", "foc"]) {
-      const left = mine.flatMap(s => camDevOnList(s, k));
-      for (const c of p.cams) if (inU(c)) { const i = c[k] ? left.indexOf(c[k]) : -1; if (i >= 0) left.splice(i, 1); }
-      for (const c of cards.filter(inU).sort((a, b) => a.L.localeCompare(b.L))) if (!c[k] && left.length) c[k] = left.shift();
+      const left = mine.flatMap(s => camDevOnList(s, k)), U = k + "U", known = new Set(camDevFlat(k).map(d => d.full));
+      const take = v => { const i = left.indexOf(v); if (i >= 0) { left.splice(i, 1); return true; } return false; };
+      if (first) for (const c of cards) if (c[k] && !left.includes(c[k])) c[U] = 1;
+      const auto = c => !c[U] && known.has(c[k]);
+      for (const c of cards) if (c[k] && !auto(c)) take(c[k]);
+      for (const c of cards) if (c[k] && auto(c) && !take(c[k])) c[k] = "";
+      for (const c of cards) if (!c[k] && !c[U] && left.length) c[k] = left.shift();
     }
   }
+  p.camsDevV = 1;
 }
+/* a camera taken off a list (or fewer of it): the cards it brought go, the last ones first, with Undo. A card is known by the line
+   it came from (cards from before that mark: the first ones of that camera from that list) */
+function camSyncDown(p, S, seen) {
+  const gone = [];
+  for (const s of S) {
+    const q = new Map(camLines(s).map(([id, l]) => [id, lineQty(l)])), mine = k => s === p ? !k.includes("~") : k.startsWith(s.id + "~");
+    for (const key of Object.keys(seen)) {
+      if (!mine(key)) continue;
+      const id = s === p ? key : key.slice(s.id.length + 1), now = q.get(id) || 0, fromHere = c => c.id === id && (s === p ? !c.src : c.src === s.id);
+      let tagged = p.cams.filter(c => c.from === key).length;
+      for (const c of p.cams) { if (tagged >= seen[key]) break; if (!c.from && !c.man && fromHere(c)) { c.from = key; tagged++; } }
+      if (now >= seen[key]) continue;
+      const cards = p.cams.filter(c => c.from === key), drop = cards.slice(now);
+      for (const c of drop) { gone.push([p.cams.indexOf(c), c]); p.cams.splice(p.cams.indexOf(c), 1); }
+      if (now) seen[key] = now; else delete seen[key];
+    }
+  }
+  if (gone.length) {
+    const was = gone.map(([i, c]) => [i, c]);
+    undoable("Removed", `camera ${gone.map(([, c]) => c.L).join(", ")} (off the list)`, () => { for (const [i, c] of was.sort((a, b) => a[0] - b[0])) { delete c.from; c.man = 1; p.cams.splice(Math.min(i, p.cams.length), 0, c); } touch(p); render(); });
+  }
+  return gone.length;
+}
+const CAM_SYNC = new Map();
 /* the cards of a list: the first time, a card for each camera body on its lists (the Main Unit's first, so they take the first
    letters), its recording format as the Media Calculator has it. Later, a camera body added to a list, or a list picked beside,
    brings its cards (a card deleted here stays deleted); new cards get their unit's free wireless video and focus */
@@ -3860,12 +3912,18 @@ function camsOf(p) {
     const u2 = camSrcU2(p, s);
     for (const [id, l] of camLines(s)) {
       const key = camSeenKey(p, s, id), q = lineQty(l), was = seen[key] || 0;
-      for (let i = was; i < q && p.cams.length < 8; i++) { const c = camNew(p.cams, id); if (s !== p) c.src = s.id; if (u2) c.u2 = 1; if (l.rec) c.rec = clone(l.rec); p.cams.push(c); added.push(c); }
+      for (let i = was; i < q && p.cams.length < 8; i++) { const c = camNew(p.cams, id); c.from = key; if (s !== p) c.src = s.id; if (u2) c.u2 = 1; if (l.rec) c.rec = clone(l.rec); p.cams.push(c); added.push(c); }
       if (q > was) seen[key] = q;
     }
   }
   if (fresh && !p.cams.length) p.cams.push(camNew([], ""));
-  if (!p.camsAuto) { camAutoFill(p, p.cams); p.camsAuto = 1; } else if (added.length) camAutoFill(p, added);
+  // the lists changed since last time (or cards came): fewer of a camera takes its cards; wireless video and focus follow
+  const sig = () => S.map(s => s.id + ":" + Object.entries(s.items || {}).map(([id, l]) => `${id}x${lineQty(l)}t${l.tx ?? ""}`).join(",")).join("|") + `#${p.cams.length}`;
+  if (CAM_SYNC.get(p.id) !== sig() || added.length || !p.camsAuto) {
+    if (!fresh) camSyncDown(p, S, seen);
+    camAutoFill(p); p.camsAuto = 1;
+    CAM_SYNC.set(p.id, sig());
+  }
   return p.cams;
 }
 /* the lists' picker: tap a list to read it too, or to stop reading it (its cards go, with Undo); the first list keeps the cards */
@@ -3901,6 +3959,14 @@ function camSel(p) {
   const u = camUnitShown(p); return t && !!t.u2 === u ? t : list.find(c => !!c.u2 === u) || null;
 }
 const camE = c => c && c.id ? ITEM.get(c.id) || null : null;
+/* the cards a camera can take: its rental house's; with no list, every house's (one of each name) */
+function camCardChoices(p, c, e) {
+  if (!p.browse) return cardChoices(e, mcHouseOf(camHome(p, c), e));
+  const seen = new Set(), out = [];
+  for (const h of HOUSES) for (const x of cardChoices(e, h.id)) { const k = camKey(x.name); if (!seen.has(k)) { seen.add(k); out.push(x); } }
+  return out;
+}
+const camGb = g => g >= 1000 ? g / 1000 + "TB" : g + "GB";
 /* the wireless video's serial numbers, the transmitter's and the receiver's (their last 4 digits) */
 const camSnText = c => { const t = (c.sn || "").trim(), r = (c.snr || "").trim(); return t || r ? "SN " + [t ? "TX " + t : "", r ? "RX " + r : ""].filter(Boolean).join(" · ") : ""; };
 const camNotes = c => (c.notes || []).filter(n => (n.t || "").trim() || (n.v || "").trim());
@@ -3913,8 +3979,12 @@ function camName(c) {
 function camVals(p, c) {
   const e = camE(c), v = { ...camName(c), codec: c.codecT || "", sensor: c.sensorT || "", sensorMm: "", sensorNote: "", scans: null, file: c.fileT || "", fileA: "", px: "", fps: "", media: c.mediaT || "", per: "", prof: null, outOnly: false, multi: false, modes: 0, cards: [] };
   if (!e) return v;
-  const h = camHome(p, c); c.rec = c.rec || {}; recEnsure(c, e, h);
-  const r = recResult(c, e); v.prof = r.prof; v.cards = cardChoices(e, mcHouseOf(h, e));
+  const h = camHome(p, c), had = c.rec && c.rec.card; c.rec = c.rec || {}; recEnsure(c, e, h);
+  v.cards = camCardChoices(p, c, e);
+  // no list: start on a card whose size is known (a catalog's plain "CFast Card" says nothing of its size)
+  if (p.browse && !had && !cardBytes(ITEM.get(c.rec.card)?.it.name || "")) { const sized = v.cards.find(x => cardBytes(x.name)); if (sized) c.rec.card = sized.id; }
+  const r = recResult(c, e); v.prof = r.prof;
+  v.gbAsk = !!(c.rec.card && !cardBytes(ITEM.get(c.rec.card)?.it.name || ""));
   if (r.c && r.md) {
     const pt = modeParts(r.md[0]), parts = r.c.m.map(x => modeParts(x[0]));
     v.outOnly = parts.every(x => !x.out && OUT_ONLY.test(x.sensor));
@@ -3933,7 +4003,7 @@ function camVals(p, c) {
     v.file = (v.fileA ? v.fileA + " " : "") + v.px;
   }
   const card = c.rec.card && ITEM.get(c.rec.card);
-  if (card && v.cards.length) v.media = cardLabel(card.it.name, e.it.name).replace(" · ", " ");
+  if (card && v.cards.length) v.media = cardLabel(card.it.name, e.it.name).replace(" · ", " ") + (v.gbAsk && c.rec.gb ? " " + camGb(c.rec.gb) : "");
   if (r.per) v.per = fmtDur(r.per);
   return v;
 }
@@ -3956,8 +4026,8 @@ function viewCams() {
       return nb + nv + nf ? `${nb} camera${nb === 1 ? "" : "s"} · ${nv} wireless video · ${nf} focus` : "nothing on its list yet"; };
     const shoot = id && fmtRange(p.shootStart, p.shootEnd), prep = id && p.prep ? fmtDate(p.prep) : "";
     const meta = id ? `<p class="cf-meta">${shoot || prep ? `<span>${[shoot ? `<b>Shoot</b> ${esc(shoot)}` : "", prep ? `<b>Prep</b> ${esc(prep)}` : ""].filter(Boolean).join(" · ")}</span>` : ""}${two ? [[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<span><b>${t}</b> ${holds(S.filter(s => camSrcU2(p, s) === w))}</span>`).join("") : `<span><b>On the list</b> ${holds(S)}</span>`}</p>`
-      : `<div class="cam-meta"><div class="field"><label for="cam-pn">Production</label><input id="cam-pn" data-cammeta="name" maxlength="60" value="${esc(M.name || "")}" placeholder="Name" dir="auto" autocomplete="off" data-sug="camProd" enterkeyhint="next"></div>
-      <div class="field cm-date"><label for="cam-pd">Date</label><input id="cam-pd" type="date" data-cammeta="date" value="${esc(M.date || "")}"></div></div>`;
+      : `<div class="cam-meta"><div class="field"><label for="cam-pn">Production</label><div class="cm-row"><input id="cam-pn" data-cammeta="name" maxlength="60" value="${esc(M.name || "")}" placeholder="Name" dir="auto" autocomplete="off" data-sug="camProd" enterkeyhint="done">
+      <button class="cm-cal${M.date ? " on" : ""}" type="button" data-act="cal-open" data-mode="day" aria-label="${M.date ? "Date: " + esc(fmtDate(M.date)) + ". Change it" : "Pick the date"}">${CAL_ICON}${M.date ? `<span>${esc(fmtDate(M.date).replace(/ \d{4}$/, ""))}</span>` : ""}</button></div></div></div>`;
     panel = `<div class="cam-fp" id="cam-fp"><div class="cf-lists">${rows}${li("none", !id, "No list", "a name and a date")}</div>${meta}</div>`;
   }
   // two units: a tab for each (its number of cameras); the letters are the unit shown's
@@ -3994,12 +4064,13 @@ function camFormHtml(p, c) {
   let rec = "";
   if (!has) rec = `<p class="hint cam-first">Choose the camera, and its recording choices show here.</p>`;
   else {
-    const media = v.cards.length ? (() => { const [a, b] = splitTail(cardLabel(ITEM.get(c.rec.card)?.it.name || "", e.it.name)); const m = cPick("card", "Media", a ? esc(a) + (b ? ` <span class="cr-d">· ${esc(b)}</span>` : "") : ""); if (v.per) m.sub = `${v.per} a card`; return m; })()
+    const media = v.cards.length ? (() => { const [a, b] = splitTail(cardLabel(ITEM.get(c.rec.card)?.it.name || "", e.it.name)); const m = cPick("card", "Media", a ? esc(a) + (b ? ` <span class="cr-d">· ${esc(b)}</span>` : "") : ""); m.sub = v.per ? `${v.per} a card` : v.gbAsk ? "Choose its size" : ""; return m; })()
       : cIn("mediaT", "Media", c.mediaT, "Type and size");
+    const size = v.gbAsk ? cPick("gb", "Size", c.rec.gb ? camGb(c.rec.gb) : "") : null;
     if (v.prof) rec = `<div class="cam-grp">${row(cPick("codec", "Codec", esc(v.codec), ""), cPick("fps", "Frame rate", v.fps ? `${fpsLabel(v.fps)} fps` : "", "Not printed"))}
       ${row(v.scans ? (v.scans.length > 1 ? cPick("scan", "Sensor coverage", esc(v.sensor), scanSub) : cInfo("Sensor coverage", esc(v.sensor), scanSub)) : v.outOnly ? cIn("sensorT", "Sensor coverage", c.sensorT, "e.g. FF 4.2K") : cPick("sensor", "Sensor coverage", esc(v.sensor)))}
       ${row((v.outOnly || v.multi || v.scans) && v.modes > 1 ? cPick("mode", "File resolution", fileHtml) : cInfo("File resolution", fileHtml))}
-      ${row(media)}</div>`;
+      ${size ? row(media, size, "t-gb") : row(media)}</div>`;
     else rec = `<div class="cam-grp">${row(cIn("codecT", "Codec", c.codecT, "e.g. ProRes 422 HQ"), cIn("sensorT", "Sensor coverage", c.sensorT, "e.g. S35 4K"))}${row(cIn("fileT", "File resolution", c.fileT, "e.g. UHD 3840×2160"), media)}</div>`;
   }
   const notes = (c.notes || []).map((n, i) => `<div class="cam-row in note"><span class="cr-v"><input class="cr-in cr-nt" data-camnote="t" data-i="${i}" data-k="${k}" value="${esc(n.t || "")}" placeholder="Title, e.g. Lens" maxlength="24" autocomplete="off" dir="auto" aria-label="Note title"><input class="cr-in" data-camnote="v" data-i="${i}" data-k="${k}" value="${esc(n.v || "")}" placeholder="Text" maxlength="60" autocomplete="off" dir="auto" aria-label="Note text"></span><button type="button" class="iconbtn cr-x-del" data-act="cam-note-del" data-i="${i}" aria-label="Remove this note">×</button></div>`).join("");
@@ -4096,16 +4167,20 @@ function camPicker(k) {
   else if (k === "mode") sheet("File resolution", `<p class="hint cs-note">${outOnly ? "The file this camera records." : `The files ${esc(sensorText(now.sensor))} makes.`}</p>`,
     parts.filter(x => outOnly || x.sensor === now.sensor).map(x => opt(x.m[0], x === now, esc(outOnly ? x.sensor : x.out || (x.sensor.match(/\b\d+(?:\.\d+)?K\b/) || [""])[0] || px(x)), px(x))).join(""));
   else if (k === "fps") sheet("Frame rate", `<p class="hint cs-note">For the recording time only. It isn't printed on the card.</p>`, `<div class="mc-chips">${REC_FPS.filter(f => !md || f <= md[3]).map(f => opt(f, c.rec.fps === f, fpsLabel(f))).join("")}</div>`);
+  else if (k === "gb") {  // a card the catalog names without its size
+    const one = g => { const t = recResult({ rec: { ...c.rec, gb: g } }, e).per; return opt(g, c.rec.gb === g, camGb(g), t ? fmtDur(t) : ""); };
+    sheet("Media size", `<p class="hint cs-note">The catalog doesn't say this card's size. With the recording time each size holds.</p>`, [64, 128, 256, 512, 1000, 2000].map(one).join(""));
+  }
   else if (k === "card") {
-    const choices = cardChoices(e, mcHouseOf(h, e)), types = [...new Set(choices.map(x => x.type))];
-    const one = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)), t = recResult({ rec: { ...c.rec, card: x.id } }, e).per; return opt(x.id, c.rec.card === x.id, esc(a) + (b ? ` · ${esc(b)}` : ""), t ? fmtDur(t) : ""); };
+    const choices = camCardChoices(p, c, e), types = [...new Set(choices.map(x => x.type))];
+    const one = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)), t = recResult({ rec: { ...c.rec, card: x.id, gb: x.id === c.rec.card ? c.rec.gb : undefined } }, e).per; return opt(x.id, c.rec.card === x.id, esc(a) + (b ? ` · ${esc(b)}` : ""), t ? fmtDur(t) : cardBytes(x.name) ? "" : "size to choose"); };
     sheet("Media", `<p class="hint cs-note">With the recording time each one holds.</p>`, types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(one).join("")).join("") : choices.map(one).join(""));
   }
 }
 function camSetVal(p, c, k, v) {
   if (k === "letter") { const o = camsOf(p).find(x => x !== c && x.L === v); if (o) o.L = c.L; c.L = v; return; }  // a letter taken: the two cameras swap
-  if (k === "cam") { if (c.id !== v && ITEM.has(v)) { c.id = v; c.name = ""; c.rec = {}; const l = [...camUnitSrcs(p, c), ...camSrcs(p)].map(s => s.items[v]).find(Boolean); if (l && l.rec) c.rec = clone(l.rec); } return; }
-  if (k === "vid" || k === "foc") { c[k] = String(v).slice(0, 60); return; }
+  if (k === "cam") { if (c.id !== v && ITEM.has(v)) { c.id = v; c.name = ""; delete c.from; c.rec = {}; const l = [...camUnitSrcs(p, c), ...camSrcs(p)].map(s => s.items[v]).find(Boolean); if (l && l.rec) c.rec = clone(l.rec); } return; }
+  if (k === "vid" || k === "foc") { c[k] = String(v).slice(0, 60); c[k + "U"] = 1; return; }
   if (k === "scan") { c.rec = c.rec || {}; c.rec.scan = String(v).slice(0, 60); return; }
   const e = camE(c); if (!e) return;
   const h = camHome(p, c); c.rec = c.rec || {}; recEnsure(c, e, h); recSet(c, e, h, k, v);
@@ -4113,8 +4188,10 @@ function camSetVal(p, c, k, v) {
 /* one camera's setup onto another: the camera, how it records, its media and the systems; not the letter, color, people, serial or channel */
 function camCopy(p, to, from) {
   const keep = { id: to.id, name: to.name, rec: clone(to.rec), vid: to.vid, foc: to.foc, codecT: to.codecT, sensorT: to.sensorT, fileT: to.fileT, mediaT: to.mediaT };
+  const marks = { from: to.from, vidU: to.vidU, focU: to.focU };
   Object.assign(to, { id: from.id || "", name: from.name || "", rec: clone(from.rec), vid: from.vid || "", foc: from.foc || "", codecT: from.codecT || "", sensorT: from.sensorT || "", fileT: from.fileT || "", mediaT: from.mediaT || "" });
-  return () => Object.assign(to, keep);
+  if (to.id !== keep.id) delete to.from; if (to.vid) to.vidU = 1; if (to.foc) to.focU = 1;  // copied: the user's
+  return () => Object.assign(to, keep, marks);
 }
 /* a typed field: kept as you type */
 function camField(p, t) {
@@ -4122,7 +4199,7 @@ function camField(p, t) {
   if (t.dataset.camnote) { const n = (c.notes || [])[Number(t.dataset.i)]; if (n) { n[t.dataset.camnote] = t.value.slice(0, t.dataset.camnote === "t" ? 24 : 60); camSave(p); } return; }
   const f = t.dataset.camf;
   if (f === "sn" || f === "snr") { const d = t.value.replace(/\D/g, "").slice(-4); if (d !== t.value) t.value = d; c[f] = d; }  // the last 4 digits, even from a whole serial pasted in
-  else c[f] = t.value.slice(0, 60);
+  else { c[f] = t.value.slice(0, 60); if (f === "vid" || f === "foc") c[f + "U"] = 1; }  // typed: the user's own
   camSave(p);
 }
 /* ----- the printed card: white paper whatever the theme; sizes in --u (1mm on the standard card) ----- */
@@ -4378,7 +4455,7 @@ function applyListFilter() {
   let shown = 0;
   wrap.querySelectorAll(".section[data-sec]").forEach(sec => {
     let n = 0;
-    sec.querySelectorAll("li.line").forEach(li => { const hit = !q || (li.dataset.s || "").includes(q); li.hidden = !hit; if (hit) n++; });
+    sec.querySelectorAll("li.line").forEach(li => { const hit = !q || qHit(li.dataset.s || "", q, true); li.hidden = !hit; if (hit) n++; });
     sec.classList.toggle("searching", !!q);
     sec.hidden = !!q && !n; shown += n;
   });
@@ -5101,7 +5178,7 @@ document.addEventListener("click", e => {
     case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
     case "cam-u": { const w = !!b.dataset.v, l = camsOf(p); app.camU = w; app.camK = (l.find(x => !!x.u2 === w) || {}).k || app.camK; app.camCmp = false; rerenderKeepScroll(); break; }
     case "cam-fold": app.camFold = !app.camFold; if (app.camFold) app.camFoldOrder = mcLists().map(x => x.id); rerenderKeepScroll(); break;
-    case "cam-add": { const list = camsOf(p); if (list.length >= 8) break; const c = camNew(list, ""); if (b.dataset.u) c.u2 = 1; list.push(c); if (!p.browse) camAutoFill(p, [c]); app.camK = c.k; app.camU = undefined; app.camCmp = false; camSave(p); render(); camPicker("cam"); break; }
+    case "cam-add": { const list = camsOf(p); if (list.length >= 8) break; const c = camNew(list, ""); c.man = 1; if (b.dataset.u) c.u2 = 1; list.push(c); if (!p.browse) camAutoFill(p); app.camK = c.k; app.camU = undefined; app.camCmp = false; camSave(p); render(); camPicker("cam"); break; }
     case "cam-src": camSrcToggle(id); app.camK = null; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
     case "cam-unit": { const c = camSel(p); if (!c) break; if (b.dataset.v) c.u2 = 1; else delete c.u2; app.camK = c.k; app.camU = undefined; camSave(p); rerenderKeepScroll(); camPicker("letter"); break; }
     case "cam-del": {
@@ -5489,7 +5566,8 @@ document.addEventListener("input", e => {
   if (t.dataset && t.dataset.cammeta) { camMeta()[t.dataset.cammeta] = t.value.slice(0, 60); touchSettings(); return; }
   if (t.hasAttribute && t.hasAttribute("data-camq")) {
     const toks = norm(t.value).split(/\s+/).map(camKey).filter(Boolean), list = document.querySelector("#modal .cs-list"); if (!list) return;
-    list.querySelectorAll(".mc-opt[data-n]").forEach(o => { const key = camKey(o.dataset.n); o.hidden = toks.length > 0 && !toks.every(x => key.includes(x)); });
+    const opts = [...list.querySelectorAll(".mc-opt[data-n]")], qq = toks.join(" "), strict = opts.filter(o => qHit(o.dataset.n, t.value)), loose = !strict.length;
+    opts.forEach(o => { o.hidden = toks.length > 0 && !(loose ? qHit(o.dataset.n, qq, true) : strict.includes(o)); });
     let head = null, any = false; const close = () => { if (head) head.hidden = !any; };
     for (const el of list.querySelectorAll(".mc-grp, .mc-opt")) { if (el.classList.contains("mc-grp")) { close(); head = el; any = false; } else if (!el.hidden) any = true; }
     close(); return;
@@ -5500,7 +5578,7 @@ document.addEventListener("input", e => {
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
   if (t.id === "fq") { app.fq = t.value; applyFavFilter(); return; }
   if (t.dataset && t.dataset.pkfind) { pkFind(t.dataset.pkfind, t.value); return; }
-  if (t.id === "bq") { const q = norm(t.value.trim()); let n = 0; document.querySelectorAll("#bpList li").forEach(li => { const hit = !q || li.dataset.b.includes(q); li.hidden = !hit; if (hit) n++; }); const none = document.getElementById("bpNone"); if (none) none.hidden = n > 0; return; }
+  if (t.id === "bq") { const q = norm(t.value.trim()); let n = 0; document.querySelectorAll("#bpList li").forEach(li => { const hit = !q || qHit(li.dataset.b, q, true); li.hidden = !hit; if (hit) n++; }); const none = document.getElementById("bpNone"); if (none) none.hidden = n > 0; return; }
   if (!p) return;
   if (t.dataset.note) { const l = p.items[t.dataset.note]; if (l) { l.note = t.value.slice(0, 200); touch(p); } return; }
   if (t.dataset.ename) { const l = p.items[t.dataset.ename]; if (l) { l.name = t.value.slice(0, 160) || l.orig || l.name; touch(p); } return; }
@@ -5595,7 +5673,7 @@ document.addEventListener("submit", e => {
   const f = e.target;
   if (f.id === "camDevOther") {  // a wireless video or focus system that isn't in the list, typed
     const p = cur(), c = p && camSel(p), n = f.elements.n.value.trim().slice(0, 60), k = f.dataset.k;
-    if (c && n && (k === "vid" || k === "foc")) { c[k] = n; camSave(p); }
+    if (c && n && (k === "vid" || k === "foc")) { c[k] = n; c[k + "U"] = 1; camSave(p); }
     closeModal(); rerenderKeepScroll(); return;
   }
   if (f.id === "camOther") {  // a camera that isn't in the catalog, by name
