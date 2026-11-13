@@ -871,6 +871,21 @@ function meFromAccount() {
   app.settings.me = { ...me, name: u.name }; app.settings.meFromGoogle = true; touchSettings();
   if (!typing() && (app.view === "home" || app.view === "settings")) render();
 }
+/* the name and phone in Settings are saved as they are typed (a moment after the last key) and when the field is left; a small
+   "Saved" beside them says so, so no Save button is needed */
+let meT = 0;
+function meSave(f) {
+  clearTimeout(meT); if (!f || !f.elements) return;
+  const me = { name: f.elements.name.value.trim().slice(0, 80), phone: f.elements.phone.value.trim().slice(0, 30) }, was = app.settings.me || {};
+  if (me.name === (was.name || "") && me.phone === (was.phone || "")) return;
+  app.settings.me = me; app.settings.meFromGoogle = true; touchSettings();
+  const s = document.getElementById("meSaved"); if (s) { s.hidden = false; replay(s, "pop"); }
+  const h = document.querySelector(".me-head .me-t b"); if (h) h.textContent = me.name || "Your details";
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("input", e => { const t = e.target; if (t && t.form && t.form.id === "meForm") { clearTimeout(meT); meT = setTimeout(() => meSave(t.form), 600); } });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") { const f = document.getElementById("meForm"); if (f && meT) meSave(f); } });
+}
 function typing() { const a = document.activeElement; return !!(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")); }
 async function initAccount() {
   if (!window.claude || typeof window.claude.use !== "function") return;
@@ -2281,7 +2296,7 @@ function viewSettings() {
       <form class="form tight" id="meForm" autocomplete="off"${meOpen ? "" : " hidden"}><div class="row2">
         <div class="field"><label for="me-name">Your name (1st AC)</label><input data-sug="ac" id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
-        <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
+        <span class="hint">Filled in on every new production. You can still change them on each one. <b id="meSaved" class="me-saved" hidden>✓ Saved</b></span></form></div>
     ${lookPickerHtml()}
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       const maker = !window.AC_STATS || app.isAdmin;   // the catalog file is the maker's tool; a user keeps only their removed items
@@ -6267,10 +6282,7 @@ document.addEventListener("change", e => {
     if (t.dataset.pki && t.value && k === "when" && dd.adds.length && !(dd[dd.adds[0]] || {}).c) pkOpen(document.getElementById("pk-" + dd.adds[0] + "-c"));  // then on to what comes with it
     return;
   }
-  if (t.form && t.form.id === "meForm") {
-    app.settings.me = { name: t.form.elements.name.value.trim().slice(0, 80), phone: t.form.elements.phone.value.trim().slice(0, 30) };
-    touchSettings(); toast("Saved for new productions"); return;
-  }
+  if (t.form && t.form.id === "meForm") { meSave(t.form); return; }
   if (t.form && t.form.id === "sendForm" && t.name === "fmt") { if (p) sendPrep(p, t.value); return; }
   if (!p) return;
   const f = t.dataset.f;
