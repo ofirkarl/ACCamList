@@ -18,6 +18,8 @@ src/
     meta.py, brands.py    names, brands, formats, mounts, groups
     utopia_skus.json, item_links.json, set_stops.json   SKUs, product pages, each lens's stop in a set
     raw/                  what was read off the two websites when the lists were made (for comparing later)
+    close_focus/          each lens's close focus: the figures (mod_data.json, mod_rx.json), where each one comes from (sources.md),
+                          and gen_mod.py, which writes them into app_script.js as the LENS_MOD table
   build/        output (not kept in git)
 ```
 

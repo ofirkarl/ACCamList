@@ -1,0 +1,877 @@
+{
+ "arri-signature-prime": {
+  "src": "https://arri.com/resource/blob/379836/107a9b953f5dd333231371f3727767da/2020-12-17-signature-lens-brochure-broschure-data.pdf",
+  "mod": {
+   "12": "1'2\"",
+   "15": "1'2\"",
+   "18": "1'2\"",
+   "21": "1'2\"",
+   "25": "1'2\"",
+   "29": "1'2\"",
+   "35": "1'2\"",
+   "40": "1'2\"",
+   "47": "1'6\"",
+   "58": "1'6\"",
+   "75": "2'2\"",
+   "95": "2'9\"",
+   "125": "3'4\"",
+   "150": "5'",
+   "200": "6'",
+   "280": "8'3\""
+  },
+  "check": "maker"
+ },
+ "arri-master-prime": {
+  "src": "https://www.afcinema.com/IMG/pdf/c/2/5/brochure-arri-zeiss-master-prime-lenses.pdf",
+  "mod": {
+   "12": "1'4\"",
+   "14": "1'2\"",
+   "16": "1'2\"",
+   "18": "1'2\"",
+   "21": "1'2\"",
+   "25": "1'2\"",
+   "27": "1'2\"",
+   "32": "1'2\"",
+   "35": "1'2\"",
+   "40": "1'4\"",
+   "50": "1'8\"",
+   "65": "2'3\"",
+   "75": "2'9\"",
+   "100": "3'6\"",
+   "135": "3'3\"",
+   "150": "4'11\""
+  },
+  "check": "maker"
+ },
+ "arri-signature-zoom": {
+  "src": "https://arri.com/resource/blob/379836/107a9b953f5dd333231371f3727767da/2020-12-17-signature-lens-brochure-broschure-data.pdf",
+  "mod": {
+   "16-32": "1'6\"",
+   "24-75": "2'6\"",
+   "45-135": "3'4\"",
+   "65-300": "6'"
+  },
+  "check": "maker"
+ },
+ "ultra-prime": {
+  "src": "https://arri.com/en/cine-lenses/arri-zeiss-fujinon-lenses/legacy/ultra-prime-lenses/arri-ultra-prime-lenses-technical-data + https://www.fdtimes.com/pdfs/articles/zeiss/ZEISS_Book-150m_2up.pdf (10mm: 0.35 m / 1 1/4')",
+  "mod": {
+   "8": "1'3\"",
+   "12": "1'",
+   "14": "9\"",
+   "16": "1'",
+   "20": "1'",
+   "24": "1'",
+   "28": "1'",
+   "32": "1'3\"",
+   "40": "1'3\"",
+   "50": "2'",
+   "65": "2'3\"",
+   "85": "3'",
+   "100": "3'3\"",
+   "135": "5'",
+   "180": "8'6\"",
+   "10": "1'3\""
+  },
+  "note": "ARRI prints feet in quarters (1 1/4' = 1'3\")",
+  "check": "maker"
+ },
+ "zeiss-supreme-radiance": {
+  "src": "https://zeiss.com/cine/radiance",
+  "mod": {
+   "18": "1'2\"",
+   "21": "1'2\"",
+   "25": "10\"",
+   "29": "1'1\"",
+   "35": "1'1\"",
+   "40": "1'5\"",
+   "50": "1'6\"",
+   "65": "2'",
+   "85": "2'9\"",
+   "100": "3'9\"",
+   "135": "4'6\""
+  },
+  "check": "maker"
+ },
+ "zeiss-cp3": {
+  "src": "https://www.zeiss.com/cine/cp3",
+  "mod": {
+   "15": "1'",
+   "18": "1'",
+   "21": "10\"",
+   "25": "10\"",
+   "28": "10\"",
+   "35": "1'",
+   "50": "1'6\"",
+   "85": "3'3\"",
+   "100": "2'6\"",
+   "135": "3'3\""
+  },
+  "note": "CP.3 and CP.3 XD share the optics",
+  "check": "maker"
+ },
+ "zeiss-nano-prime": {
+  "src": "https://www.zeiss.com/photonics-and-optics/en/cinematography/lenses/nano-prime-lenses.html",
+  "mod": {
+   "18": "10\"",
+   "24": "1'2\"",
+   "35": "1'6\"",
+   "50": "1'8\"",
+   "75": "2'6\"",
+   "100": "3'3\""
+  },
+  "note": "ZEISS prints decimal inches (9.8\"); rounded to the inch",
+  "check": "maker"
+ },
+ "zeiss-lwz3": {
+  "src": "https://www.zeiss.com/photonics-and-optics/en/cinematography/lenses/lightweight-zoom-lwz-3.html",
+  "mod": {
+   "21-100": "2'8\""
+  },
+  "check": "maker"
+ },
+ "zeiss-cz2": {
+  "src": "https://www.zeiss.com/photonics-and-optics/en/cinematography/lenses/cinema-zoom-lenses.html",
+  "mod": {
+   "15-30": "1'10\"",
+   "28-80": "2'8\"",
+   "70-200": "5'"
+  },
+  "note": "ZEISS now lists the CZ.2 zooms as Cinema Zoom",
+  "check": "maker"
+ },
+ "zeiss-cp2": {
+  "src": "https://www.fullcompass.com/common/files/18102-Brochure.pdf",
+  "mod": {
+   "15": "1'",
+   "18": "1'",
+   "21": "10\"",
+   "25 T2.9": "7\"",
+   "25 T2.1": "10\"",
+   "28": "10\"",
+   "35": "1'",
+   "50": "1'6\"",
+   "85": "3'3\"",
+   "100": "2'6\"",
+   "135": "3'3\"",
+   "50 macro": "10\""
+  },
+  "note": "ZEISS CP.2 brochure",
+  "check": "maker"
+ },
+ "zeiss-cp2-superspeed": {
+  "src": "https://www.fullcompass.com/common/files/18102-Brochure.pdf",
+  "mod": {
+   "35": "1'",
+   "50": "1'6\"",
+   "85": "3'3\""
+  },
+  "check": "maker"
+ },
+ "cooke-s4i": {
+  "src": "https://cookeoptics.com/wp-content/uploads/2021/11/Cooke-Lens-Specs-Brochure.pdf",
+  "mod": {
+   "12": "9\"",
+   "14": "9\"",
+   "16": "9\"",
+   "18": "9\"",
+   "21": "9\"",
+   "25": "9\"",
+   "27": "10\"",
+   "32": "1'",
+   "35": "1'2\"",
+   "40": "1'4\"",
+   "50": "1'8\"",
+   "65": "2'3\"",
+   "75": "2'6\"",
+   "100": "3'",
+   "135": "2'9\"",
+   "150": "3'6\"",
+   "180": "4'3\"",
+   "300": "7'"
+  },
+  "note": "Cooke's minimum marked object distance (MOD)",
+  "check": "maker"
+ },
+ "cooke-anamorphic-i": {
+  "src": "https://cookeoptics.com/wp-content/uploads/2021/11/Cooke-Lens-Specs-Brochure.pdf",
+  "mod": {
+   "25": "2'9\"",
+   "32": "2'9\"",
+   "40": "2'9\"",
+   "50": "2'9\"",
+   "65": "1'6\"",
+   "75": "3'3\"",
+   "100": "3'8\"",
+   "135": "4'8\"",
+   "180": "6'6\"",
+   "300": "10'"
+  },
+  "note": "Cooke Anamorphic/i 2x, minimum marked object distance; the catalog calls them S6i Anamorphic",
+  "check": "maker"
+ },
+ "cooke-sp3": {
+  "src": "https://cookeoptics.com/wp-content/uploads/2023/08/COOKE_SP3_Specification_022924.pdf + https://www.adorama.com/co151870.html (18mm: Cooke MOD 250 mm / 10\")",
+  "mod": {
+   "25": "10\"",
+   "32": "1'1\"",
+   "50": "1'8\"",
+   "75": "3'",
+   "100": "3'",
+   "18": "10\""
+  },
+  "note": "18mm from the retailer listing of Cooke spec",
+  "check": "maker"
+ },
+ "cooke-panchro-ff": {
+  "src": "https://cinelenswiki.com/_media/lens:cooke_panchro-i-classic-ff_specification_051324.pdf",
+  "mod": {
+   "18": "11\"",
+   "21": "11\"",
+   "25": "1'1\"",
+   "27": "1'1\"",
+   "32": "1'1\"",
+   "40": "1'1\"",
+   "50": "1'4\"",
+   "65": "1'1\"",
+   "75": "2'6\"",
+   "100": "2'",
+   "135": "2'9\"",
+   "152": "3'6\""
+  },
+  "note": "Cooke Panchro/i Classic FF spec sheet, MOD",
+  "check": "maker"
+ },
+ "leitz-summilux-c": {
+  "src": "https://leitz-cine.com/product/summilux-c",
+  "mod": {
+   "16": "1'4\"",
+   "18": "1'6\"",
+   "21": "1'3\"",
+   "25": "1'3\"",
+   "29": "1'6\"",
+   "35": "1'6\"",
+   "40": "1'6\"",
+   "50": "2'",
+   "65": "1'6\"",
+   "75": "2'6\"",
+   "100": "3'3\"",
+   "135": "4'1\""
+  },
+  "check": "maker"
+ },
+ "leitz-summicron-c": {
+  "src": "https://www.leitz-cine.com/product/summicron-c",
+  "mod": {
+   "15": "1'",
+   "18": "1'",
+   "21": "1'",
+   "25": "1'",
+   "29": "1'",
+   "35": "1'2\"",
+   "40": "1'6\"",
+   "50": "2'",
+   "75": "2'7\"",
+   "100": "3'3\"",
+   "135": "4'6\""
+  },
+  "check": "maker"
+ },
+ "leica-m08": {
+  "src": "https://www.afcinema.com/IMG/pdf/a/7/5/m-0.8-data-sheet.pdf",
+  "mod": {
+   "21": "2'3\"",
+   "24": "2'3\"",
+   "28": "2'3\"",
+   "35": "2'3\"",
+   "50": "2'3\"",
+   "50 f/0.95": "3'3\"",
+   "75": "2'3\"",
+   "90": "3'3\""
+  },
+  "note": "Leitz M 0.8 data sheet",
+  "check": "maker"
+ },
+ "zeiss-super-speed": {
+  "src": "https://www.keslowcamera.com/gear/zeiss-super-speed-primes/ + https://lemac.com.au/Rentals/ZeissMKIIIT13SuperSpeeds.aspx + https://www.rule.com/product/zeiss-super-speed/",
+  "mod": {
+   "18": "10\"",
+   "25": "10\"",
+   "35": "1'2\"",
+   "85": "3'"
+  },
+  "note": "No ZEISS source (discontinued); three rental houses agree on these. 50mm: they differ (2'4\" / 2'6\"), left out. Standard Speeds: houses differ by close-focus mods, left out.",
+  "check": "3 rental houses"
+ },
+ "angenieux-ez": {
+  "src": "https://www.lensrentals.com/product-assets/1c61a311-6449-4001-8572-a39efadb07d9/User_Manual_EZ1_EZ2_EZ3_66073806AA-fr_eng-1.pdf",
+  "mod": {
+   "30-90": "2'",
+   "45-135": "2'",
+   "15-40": "2'",
+   "22-60": "2'",
+   "45-165": "4'",
+   "68-250": "4'"
+  },
+  "note": "Angenieux EZ user manual, MOD",
+  "check": "maker"
+ },
+ "angenieux-optimo": {
+  "src": "https://www.mediatec.de/media/9a/b2/80/1699430730/ANGENIEUX-BROSCHUERE.PDF.PDF",
+  "mod": {
+   "15-40": "2'",
+   "28-76": "2'",
+   "45-120": "3'1\"",
+   "24-290": "4'",
+   "28-340": "4'1\"",
+   "19.5-94": "2'1\"",
+   "56-152": "2'1\"",
+   "30-72": "2'2\""
+  },
+  "note": "Angenieux brochure, MOD (28-340 4'0.5\", 19.5-94 2'0.5\" rounded up)",
+  "check": "maker"
+ },
+ "arri-alura": {
+  "src": "https://utopiacam.com/wp-content/uploads/2016/05/New_Alura_Zooms_-_Data_Sheet_-_DIN_A4.pdf + arri.com legacy technical data",
+  "mod": {
+   "15.5-45": "2'",
+   "30-80": "2'",
+   "18-80": "2'4\"",
+   "45-250": "3'11\""
+  },
+  "note": "ARRI Alura data sheet",
+  "check": "maker"
+ },
+ "arri-master-macro": {
+  "src": "https://www.arri.com/en/cine-lenses/arri-zeiss-fujinon-lenses/master-primes/master-macro-100/arri-master-macro-100-technical-data",
+  "mod": {
+   "100": "1'1¾\""
+  },
+  "check": "maker"
+ },
+ "arri-master-zoom": {
+  "src": "https://expandore.com/singapore/Lenses/Carl_Zeiss/Master_Zoom_lens.htm + https://new.visualproducts.com/?p=6624",
+  "mod": {
+   "16.5-110": "2'4\""
+  },
+  "note": "Two sources agree (0.7 m / 2'4\"); no ARRI page found",
+  "check": "2 sources"
+ },
+ "fujinon-mk": {
+  "src": "https://www.fujifilm.com/au/en/business/cine-and-broadcast/cinelens/mk",
+  "mod": {
+   "18-55": "2'9\"",
+   "50-135": "3'11\""
+  },
+  "macro": {
+   "18-55": "1'3\"",
+   "50-135": "2'9\""
+  },
+  "note": "Fujifilm prints 1ft 2.9in for the 18-55 macro",
+  "check": "maker"
+ },
+ "fujinon-zk": {
+  "src": "https://www.fujifilm.com/au/en/business/cine-and-broadcast/cinelens/zk",
+  "mod": {
+   "14-35": "2'",
+   "19-90": "2'9\"",
+   "85-300": "3'11\"",
+   "25-300": "3'11\""
+  },
+  "macro": {
+   "14-35": "1'1\"",
+   "19-90": "1'3\"",
+   "85-300": "3'2\"",
+   "25-300": "1'11\""
+  },
+  "check": "maker"
+ },
+ "fujinon-xk": {
+  "src": "https://www.fujifilm.com/au/en/business/cine-and-broadcast/cinelens/xk",
+  "mod": {
+   "20-120": "3'7\""
+  },
+  "macro": {
+   "20-120": "1'4\""
+  },
+  "check": "maker"
+ },
+ "canon-cine-servo": {
+  "src": "https://www.canon.co.uk/pro/cinema-lenses/cn7x17-kas-t/specifications/",
+  "mod": {
+   "17-120": "2'9\""
+  },
+  "note": "Canon prints 0.85 m / 2.8'",
+  "check": "maker"
+ },
+ "sigma-cine-ff-hs": {
+  "src": "https://www.afcinema.com/IMG/pdf/e/8/1/sigma_cine_lens_brochure_180912.pdf + sigma-global.com + https://www.sigma-global.com/en/cine-lenses/ff-high-speed-prime/65_15/",
+  "mod": {
+   "14": "11\"",
+   "20": "11\"",
+   "24": "10\"",
+   "28": "1'",
+   "35": "1'",
+   "40": "1'4\"",
+   "50": "1'4\"",
+   "85": "2'10\"",
+   "105": "3'4\"",
+   "135": "2'11\"",
+   "65": "2'2\""
+  },
+  "note": "Sigma Cine brochure; 14 and 105 checked on sigma-global.com",
+  "check": "maker"
+ },
+ "tokina-vista": {
+  "src": "https://www.kenko-pi.co.jp/pdf /Tokina%20Lens_Filters%20Brochure_202211.pdf + https://tokinalens.com/product/vista_prime_85mm_t1_5/",
+  "mod": {
+   "18": "1'6\"",
+   "21": "1'2\"",
+   "25": "1'2\"",
+   "29": "1'2\"",
+   "35": "1'4\"",
+   "40": "1'6\"",
+   "50": "1'7\"",
+   "65": "2'3\"",
+   "85": "3'1½\"",
+   "105": "3'9\"",
+   "135": "4'7\""
+  },
+  "note": "Tokina brochure (decimal inches rounded); 85mm from tokinalens.com (the brochure's 0.35 m is a misprint)",
+  "check": "maker"
+ },
+ "tokina-cinema-zoom": {
+  "src": "https://tokinalens.com/product/11_20mm_t2_9/ + https://tokinalens.com/product/16_28mm_t3_0_mkii/ + https://bpm-media.imgbolt.de/media/pdf/8f/5b/9c/EN_Tokina_Cinema_ATX_Brochure.pdf",
+  "mod": {
+   "11-20": "1'",
+   "16-28": "11\"",
+   "11-16": "1'2\""
+  },
+  "note": "11-20: 0.30 m (11.8\")",
+  "check": "maker"
+ },
+ "tokina-cinema-macro": {
+  "src": "https://bpm-media.imgbolt.de/media/pdf/8f/5b/9c/EN_Tokina_Cinema_ATX_Brochure.pdf",
+  "mod": {
+   "100": "1'"
+  },
+  "note": "0.3 m (11.8\")",
+  "check": "maker"
+ },
+ "nisi-athena": {
+  "src": "https://thecinelens.com/2023/05/04/nisi-doubles-down-with-new-athena-primes/ + https://www.adorama.com/iaathmkpl.html + https://www.digitalstore.at/media/99/f3/f9/1712148760/Athena_Prime_Update Brochures-2024-1.pdf",
+  "mod": {
+   "14": "10\"",
+   "25": "1'",
+   "35": "1'",
+   "50": "1'8\"",
+   "85": "2'8\"",
+   "135": "3'3\""
+  },
+  "note": "14-85 two sources agree; 135: NiSi 2024 brochure + Adorama (1 m); 18 and 40 only in that brochure, which swaps the 14 and 25: left out",
+  "check": "2 sources"
+ },
+ "dzofilm-vespid": {
+  "src": "https://www.newsshooter.com/2020/10/30/dzofilm-releases-vespid-full-frame-prime-cinema-lenses-in-ef-and-pl/ + https://teamdigital.com.au/product/dzofilm-new-vespid-prime-cine-10-lens-kit-12-16mmt2-821-25-35-40-50-75-100-125mm-t2-1plef-mount/ + https://www.keslowcamera.com/gear/dzofilm-vespid-retro-primes-2/ + https://www.videomaker.com/news/dzofilm-reveals-two-new-vespid-prime-cine-lenses/",
+  "mod": {
+   "16": "10\"",
+   "25": "1'",
+   "35": "1'",
+   "40": "1'",
+   "50": "1'3\"",
+   "75": "2'",
+   "90": "10\"",
+   "100": "2'4\"",
+   "125": "2'7\"",
+   "21": "11\""
+  },
+  "note": "DZOFilm launch specs (metres, converted); 50mm 0.37 m (Adorama and Keslow print 1'6\", the launch specs, Team Digital, Foto Erhardt and Duclos agree on 0.37 m / 1'2\"–1'3\"); 21mm 11\" (launch news, AVL, Keslow; Team Digital 0.3 m)",
+  "check": "launch specs + 3 sources"
+ },
+ "dzofilm-catta-ace": {
+  "src": "https://dzofilm.com/en/lens/zoom/catta-ace",
+  "mod": {
+   "18-35": "1'8\"",
+   "35-80": "2'5\"",
+   "70-135": "2'6\""
+  },
+  "check": "maker"
+ },
+ "dzofilm-x-tract": {
+  "src": "https://dzofilm.com/en/lens/macro-probe/x-tract",
+  "mod": {
+   "18-28": "1'7\""
+  },
+  "check": "maker"
+ },
+ "laowa-ranger": {
+  "src": "https://www.adorama.com/VE162875LEF.html + https://thecinelens.com/2024/10/22/laowa-launches-ranger-16-30mm-t2-9-full-frame-cine-zoom/",
+  "mod": {
+   "16-30": "1'1\"",
+   "28-75": "1'7\"",
+   "75-180": "2'11\""
+  },
+  "note": "Venus Ranger specifications on Adorama; 16-30 also in thecinelens",
+  "check": "retailer (16-30: 2 sources)"
+ },
+ "atlas-orion": {
+  "src": "https://atlaslensco.com/products/orion-series-anamorphic-lenses",
+  "mod": {
+   "18": "1'6\"",
+   "21": "1'6\"",
+   "25": "1'6\"",
+   "28": "1'6\"",
+   "32": "1'9\"",
+   "40": "2'",
+   "50": "2'6\"",
+   "65": "2'9\"",
+   "80": "3'",
+   "100": "3'6\"",
+   "135": "3'6\"",
+   "200": "3'6\""
+  },
+  "check": "maker",
+  "note": "Atlas prints decimal feet (1.75 ft = 1'9\"); Silver Edition shares the optics"
+ },
+ "laowa-nanomorph-prime": {
+  "src": "https://www.adorama.com/venus-laowa-nanomorph-1-5x-s35-anamorphic-cinema-lens/p/ves355lkplfb",
+  "mod": {
+   "27": "1'5\"",
+   "35": "2'",
+   "50": "2'4\"",
+   "65": "2'4\"",
+   "80": "2'4\""
+  },
+  "check": "retailer",
+  "note": "Venus Laowa spec on Adorama (decimal inches rounded)"
+ },
+ "viltrox-epic": {
+  "src": "https://viltrox.com/products/epic-anamorphic-all-focal-length-t2-0-1-33x-cine-lens-pl-mount-kit",
+  "mod": {
+   "25": "1'8\"",
+   "35": "2'7\"",
+   "50": "2'7\"",
+   "65": "1'4\"",
+   "75": "3'3\"",
+   "100": "2'9\"",
+   "135": "3'4\""
+  },
+  "check": "maker"
+ },
+ "sony-70-200-gm1": {
+  "src": "https://en.wikipedia.org/wiki/List_of_Sony_E-mount_lenses (Sony's specs; checked against Sony's lineup PDF https://www.sony.jp/overseas/contents/pdf/202207.pdf)",
+  "mod": {
+   "70-200": "3'2\""
+  },
+  "check": "maker (via list)",
+  "note": "0.96 m"
+ },
+ "sony-e": {
+  "src": "https://en.wikipedia.org/wiki/List_of_Sony_E-mount_lenses (Sony's specs; 6 checked against Sony's lineup PDF https://www.sony.jp/overseas/contents/pdf/202207.pdf) + sony.co.uk specifications (SELP18105G, SELP18110G, SELP28135G, SEL2870, SEL2470GM2, SEL28F20) + sony.ie (SEL100F28GM)",
+  "mod": {
+   "14": "10\"",
+   "20": "7\"",
+   "24": "9\"",
+   "28": "10\"",
+   "35 f/1.4": "10\"",
+   "35 f/1.8": "9\"",
+   "50 f/1.2": "1'4\"",
+   "50 f/1.8": "1'6\"",
+   "85 f/1.4": "2'9\"",
+   "85 f/1.8": "2'7\"",
+   "90": "11\"",
+   "100": "2'9\"",
+   "135": "2'4\"",
+   "24-70": "1'3\"",
+   "24-70 II": "8\"–1'",
+   "24-105": "1'3\"",
+   "28-70 f/2": "1'3\"",
+   "28-70": "1'–1'6\"",
+   "28-135": "1'4\"–3'1\"",
+   "50-150": "1'4\"–2'5\"",
+   "70-200 II": "1'4\"–2'8\"",
+   "100-400": "3'3\"",
+   "200-600": "7'10\"",
+   "18-105": "1'6\"–3'1\"",
+   "18-110": "1'4\"–3'1\""
+  },
+  "check": "maker (via list)",
+  "note": "Sony gives metres; converted to the nearest inch. 85 f/1.4 GM: 2'9\" with AF (2'7\" manual). Zooms with two values: wide–tele. 16-35 f/2.8, 18-200 and the unnamed 70-200 f/2.8: which version isn't in the name, left out. Power zooms and the 28-70: wide–tele from Sony's pages. 100 STF: 0.85 m, macro setting 0.57 m.",
+  "macro": {
+   "100": "1'10\""
+  }
+ },
+ "canon-ef-70-200-iii": {
+  "src": "https://canon.co.uk/lenses/ef-70-200mm-f-2-8-l-is-iii-usm-lens/specifications",
+  "mod": {
+   "70-200": "3'11\""
+  },
+  "check": "maker",
+  "note": "1.2 m"
+ },
+ "canon-ef": {
+  "src": "https://www.canon.co.uk/lenses/ef-16-35mm-f-2-8l-ii-usm-lens/specification.html + https://www.canon.co.uk/lenses/ef-24-70mm-f-2-8l-ii-usm-lens/specification.html + https://www.canon.co.uk/lenses/ef-24-105mm-f-4l-is-ii-usm-lens/specifications/ + https://www.canon.co.uk/lenses/ef-100mm-f-2-8l-macro-is-usm-lens/specification.html + Canon EF lens guide (TS-E 45) + https://global.canon/en/c-museum/product/ef367.html (16-35 I 0.28 m) + https://id.canon/en/business/ef16-35mm-f28l-iii-usm/specification (III 0.28 m) + https://global.canon/en/c-museum/product/ef387.html (24-105 I 0.45 m) + https://global.canon/en/c-museum/product/ef406.html (70-200 IS II 1.2 m) + https://www.canon-europe.com/lenses/ts-e-90mm-f-2-8-lens/specification.html (TS-E 90 0.5 m) + https://global.canon/en/c-museum/product/ef390.html (EF-S 17-55 0.35 m)",
+  "mod": {
+   "16-35 II": "11\"",
+   "24-70 II": "1'3\"",
+   "24-105 II": "1'6\"",
+   "100 macro": "1'",
+   "45": "1'4\"",
+   "16-35": "11\"",
+   "24-105": "1'6\"",
+   "70-200 II": "3'11\"",
+   "90": "1'8\"",
+   "17-55": "1'2\""
+  },
+  "check": "maker",
+  "note": "Canon gives metres; converted to the nearest inch. 16-35 f/2.8L: every version 0.28 m; 24-105 f/4L: both versions 0.45 m"
+ },
+ "sigma-art": {
+  "src": "https://www.afcinema.com/IMG/pdf/e/8/1/sigma_cine_lens_brochure_180912.pdf (the Cine FF High Speed primes share the Art optics) + https://www.sigma-global.com/en/lenses/a016_85_14/",
+  "mod": {
+   "14": "11\"",
+   "20": "11\"",
+   "24": "10\"",
+   "35": "1'",
+   "50": "1'4\"",
+   "85": "2'9½\"",
+   "105": "3'3\"",
+   "135": "2'10\""
+  },
+  "check": "maker (cine twin)",
+  "note": "Sigma's metric figures (85 Art: 85 cm / 33.5 in on sigma-global.com); the others from their Cine twins, converted to the inch"
+ },
+ "samyang": {
+  "src": "https://www.fotointern.ch/wp-uploads/2015/04/Sam-Yang-Produkte-2015.pdf",
+  "mod": {
+   "8": "1'",
+   "12": "8\"",
+   "14": "11\"",
+   "16": "8\"",
+   "24": "10\"",
+   "24 f/3.5": "8\"",
+   "35": "1'",
+   "50": "1'6\"",
+   "85": "3'7\""
+  },
+  "check": "maker",
+  "note": "Samyang catalogue (metres, converted); the cine lenses share the photo versions' optics; the 35mm f/2.8 AF left out"
+ },
+ "zeiss-batis": {
+  "src": "https://www.zeiss.com/content/dam/consumer-products/downloads/photography/brochures/en/brochure-zeiss-mirrorless-system-lenses-en.pdf",
+  "mod": {
+   "18": "10\"",
+   "25": "8\"",
+   "40": "9\"",
+   "85": "2'7\"",
+   "135": "2'10\""
+  },
+  "check": "maker",
+  "note": "ZEISS prints decimal inches; rounded"
+ },
+ "zeiss-loxia": {
+  "src": "https://www.zeiss.com/content/dam/consumer-products/downloads/photography/brochures/en/brochure-zeiss-mirrorless-system-lenses-en.pdf",
+  "mod": {
+   "21": "10\"",
+   "25": "10\"",
+   "35": "1'",
+   "50": "1'6\"",
+   "85": "2'7\""
+  },
+  "check": "maker",
+  "note": "ZEISS prints decimal inches; rounded"
+ },
+ "zeiss-milvus": {
+  "src": "https://www.zeiss.es/content/dam/consumer-products/downloads/photography/brochures/en/brochure-zeiss-slr-lenses-en.pdf",
+  "mod": {
+   "50 f/1.4": "1'6\"",
+   "50 f/2": "9\"",
+   "85": "2'7\""
+  },
+  "check": "maker",
+  "note": "ZEISS SLR brochure (metres, converted)"
+ },
+ "zeiss-otus": {
+  "src": "https://www.zeiss.es/content/dam/consumer-products/downloads/photography/brochures/en/brochure-zeiss-slr-lenses-en.pdf",
+  "mod": {
+   "55": "1'8\""
+  },
+  "check": "maker"
+ },
+ "zeiss-ze": {
+  "src": "https://www.zeiss.es/content/dam/consumer-products/downloads/photography/brochures/en/brochure-zeiss-slr-lenses-en.pdf + https://bpm-media.imgbolt.de/media/pdf/0e/23/53/EN_Zeiss_SLR_Lenses_2014.pdf (Distagon 2.8/15 0.25 m, 3.5/18 0.3 m, 2.8/21 0.22 m, 2/35 0.3 m)",
+  "mod": {
+   "25": "10\"",
+   "50": "1'6\"",
+   "85": "3'3\"",
+   "100": "1'5\"",
+   "15": "10\"",
+   "18": "1'",
+   "21": "9\"",
+   "35": "1'"
+  },
+  "check": "maker",
+  "note": "ZEISS SLR brochures (metres, converted); the 100 from the Makro-Planar 2/100 (0.44 m)"
+ },
+ "laowa-vv": {
+  "src": "https://www.videomaker.com/news/venus-optics-launches-four-new-full-frame-wide-angle-cine-prime-lenses/",
+  "mod": {
+   "9": "5\"",
+   "10": "5\"",
+   "12": "6\""
+  },
+  "check": "news (maker specs)",
+  "note": "Venus Optics launch specs: 12 cm (4.7 in); 12mm VV 14 cm"
+ },
+ "laowa-zero-d-12": {
+  "src": "https://www.adorama.com/ve1229plt.html",
+  "mod": {
+   "12": "7\""
+  },
+  "check": "retailer",
+  "note": "18 cm (7.08 in)"
+ },
+ "pana-leica-12-60": {
+  "src": "https://panasonic.com/it/consumer/fotocamere-e-videocamere-imparare/fotocamere-lumix-s/obiettivi-lumix-s-e-lumix-g-2020.html",
+  "mod": {
+   "12-60": "8\"–9\""
+  },
+  "check": "maker",
+  "note": "0.2 m wide / 0.24 m tele"
+ },
+ "pana-g-12-60": {
+  "src": "https://panasonic.com/it/consumer/fotocamere-e-videocamere-imparare/fotocamere-lumix-s/obiettivi-lumix-s-e-lumix-g-2020.html",
+  "mod": {
+   "12-60": "8\"–10\""
+  },
+  "check": "maker",
+  "note": "LUMIX G Vario 12-60 f/3.5-5.6: 0.2 m wide / 0.25 m tele"
+ },
+ "panasonic": {
+  "src": "https://panasonic.com/it/consumer/fotocamere-e-videocamere-imparare/fotocamere-lumix-s/obiettivi-lumix-s-e-lumix-g-2020.html + Panasonic H-HSA35100 page (0.85 m; the first version 0.85 m too, imaging-resource) + LUMIX S-S24 spec sheet (0.24 m) + https://na.panasonic.ca/news/new-35mm-wide-angle-fixed-focal-length-lens-f18-large-aperture (S-S35 0.24 m)",
+  "mod": {
+   "20-60": "6\"–1'4\"",
+   "24-70": "1'3\"",
+   "12-35 II": "10\"",
+   "14-42": "8\"–1'",
+   "8-18": "9\"",
+   "15": "8\"",
+   "25 II": "1'",
+   "10-25": "11\"",
+   "35-100": "2'9\"",
+   "24": "9\"",
+   "35": "9\""
+  },
+  "check": "maker",
+  "note": "Panasonic gives metres; converted to the inch. Zooms with two values: wide–tele."
+ },
+ "fuji-gf": {
+  "src": "https://www.fujifilm-x.com/fr-ch/products/lenses/gf55mmf17-r-wr/specifications/ + https://www.fujifilm-x.com/en-my/products/lenses/gf45-100mmf4-r-lm-ois-wr/specifications/",
+  "mod": {
+   "55": "1'8\"",
+   "45-100": "2'2\"–2'8\""
+  },
+  "check": "maker",
+  "note": "Fujifilm gives metres (from the focal plane); converted"
+ },
+ "tribe7-blackwing7": {
+  "src": "https://utopiacam.com/wp-content/uploads/2023/04/TRIBE7-BLACKWING7-TECHNICAL-SPECIFICATIONS-SUMMER22-5c50ee2ebcf4e08c4d5838c634d188a6-2.pdf",
+  "mod": {
+   "20.7": "9\"",
+   "27": "1'1\"",
+   "37": "1'6\"",
+   "47": "1'5½\"",
+   "57": "1'7\"",
+   "77": "2'2\"",
+   "107": "2'3\"",
+   "137": "2'8\""
+  },
+  "check": "maker",
+  "note": "Tribe7 spec sheet (20.7mm: under 9\")"
+ },
+ "nisi-aureus": {
+  "src": "https://www.adorama.com/ianic5kitpl.html",
+  "mod": {
+   "18": "10\"",
+   "24": "1'1\"",
+   "35": "1'2\"",
+   "50": "1'10\"",
+   "85": "2'11\""
+  },
+  "check": "retailer",
+  "note": "NiSi spec on Adorama (decimal inches rounded)"
+ },
+ "dzofilm-linglung": {
+  "src": "https://dzofilm.com/products/linglung",
+  "mod": {
+   "10-24": "2'",
+   "20-70": "2'7\""
+  },
+  "check": "maker"
+ },
+ "thypoch-simera": {
+  "src": "https://www.adorama.com/tytpsc5pe.html",
+  "mod": {
+   "21": "9\"",
+   "28": "1'4\"",
+   "35": "1'6\"",
+   "50": "1'6\"",
+   "75": "1'10\""
+  },
+  "check": "retailer",
+  "note": "Thypoch spec on Adorama (metres, converted)"
+ },
+ "dzofilm-gnosis-24": {
+  "src": "https://www.ducloslenses.com/products/gnosis-24mm-t2-8-macro",
+  "mod": {
+   "24": "6\""
+  },
+  "check": "rental",
+  "note": "Duclos prints 6.1\""
+ },
+ "dulens-apo-mini": {
+  "src": "https://www.newsshooter.com/2022/07/28/dulens-apo-mini-vintage-series-primes/",
+  "mod": {
+   "21": "1'",
+   "31": "1'3\"",
+   "43": "1'10\"",
+   "58": "2'3\"",
+   "85": "2'9\""
+  },
+  "check": "press",
+  "note": "Launch spec table (Newsshooter); same on Rare Breeds West, Rule, Greenwood, Duclos (85). B&H 39\" and CineLensWiki 42\" for the 43 disagree with all of them. 110mm left out: Rule 3'10\", B&H 0.8 m"
+ },
+ "tokina-11-16-dx": {
+  "src": "https://tokinalens.com/product/at_x_116_pro_dx_ii",
+  "mod": {
+   "11-16": "1'"
+  },
+  "check": "maker",
+  "note": "0.3 m"
+ },
+ "samyang-af-35": {
+  "src": "https://samyanglens.com/en/product/product-view.php?seq=151",
+  "mod": {
+   "35": "1'2\""
+  },
+  "check": "maker",
+  "note": "0.35 m"
+ },
+ "viltrox-af-13": {
+  "src": "https://viltrox.com/fr/products/auto-focus-13mmf14-e-mount-aps-c-prime-lens",
+  "mod": {
+   "13": "9\""
+  },
+  "check": "maker",
+  "note": "0.22 m"
+ },
+ "dzofilm-catta": {
+  "src": "https://www.newsshooter.com/2021/11/18/dzofilm-goes-full-frame-with-new-catta-zoom-lenses/",
+  "mod": {
+   "35-80": "2'5\"",
+   "70-135": "2'6\""
+  },
+  "check": "launch specs",
+  "note": "Catta Zoom (E-mount) launch spec table"
+ }
+}
