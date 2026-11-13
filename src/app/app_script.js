@@ -1791,6 +1791,7 @@ function render() {
   if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
+  txSync();   // a wireless set's open drawer follows its counter, or goes with it
 }
 
 /* a list's gear by section, as a thin bar of their colors (how much camera, lens, support...) */
@@ -2442,22 +2443,69 @@ function ctlHtml(p, id) {
   if (!l) return `<button class="add" type="button" data-act="cinc" data-id="${esc(id)}" aria-label="Add">+ Add</button>`;
   return l.tx !== undefined ? setsCtl("c", id, l) : stepper("c", id, l.qty, null, false);
 }
-/* a wireless set: its counter counts sets; its transmitters and receivers live in a tiny dialog that drops open under that counter
-   when the set is added or its quantity is tapped (and from the small line under the counter, which also says how many of each).
-   One is open at a time; a tap anywhere else closes it. The same in Add Gear and in the list. */
-let txPop = null, txFresh = null;   // the line whose dialog is open; and, for one drawing, the one that has just opened (it animates)
+/* a wireless set: its counter counts sets; its transmitters and receivers live in a tiny drawer that slides out from under that
+   counter when the set is added or its quantity is tapped (and from the small line under the counter, which also says how many of
+   each). It floats over the page, so the item's row never changes size and nothing around it moves. One is open at a time; a tap
+   anywhere else closes it. The same in Add Gear and in the list. */
+let txPop = null, txAct = "l";   // the line whose drawer is open, and whose counters it uses ("c" in Add Gear, "l" in the list)
 const setsCtl = (act, id, l) => `<span class="tr q-sets"><button class="q-cap" type="button" data-act="txrx" data-id="${esc(id)}" aria-expanded="${txPop === id}" aria-label="${l.tx} transmitters, ${l.rx} receivers: change">Sets · TX ${l.tx} · RX ${l.rx}</button>${stepper(act, id, lineQty(l), null, false)}</span>`;
-const txRowHtml = (id, l, act) => txPop === id ? `<div class="tx-row${txFresh === id ? " anim" : ""}"><div class="tx-pop" role="group" aria-label="Transmitters and receivers"><span class="tr"><span>TX</span>${stepper(act, id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper(act, id, l.rx, "rx", true)}</span></div></div>` : "";
-function txCloseDom() { document.querySelectorAll(".tx-row").forEach(el => el.remove()); document.querySelectorAll('.q-cap[aria-expanded="true"]').forEach(el => el.setAttribute("aria-expanded", "false")); }
-function txClose() { if (!txPop) return; txPop = null; txFresh = null; txCloseDom(); }
-/* after a set's quantity changed: open its dialog (closing another's), or forget it when the set left the list */
-function txOpenFor(p, id) { const l = p && p.items[id]; if (l && l.tx !== undefined) { if (txPop !== id) { if (txPop) txCloseDom(); txFresh = id; } txPop = id; } else if (txPop === id) txPop = null; }
+const txEl = () => document.getElementById("txPop");
+const txAnchor = () => { for (const c of document.querySelectorAll(`.q-cap[data-id="${CSS.escape(txPop)}"]`)) { const s = c.parentElement && c.parentElement.querySelector(".stepper"); if (s && s.getBoundingClientRect().width) return { cap: c, step: s }; } return null; };
+/* where the drawer sits: right under the counter, its right edges in line; above it when there is no room below (the bottom bar);
+   gone when its counter has scrolled out of sight or under the search bar */
+function txPlace() {
+  const el = txEl(), a = txPop && txAnchor(); if (!el || !a) return false;
+  const r = a.step.getBoundingClientRect(), cr = a.cap.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, h = el.scrollHeight + 12;
+  el.style.setProperty("--h", h + "px"); el.style.minWidth = Math.ceil(cr.width) + "px";   // as wide as the small line it slides over
+  const nav = document.querySelector(".navbar:not([hidden]), .dock:not([hidden])"), floor = nav ? nav.getBoundingClientRect().top : vh;
+  const bar = document.querySelector(".bar.pad"), br = bar ? bar.getBoundingClientRect() : null, roof = br && br.top <= 1 ? br.bottom : 0;
+  if (r.top < roof - 4 || r.bottom > floor + 4) return false;
+  const up = r.bottom + 3 + h > floor - 4 && r.top - 3 - h > roof;
+  el.classList.toggle("up", up);
+  el.style.right = Math.max(6, vw - Math.max(r.right, cr.right)) + "px";
+  el.style.top = up ? "" : (r.bottom + 3) + "px"; el.style.bottom = up ? (vh - r.top + 3) + "px" : "";
+  return true;
+}
+const txInner = l => `<span class="tr"><span>TX</span>${stepper(txAct, txPop, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper(txAct, txPop, l.rx, "rx", true)}</span>`;
+/* after the page or a row was drawn again: the drawer keeps its place and shows the new numbers (no second animation) */
+function txSync() {
+  if (!txPop) return;
+  const el = txEl(), p = cur(), l = p && p.items[txPop], a = txAnchor();
+  if (!el || !a || !l || l.tx === undefined) { txClose(true); return; }
+  if (!(document.activeElement && el.contains(document.activeElement) && document.activeElement.tagName === "INPUT")) el.innerHTML = txInner(l);
+  a.cap.setAttribute("aria-expanded", "true");
+  if (!txPlace()) txClose(true);
+}
+function txClose(now) {
+  if (!txPop) return; txPop = null;
+  document.querySelectorAll('.q-cap[aria-expanded="true"]').forEach(c => c.setAttribute("aria-expanded", "false"));
+  const el = txEl(); if (!el) return;
+  el.removeAttribute("id"); el.classList.remove("open");   // slides back in, then goes
+  if (now) el.remove(); else setTimeout(() => el.remove(), 640);
+}
+/* a set was added or its quantity tapped: open its drawer (closing another's); a set that left the list takes its drawer with it */
+function txOpenFor(p, id, act) {
+  const l = p && p.items[id];
+  if (!l || l.tx === undefined) { if (txPop === id) txClose(true); return; }
+  if (txPop === id) { txSync(); return; }
+  txClose(true); txPop = id; txAct = act;
+  const el = document.createElement("div"); el.id = "txPop"; el.className = "tx-pop"; el.setAttribute("role", "group"); el.setAttribute("aria-label", "Transmitters and receivers");
+  el.innerHTML = txInner(l); document.body.appendChild(el);
+  const a = txAnchor(); if (a) a.cap.setAttribute("aria-expanded", "true");
+  if (!txPlace()) { txClose(true); return; }
+  void el.offsetHeight; el.classList.add("open");
+}
+let txRaf = 0;
+if (typeof window !== "undefined" && window.addEventListener) {
+  const follow = () => { if (!txPop || txRaf) return; txRaf = requestAnimationFrame(() => { txRaf = 0; if (txPop && !txPlace()) txClose(true); }); };
+  window.addEventListener("scroll", follow, { passive: true }); window.addEventListener("resize", follow);
+}
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h), wl = on && p.items[it.id].tx !== undefined ? p.items[it.id] : null;
   const specs = specsHtml(it, extra, { q }), nameLink = "";
   const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "";  // the product page globe sits in the row's top-right corner
   return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
-    <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}</span><span class="ctl">${ctlHtml(p, it.id)}</span>${wl ? txRowHtml(it.id, wl, "c") : ""}</li>`;
+    <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
 }
 
 /* ----- Add Gear: the rental house catalog ----- */
@@ -3504,7 +3552,6 @@ function lineHtml(p, id, l) {
   const qtys = l.tx !== undefined
     ? setsCtl("l", id, l)   // wireless video: sets where every item has its quantity
     : stepper("l", id, l.qty, null, false);
-  const txRow = l.tx !== undefined ? txRowHtml(id, l, "l") : "";
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
@@ -3521,7 +3568,7 @@ function lineHtml(p, id, l) {
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
       <div class="l-grid"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}</span>
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
-      <div class="l-bottom">${qtys}</div>${txRow}</div>
+      <div class="l-bottom">${qtys}</div></div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}
@@ -5501,7 +5548,7 @@ document.addEventListener("click", e => {
   if (lp.fired && e.target.closest && e.target.closest("[data-lp]")) { lp.fired = false; e.preventDefault(); return; }
   const b = e.target.closest("[data-act]");
   if (mcOpen && !(e.target.closest && e.target.closest(".mc-panel, [data-act='mc-open']"))) mcClose();
-  if (txPop && !(e.target.closest && e.target.closest(".tx-row, .q-sets"))) txClose();   // the wireless set's little dialog: a tap anywhere else closes it
+  if (txPop && !(e.target.closest && e.target.closest("#txPop, .q-sets"))) txClose();   // the wireless set's little drawer: a tap anywhere else closes it
   if (!b || b.disabled) return;
   const act = b.dataset.act, id = b.dataset.id, f = b.dataset.f;
   buzz("tap");
@@ -5777,9 +5824,8 @@ document.addEventListener("click", e => {
       const l = p.items[id];
       const cur0 = l ? (f ? l[f] : lineQty(l)) : 0;
       const ids = setQty(p, id, cur0 + (act === "cinc" ? 1 : -1), l ? f : undefined);
-      if (!(l && f)) txOpenFor(p, id);
       if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids);
-      txFresh = null;
+      if (l && f) txSync(); else txOpenFor(p, id, "c");
       popQty("c", id, l ? f : undefined);
       break;
     }
@@ -5803,8 +5849,7 @@ document.addEventListener("click", e => {
       const l = p.items[id]; if (!l) break;
       const cur0 = f ? l[f] : lineQty(l);
       setQty(p, id, cur0 + (act === "linc" ? 1 : -1), f);
-      if (!f) txOpenFor(p, id);
-      rerenderKeepScroll(); txFresh = null; popQty("l", id, f);
+      rerenderKeepScroll(); if (!f) txOpenFor(p, id, "l"); popQty("l", id, f);
       break;
     }
     case "remove": {
@@ -5944,8 +5989,7 @@ document.addEventListener("click", e => {
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
     case "lab-open": labShow(true); break;
-    case "txrx": { const was = txPop === id; if (txPop) txClose(); if (!was) { txPop = id; txFresh = id; }
-      if (b.closest("[data-row]")) refreshRows(p, [id]); else rerenderKeepScroll(); txFresh = null; break; }
+    case "txrx": if (txPop === id) txClose(); else txOpenFor(p, id, b.closest("[data-row]") ? "c" : "l"); break;
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
