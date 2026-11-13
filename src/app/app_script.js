@@ -2234,7 +2234,6 @@ function viewSettings() {
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
     <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>Settings</h2><span></span></div>${acct ? `<div class="set-title"><span></span>${acct}</div>` : ""}</div>
-    <div class="set-group"><button class="btn lab-open" type="button" data-act="lab-open">Color lab · try colors on the real pages</button></div>
     <div class="set-group me-group${meOpen ? " open" : ""}"><button class="me-head" type="button" data-act="me-toggle" aria-expanded="${meOpen}" aria-controls="meForm">
         <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
         <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
@@ -2250,11 +2249,11 @@ function viewSettings() {
       <div class="cat-io"><button class="btn" type="button" data-act="lists-export">${SAVE_ICON}<span>Save all my lists as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-listsimport="1" hidden>${LOAD_ICON}<span>Load lists from a file</span></label></div>
       <span class="hint">A backup of every production and its gear. Loading one adds its lists to yours; a list you already have is replaced only by a newer copy.</span></div>
-    ${window.AC_STATS ? `<div class="set-group"><h3>About your use</h3>
+    ${window.AC_STATS ? `<div class="set-group"><h3 data-act="ids-show">About your use</h3>
       <p class="hint" style="margin:0">The app tells its maker how much it is used: your name, how many lists you made, exported and shared, and your time in the app. Never what is in your lists.</p>
       ${app.isAdmin ? `<div><button class="btn primary" type="button" data-act="admin-open">Control room</button></div>` : ""}
-      <div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div>
-      ${app.isAdmin ? "" : `<div class="acct-id"><button class="btn sm" type="button" data-act="admin-check">Check Control room access</button></div>${app.adminSay ? `<p class="hint${app.adminWhy === "ok" ? "" : " warn"}" style="margin:0">${esc(app.adminSay)}</p>` : ""}`}</div>` : ""}
+      ${app.isAdmin || app.showIds ? `<div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div>` : ""}
+      ${!app.isAdmin && app.showIds ? `<div class="acct-id"><button class="btn sm" type="button" data-act="admin-check">Check Control room access</button></div>${app.adminSay ? `<p class="hint${app.adminWhy === "ok" ? "" : " warn"}" style="margin:0">${esc(app.adminSay)}</p>` : ""}` : ""}</div>` : ""}
     ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
       <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
       ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
@@ -6049,6 +6048,7 @@ document.addEventListener("click", e => {
       break; }
     case "lab-open": labShow(true); break;
     case "copy-uid": { const t = window.AC_STATS ? window.AC_STATS.uid : ""; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Account ID copied"), () => toast(t)); break; }
+    case "ids-show": { const t = Date.now(); app.idTaps = (app.idTaps || []).filter(x => t - x < 2500).concat(t); if (app.idTaps.length >= 5) { app.idTaps = []; app.showIds = !app.showIds; rerenderKeepScroll(); } break; }
     case "admin-check": app.adminSay = "Checking…"; rerenderKeepScroll(); adminCheck(true); break;
     case "admin-open": app.view = "admin"; app.adminData = null; render(); window.scrollTo(0, 0); adminLoad(); break;
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
@@ -6933,7 +6933,8 @@ function viewAdmin() {
       ${u.account && u.name && u.account !== u.name ? `<div class="ad-sub" dir="auto">${esc(u.account)}</div>` : ""}
       <div class="ad-grid">${cell("Lists now", u.lists || 0)}${cell("Lists made", s.made)}${cell("Exports", s.exports)}${cell("Shared the app", s.shares ? `${s.shares}×` : "no")}${cell("Time in the app", fmtMins(s.mins))}${cell("Days used", s.days)}</div>
       <div class="ad-sub">Since ${s.first ? new Date(s.first).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "?"}${s.devs > 1 ? ` · ${s.devs} devices` : ""}${s.ver ? ` · version ${esc(s.ver)}` : ""}</div></div>`).join("") : `<p class="hint">No one has reported yet. Numbers arrive once each user opens the updated app with a connection.</p>`}
-    <p class="hint">Counted from the day each user got this version. "Shared the app" counts the app's own Share button only.</p></section>`;
+    <p class="hint">Counted from the day each user got this version. "Shared the app" counts the app's own Share button only.</p>
+    <div class="set-group"><h3>Tools</h3><button class="btn" type="button" data-act="lab-open">Color lab · try colors on the real pages</button></div></section>`;
 }
 render();
 initAccount();
