@@ -1850,6 +1850,16 @@ function wlAuthHtml() {
       <button class="btn wl-in" type="button" data-act="acct-in">Continue with Google</button>
       <span class="hint wl-why">Keeps your lists in your Google account: safe, and on every phone you sign in on. Already have lists there? They come right back.</span>`;
 }
+/* the home page, for someone not signed in: in the first-list card, Google as the other way in; with lists already, a small card
+   that offers to keep them in the account (closed for good with its ×) */
+function homeAuthHtml(empty) {
+  const a = window.AC_AUTH, u = a && a.user ? a.user() : null; if (!a || u) return "";
+  if (empty) return `<div class="wl-or" aria-hidden="true"><span>or</span></div><button class="btn wl-in" type="button" data-act="acct-in">Continue with Google</button>
+      <span class="hint wl-why">Already have lists in your Google account? They come right back. New here? Your lists will be kept safe, on every phone.</span>`;
+  if (app.settings.signInHint === "off") return "";
+  return `<div class="home-auth"><div><b>Keep your lists safe</b><span>Sign in with Google: your lists are kept in your account, on every phone.</span></div>
+    <button class="btn primary sm" type="button" data-act="acct-in">Sign in</button><button class="iconbtn" type="button" data-act="home-auth-off" aria-label="Not now">×</button></div>`;
+}
 function wlAuthFill() {
   const el = typeof document !== "undefined" && document.getElementById("wlAuth"); if (!el) return; el.innerHTML = wlAuthHtml();
   const u = window.AC_AUTH && window.AC_AUTH.user ? window.AC_AUTH.user() : null, n = document.getElementById("wl-name");
@@ -1917,7 +1927,8 @@ function viewHome(archPage) {
     ${list.length ? `${cards ? `<ul class="prod-list">${cards}</ul>` : `<p class="hint">No current productions.</p>`}${archRow}${archHtml}${sel ? "" : `<p class="hint lp-hint">Press and hold a production to duplicate it, delete it, or select several.</p>`}` :
     `<div class="empty-state"><h3>Start your first equipment list</h3>
       <p>Create a production, pick the rental house you're working with, then add gear from their catalog with a quantity for each item. Send the finished list as a PDF or a Word file.</p>
-      <button class="btn primary" type="button" data-act="new">+ Create list</button></div>`}
+      <button class="btn primary" type="button" data-act="new">+ Create list</button>${homeAuthHtml(true)}</div>`}
+    ${list.length && !sel ? homeAuthHtml(false) : ""}
   </section>${selDock}`;
 }
 /* the top of a page outside a production: back, the title, and a line under it (the same row as a production's) */
@@ -6067,6 +6078,7 @@ document.addEventListener("click", e => {
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
     case "lab-open": labShow(); break;
+    case "home-auth-off": app.settings.signInHint = "off"; touchSettings(); rerenderKeepScroll(); break;
     case "look": lookPick(b.dataset.v); break;
     case "copy-uid": { const t = window.AC_STATS ? window.AC_STATS.uid : ""; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Account ID copied"), () => toast(t)); break; }
     case "ids-show": { const t = Date.now(); app.idTaps = (app.idTaps || []).filter(x => t - x < 2500).concat(t); if (app.idTaps.length >= 5) { app.idTaps = []; app.showIds = !app.showIds; rerenderKeepScroll(); } break; }
