@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611131937";
+window.AC_BUILD = "202611132003";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -4522,7 +4522,8 @@ function render() {
   histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
   document.querySelectorAll(".tx-pop:not(#txPop)").forEach(el => el.remove());
-  lookApply();   // the user's colors (they may just have come from the account)   // a drawer still sliding shut doesn't linger over a page drawn anew
+  lookApply();   // the user's colors (they may just have come from the account)
+  if (lookUi.open && app.view !== "settings" && app.view !== "admin") { lookKeep(); look = null; lookUi.open = false; labDraw(); }   // leaving Settings closes the colors panel (what was set is kept)   // a drawer still sliding shut doesn't linger over a page drawn anew
   txSync();   // a wireless set's open drawer follows its counter, or goes with it
 }
 

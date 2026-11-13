@@ -4372,7 +4372,8 @@ function render() {
   histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
   document.querySelectorAll(".tx-pop:not(#txPop)").forEach(el => el.remove());
-  lookApply();   // the user's colors (they may just have come from the account)   // a drawer still sliding shut doesn't linger over a page drawn anew
+  lookApply();   // the user's colors (they may just have come from the account)
+  if (lookUi.open && app.view !== "settings" && app.view !== "admin") { lookKeep(); look = null; lookUi.open = false; labDraw(); }   // leaving Settings closes the colors panel (what was set is kept)   // a drawer still sliding shut doesn't linger over a page drawn anew
   txSync();   // a wireless set's open drawer follows its counter, or goes with it
 }
 
