@@ -3954,7 +3954,7 @@ const LC_COLS = { orange: ["#b4500f", "#e07b2e", "#fbefe4", "Orange"], red: ["#b
 const lcLook = o => ({ st: LC_STYLES[o.style] ? o.style : "lines", col: LC_COLS[o.col] ? o.col : o.ink === "bw" ? "black" : "orange" });
 function lensCardHtml(p, o) {
   const { units, sets, ones } = lcRows(p), n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
-  const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--k:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
+  const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--lck:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
   const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
   const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`, sub = a => a.filter(Boolean).map(esc).join(" · ");
   const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
@@ -3994,7 +3994,7 @@ function viewLensCard() {
   return `${head}
     <section class="pad cam-out lc-page">
       <div class="field lc-top"><select id="lc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
-      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}</div></div>
+      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--lck:${k}">${card.html}</div></div>
         <div class="lc-bar">
           <span class="stepper lc-step" role="group" aria-label="Card size">${sb("lc-k", -1, "Smaller card", "−", k <= LC_K[0])}<span id="lc-size" aria-live="polite">…</span>${sb("lc-k", 1, "Bigger card", "+", k >= LC_K[1])}</span>
           <button type="button" class="iconbtn lc-reset" data-act="lc-k1" aria-label="Back to the first size" title="Back to the first size"${k !== 1 ? "" : " hidden"}>${RESET_ICON}</button>
@@ -4041,7 +4041,7 @@ function lcFit() {
 function lcShowK(k) {
   const prev = document.querySelector(".lc-prev"), c = prev && prev.querySelector(".lcard"); if (!c || !lcNat) return;
   const fit = lcPu(prev, k), z = lcZ();
-  c.style.setProperty("--k", k); prev.style.setProperty("--pu", fit * z + "px");
+  c.style.setProperty("--lck", k); prev.style.setProperty("--pu", fit * z + "px");
   prev.style.height = Math.round((app.lcRoomH || lcNat.h * k * fit) + 2 * LC_PAD) + "px";  // one height whatever the size or zoom: zoomed in, it scrolls
   const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(k);
   const one = document.querySelector('[data-act="lc-k1"]'); if (one) one.hidden = Math.abs(k - 1) < .005;

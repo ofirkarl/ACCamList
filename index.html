@@ -222,7 +222,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     linear-gradient(90deg, #00214c 0 17.86%, #fff 0 35.71%, #32006a 0 53.57%, #131313 0 71.43%, #090909 0 76.19%, #131313 0 80.95%, #1d1d1d 0 85.71%, #131313 0) left 0 bottom 0 / 100% 20vh no-repeat,
     linear-gradient(90deg, #0000c0 0 14.29%, #131313 0 28.57%, #c000c0 0 42.86%, #131313 0 57.14%, #00c0c0 0 71.43%, #131313 0 85.71%, #c0c0c0 0) left 0 bottom 20vh / 100% 7vh no-repeat,
     linear-gradient(90deg, #c0c0c0 0 14.29%, #c0c000 0 28.57%, #00c0c0 0 42.86%, #00c000 0 57.14%, #c000c0 0 71.43%, #c00000 0 85.71%, #0000c0 0) 0 0 / 100% 73vh no-repeat;
-  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .3) 45%, rgba(0, 0, 0, .3) 60%, #000 73%); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .3) 45%, rgba(0, 0, 0, .3) 60%, #000 73%); }
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .04) 38%, rgba(0, 0, 0, .04) 62%, #000 78%); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .04) 38%, rgba(0, 0, 0, .04) 62%, #000 78%); }
 :root[data-theme="dark"] { --bars-bg: .11; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bars-bg: .11; } }
 /* what stays put over a scrolling page lets the bars show through, softly */
@@ -2226,7 +2226,7 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .cp-seg button { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 44px; padding: 6px; font-size: 14px; }
 .cp-seg button span { font-size: 12px; font-weight: 400; opacity: .8; }
 .cp-note { margin: 0; }
-/* Lens Cards: the card drawn in --u (a mm on paper); on screen --pu px a mm (fitted to the preview) times the size dragged (--k); in the PDF 4 px a mm times --k */
+/* Lens Cards: the card drawn in --u (a mm on paper); on screen --pu px a mm (fitted to the preview) times the size dragged (--lck); in the PDF 4 px a mm times --lck */
 /* the page, tight enough to show whole with no scrolling: list and layout on one row, the preview with its own bar, then the look */
 .app:has(.lc-page) { padding-bottom: 0; }
 .cam-out.lc-page { gap: 12px; padding-top: 4px; padding-bottom: 16px; }
@@ -2242,12 +2242,12 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lc-prev { --pu: 2.2px; display: flex; width: 100%; box-sizing: border-box; padding: 18px; overflow: hidden; }
 .lc-prev.zoom { overflow: auto; max-height: 72vh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .lc-frame { position: relative; flex: none; margin: auto; }  /* in the middle of the window; a card wider than it scrolls from its edge */
-.lc-prev .lcard { --u: calc(var(--pu) * var(--k, 1)); box-shadow: 0 6px 18px rgba(0, 0, 0, .15); }
+.lc-prev .lcard { --u: calc(var(--pu) * var(--lck, 1)); box-shadow: 0 6px 18px rgba(0, 0, 0, .15); }
 /* the size eases to a new value (a key, Actual size, zoom); while dragged it follows the finger with no delay */
-@property --k { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --lck { syntax: "<number>"; inherits: true; initial-value: 1; }
 @property --pu { syntax: "<length>"; inherits: true; initial-value: 2.2px; }
 .lc-prev { transition: --pu .2s ease-out; }
-.lc-prev .lcard { transition: --k .2s ease-out; }
+.lc-prev .lcard { transition: --lck .2s ease-out; }
 .lc-prev.still, .lc-prev.still .lcard { transition: none; }
 @media (prefers-reduced-motion: reduce) { .lc-prev, .lc-prev .lcard { transition: none; } }
 /* the preview's bar, right under the card: its size in cm with − + and back to the first size; the preview's zoom in steps */
@@ -2274,7 +2274,7 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lc-sw { flex: 0 1 32px; min-width: 24px; aspect-ratio: 1; height: auto; padding: 0; border-radius: 50%; border: 0; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); cursor: pointer; }
 .lc-sw.bw { background: linear-gradient(135deg, #18171d 50%, #fff 50%); }
 .lc-sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--fg); }
-.lc-host .lcard { --u: calc(4px * var(--k, 1)); }
+.lc-host .lcard { --u: calc(4px * var(--lck, 1)); }
 /* the card: paper, whatever the theme */
 .lcard { --lc-a: #b4500f; --lc-l: #e07b2e; --lc-z: #fbefe4; --lc-r: #d6d0c5; box-sizing: border-box; background: #fff; color: #18171d; font-family: var(--font-body); direction: ltr; text-align: left; border-radius: calc(var(--u) * 1.2); }
 .lcard td, .lcard th { color: #18171d; border: 0; background: none; font-weight: inherit; }
@@ -6479,7 +6479,7 @@ const LC_COLS = { orange: ["#b4500f", "#e07b2e", "#fbefe4", "Orange"], red: ["#b
 const lcLook = o => ({ st: LC_STYLES[o.style] ? o.style : "lines", col: LC_COLS[o.col] ? o.col : o.ink === "bw" ? "black" : "orange" });
 function lensCardHtml(p, o) {
   const { units, sets, ones } = lcRows(p), n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
-  const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--k:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
+  const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--lck:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
   const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
   const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`, sub = a => a.filter(Boolean).map(esc).join(" · ");
   const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
@@ -6519,7 +6519,7 @@ function viewLensCard() {
   return `${head}
     <section class="pad cam-out lc-page">
       <div class="field lc-top"><select id="lc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
-      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}</div></div>
+      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--lck:${k}">${card.html}</div></div>
         <div class="lc-bar">
           <span class="stepper lc-step" role="group" aria-label="Card size">${sb("lc-k", -1, "Smaller card", "−", k <= LC_K[0])}<span id="lc-size" aria-live="polite">…</span>${sb("lc-k", 1, "Bigger card", "+", k >= LC_K[1])}</span>
           <button type="button" class="iconbtn lc-reset" data-act="lc-k1" aria-label="Back to the first size" title="Back to the first size"${k !== 1 ? "" : " hidden"}>${RESET_ICON}</button>
@@ -6566,7 +6566,7 @@ function lcFit() {
 function lcShowK(k) {
   const prev = document.querySelector(".lc-prev"), c = prev && prev.querySelector(".lcard"); if (!c || !lcNat) return;
   const fit = lcPu(prev, k), z = lcZ();
-  c.style.setProperty("--k", k); prev.style.setProperty("--pu", fit * z + "px");
+  c.style.setProperty("--lck", k); prev.style.setProperty("--pu", fit * z + "px");
   prev.style.height = Math.round((app.lcRoomH || lcNat.h * k * fit) + 2 * LC_PAD) + "px";  // one height whatever the size or zoom: zoomed in, it scrolls
   const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(k);
   const one = document.querySelector('[data-act="lc-k1"]'); if (one) one.hidden = Math.abs(k - 1) < .005;
