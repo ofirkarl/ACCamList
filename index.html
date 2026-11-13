@@ -9310,8 +9310,10 @@ function labApply() {
   if (!st) { st = document.createElement("style"); st.id = "lab-style"; document.head.appendChild(st); }
   const P = labHsl(lab.h, lab.s, lab.l), ch = lab.cm === "same" ? lab.h : lab.ch, C = labHsl(ch, lab.s, lab.l), Ci = labHsl(ch, lab.s, Math.max(18, Math.min(lab.l, 46) - 10));
   const hh = lab.hm === "same" ? lab.h : lab.hm === "comp" ? lab.h + 180 : lab.hh, hl = lab.hm === "same" ? lab.l : Math.max(lab.l, 58), H = labHsl(hh, lab.s, hl), Hf = labFg(hh, lab.s, hl);
-  const bg = `color-mix(in srgb, ${labHsl(lab.h, lab.s, 88)} ${lab.pt}%, #f8f7f4)`;
-  st.textContent = `:root{--accent:${P};--accent-fg:${labFg(lab.h, lab.s, lab.l)};--bg:${bg};--bars-bg:${(lab.bg / 100 * .3).toFixed(3)};--sf:${C};--sf-ink:${Ci};--sf-tint:color-mix(in srgb,${C} 9%,var(--surface));--sf-line:color-mix(in srgb,${C} 28%,var(--line));--sf-on:color-mix(in srgb,${C} 17%,var(--surface));}
+  const dk = document.documentElement.dataset.theme === "dark" || (document.documentElement.dataset.theme !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  const bg = dk ? `color-mix(in srgb, ${labHsl(lab.h, lab.s, 30)} ${lab.pt}%, #0f0f14)` : `color-mix(in srgb, ${labHsl(lab.h, lab.s, 88)} ${lab.pt}%, #f8f7f4)`;
+  const I = " !important";  // over the rental house's color and the dark theme's, which are set on the same element
+  st.textContent = `:root{--accent:${P}${I};--accent-fg:${labFg(lab.h, lab.s, lab.l)}${I};--accent-soft:color-mix(in srgb,${P} 10%,var(--surface))${I};--bg:${bg}${I};--bars-bg:${(lab.bg / 100 * .3).toFixed(3)}${I};--sf:${C}${I};--sf-ink:${dk ? labHsl(ch, lab.s, 78) : Ci}${I};--sf-tint:color-mix(in srgb,${C} 9%,var(--surface))${I};--sf-line:color-mix(in srgb,${C} 28%,var(--line))${I};--sf-on:color-mix(in srgb,${C} 17%,var(--surface))${I};}
 body,.app{background:${bg}} .finder{--accent:${P} !important}
 .mc-res{background:${H};box-shadow:0 8px 18px -10px ${H}} .mc-res b{color:${Hf}} .mc-res .t-l{color:${Hf};opacity:.8}`;
 }
