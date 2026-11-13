@@ -3492,8 +3492,12 @@ function lineHtml(p, id, l) {
   const e = ITEM.get(id);
   const key = l.custom ? favKeyCustom(l.name, l.section) : id;
   const qtys = l.tx !== undefined
-    ? `<span class="qtys"><span class="tr q-sets"><span>Sets</span>${stepper("l", id, lineQty(l), null, false)}</span><span class="q-txrx"><span class="tr"><span>TX</span>${stepper("l", id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper("l", id, l.rx, "rx", true)}</span></span></span>`
+    ? `<span class="tr q-sets"><span>Sets</span>${stepper("l", id, lineQty(l), null, false)}</span>`   // wireless video: sets where every item has its quantity
     : stepper("l", id, l.qty, null, false);
+  // its transmitters and receivers: one small tag under the name ("TX 1 · RX 1"), which opens their two counters when they differ from the sets
+  const txOpen = l.tx !== undefined && app.open.has("tx:" + id);
+  const txTag = l.tx !== undefined ? `<button class="txrx-tag" type="button" data-act="txrx" data-id="${esc(id)}" aria-expanded="${txOpen}" aria-label="Transmitters and receivers">TX <b>${l.tx}</b> · RX <b>${l.rx}</b>${CHEV}</button>` : "";
+  const txRow = txOpen ? `<div class="l-txrx"><span class="tr"><span>TX</span>${stepper("l", id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper("l", id, l.rx, "rx", true)}</span></div>` : "";
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
@@ -3508,9 +3512,9 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid${l.tx !== undefined ? " wide" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}</span>
+      <div class="l-grid"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}${txTag}</span>
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
-      <div class="l-bottom">${qtys}</div></div>
+      <div class="l-bottom">${qtys}</div>${txRow}</div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}
@@ -5929,6 +5933,7 @@ document.addEventListener("click", e => {
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
     case "lab-open": labShow(true); break;
+    case "txrx": { const k = "tx:" + b.dataset.id; if (app.open.has(k)) app.open.delete(k); else app.open.add(k); rerenderKeepScroll(); break; }
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
