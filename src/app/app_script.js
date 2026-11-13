@@ -1228,7 +1228,8 @@ function applyDefaults(p) {
 }
 /* menus: every list to choose from is a quiet field; it opens its choices in place, one line each, in the page's own scroll.
    The real <select> stays underneath (hidden), so choosing still sends its usual change */
-function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span class="ns-a">${esc(t.slice(0, i))}</span><span class="ns-b">${esc(t.slice(i + 3))}</span>` : `<span class="ns-a">${esc(t)}</span>`; }
+/* a choice's name takes its own direction: a Hebrew name runs right to left, aligns right, and is cut (if it must be) on its left */
+function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span class="ns-a" dir="auto">${esc(t.slice(0, i))}</span><span class="ns-b">${esc(t.slice(i + 3))}</span>` : `<span class="ns-a" dir="auto">${esc(t)}</span>`; }
 function nselSync(w) {
   const sel = w.querySelector("select"), btn = w.querySelector(".nsel-btn"); if (!sel || !btn) return;
   const o = sel.options[sel.selectedIndex];

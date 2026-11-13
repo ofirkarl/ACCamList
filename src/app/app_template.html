@@ -2050,7 +2050,13 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 /* the page, tight enough to show whole with no scrolling: list and layout on one row, the preview with its own bar, then the look */
 .app:has(.lc-page) { padding-bottom: 0; }
 .cam-out.lc-page { gap: 12px; padding-top: 4px; padding-bottom: 16px; }
-.lc-top select { min-height: 42px; padding-block: 8px; }
+.lc-top { position: relative; }
+.lc-top .nsel-btn { min-height: 42px; padding-block: 8px; }
+/* the list picker's menu floats over the page (nothing below moves) and shows each name whole */
+.lc-top .nsel, .mc-pick .nsel { position: static; }
+.lc-top .nsel-list, .mc-pick .nsel-list { position: absolute; left: 0; right: 0; z-index: 30; max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 16px 40px rgba(0, 0, 0, .22); }
+.mc-pick .field { position: relative; }
+.lc-top .nsel-opt .ns-a, .mc-pick .nsel-opt .ns-a { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .lc-page .cp-seg button { min-height: 34px; padding: 4px 12px; }
 .lc-view { border-radius: 12px; background: var(--desk); overflow: hidden; }
 .lc-prev { --pu: 2.2px; display: flex; width: 100%; box-sizing: border-box; padding: 18px; overflow: hidden; }
@@ -3570,7 +3576,8 @@ function applyDefaults(p) {
 }
 /* menus: every list to choose from is a quiet field; it opens its choices in place, one line each, in the page's own scroll.
    The real <select> stays underneath (hidden), so choosing still sends its usual change */
-function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span class="ns-a">${esc(t.slice(0, i))}</span><span class="ns-b">${esc(t.slice(i + 3))}</span>` : `<span class="ns-a">${esc(t)}</span>`; }
+/* a choice's name takes its own direction: a Hebrew name runs right to left, aligns right, and is cut (if it must be) on its left */
+function nselText(t) { const i = t.lastIndexOf(" · "); return i > 0 ? `<span class="ns-a" dir="auto">${esc(t.slice(0, i))}</span><span class="ns-b">${esc(t.slice(i + 3))}</span>` : `<span class="ns-a" dir="auto">${esc(t)}</span>`; }
 function nselSync(w) {
   const sel = w.querySelector("select"), btn = w.querySelector(".nsel-btn"); if (!sel || !btn) return;
   const o = sel.options[sel.selectedIndex];
