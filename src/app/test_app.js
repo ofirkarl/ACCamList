@@ -1097,3 +1097,15 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   const R = A.lcRows(m);
   ok(R.sets.length === 3 && R.sets.every(r => /Thypoch/.test(r.name) && r.lenses.length === 5 && r.lenses[4].cf === "1'10\""), "the DZO Thypoch set however it's written (another rental house's list too): found, each lens with its close focus");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); }
+// --- Lens card: a production with a 2nd Unit: picked once, both units' lenses, each under its unit
+{ const m = A.newProduction({ houseId: "utopia", name: "Ronin 4D" }); A.app.productions.push(m);
+  const q = A.copyProduction(m, { name: m.name, mainOf: m.id }); A.app.productions.push(q); m.unit2 = q.id; q.items = {};
+  const add = (p, re) => { for (const [id, e] of A.ITEM) if (e.h.id === "utopia" && re.test(e.it.name)) { A.setQty(p, id, 1); return; } };
+  add(q, /^DZOFilm Thypoch Simera-C/);
+  let R = A.lcRows(m); ok(R.sets.length === 1 && R.units.length === 1 && R.units[0].label === "2nd Unit", "lenses only on the 2nd Unit: found from the production");
+  A.app.settings.lcList = q.id; A.app.view = "lenscard"; let v = A.viewLensCard();
+  ok((v.match(new RegExp('<option value="' + m.id + '"', "g")) || []).length === 1 && !v.includes('<option value="' + q.id + '"') && /Thypoch/.test(v), "the production once in the list picker (a 2nd Unit picked before comes to its production), its lenses shown");
+  add(m, /^Cooke S4i T2\/14mm$/); R = A.lcRows(m);
+  const c = A.lensCardHtml(m, { lay: "compact", ink: "color" }).html, t2 = A.lensCardHtml(m, { lay: "two", ink: "color" }).html;
+  ok(R.units.length === 2 && /class="lc-u">Main Unit</.test(c) && /class="lc-u">2nd Unit</.test(c) && (t2.match(/<table class="lc-t">/g) || []).length === 2, "both units with lenses: each under its name; two columns: Main Unit beside 2nd Unit");
+  A.app.productions.splice(A.app.productions.indexOf(q), 1); A.app.productions.splice(A.app.productions.indexOf(m), 1); A.app.view = "home"; }

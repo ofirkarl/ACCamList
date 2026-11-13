@@ -3850,8 +3850,8 @@ function viewTools() {
    One table (a row a lens) and Two columns (sets beside the rest). The PDF is the card's own size, nothing around it */
 const LC_LAYOUTS = { compact: "Compact", one: "One table", two: "2 columns" };
 const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (o.ink !== "bw") o.ink = "color"; return o; };
-const lcLists = () => app.productions.filter(x => !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));  // 2nd Unit lists too
-function lcListId() { const k = app.settings.lcList; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = lcLists()[0]; return l ? l.id : ""; }
+const lcLists = () => mcLists();  // each production once: its 2nd Unit's lenses come with it
+function lcListId() { const k = app.settings.lcList, q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && !isArchived(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
 /* a list line's lens: its catalog item; a line typed by hand or brought in from a Word list or another rental house is matched
    by name to a catalog lens (the list's own rental house first), or else read from its own name ("Cooke S4i 32mm") */
 const LENS_STOP = new Set(["set", "of", "lens", "lenses", "kit", "mount", "the", "and", "with", "pl", "lpl", "ef", "e", "rf", "l", "mft", "full", "frame", "ff", "s35", "super35", "cine", "feet", "metric", "imperial"]);
@@ -3882,7 +3882,13 @@ function lcLensOf(id, l, hid) {
 }
 const lcCur = () => findProd(lcListId()) || null;
 /* the list's lenses: sets first, then single lenses and zooms, in the list's order */
+/* the production's lenses, Main Unit and 2nd Unit each on its own (sets and ones together across both, too) */
 function lcRows(p) {
+  const m = mainOf(p) || p, u2 = unit2Of(m);
+  const units = [[m, "Main Unit"], [u2, "2nd Unit"]].filter(([q]) => q).map(([q, label]) => ({ label, ...lcRowsOf(q) })).filter(u => u.sets.length || u.ones.length);
+  return { units, sets: units.flatMap(u => u.sets), ones: units.flatMap(u => u.ones) };
+}
+function lcRowsOf(p) {
   const sets = [], ones = [];
   for (const [id, l] of Object.entries(p && p.items || {})) {
     const q = lineQty(l), x = q ? lcLensOf(id, l, p.houseId) : null; if (!x) continue;
@@ -3897,7 +3903,7 @@ function lcRows(p) {
   return { sets, ones };
 }
 function lensCardHtml(p, o) {
-  const { sets, ones } = lcRows(p), bw = o.ink === "bw", n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length;
+  const { units, sets, ones } = lcRows(p), bw = o.ink === "bw", n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
   const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
   const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`;
   const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
@@ -3905,15 +3911,19 @@ function lensCardHtml(p, o) {
     const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, f) => `<tr class="${k}"><td>${k === "mm" ? "MM" : k === "t" ? "T" : "CF"}</td>${r.lenses.map(f).join("")}</tr>`;
       return `<div class="lcc-s"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount, one ? r.lenses[0].t : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
         <table>${tr("mm", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", l => `<td>${esc(l.t)}</td>`)}${tr("cf", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
-    const oneB = ones.length ? `${sets.length ? `<div class="lcc-sep"></div>` : ""}<table class="lcc-o">${ones.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table>` : "";
-    return { n, html: `<div class="lcard lcc${bw ? " bw" : ""}">${head}${sets.map(setB).join("")}${oneB}</div>` };
+    const oneB = (ones, after) => ones.length ? `${after ? `<div class="lcc-sep"></div>` : ""}<table class="lcc-o">${ones.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table>` : "";
+    const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones, u.sets.length)}`;
+    return { n, html: `<div class="lcard lcc${bw ? " bw" : ""}">${head}${units.map(unitB).join("")}</div>` };
   }
   const rows = (list, kind) => list.map(r => kind === "set"
     ? `<tr class="g"><td colspan="3">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount].filter(Boolean).map(esc).join(" · ")}</span></td></tr>${r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join("")}`
     : `<tr><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("");
-  const table = (s, w) => s.length || w.length ? `<table class="lc-t"><thead><tr><th>Lens · mm</th><th class="n">Stop</th><th class="n">Close focus</th></tr></thead><tbody>${rows(s, "set")}${rows(w, "one")}</tbody></table>` : "";
+  const uRow = u => two ? `<tr class="u"><td colspan="3">${u.label}</td></tr>` : "";
+  const table = us => us.some(u => u.sets.length || u.ones.length) ? `<table class="lc-t"><thead><tr><th>Lens · mm</th><th class="n">Stop</th><th class="n">Close focus</th></tr></thead><tbody>${us.map(u => uRow(u) + rows(u.sets, "set") + rows(u.ones, "one")).join("")}</tbody></table>` : "";
   const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
-  const body = o.lay === "two" && sets.length && ones.length ? `<div class="lc-cols">${table(sets, [])}${table([], ones)}</div>` : table(sets, ones);
+  // two columns: Main Unit beside 2nd Unit, or with one unit its sets beside the rest
+  const body = o.lay !== "two" ? table(units) : two ? `<div class="lc-cols">${table([units[0]])}${table([units[1]])}</div>`
+    : sets.length && ones.length ? `<div class="lc-cols">${table([{ ...units[0], ones: [] }])}${table([{ ...units[0], sets: [] }])}</div>` : table(units);
   return { n, html: `<div class="lcard lct${o.lay === "two" ? " two" : ""}${bw ? " bw" : ""}">${head}${body}${foot}</div>` };
 }
 function viewLensCard() {
