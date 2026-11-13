@@ -1062,14 +1062,17 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   const mk = md(L("utopia", /^Fujinon MK18-55/)); ok(mk && mk.one === "2'9\"" && mk.macro === "1'3\"", "a zoom with a macro setting: MK18-55 2'9\" (macro 1'3\")");
   ok(md(L("utopia", /Super16 ArriFlex And Ultra Primes Mix/)) === null, "a Super 16 set named with Ultra Primes isn't read as Ultra Primes");
   ok(md(L("utopia", /^Zeiss Master Macro 100/)).one === "1'1\u00be\"", "the Master Macro 100: 1'1\u00be\"");
+  ok(md(L("utopia", /^DZOFilm Vespid 50mm/)).one === "1'3\"" && md(L("utopia", /^DZOFilm Vespid 21mm/)).one === "11\"", "the 2026-11 check: Vespid 50 1'3\" (0.37 m), the 21 11\"");
+  ok(md(L("utopia", /^Sony E-Mount 18-105mm/)).one === "1'6\"–3'1\"" && md(L("utopia", /^Sony FE 24-70mm f\/2\.8 GM II/)).one === "8\"–1'" && md(L("utopia", /^Sony FE 100mm f\/2\.8 GM/)).one === "2'9\"" && md(L("utopia", /^Sony FE 100mm f\/2\.8 GM/)).macro === "1'10\"", "Sony: power zooms wide–tele, the 24-70 GM II 8\"–1', the 100 STF 2'9\" (macro 1'10\")");
+  ok(md(L("utopia", /^Cooke Panchro Prime Lens Set/)) === null && md(L("utopia", /^Canon EF 70-200mm f\/2\.8L Is II/)).one === "3'11\"" && md(L("utopia", /^Zeiss EF Distagon T\* 21mm/)).one === "9\"" && md(L("utopia", /^Zeiss Ultra Prime 10mm/)).one === "1'3\"", "the vintage Speed Panchro set has no figure (not the Panchro/i FF); Canon 70-200 IS II, ZE 21, Ultra Prime 10 added");
   { const d43 = md(L("utopia", /^Dulens APO Mini Prime 43mm/)), dset = L("utopia", /^Dulens APO Mini Prime T2\.4\/T2\.6 Set/); ok(d43 && d43.one === "1'10\"" && (!dset || /1'10/.test(JSON.stringify(md(dset)))), "Dulens APO Mini Prime: the 43 at 1'10\", the set too"); }
   ok(/class="mod"[^>]*>CF 9&quot;</.test(A.specsHtml(L("utopia", /^Cooke S4i T2\/14mm$/).it)), "the lens's line shows CF 9\"");
   ok(/<i class="ll-cf"[^>]*>1(&#39;|')2&quot;<\/i>/.test(A.specsHtml(L("fitussi", /^ARRI Signature Prime Set$/).it)), "a set's line: each lens with its close focus"); }
 { const L = (h, re) => { for (const [id, e] of A.ITEM) if (e.h.id === h && re.test(e.it.name)) return e; return null; };
   const md = e => e ? A.lensMod(e.it, A.lensSpec(e.it, e.s.id)) : undefined;
   const g1 = md(L("utopia", /^Sony E-Mount 24-70mm f\/2\.8 GM$/)), g2 = md(L("utopia", /^Sony FE 24-70mm f\/2\.8 GM II/));
-  ok(g1 === undefined || (g1 && g2 && g1.one === "1'3\"" && g2.one === "8\""), "a version in the name picks its own close focus (24-70 GM 1'3\", GM II 8\")");
-  const af = L("utopia", /^Samyang E-Mount 35mm F\/2\.8 AF/); ok(!af || md(af) === null, "a lens whose version isn't checked gets none (Samyang 35 AF)"); }
+  ok(g1 === undefined || (g1 && g2 && g1.one === "1'3\"" && g2.one === "8\"–1'"), "a version in the name picks its own close focus (24-70 GM 1'3\", GM II 8\"–1')");
+  const af = L("utopia", /^Samyang E-Mount 35mm F\/2\.8 AF/); ok(!af || md(af).one === "1'2\"", "the Samyang AF 35 f/2.8: its own figure (0.35 m), not the cine 35's"); }
 
 // --- Lens card: the list's lenses with their close focus, three layouts
 { const m = A.newProduction({ houseId: "utopia", name: "Lens card test" }); A.app.productions.push(m); A.closeModal && A.closeModal();
@@ -1077,7 +1080,7 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   add(/^ARRI Signature Prime LPL-Mount Lens Set Of 8$/); add(/^Cooke S4i T2\/14mm$/); add(/^Angenieux Optimo Zoom 24-290/); add(/^Fujinon MK18-55/); add(/^Zeiss Ultra Prime 10mm/);
   const R = A.lcRows(m);
   ok(R.sets.length === 1 && R.sets[0].lenses.length === 8 && R.sets[0].lenses[3].mm === "47" && R.sets[0].lenses[3].cf === "1'6\"", "the set: each lens with its close focus (47mm 1'6\")");
-  ok(R.ones.length === 4 && R.ones.some(r => r.mm === "24–290" && r.cf === "4'") && R.ones.some(r => r.mm === "18–55" && r.macro === "1'3\"") && R.ones.some(r => r.mm === "10" && r.cf === ""), "single lenses and zooms: a row each, the macro too; one with no figure stays empty");
+  ok(R.ones.length === 4 && R.ones.some(r => r.mm === "24–290" && r.cf === "4'") && R.ones.some(r => r.mm === "18–55" && r.macro === "1'3\"") && R.ones.some(r => r.mm === "10" && r.cf === "1'3\""), "single lenses and zooms: a row each, the macro too (the Ultra Prime 10 now 1'3\")");
   const o = { lay: "compact", ink: "color" }, c = A.lensCardHtml(m, o);
   ok(c.n === 12 && /class="lcard lc-lines lcc"/.test(c.html) && /<tr class="mm"><th>MM<\/th><td>18<\/td>/.test(c.html) && !/<tr class="t">/.test(c.html) && /class="lcc-g lcc-ones"><div class="lcc-n">Single lenses/.test(c.html), "compact: the set's name, its focal lengths over close focus, its one stop once; the single lenses a block of their own");
   ok(/<table class="lcc-o"><thead><tr><th>Lens<\/th><th class="n">MM<\/th><th class="n">T<\/th><th class="n">CF<\/th><th class="mac">Macro<\/th><\/tr><\/thead>/.test(c.html) && /<td class="nm">Angenieux Optimo[^<]*<\/td><td class="n mm">24–290<\/td><td class="n">T2\.8<\/td><td class="n cf">4(&#39;|')<\/td>/.test(c.html), "compact, the single lenses: the same labels as the sets, the name, mm, stop and close focus each in a column");
