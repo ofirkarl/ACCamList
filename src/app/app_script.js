@@ -1408,6 +1408,32 @@ function showModal(html) {
   m.querySelector(".btn.primary")?.focus();
   navSync();
 }
+/* a drawer closes when pulled down by its top (the grab line, the title row): it follows the finger, and past a third of
+   its height or 90 px (or a quick flick) it slides away; let go sooner and it springs back */
+const pull = { card: null, y: 0, dy: 0, t: 0 };
+document.addEventListener("touchstart", e => {
+  pull.card = null;
+  const m = document.getElementById("modal"), card = m && m.querySelector(".modal-card"); if (!card || e.touches.length !== 1 || !card.contains(e.target)) return;
+  if (e.target.closest("button, input, select, textarea, a, [data-act]")) return;
+  const y = e.touches[0].clientY, top = card.getBoundingClientRect().top;
+  if (y - top > 64) return;  // only the top of the drawer pulls it
+  Object.assign(pull, { card, y, dy: 0, t: Date.now() }); card.style.transition = "none";
+}, { passive: true });
+document.addEventListener("touchmove", e => {
+  if (!pull.card) return;
+  pull.dy = Math.max(0, e.touches[0].clientY - pull.y);
+  pull.card.style.transform = `translateY(${pull.dy}px)`;
+  if (pull.dy > 4 && e.cancelable) e.preventDefault();
+}, { passive: false });
+const pullEnd = () => {
+  const card = pull.card; if (!card) return; pull.card = null;
+  const h = card.offsetHeight, fast = pull.dy > 40 && Date.now() - pull.t < 260;
+  if (pull.dy > Math.min(90, h / 3) || fast) {
+    card.style.transition = "transform .18s ease-in"; card.style.transform = `translateY(${h + 40}px)`;
+    setTimeout(() => { if (card.isConnected) closeModal(); }, 170);
+  } else { card.style.transition = "transform .2s cubic-bezier(.2,.8,.2,1)"; card.style.transform = ""; setTimeout(() => { card.style.transition = ""; }, 220); }
+};
+document.addEventListener("touchend", pullEnd); document.addEventListener("touchcancel", pullEnd);
 /* a dialog stays above the on-screen keyboard: it takes only the part of the screen the keyboard leaves, and the field being typed in scrolls into view */
 function fitToKeyboard() {
   const vv = window.visualViewport, m = document.getElementById("modal");
