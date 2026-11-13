@@ -1087,7 +1087,7 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   ok(/style="--k:1\.5;/.test(A.lensCardHtml(m, { lay: "compact", k: { compact: 1.5 } }).html) && /style="--k:4;/.test(A.lensCardHtml(m, { lay: "one", k: { one: 9 } }).html) && /style="--k:1;/.test(A.lensCardHtml(m, { lay: "one", k: { compact: 2 } }).html), "the size dragged: each layout its own, kept within 50%–400%");
   ok(A.lcStepK(1, 1) === 1.1 && A.lcStepK(1.37, 1) === 1.4 && A.lcStepK(1.37, -1) === 1.3 && Math.abs(A.lcStepK(1, -1) - .9) < 1e-9, "the size by − +: to the next tenth, up or down");
   A.app.settings.lcList = m.id; A.app.view = "lenscard"; const v = A.viewLensCard();
-  ok((v.match(/data-act="lc-opt" data-k="lay"/g) || []).length === 2 && /id="lc-list"/.test(v) && /data-act="lc-save"/.test(v) && /Lens Cards/.test(v) && /class="lc-grip" role="slider"/.test(v), "the page (Lens Cards): the list, two layouts, the corner to resize, Save PDF");
+  ok((v.match(/data-act="lc-opt" data-k="lay"/g) || []).length === 2 && /id="lc-list"/.test(v) && /data-act="lc-save"/.test(v) && /Lens Cards/.test(v) && !/lc-grip/.test(v), "the page (Lens Cards): the list, two layouts, Save PDF; the card always fitted (no corner)");
   ok((v.match(/data-act="lc-k" data-v="-?1"/g) || []).length === 2 && (v.match(/data-act="lc-zoom" data-v="-?1"/g) || []).length === 2 && /id="lc-zl"[^>]*>1×</.test(v) && /data-act="lc-zoom" data-v="-1"[^>]*disabled/.test(v) && /class="lc-bar"/.test(v) && /data-act="lc-k1"[^>]*hidden/.test(v) && !/Actual size/.test(v), "under the card: its size with − +, back to the first size only once changed; the preview's zoom in steps, from 1×");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); A.app.view = "home"; }
 
