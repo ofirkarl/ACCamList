@@ -169,7 +169,7 @@
   --warn: #b45309;
   --warn-bg: #fff4de;
   --star: #f5a524;
-  --desk: #dcd7cd;
+  --desk: color-mix(in srgb, var(--surface) 62%, transparent);  /* where a card or a page is shown: the page's own light surface, never grey */
   --paper: #ffffff;
   /* category colors (the four rental house categories start on red, amber, blue and violet) */
   --pal-red: #e5484d; --pal-orange: #f97316; --pal-amber: #f5a524; --pal-olive: #84a31f; --pal-green: #22b45e; --pal-teal: #14b8a6;
@@ -1516,7 +1516,7 @@ body.kb-up .navbar { transform: translateY(110%); }
 .mc-pair.one { grid-template-columns: minmax(0, 1fr); }
 .mc-tile { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; min-height: 64px; box-sizing: border-box; margin: 0; padding: 12px 10px; border: 0; border-radius: 12px; background: none; color: var(--fg); font: inherit; text-align: start; }
 .mc-tile.info { box-shadow: inset 0 0 0 1px var(--line); }
-.mc-tile.tap, .mc-card { background: var(--sunken); }
+.mc-tile.tap, .mc-card { background: var(--surface); border: 1px solid var(--line); }
 .mc-tile.tap, .mc-card > .mc-tile { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color .15s, box-shadow .15s; }
 .mc-tile.tap.on, .mc-card.on { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .mc-tile.on .t-v, .mc-card.on > .mc-tile .t-v { color: var(--accent); }
@@ -2240,7 +2240,7 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .mc-pick .field { position: relative; }
 .lc-top .nsel-opt .ns-a, .mc-pick .nsel-opt .ns-a { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .lc-page .cp-seg button { min-height: 34px; padding: 4px 12px; }
-.lc-view { border-radius: 12px; background: var(--desk); overflow: hidden; }
+.lc-view { border-radius: 14px; background: var(--desk); border: 1px solid var(--line); overflow: hidden; }
 .lc-prev { --pu: 2.2px; display: flex; width: 100%; box-sizing: border-box; padding: 18px; overflow: hidden; }
 .lc-prev.zoom { overflow: auto; max-height: 72vh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .lc-frame { position: relative; flex: none; margin: auto; }  /* in the middle of the window; a card wider than it scrolls from its edge */
@@ -2268,6 +2268,8 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lc-reset { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; }
 .lc-reset[hidden] { display: none; }
 .lc-sty { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* the look's choices on a soft panel of their own, between them and the page */
+.lc-opts { padding: 10px 12px; border-radius: 14px; background: var(--desk); border: 1px solid var(--line); }
 .lc-opts { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px 12px; }
 .lc-page .co-acts .btn { min-height: 44px; }
 .lc-note { text-align: center; }
@@ -4303,7 +4305,7 @@ function render() {
   else if (app.view === "favs" && cur()) v.innerHTML = viewFavsSolo();
   else if (app.view === "cams" && cur()) v.innerHTML = viewCams();
   else if (app.view === "camprint" && cur()) v.innerHTML = viewCamPrint();
-  else if (app.view === "lenscard") v.innerHTML = viewLensCard();
+  else if (app.view === "lenscard") { v.innerHTML = viewLensCard(); lcFit(); }  // fitted before it is painted: no flash of a card at the wrong size
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
@@ -7038,7 +7040,9 @@ function camPicker(k) {
     const us = camUnitSrcs(p, c), from = us.some(s => camLines(s).length) ? us : camSrcs(p), qn = new Map();
     for (const s of from) for (const [id, l] of camLines(s)) qn.set(id, (qn.get(id) || 0) + lineQty(l));
     const onList = [...qn].map(([id, n]) => opt(id, c.id === id, esc(shortName(ITEM.get(id).it.name)), n > 1 ? `${n} on the list` : "On the list")).join(""), h = camHome(p, c);
-    const all = mcFreeCams(p.browse ? "any" : h.houseId).map(id => opt(id, c.id === id, esc(ITEM.get(id).it.name), "", ` data-n="${esc(norm(ITEM.get(id).it.name))}"`)).join("");
+    // every camera under its maker's name, the makers in the catalog's order
+    const byMk = new Map(); for (const id of mcFreeCams(p.browse ? "any" : h.houseId)) { const b = ITEM.get(id).it.brand || "Other"; if (!byMk.has(b)) byMk.set(b, []); byMk.get(b).push(id); }
+    const all = [...byMk.keys()].sort(brandSort).map(b => grp(b) + byMk.get(b).map(id => opt(id, c.id === id, esc(ITEM.get(id).it.name), "", ` data-n="${esc(norm(ITEM.get(id).it.name))}"`)).join("")).join("");
     sheet("Camera", search("Search cameras"), (onList ? grp("On the list") + onList : "") + `<div class="cs-all">${grp(p.browse ? "All cameras" : `All cameras at ${houseById(h.houseId)?.name || "the rental house"}`)}${all}</div>`
       + `<form class="cs-other" id="camOther" autocomplete="off"><input name="n" maxlength="60" placeholder="Not listed? Type its name" aria-label="Another camera, by name" dir="auto" value="${esc(c.id ? "" : c.name || "")}"><button class="btn sm" type="submit">Use</button></form>`);
     const on = document.querySelector("#modal .mc-opt.on"); if (on) on.scrollIntoView({ block: "center" });
@@ -8009,7 +8013,7 @@ document.addEventListener("click", e => {
   const p = cur();
   switch (act) {
     case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; app.fq = ""; render(); window.scrollTo(0, 0); break;
-    case "settings": if (app.view === "settings") break; closePreview(); closeModal(); app.setFrom = null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
+    case "settings": if (app.view === "settings") { histPop(); break; } /* a second tap closes it: back to where you were */ closePreview(); closeModal(); app.setFrom = null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
