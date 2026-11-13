@@ -2596,6 +2596,18 @@ body { overflow-x: clip; }
 .mc-res { background: var(--comp); box-shadow: 0 8px 18px -10px var(--comp); }
 .mc-res b { color: var(--comp-fg); }
 .mc-res .t-l { color: var(--comp-fg); opacity: .8; }
+/* nothing sits bare on the test-pattern background: a list's sections, a catalog's categories and a favorites group are each a
+   white card, so their text always has a clean ground */
+.section, .fav-cat, details.cat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--frame-shadow); padding: 12px; margin-block: 0 10px; }
+.section.closed { padding-block: 8px; }
+.section.closed h3 { background: none; }
+.section.drop-on { background: var(--surface); border-radius: 14px; }
+/* loose lines of help text get a soft ground of their own */
+.pad > .hint, .pad > p.hint, .section-empty, .pg-sub { text-shadow: 0 0 6px var(--bg), 0 0 2px var(--bg); }
+/* a tool's name is never cut: two words go on two lines, every tile the same height */
+.hs-btn .hs-t { white-space: normal; overflow: visible; text-overflow: clip; text-align: center; font-size: 10px; line-height: 12px; letter-spacing: .02em; min-height: 24px; display: grid; align-content: center; overflow-wrap: normal; word-break: keep-all; }
+.hs-btn .tl-c.hs-i, .tool-row .tl-c.hs-i { box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--accent) 60%, transparent); }  /* the glow in the icon's own color, not an old one */
+@media (max-width: 345px) { .hs-btn .hs-t { font-size: 9px; letter-spacing: 0; } }
 </style>
 </head>
 <body>
