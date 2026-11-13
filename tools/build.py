@@ -47,6 +47,7 @@ rep('<title>AC Cam List</title>\n<meta name="claude:viewport-fit-sides" content=
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
+window.AC_BUILD = "''' + VERSION + '''";
 ''' + shim + '''</script>
 ''')
 rep('</style>\n\n<div class="app">', '</style>\n</head>\n<body>\n<div class="app">')

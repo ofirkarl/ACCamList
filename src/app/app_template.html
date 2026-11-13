@@ -2494,6 +2494,24 @@ body { overflow-x: clip; }
 .tx-in .stepper button { width: 24px; height: 24px; font-size: 14px; }
 .tx-in .stepper input { width: 22px; height: 24px; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .tx-in { transition: none; } }
+/* Settings: the account id; the Control room */
+.acct-id { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.acct-id code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.ad { display: grid; gap: 10px; }
+.ad-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+.ad-stat { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.ad-stat b { font-size: 18px; line-height: 22px; color: var(--accent); }
+.ad-stat span, .ad-grid span { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ad-user { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--frame-shadow); }
+.ad-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ad-top > b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+.ad-tag { flex: none; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); font-size: 11px; color: var(--muted); }
+.ad-tag.on { border-color: var(--sf-line); background: var(--sf-tint); color: var(--sf-ink); }
+.ad-last { margin-inline-start: auto; flex: none; font-size: 12px; color: var(--muted); }
+.ad-sub { font-size: 12px; color: var(--muted); }
+.ad-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ad-grid > div { display: grid; gap: 2px; min-width: 0; }
+.ad-grid b { font-size: 15px; font-weight: 600; }
 </style>
 
 <div class="app">
@@ -4309,6 +4327,7 @@ function render() {
   else if (app.view === "mcalc" && cur()) v.innerHTML = viewMcalc();
   else if (app.view === "lensfind" && cur()) v.innerHTML = viewLensFind();
   else if (app.view === "tools") v.innerHTML = viewTools();
+  else if (app.view === "admin" && app.isAdmin) v.innerHTML = viewAdmin();
   else if (app.view === "favs" && cur()) v.innerHTML = viewFavsSolo();
   else if (app.view === "cams" && cur()) v.innerHTML = viewCams();
   else if (app.view === "camprint" && cur()) v.innerHTML = viewCamPrint();
@@ -4756,6 +4775,14 @@ function viewSettings() {
       return `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-catimport="1" hidden>${LOAD_ICON}<span>Load a catalog file</span></label></div>
       <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add Gear.</span></div>`; })()}
+    <div class="set-group"><h3>My lists</h3>
+      <div class="cat-io"><button class="btn" type="button" data-act="lists-export">${SAVE_ICON}<span>Save all my lists as a file</span></button>
+        <label class="btn"><input type="file" accept=".json,application/json" data-listsimport="1" hidden>${LOAD_ICON}<span>Load lists from a file</span></label></div>
+      <span class="hint">A backup of every production and its gear. Loading one adds its lists to yours; a list you already have is replaced only by a newer copy.</span></div>
+    ${window.AC_STATS ? `<div class="set-group"><h3>About your use</h3>
+      <p class="hint" style="margin:0">The app tells its maker how much it is used: your name, how many lists you made, exported and shared, and your time in the app. Never what is in your lists.</p>
+      ${app.isAdmin ? `<div><button class="btn primary" type="button" data-act="admin-open">Control room</button></div>` : ""}
+      <div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div></div>` : ""}
     ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
       <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
       ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
@@ -7606,7 +7633,7 @@ function docSigOf(p) {
   return String(h >>> 0);
 }
 const docVer = p => p.docSig && p.docSig === docSigOf(p) ? (p.docVer || 1) : (p.docVer || 0) + 1;
-function commitVer(p) { const sig = docSigOf(p); if (p.docSig !== sig) { p.docVer = docVer(p); p.docSig = sig; touch(p); } }
+function commitVer(p) { statCount("exports"); const sig = docSigOf(p); if (p.docSig !== sig) { p.docVer = docVer(p); p.docSig = sig; touch(p); } }
 /* the title at the top of the list ("Camera List", or the one set in Settings) */
 const docTitle = p => String((p && p.docTitle) || app.settings.docTitle || "Camera List").slice(0, 60);
 const CLEAN_FONT = "Futura, 'Century Gothic', 'Avenir Next', 'IBM Plex Sans', Arial, Helvetica, sans-serif";
@@ -7843,7 +7870,7 @@ function helperUrl(name, mime, subject, text, b64) {
   const e = encodeURIComponent;
   return `intent://send#Intent;scheme=accamlist;package=${SEND_PKG};S.name=${e(name)};S.mime=${e(mime)};S.subject=${e(subject)};S.text=${e(text)};S.data=${e(b64)};S.browser_fallback_url=${e(APP_URL + "#send-app")};end`;
 }
-async function shareApp() {
+async function shareApp() { statCount("shares");
   const data = { title: "AC Cam List", text: "Camera equipment lists for camera assistants: pick the rental house, build the list, send it.", url: APP_URL };
   try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e && e.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(APP_URL); toast("Link to the app copied"); } catch (e) { toast(APP_URL); }
@@ -7863,6 +7890,19 @@ async function importCatalog(file) {
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cat-import-go">Load catalog</button></div></div>`);
 }
 let pendingCatalog = null;
+/* a lists file (Settings → My lists → Save all my lists as a file): a backup, or the way onto another phone without an account */
+let pendingLists = null;
+async function importLists(file) {
+  let d = null;
+  try { d = JSON.parse(await file.text()); } catch (e) {}
+  const ok = d && d.kind === "lists" && Array.isArray(d.productions) && d.productions.every(r => r && typeof r === "object" && typeof r.id === "string" && r.id && r.items && typeof r.items === "object" && !Array.isArray(r.items));
+  if (!ok) { toast("That isn't an AC Cam List lists file."); return; }
+  const have = new Map(app.productions.map(x => [x.id, x])), add = d.productions.filter(r => !have.has(r.id)).length, upd = d.productions.filter(r => have.has(r.id) && (r.updatedAt || 0) > (have.get(r.id).updatedAt || 0)).length;
+  const when = d.savedAt && !isNaN(Date.parse(d.savedAt)) ? verStamp(new Date(d.savedAt)) : "";
+  pendingLists = d;
+  showModal(`<div class="sheet"><h3 class="plain">Load these lists?</h3><p class="hint">${d.productions.length} list${d.productions.length === 1 ? "" : "s"} in the file${when ? `, saved ${esc(when)}` : ""}. ${add} new${upd ? `, ${upd} newer than yours` : ""}. Your other lists stay as they are.</p>
+    <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="lists-import-go"${add || upd ? "" : " disabled"}>Load lists</button></div></div>`);
+}
 const SAVE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></svg>`;
 const FILE_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M12 11v6M9 14l3 3 3-3"/></svg>`;
 const COPY_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V4H4v13h4"/></svg>`;
@@ -8536,6 +8576,27 @@ document.addEventListener("click", e => {
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
     case "lab-open": labShow(true); break;
+    case "copy-uid": { const t = window.AC_STATS ? window.AC_STATS.uid : ""; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Account ID copied"), () => toast(t)); break; }
+    case "admin-open": app.view = "admin"; app.adminData = null; render(); window.scrollTo(0, 0); adminLoad(); break;
+    case "admin-reload": app.adminData = null; render(); adminLoad(); break;
+    case "lists-export": {
+      const d = new Date(), two = n => String(n).padStart(2, "0");
+      const data = { app: "AC Cam List", kind: "lists", savedAt: d.toISOString(), productions: JSON.parse(JSON.stringify(app.productions, (k, v) => k === "_w" ? undefined : v)) };
+      saveFile(`AC Cam List lists ${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}.json`, JSON.stringify(data)).then(ok => { if (ok) toast(`${app.productions.length} list${app.productions.length === 1 ? "" : "s"} saved to your Downloads`); });
+      break;
+    }
+    case "lists-import-go": {
+      const d = pendingLists; pendingLists = null; closeModal(); if (!d) break;
+      let add = 0, upd = 0;
+      for (const r of d.productions) {
+        const i = app.productions.findIndex(x => x.id === r.id);
+        if (i < 0) { app.productions.push(r); add++; schedule(r.id); }
+        else if ((r.updatedAt || 0) > (app.productions[i].updatedAt || 0)) { app.productions[i] = r; upd++; schedule(r.id); }
+      }
+      for (const r of d.productions) for (const l of Object.values(r.items || {})) wlFix(l);
+      lsSave(); render(); toast(add || upd ? `${add} list${add === 1 ? "" : "s"} added${upd ? `, ${upd} updated` : ""}` : "Nothing new in that file: you already have these lists");
+      break;
+    }
     case "txrx": if (txPop === id) txClose(); else txOpenFor(p, id, b.closest("[data-row]") ? "c" : "l"); break;
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
@@ -8617,6 +8678,7 @@ document.addEventListener("input", e => {
   if (t.dataset.kname) { const { c } = kidRef(p, t.dataset.kname); if (c) { c.name = t.value.slice(0, 120); touch(p); } return; }
 });
 document.addEventListener("change", e => {
+  if (e.target && e.target.dataset && e.target.dataset.listsimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importLists(f); return; }
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
   if (t.id === "lc-name") { lcOwn().name = t.value.trim(); lcPdfMade = null; touchSettings(); const h = document.querySelector(".lcard .lc-head b"); if (h) h.textContent = lcOwn().name || "Lenses"; return; }
@@ -9349,7 +9411,60 @@ function labDraw() {
 }
 function labShow(on) { lab.on = on; lab.open = on; labSave(); labApply(); labDraw(); }
 function labInit() { if (typeof document === "undefined" || !document.body || !document.body.appendChild) return; try { labApply(); labDraw(); } catch (e) {} }
+
+/* ---------- how much the app is used, for its maker (the installed app only; nothing of the lists themselves).
+   Each phone keeps its own counts (minutes with the app in front and in use, exports, shares of the app, lists made, days used)
+   and sends them now and then with the user's name. The Control room (Settings, the maker's account only) adds them up. ---------- */
+const LS_STATS = "accam-stats-v1";
+const stats = Object.assign({ dev: uid("d"), first: Date.now(), mins: 0, exports: 0, shares: 0, seen: {}, days: {} }, lsGet(LS_STATS, null) || {});
+let statsDirty = false, statsAct = 0, statsSent = 0, statsOn = false;
+function statCount(k) { stats[k] = (stats[k] || 0) + 1; statsDirty = true; lsPut(LS_STATS, stats); }
+function statsSend(force) {
+  const S = typeof window !== "undefined" && window.AC_STATS; if (!S || !statsDirty || (!force && Date.now() - statsSent < 5 * 60000)) return;
+  statsSent = Date.now(); statsDirty = false;
+  const u = window.AC_AUTH && window.AC_AUTH.user ? window.AC_AUTH.user() : null;
+  S.write({ name: (app.settings.me || {}).name || "", account: u ? u.name || "" : "", signedIn: !!u, lists: app.productions.filter(p => !p.mainOf).length, updated: Date.now(),
+    dev: { [stats.dev]: { mins: stats.mins, exports: stats.exports, shares: stats.shares, made: Object.keys(stats.seen).length, days: Object.keys(stats.days).length, first: stats.first, last: Date.now(), ver: window.AC_BUILD || "" } } });
+}
+function statsTick() {
+  if (document.visibilityState === "visible" && Date.now() - statsAct < 120000) { stats.mins++; stats.days[todayIso()] = 1; }
+  for (const p of app.productions) if (!p.mainOf) stats.seen[p.id] = 1;
+  statsDirty = true; lsPut(LS_STATS, stats); statsSend();
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  const act = () => { statsAct = Date.now(); if (!statsOn) { statsOn = true; setInterval(statsTick, 60000); setTimeout(() => { statsTick(); statsSend(true); }, 20000); } };
+  document.addEventListener("pointerdown", act, { passive: true, capture: true }); document.addEventListener("keydown", act, { passive: true, capture: true });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && statsOn) statsSend(true); });
+}
+/* the Control room */
+const adminSum = u => { const o = { mins: 0, exports: 0, shares: 0, made: 0, days: 0, first: 0, last: 0, ver: "", devs: 0 };
+  for (const d of Object.values(u.dev || {})) { o.devs++; for (const k of ["mins", "exports", "shares", "made", "days"]) o[k] += d[k] || 0; if (d.first && (!o.first || d.first < o.first)) o.first = d.first; if ((d.last || 0) > o.last) { o.last = d.last; o.ver = d.ver || ""; } }
+  return o; };
+const fmtMins = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+const fmtAgo = t => { if (!t) return "never"; const d = Math.floor((Date.now() - t) / 864e5); return d <= 0 ? "today" : d === 1 ? "yesterday" : d < 30 ? `${d} days ago` : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+function adminLoad() {
+  const S = window.AC_STATS; if (!S) return;
+  S.list().then(rows => { app.adminData = rows; }, () => { app.adminData = "error"; }).then(() => { if (app.view === "admin") rerenderKeepScroll(); });
+}
+function viewAdmin() {
+  const head = pageHead("Control room", "", `<button class="iconbtn" type="button" data-act="admin-reload" aria-label="Load again" title="Load again">↻</button>`), d = app.adminData;
+  if (!d) return `${head}<section class="pad"><p class="hint">Loading…</p></section>`;
+  if (d === "error") return `${head}<section class="pad"><p class="hint warn">The usage numbers couldn't be read. Check the connection, and that the database rules are published.</p></section>`;
+  const us = d.map(u => ({ u, s: adminSum(u) })).sort((a, b) => b.s.last - a.s.last), wk = Date.now() - 7 * 864e5;
+  const tot = us.reduce((t, x) => ({ lists: t.lists + (x.u.lists || 0), mins: t.mins + x.s.mins, exports: t.exports + x.s.exports }), { lists: 0, mins: 0, exports: 0 });
+  const stat = (v, l) => `<div class="ad-stat"><b class="num">${v}</b><span>${l}</span></div>`;
+  const cell = (l, v) => `<div><span>${l}</span><b class="num">${v}</b></div>`;
+  return `${head}<section class="pad ad">
+    <div class="ad-stats">${stat(us.length, "users")}${stat(us.filter(x => x.s.last > wk).length, "active this week")}${stat(tot.lists, "lists now")}${stat(tot.exports, "exports")}${stat(fmtMins(tot.mins), "in the app")}</div>
+    ${us.length ? us.map(({ u, s }) => `<div class="ad-user"><div class="ad-top"><b dir="auto">${esc(u.name || u.account || "No name")}</b>${u.uid === window.AC_STATS.uid ? `<span class="ad-tag">you</span>` : ""}<span class="ad-tag${u.signedIn ? " on" : ""}">${u.signedIn ? "signed in" : "no account"}</span><span class="ad-last">${fmtAgo(s.last)}</span></div>
+      ${u.account && u.name && u.account !== u.name ? `<div class="ad-sub" dir="auto">${esc(u.account)}</div>` : ""}
+      <div class="ad-grid">${cell("Lists now", u.lists || 0)}${cell("Lists made", s.made)}${cell("Exports", s.exports)}${cell("Shared the app", s.shares ? `${s.shares}×` : "no")}${cell("Time in the app", fmtMins(s.mins))}${cell("Days used", s.days)}</div>
+      <div class="ad-sub">Since ${s.first ? new Date(s.first).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "?"}${s.devs > 1 ? ` · ${s.devs} devices` : ""}${s.ver ? ` · version ${esc(s.ver)}` : ""}</div></div>`).join("") : `<p class="hint">No one has reported yet. Numbers arrive once each user opens the updated app with a connection.</p>`}
+    <p class="hint">Counted from the day each user got this version. "Shared the app" counts the app's own Share button only.</p></section>`;
+}
 render();
 initAccount();
 labInit();
+/* is this the maker's account? (asked once the installed app's sign-in has answered) */
+if (typeof window !== "undefined" && window.claude && typeof window.claude.use === "function") Promise.resolve(window.claude.use("user")).then(() => window.AC_STATS && window.AC_STATS.isAdmin()).then(v => { app.isAdmin = !!v; if (app.view === "settings" && !typing()) render(); }).catch(() => {});
 </script>

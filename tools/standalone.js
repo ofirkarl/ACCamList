@@ -63,6 +63,13 @@
         }
       };
       var me = auth.currentUser.uid;
+      // how much the app is used: each account writes its own numbers (stats/<uid>); only the maker's account (listed under admins/) reads them all
+      window.AC_STATS = {
+        uid: me,
+        write: function (d) { return F.setDoc(F.doc(fs, 'stats/' + me), enc(d), {merge: true}).catch(function () {}); },
+        isAdmin: function () { return F.getDoc(F.doc(fs, 'admins/' + me)).then(function (x) { return x.exists(); }).catch(function () { return false; }); },
+        list: function () { return F.getDocs(F.collection(fs, 'stats')).then(function (x) { return x.docs.map(function (d) { return Object.assign({uid: d.id}, dec(d.data())); }); }); }
+      };
       var mapCol = function (path) {
         var m = /^data\/users\/([^/]+)$/.exec(path);
         if (!m || m[1] !== me) throw {code: 'invalid_argument'};

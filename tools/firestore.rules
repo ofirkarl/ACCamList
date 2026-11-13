@@ -1,9 +1,23 @@
 rules_version = '2';
-// AC Cam List: each person reads and writes only their own lists and settings.
+// AC Cam List
 service cloud.firestore {
   match /databases/{database}/documents {
+    // the app's maker: an account listed under admins/ (made by hand in the Firebase console, never by the app)
+    function isAdmin() { return request.auth != null && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+
+    // each person reads and writes only their own lists and settings
     match /users/{uid}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // how much the app is used: each account writes its own numbers; only the maker reads everyone's
+    match /stats/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    // an account may see whether it is the maker's; nobody writes this from the app
+    match /admins/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
     }
   }
 }
