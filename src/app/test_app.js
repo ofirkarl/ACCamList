@@ -1064,3 +1064,8 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   ok(md(L("utopia", /^Zeiss Master Macro 100/)).one === "1'1\u00be\"", "the Master Macro 100: 1'1\u00be\"");
   ok(/class="mod"[^>]*>CF 9&quot;</.test(A.specsHtml(L("utopia", /^Cooke S4i T2\/14mm$/).it)), "the lens's line shows CF 9\"");
   ok(/<i class="ll-cf"[^>]*>1(&#39;|')2&quot;<\/i>/.test(A.specsHtml(L("fitussi", /^ARRI Signature Prime Set$/).it)), "a set's line: each lens with its close focus"); }
+{ const L = (h, re) => { for (const [id, e] of A.ITEM) if (e.h.id === h && re.test(e.it.name)) return e; return null; };
+  const md = e => e ? A.lensMod(e.it, A.lensSpec(e.it, e.s.id)) : undefined;
+  const g1 = md(L("utopia", /^Sony E-Mount 24-70mm f\/2\.8 GM$/)), g2 = md(L("utopia", /^Sony FE 24-70mm f\/2\.8 GM II/));
+  ok(g1 === undefined || (g1 && g2 && g1.one === "1'3\"" && g2.one === "8\""), "a version in the name picks its own close focus (24-70 GM 1'3\", GM II 8\")");
+  const af = L("utopia", /^Samyang E-Mount 35mm F\/2\.8 AF/); ok(!af || md(af) === null, "a lens whose version isn't checked gets none (Samyang 35 AF)"); }
