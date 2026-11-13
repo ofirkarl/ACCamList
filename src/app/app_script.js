@@ -3850,7 +3850,8 @@ function viewTools() {
    as what's on it; its corner drags it bigger or smaller like a window, everything on it in proportion. The PDF is the card's own size */
 const LC_LAYOUTS = { compact: "Compact", one: "One table" };
 const LC_K = [0.5, 2.5];  // how much smaller or bigger the card may be dragged
-const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (o.ink !== "bw") o.ink = "color"; if (!o.k || typeof o.k !== "object") o.k = {}; return o; };
+const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (!o.k || typeof o.k !== "object") o.k = {};
+  const L = lcLook(o); o.style = L.st; o.col = L.col; delete o.ink; return o; };
 const lcK = o => { o = o || lcOpts(); return Math.min(LC_K[1], Math.max(LC_K[0], Number((o.k || {})[o.lay]) || 1)); };
 const lcLists = () => mcLists();  // each production once: its 2nd Unit's lenses come with it
 function lcListId() { const k = app.settings.lcList, q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && !isArchived(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
@@ -3904,26 +3905,37 @@ function lcRowsOf(p) {
   }
   return { sets, ones };
 }
+/* the card's looks: a design (Lines, Bold, Grid) and a color (text, lines, the tint that sets a lens's data apart); Black is black and white */
+const LC_STYLES = { lines: "Lines", bold: "Bold", grid: "Grid" };
+const LC_COLS = { orange: ["#b4500f", "#e07b2e", "#fbefe4", "Orange"], red: ["#b3261e", "#d9534f", "#fbe9e8", "Red"], blue: ["#1a5fb4", "#3584e4", "#e7f0fb", "Blue"],
+  green: ["#26774a", "#3fa66b", "#e5f3ea", "Green"], violet: ["#6b3fa0", "#8f62c8", "#f0e9f8", "Violet"], black: ["#18171d", "#18171d", "#ecebe8", "Black and white"] };
+const lcLook = o => ({ st: LC_STYLES[o.style] ? o.style : "lines", col: LC_COLS[o.col] ? o.col : o.ink === "bw" ? "black" : "orange" });
 function lensCardHtml(p, o) {
-  const { units, sets, ones } = lcRows(p), bw = o.ink === "bw", n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
+  const { units, sets, ones } = lcRows(p), n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
+  const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--k:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
   const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
-  const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`;
+  const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`, sub = a => a.filter(Boolean).map(esc).join(" · ");
   const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
+  const ONES = "Single lenses";
   if (o.lay === "compact") {
-    const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, f) => `<tr class="${k}"><td>${k === "mm" ? "MM" : k === "t" ? "T" : "CF"}</td>${r.lenses.map(f).join("")}</tr>`;
-      return `<div class="lcc-s"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount, one ? r.lenses[0].t : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
-        <table>${tr("mm", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", l => `<td>${esc(l.t)}</td>`)}${tr("cf", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
-    const oneB = (ones, after) => ones.length ? `${after ? `<div class="lcc-sep"></div>` : ""}<table class="lcc-o">${ones.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table>` : "";
-    const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones, u.sets.length)}`;
-    return { n, html: `<div class="lcard lcc${bw ? " bw" : ""}" style="--k:${lcK(o)}">${head}${units.map(unitB).join("")}</div>` };
+    // a set: its name, then its lenses side by side, a column a lens (focal length over stop and close focus), every other one tinted
+    const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, lab, f) => `<tr class="${k}"><th>${lab}</th>${r.lenses.map(f).join("")}</tr>`;
+      return `<div class="lcc-g"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${sub([r.cov, r.mount, one ? r.lenses[0].t : ""])}</span></div>
+        <table class="lcc-m">${tr("mm", "MM", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", "T", l => `<td>${esc(l.t)}</td>`)}${tr("cf", "CF", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
+    // the single lenses: a block of their own, under their own name, a row a lens
+    const oneB = list => list.length ? `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o">${list.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table></div>` : "";
+    const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones)}`;
+    return { n, html: `<div class="${cls} lcc" style="${sty}">${head}${units.map(unitB).join("")}</div>` };
   }
-  const rows = (list, kind) => list.map(r => kind === "set"
-    ? `<tr class="g"><td colspan="3"><div class="lc-gn">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount].filter(Boolean).map(esc).join(" · ")}</span></div></td></tr>${r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join("")}`
-    : `<tr><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("");
-  const uRow = u => two ? `<tr class="u"><td colspan="3">${u.label}</td></tr>` : "";
-  const table = us => us.some(u => u.sets.length || u.ones.length) ? `<table class="lc-t"><thead><tr><th>Lens · mm</th><th class="n">Stop</th><th class="n">Close focus</th></tr></thead><tbody>${us.map(u => uRow(u) + rows(u.sets, "set") + rows(u.ones, "one")).join("")}</tbody></table>` : "";
+  // one table: each set, and the single lenses, a block of its own: its name, then the column names, then a row a lens
+  const block = (name, meta, labs, rows) => `<tbody class="grp"><tr class="g"><td colspan="3"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
+    <tr class="h"><th>${labs}</th><th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
+  const setT = r => block(esc(r.name) + x(r.q), sub([r.cov, r.mount]), "mm", r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
+  const oneT = list => list.length ? block(ONES, "", "Lens · mm", list.map(r => `<tr class="in"><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) .replace('<tbody class="grp">', '<tbody class="grp ones">') : "";
+  const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="3">${u.label}</td></tr></tbody>` : "";
+  const table = units.length ? `<table class="lc-t">${units.map(u => uRow(u) + u.sets.map(setT).join("") + oneT(u.ones)).join("")}</table>` : "";
   const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
-  return { n, html: `<div class="lcard lct${bw ? " bw" : ""}" style="--k:${lcK(o)}">${head}${table(units)}${foot}</div>` };
+  return { n, html: `<div class="${cls} lct" style="${sty}">${head}${table}${foot}</div>` };
 }
 function viewLensCard() {
   const p = lcCur(), o = lcOpts(), id = lcListId();
@@ -3938,13 +3950,16 @@ function viewLensCard() {
     <section class="pad mc-pick"><div class="field"><label for="lc-list">List</label><select id="lc-list" aria-label="Which list">${opts}</select></div></section>
     <section class="pad cam-out">
       <div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
-      ${card.n ? `<div class="lc-prev"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
-        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span><button type="button" class="btn sm" data-act="lc-k1"${k !== 1 ? "" : " hidden"}>Actual size</button></div>` : `<p class="hint">No lenses on this list yet.</p>`}
-      <div class="cp-opts"><span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
+      ${card.n ? `<div class="lc-prev${app.lcZoom ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
+        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span><button type="button" class="iconbtn lc-zoom" data-act="lc-zoom" aria-pressed="${!!app.lcZoom}" aria-label="${app.lcZoom ? "Zoom out of the preview" : "Zoom in on the preview"}">${app.lcZoom ? ZOOM_OUT_ICON : ZOOM_IN_ICON}</button><button type="button" class="btn sm" data-act="lc-k1"${k !== 1 ? "" : " hidden"}>Actual size</button></div>` : `<p class="hint">No lenses on this list yet.</p>`}
+      <div class="cp-opts"><span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
+        <span class="cr-l">Colors</span><div class="lc-swatches" role="radiogroup" aria-label="Colors">${Object.entries(LC_COLS).map(([v, c]) => `<button type="button" class="lc-sw${v === "black" ? " bw" : ""}" role="radio" data-act="lc-opt" data-k="col" data-v="${v}" aria-checked="${o.col === v}" aria-label="${c[3]}" title="${c[3]}" style="--sw:${c[1]}"></button>`).join("")}</div></div>
       ${card.n ? `<p class="hint cp-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · <span id="lc-size">…</span>. The PDF is the card's own size: print at actual size (100%).</p>` : ""}
       <div class="co-acts"><button class="btn primary" type="button" data-act="lc-save" ${card.n ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="lc-share" ${card.n ? "" : "disabled"}>Share</button></div>
     </section>`;
 }
+const ZOOM_IN_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M10.5 7.5v6M7.5 10.5h6"/></svg>`;
+const ZOOM_OUT_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M7.5 10.5h6"/></svg>`;
 const GRIP_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M20 10 10 20M20 15.5 15.5 20M20 4.5 4.5 20"/></svg>`;
 /* the card's size at its actual size (mm), measured as the PDF draws it, 4 px a mm */
 function lcNatural(p) {
@@ -3953,13 +3968,14 @@ function lcNatural(p) {
   const c = host.firstElementChild, r = { w: c.offsetWidth / 4, h: c.offsetHeight / 4 }; host.remove(); return r;
 }
 let lcNat = null;  // { w, h } of the card on screen at its actual size
-const lcSizeText = k => lcNat ? `${Math.round(lcNat.w * k)} × ${Math.round(lcNat.h * k)} mm` : "…";
+const lcSizeText = k => lcNat ? `${(lcNat.w * k / 10).toFixed(1)} × ${(lcNat.h * k / 10).toFixed(1)} cm` : "…";
 /* the preview's scale, px a mm: fitted when the page opens on a list and layout (4.5 at most, so a small card stays readable), then
    kept while the card is resized, so nothing jumps; a card bigger than the preview is shown smaller, never cut */
 function lcPu(prev, k) {
-  const room = Math.max(40, prev.clientWidth - 40 - 12), key = lcListId() + "|" + lcOpts().lay;
+  const room = Math.max(40, prev.clientWidth - 56), key = lcListId() + "|" + lcOpts().lay;
   if (!app.lcPu || app.lcPu.key !== key || app.lcPu.room !== room) app.lcPu = { key, room, pu: Math.min(4.5, room / (lcNat.w * k)) };
-  return Math.min(app.lcPu.pu, room / (lcNat.w * k));
+  const fit = Math.min(app.lcPu.pu, room / (lcNat.w * k));
+  return app.lcZoom ? Math.max(fit * 2, 6) : fit;  // zoomed in: the preview only, to read it; the card's size stays
 }
 function lcFit() {
   const prev = document.querySelector(".lc-prev"), fr = prev && prev.querySelector(".lc-frame"), p = lcCur(); if (!fr || !p) return;
@@ -5483,6 +5499,8 @@ document.addEventListener("click", e => {
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
     case "lc-k1": lcShowK(lcSetK(1)); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
+    case "lc-zoom": { app.lcZoom = !app.lcZoom; const pv = document.querySelector(".lc-prev"); if (pv) { pv.classList.toggle("zoom", app.lcZoom); lcShowK(lcK()); }
+      b.setAttribute("aria-pressed", String(!!app.lcZoom)); b.setAttribute("aria-label", app.lcZoom ? "Zoom out of the preview" : "Zoom in on the preview"); b.innerHTML = app.lcZoom ? ZOOM_OUT_ICON : ZOOM_IN_ICON; break; }
     case "lc-save": lcPdfGo(b, false); break;
     case "lc-share": lcPdfGo(b, true); break;
     case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;

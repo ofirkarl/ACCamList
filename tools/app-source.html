@@ -2046,77 +2046,103 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .cp-seg button { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 44px; padding: 6px; font-size: 14px; }
 .cp-seg button span { font-size: 12px; font-weight: 400; opacity: .8; }
 .cp-note { margin: 0; }
-/* Lens card: drawn in --u (a mm on paper); the preview fits 148 mm across, zoomed in it's 4 px a mm, the PDF is drawn at 4 px a mm */
-.lc-prev { --pu: 2.2px; display: block; width: 100%; box-sizing: border-box; padding: 12px 28px 28px 12px; border-radius: 12px; background: var(--desk); overflow: hidden; }
-/* the card on screen: --pu px a mm (fitted to the preview), times the size dragged (--k); in the PDF, 4 px a mm times --k */
-.lc-frame { position: relative; display: inline-block; vertical-align: top; }
+/* Lens Cards: the card drawn in --u (a mm on paper); on screen --pu px a mm (fitted to the preview) times the size dragged (--k); in the PDF 4 px a mm times --k */
+.lc-prev { --pu: 2.2px; display: flex; width: 100%; box-sizing: border-box; padding: 28px; border-radius: 12px; background: var(--desk); overflow: hidden; }
+.lc-prev.zoom { overflow: auto; max-height: 72vh; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.lc-frame { position: relative; flex: none; margin: auto; }  /* in the middle of the window; a card wider than it scrolls from its edge */
 .lc-prev .lcard { --u: calc(var(--pu) * var(--k, 1)); box-shadow: 0 6px 18px rgba(0, 0, 0, .15); }
-/* the size eases to a new value (a key, Actual size); while dragged it follows the finger with no delay */
+/* the size eases to a new value (a key, Actual size, zoom); while dragged it follows the finger with no delay */
 @property --k { syntax: "<number>"; inherits: true; initial-value: 1; }
 @property --pu { syntax: "<length>"; inherits: true; initial-value: 2.2px; }
 .lc-prev { transition: --pu .2s ease-out; }
 .lc-prev .lcard { transition: --k .2s ease-out; }
 .lc-prev.drag, .lc-prev.drag .lcard, .lc-prev.still, .lc-prev.still .lcard { transition: none; }
 .lc-prev.drag .lcard { box-shadow: 0 0 0 2px var(--accent), 0 6px 18px rgba(0, 0, 0, .15); }
-.lc-sz .btn[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .lc-prev, .lc-prev .lcard { transition: none; } }
 .lc-grip { position: absolute; right: -20px; bottom: -20px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--surface); color: var(--accent); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); cursor: nwse-resize; touch-action: none; user-select: none; -webkit-user-select: none; }
 .lc-grip::before { content: ""; position: absolute; inset: -9px; }  /* a 48 px target */
 .lc-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.lc-sz { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; margin-top: -6px; }
-.lc-sz .hint { margin: 0; }
+.lc-sz { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: -6px; }
+.lc-sz .hint { margin: 0 auto 0 0; }
+.lc-sz .btn[hidden] { display: none; }
+.lc-sty { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lc-zoom { width: 40px; height: 40px; flex: none; }
+.lc-zoom[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft, var(--surface)); }
+/* the colors: a row of swatches */
+.lc-swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+.lc-sw { width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 0; background: var(--sw); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); cursor: pointer; }
+.lc-sw.bw { background: linear-gradient(135deg, #18171d 50%, #fff 50%); }
+.lc-sw[aria-checked="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--fg); }
 .lc-host .lcard { --u: calc(4px * var(--k, 1)); }
-.lcard { box-sizing: border-box; background: #fff; color: #18171d; font-family: var(--font-body); direction: ltr; text-align: left; border-radius: calc(var(--u) * 1.2); }
-.lcard td, .lcard th { color: #18171d; border: 0; background: none; }
-.lc-head { display: flex; align-items: baseline; gap: calc(var(--u) * 2.4); border-bottom: calc(var(--u) * .4) solid #e07b2e; padding-bottom: calc(var(--u) * 1.2); }
-.lc-head b { font-size: calc(var(--u) * 3.6); font-weight: 700; letter-spacing: -.01em; }
+/* the card: paper, whatever the theme */
+.lcard { --lc-a: #b4500f; --lc-l: #e07b2e; --lc-z: #fbefe4; --lc-r: #d6d0c5; box-sizing: border-box; background: #fff; color: #18171d; font-family: var(--font-body); direction: ltr; text-align: left; border-radius: calc(var(--u) * 1.2); }
+.lcard td, .lcard th { color: #18171d; border: 0; background: none; font-weight: inherit; }
+.lc-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: calc(var(--u) * .4) calc(var(--u) * 2.4); border-bottom: calc(var(--u) * .45) solid var(--lc-l); padding-bottom: calc(var(--u) * 1.2); }
+.lc-head b { font-size: calc(var(--u) * 3.4); font-weight: 700; letter-spacing: -.01em; }
 .lc-head span { font-size: calc(var(--u) * 2.6); color: #5b5866; }
 .lc-head .lc-dt { margin-left: auto; padding-left: calc(var(--u) * 3); font-family: var(--font-mono); white-space: nowrap; }
 .lc-q { font-family: var(--font-mono); font-weight: 600; color: #5b5866; }
 .lc-na { color: #a19dab !important; font-weight: 400 !important; }
-/* one table, two columns: a 148 mm card */
-.lct { display: inline-flex; flex-direction: column; min-width: calc(var(--u) * 60); padding: calc(var(--u) * 4) calc(var(--u) * 5) calc(var(--u) * 3.4); gap: calc(var(--u) * 2.2); }
-/* every card is as wide as its lenses: the head, the foot and a set's name take that width and wrap in it, never widen it */
+/* every card is as wide as its lenses: the head, the foot and the names take that width and wrap in it, never widen it */
 .lc-head, .lc-foot, .lc-gn, .lcc-n { width: 0; min-width: 100%; box-sizing: border-box; }
-.lc-head { flex-wrap: wrap; row-gap: calc(var(--u) * .4); }
-.lct .lc-head b { font-size: calc(var(--u) * 4); } .lct .lc-head span { font-size: calc(var(--u) * 2.8); }
-.lc-t { width: auto; border-collapse: collapse; font-size: calc(var(--u) * 3.3); }
-.lc-t th { font-size: calc(var(--u) * 2.3); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: #6b6875; text-align: left; padding: 0 0 calc(var(--u) * 1); }
-.lc-t th.n, .lc-t td.n { text-align: right; padding-left: calc(var(--u) * 5); white-space: nowrap; }
-.lc-t td:first-child { white-space: nowrap; }
-.lc-t tr.g td, .lc-t tr.u td { white-space: normal; }
-.lc-t td { font-size: calc(var(--u) * 3.3); line-height: 1.3; padding: calc(var(--u) * .9) 0; border-bottom: calc(var(--u) * .25) solid #e6e2da; vertical-align: baseline; }
-.lc-t td.n { font-family: var(--font-mono); font-size: calc(var(--u) * 3.1); }
-.lc-t td.cf { font-weight: 700; color: #b4500f; }
-.lc-t .lc-mm { font-family: var(--font-mono); font-weight: 700; }
-.lc-t tr.in .lc-mm { display: inline-block; min-width: calc(var(--u) * 13); padding-left: calc(var(--u) * 3); }
-.lc-t td small { display: block; font-size: calc(var(--u) * 2.4); color: #6b6875; font-weight: 400; }
-.lc-t tr.g td { padding-top: calc(var(--u) * 2.2); border-bottom: calc(var(--u) * .35) solid #e3a36d; font-weight: 700; font-size: calc(var(--u) * 3.2); color: #b4500f; }
-.lc-t tr.g td .lc-gn > span:not(.lc-q) { font-weight: 400; color: #6b6875; font-size: calc(var(--u) * 2.6); margin-left: calc(var(--u) * 2); }
-.lc-foot { font-size: calc(var(--u) * 2.3); color: #6b6875; }
-/* compact: as small as what's on it; a set is focal lengths over close focus */
-.lcc { display: inline-flex; flex-direction: column; gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 2.4) calc(var(--u) * 3) calc(var(--u) * 2.6); font-size: calc(var(--u) * 2.7); line-height: 1.3; }
-.lcc .lc-head { border-bottom-width: calc(var(--u) * .35); padding-bottom: calc(var(--u) * 1); }
-.lcc .lc-head b { font-size: calc(var(--u) * 3.2); } .lcc .lc-head span { font-size: calc(var(--u) * 2.7); } .lcc .lc-head .lc-dt { font-size: calc(var(--u) * 2.4); }
-.lcc-n { font-weight: 700; } .lcc-n > span:not(.lc-q) { font-weight: 400; color: #5b5866; margin-left: calc(var(--u) * 1.2); }
-.lcc table { border-collapse: collapse; font-family: var(--font-mono); width: auto; }
-.lcc td { padding: 0 0 0 calc(var(--u) * 2.4); text-align: right; white-space: nowrap; font-size: calc(var(--u) * 2.7); line-height: 1.3; }
-.lcc-s td:first-child { padding-left: 0; text-align: left; font-family: var(--font-body); font-size: calc(var(--u) * 2.1); font-weight: 600; letter-spacing: .06em; color: #8a8694; }
-.lcc-s tr.mm td { font-weight: 700; }
-.lcc-s tr.cf td:not(:first-child) { color: #b4500f; font-weight: 600; }
-.lcc-sep { border-top: calc(var(--u) * .25) solid #e6e2da; }
 /* a production with a 2nd Unit: each unit under its name */
-.lc-u { margin-top: calc(var(--u) * .6); font-size: calc(var(--u) * 2.1); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5b5866; }
-.lc-t tr.u td { padding-top: calc(var(--u) * 2.6); font-size: calc(var(--u) * 2.3); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5b5866; border-bottom: 0; }
-.lcc-o td { padding-top: calc(var(--u) * .5); }
-.lcc-o td:first-child { padding-left: 0; padding-right: calc(var(--u) * 2); text-align: left; font-family: var(--font-body); font-weight: 600; }
+.lc-u { margin-top: calc(var(--u) * .8); font-size: calc(var(--u) * 2.2); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5b5866; }
+/* Compact: a set's name, then its lenses side by side; a column a lens, every other one tinted so each lens's data reads as one */
+.lcc { display: inline-flex; flex-direction: column; gap: calc(var(--u) * 1.6); padding: calc(var(--u) * 2.6) calc(var(--u) * 3) calc(var(--u) * 2.8); font-size: calc(var(--u) * 2.7); line-height: 1.3; }
+.lcc-g { display: flex; flex-direction: column; gap: calc(var(--u) * .8); }
+.lcc-g + .lcc-g { padding-top: calc(var(--u) * 1.6); border-top: calc(var(--u) * .25) solid var(--lc-r); }
+.lcc-g + .lcc-ones { border-top: calc(var(--u) * .5) solid #18171d; }  /* the single lenses: a heavier line than between sets */
+.lcc-n { font-weight: 700; font-size: calc(var(--u) * 2.8); color: var(--lc-a); }
+.lcc-n > span:not(.lc-q) { font-weight: 400; color: #5b5866; margin-left: calc(var(--u) * 1.2); font-size: calc(var(--u) * 2.5); }
+.lcc table { border-collapse: collapse; font-family: var(--font-mono); width: auto; align-self: flex-start; }  /* each table its own width: no stretched columns */
+.lcc td, .lcc th { padding: calc(var(--u) * .45) calc(var(--u) * 1.5); white-space: nowrap; font-size: calc(var(--u) * 2.7); line-height: 1.25; }
+.lcc-m td { text-align: center; }
+.lcc-m th { padding-left: 0; text-align: left; font-family: var(--font-body); font-size: calc(var(--u) * 2.1); font-weight: 700; letter-spacing: .06em; color: #8a8694; }
+.lcc-m td:nth-child(even) { background: var(--lc-z); }
+.lcc-m tr.mm td { font-weight: 700; }
+.lcc-m tr.cf td { color: var(--lc-a); font-weight: 700; }
+.lcc-o tr:nth-child(odd) td { background: var(--lc-z); }
+.lcc-o td:first-child { text-align: left; font-family: var(--font-body); font-weight: 600; padding-right: calc(var(--u) * 3); }
+.lcc-o td { text-align: right; }
 .lcc-o .lcc-mm { font-family: var(--font-mono); }
-.lcc-o td.cf { color: #b4500f; font-weight: 600; }
-.lcc-o td.mac { color: #6b6875; font-family: var(--font-body); font-size: calc(var(--u) * 2.2); text-align: left; }
-/* black & white */
-.lcard.bw .lc-head { border-bottom-color: #18171d; }
-.lcard.bw .lc-t td.cf, .lcard.bw .lc-t tr.g td, .lcard.bw .lcc-s tr.cf td:not(:first-child), .lcard.bw .lcc-o td.cf { color: #18171d; }
-.lcard.bw .lc-t tr.g td { border-bottom-color: #18171d; }
+.lcc-o td.cf { color: var(--lc-a); font-weight: 700; }
+.lcc-o td.mac { color: #6b6875; font-family: var(--font-body); font-size: calc(var(--u) * 2.2); text-align: left; padding-left: 0; }
+/* One table: each set, and the single lenses, a block: its name, the column names, a row a lens (every other one tinted) */
+.lct { display: inline-flex; flex-direction: column; min-width: calc(var(--u) * 60); padding: calc(var(--u) * 3.6) calc(var(--u) * 4.4) calc(var(--u) * 3.2); gap: calc(var(--u) * 2); }
+.lct .lc-head b { font-size: calc(var(--u) * 4); } .lct .lc-head span { font-size: calc(var(--u) * 2.8); }
+.lc-t { width: auto; border-collapse: collapse; font-size: calc(var(--u) * 3.2); }
+.lc-t td, .lc-t th { padding: calc(var(--u) * .8) calc(var(--u) * 1.8); line-height: 1.3; vertical-align: baseline; white-space: nowrap; }
+.lc-t tr.g td { padding: calc(var(--u) * 3.2) 0 calc(var(--u) * .9); white-space: normal; font-weight: 700; font-size: calc(var(--u) * 3.3); color: var(--lc-a); border-bottom: calc(var(--u) * .4) solid var(--lc-l); }
+.lc-t tbody:first-child tr.g td { padding-top: 0; }
+.lc-t .lc-gn > span:not(.lc-q) { font-weight: 400; color: #6b6875; font-size: calc(var(--u) * 2.6); margin-left: calc(var(--u) * 2); }
+.lc-t tbody.ones tr.g td { border-bottom-color: #18171d; }
+.lc-t tbody.ones:not(:first-child) tr.g td { padding-top: calc(var(--u) * 4.4); }
+.lc-t tr.h th { padding-top: calc(var(--u) * .9); padding-bottom: calc(var(--u) * .5); font-size: calc(var(--u) * 2.1); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #8a8694; text-align: left; }
+.lc-t th.n, .lc-t td.n { text-align: right; padding-left: calc(var(--u) * 4); }
+.lc-t tr.in:nth-child(odd) td { background: var(--lc-z); }
+.lc-t td.n { font-family: var(--font-mono); font-size: calc(var(--u) * 3.1); }
+.lc-t td.cf { font-weight: 700; color: var(--lc-a); }
+.lc-t .lc-mm { font-family: var(--font-mono); font-weight: 700; }
+.lc-t td small { display: block; font-size: calc(var(--u) * 2.3); color: #6b6875; font-weight: 400; }
+.lc-t tr.u td { padding: calc(var(--u) * 3.4) 0 0; font-size: calc(var(--u) * 2.3); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #5b5866; }
+.lc-t tbody.ut:first-child tr.u td { padding-top: 0; }
+.lc-foot { font-size: calc(var(--u) * 2.2); color: #6b6875; }
+/* Bold: the head a band of the color, each block's name on the tint */
+.lc-bold .lc-head { background: var(--lc-l); border: 0; border-radius: calc(var(--u) * .8); padding: calc(var(--u) * 1.4) calc(var(--u) * 2.4); }
+.lc-bold .lc-head b, .lc-bold .lc-head span { color: #fff; }
+.lc-bold .lcc-n { background: var(--lc-z); border-radius: calc(var(--u) * .6); padding: calc(var(--u) * .6) calc(var(--u) * 1.5); }
+.lc-bold .lcc-m td:nth-child(even), .lc-bold .lcc-o tr:nth-child(odd) td, .lc-bold .lc-t tr.in:nth-child(odd) td { background: #f3f2ef; }
+.lc-bold .lc-t tr.g td { border-bottom-width: calc(var(--u) * .7); }
+/* Grid: every lens in a box of thin lines; no tint (clear in black and white) */
+.lc-grid .lcc-m td, .lc-grid .lcc-m th, .lc-grid .lcc-o td, .lc-grid .lc-t tr.in td, .lc-grid .lc-t tr.h th { background: none !important; border: calc(var(--u) * .25) solid #b9b3a8; }
+.lc-grid .lcc-m th, .lc-grid .lc-t tr.h th { background: #f4f3f0 !important; }
+.lc-grid .lcc-o td.mac { border: 0; }
+.lc-grid .lcc-m th { padding-left: calc(var(--u) * 1.2); }
+.lc-grid .lcc-g + .lcc-g { border-top: 0; padding-top: calc(var(--u) * .8); }
+.lc-grid .lcc-g + .lcc-ones { border-top: calc(var(--u) * .5) solid #18171d; padding-top: calc(var(--u) * 1.6); }
+/* black and white: no color but the tint, a light grey */
+.lcard.bw .lcc-m tr.cf td, .lcard.bw .lcc-o td.cf, .lcard.bw .lc-t td.cf, .lcard.bw .lcc-n, .lcard.bw .lc-t tr.g td { color: #18171d; }
+.lcard.bw.lc-bold .lc-head { background: #18171d; }
 
 /* the printed card: paper, whatever the theme. Sizes in --u: 1mm on the standard card (10 × 6.6 cm) */
 .ccard { --u: 1mm; width: calc(var(--u) * 86); height: auto; box-sizing: border-box; display: flex; flex-direction: column; background: #fff; color: #18171d; border: calc(var(--u) * 1.2) solid var(--c); border-radius: calc(var(--u) * 3); padding: calc(var(--u) * 2.6) calc(var(--u) * 3.4); font-family: var(--font-body); text-align: left; direction: ltr; overflow: hidden; }
@@ -6142,7 +6168,8 @@ function viewTools() {
    as what's on it; its corner drags it bigger or smaller like a window, everything on it in proportion. The PDF is the card's own size */
 const LC_LAYOUTS = { compact: "Compact", one: "One table" };
 const LC_K = [0.5, 2.5];  // how much smaller or bigger the card may be dragged
-const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (o.ink !== "bw") o.ink = "color"; if (!o.k || typeof o.k !== "object") o.k = {}; return o; };
+const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (!o.k || typeof o.k !== "object") o.k = {};
+  const L = lcLook(o); o.style = L.st; o.col = L.col; delete o.ink; return o; };
 const lcK = o => { o = o || lcOpts(); return Math.min(LC_K[1], Math.max(LC_K[0], Number((o.k || {})[o.lay]) || 1)); };
 const lcLists = () => mcLists();  // each production once: its 2nd Unit's lenses come with it
 function lcListId() { const k = app.settings.lcList, q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && !isArchived(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
@@ -6196,26 +6223,37 @@ function lcRowsOf(p) {
   }
   return { sets, ones };
 }
+/* the card's looks: a design (Lines, Bold, Grid) and a color (text, lines, the tint that sets a lens's data apart); Black is black and white */
+const LC_STYLES = { lines: "Lines", bold: "Bold", grid: "Grid" };
+const LC_COLS = { orange: ["#b4500f", "#e07b2e", "#fbefe4", "Orange"], red: ["#b3261e", "#d9534f", "#fbe9e8", "Red"], blue: ["#1a5fb4", "#3584e4", "#e7f0fb", "Blue"],
+  green: ["#26774a", "#3fa66b", "#e5f3ea", "Green"], violet: ["#6b3fa0", "#8f62c8", "#f0e9f8", "Violet"], black: ["#18171d", "#18171d", "#ecebe8", "Black and white"] };
+const lcLook = o => ({ st: LC_STYLES[o.style] ? o.style : "lines", col: LC_COLS[o.col] ? o.col : o.ink === "bw" ? "black" : "orange" });
 function lensCardHtml(p, o) {
-  const { units, sets, ones } = lcRows(p), bw = o.ink === "bw", n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
+  const { units, sets, ones } = lcRows(p), n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length, two = units.length > 1;
+  const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--k:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
   const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
-  const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`;
+  const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`, sub = a => a.filter(Boolean).map(esc).join(" · ");
   const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
+  const ONES = "Single lenses";
   if (o.lay === "compact") {
-    const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, f) => `<tr class="${k}"><td>${k === "mm" ? "MM" : k === "t" ? "T" : "CF"}</td>${r.lenses.map(f).join("")}</tr>`;
-      return `<div class="lcc-s"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount, one ? r.lenses[0].t : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
-        <table>${tr("mm", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", l => `<td>${esc(l.t)}</td>`)}${tr("cf", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
-    const oneB = (ones, after) => ones.length ? `${after ? `<div class="lcc-sep"></div>` : ""}<table class="lcc-o">${ones.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table>` : "";
-    const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones, u.sets.length)}`;
-    return { n, html: `<div class="lcard lcc${bw ? " bw" : ""}" style="--k:${lcK(o)}">${head}${units.map(unitB).join("")}</div>` };
+    // a set: its name, then its lenses side by side, a column a lens (focal length over stop and close focus), every other one tinted
+    const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, lab, f) => `<tr class="${k}"><th>${lab}</th>${r.lenses.map(f).join("")}</tr>`;
+      return `<div class="lcc-g"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${sub([r.cov, r.mount, one ? r.lenses[0].t : ""])}</span></div>
+        <table class="lcc-m">${tr("mm", "MM", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", "T", l => `<td>${esc(l.t)}</td>`)}${tr("cf", "CF", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
+    // the single lenses: a block of their own, under their own name, a row a lens
+    const oneB = list => list.length ? `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o">${list.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table></div>` : "";
+    const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones)}`;
+    return { n, html: `<div class="${cls} lcc" style="${sty}">${head}${units.map(unitB).join("")}</div>` };
   }
-  const rows = (list, kind) => list.map(r => kind === "set"
-    ? `<tr class="g"><td colspan="3"><div class="lc-gn">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount].filter(Boolean).map(esc).join(" · ")}</span></div></td></tr>${r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join("")}`
-    : `<tr><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("");
-  const uRow = u => two ? `<tr class="u"><td colspan="3">${u.label}</td></tr>` : "";
-  const table = us => us.some(u => u.sets.length || u.ones.length) ? `<table class="lc-t"><thead><tr><th>Lens · mm</th><th class="n">Stop</th><th class="n">Close focus</th></tr></thead><tbody>${us.map(u => uRow(u) + rows(u.sets, "set") + rows(u.ones, "one")).join("")}</tbody></table>` : "";
+  // one table: each set, and the single lenses, a block of its own: its name, then the column names, then a row a lens
+  const block = (name, meta, labs, rows) => `<tbody class="grp"><tr class="g"><td colspan="3"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
+    <tr class="h"><th>${labs}</th><th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
+  const setT = r => block(esc(r.name) + x(r.q), sub([r.cov, r.mount]), "mm", r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
+  const oneT = list => list.length ? block(ONES, "", "Lens · mm", list.map(r => `<tr class="in"><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) .replace('<tbody class="grp">', '<tbody class="grp ones">') : "";
+  const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="3">${u.label}</td></tr></tbody>` : "";
+  const table = units.length ? `<table class="lc-t">${units.map(u => uRow(u) + u.sets.map(setT).join("") + oneT(u.ones)).join("")}</table>` : "";
   const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
-  return { n, html: `<div class="lcard lct${bw ? " bw" : ""}" style="--k:${lcK(o)}">${head}${table(units)}${foot}</div>` };
+  return { n, html: `<div class="${cls} lct" style="${sty}">${head}${table}${foot}</div>` };
 }
 function viewLensCard() {
   const p = lcCur(), o = lcOpts(), id = lcListId();
@@ -6230,13 +6268,16 @@ function viewLensCard() {
     <section class="pad mc-pick"><div class="field"><label for="lc-list">List</label><select id="lc-list" aria-label="Which list">${opts}</select></div></section>
     <section class="pad cam-out">
       <div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
-      ${card.n ? `<div class="lc-prev"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
-        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span><button type="button" class="btn sm" data-act="lc-k1"${k !== 1 ? "" : " hidden"}>Actual size</button></div>` : `<p class="hint">No lenses on this list yet.</p>`}
-      <div class="cp-opts"><span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
+      ${card.n ? `<div class="lc-prev${app.lcZoom ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
+        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span><button type="button" class="iconbtn lc-zoom" data-act="lc-zoom" aria-pressed="${!!app.lcZoom}" aria-label="${app.lcZoom ? "Zoom out of the preview" : "Zoom in on the preview"}">${app.lcZoom ? ZOOM_OUT_ICON : ZOOM_IN_ICON}</button><button type="button" class="btn sm" data-act="lc-k1"${k !== 1 ? "" : " hidden"}>Actual size</button></div>` : `<p class="hint">No lenses on this list yet.</p>`}
+      <div class="cp-opts"><span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
+        <span class="cr-l">Colors</span><div class="lc-swatches" role="radiogroup" aria-label="Colors">${Object.entries(LC_COLS).map(([v, c]) => `<button type="button" class="lc-sw${v === "black" ? " bw" : ""}" role="radio" data-act="lc-opt" data-k="col" data-v="${v}" aria-checked="${o.col === v}" aria-label="${c[3]}" title="${c[3]}" style="--sw:${c[1]}"></button>`).join("")}</div></div>
       ${card.n ? `<p class="hint cp-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · <span id="lc-size">…</span>. The PDF is the card's own size: print at actual size (100%).</p>` : ""}
       <div class="co-acts"><button class="btn primary" type="button" data-act="lc-save" ${card.n ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="lc-share" ${card.n ? "" : "disabled"}>Share</button></div>
     </section>`;
 }
+const ZOOM_IN_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M10.5 7.5v6M7.5 10.5h6"/></svg>`;
+const ZOOM_OUT_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M7.5 10.5h6"/></svg>`;
 const GRIP_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M20 10 10 20M20 15.5 15.5 20M20 4.5 4.5 20"/></svg>`;
 /* the card's size at its actual size (mm), measured as the PDF draws it, 4 px a mm */
 function lcNatural(p) {
@@ -6245,13 +6286,14 @@ function lcNatural(p) {
   const c = host.firstElementChild, r = { w: c.offsetWidth / 4, h: c.offsetHeight / 4 }; host.remove(); return r;
 }
 let lcNat = null;  // { w, h } of the card on screen at its actual size
-const lcSizeText = k => lcNat ? `${Math.round(lcNat.w * k)} × ${Math.round(lcNat.h * k)} mm` : "…";
+const lcSizeText = k => lcNat ? `${(lcNat.w * k / 10).toFixed(1)} × ${(lcNat.h * k / 10).toFixed(1)} cm` : "…";
 /* the preview's scale, px a mm: fitted when the page opens on a list and layout (4.5 at most, so a small card stays readable), then
    kept while the card is resized, so nothing jumps; a card bigger than the preview is shown smaller, never cut */
 function lcPu(prev, k) {
-  const room = Math.max(40, prev.clientWidth - 40 - 12), key = lcListId() + "|" + lcOpts().lay;
+  const room = Math.max(40, prev.clientWidth - 56), key = lcListId() + "|" + lcOpts().lay;
   if (!app.lcPu || app.lcPu.key !== key || app.lcPu.room !== room) app.lcPu = { key, room, pu: Math.min(4.5, room / (lcNat.w * k)) };
-  return Math.min(app.lcPu.pu, room / (lcNat.w * k));
+  const fit = Math.min(app.lcPu.pu, room / (lcNat.w * k));
+  return app.lcZoom ? Math.max(fit * 2, 6) : fit;  // zoomed in: the preview only, to read it; the card's size stays
 }
 function lcFit() {
   const prev = document.querySelector(".lc-prev"), fr = prev && prev.querySelector(".lc-frame"), p = lcCur(); if (!fr || !p) return;
@@ -7775,6 +7817,8 @@ document.addEventListener("click", e => {
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
     case "lc-k1": lcShowK(lcSetK(1)); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
+    case "lc-zoom": { app.lcZoom = !app.lcZoom; const pv = document.querySelector(".lc-prev"); if (pv) { pv.classList.toggle("zoom", app.lcZoom); lcShowK(lcK()); }
+      b.setAttribute("aria-pressed", String(!!app.lcZoom)); b.setAttribute("aria-label", app.lcZoom ? "Zoom out of the preview" : "Zoom in on the preview"); b.innerHTML = app.lcZoom ? ZOOM_OUT_ICON : ZOOM_IN_ICON; break; }
     case "lc-save": lcPdfGo(b, false); break;
     case "lc-share": lcPdfGo(b, true); break;
     case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
