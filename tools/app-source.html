@@ -5668,7 +5668,7 @@ function camScanOf(e, cd, key, fps) {
 /* a Media Calculator value: the camera's format, sensor mode, frame rate, card, card size, or a typed bit rate */
 function recSet(l, e, p, k, v) {
   if (k === "mbps") { const n = Math.max(0, Math.min(20000, parseFloat(v) || 0)); if (n) l.rec.mbps = n; else delete l.rec.mbps; return; }
-  if (k === "card") { l.rec.card = v; delete l.rec.gb; return; }
+  if (k === "card") { const [id, g] = String(v).split("@"); l.rec.card = id; if (Number(g)) l.rec.gb = Number(g); else delete l.rec.gb; return; }  // "id@256": a plain card, its size
   if (k === "gb") { const g = Number(v); if (g) l.rec.gb = g; else delete l.rec.gb; return; }
   if (k === "fps") { l.rec.fps = Number(v); return; }
   const prof = recProfile(e.it.name); if (!prof) return;
@@ -5708,8 +5708,11 @@ const mcFreeOf = (p, id) => { const list = mcFreeList(p); return list[Number(Str
 const mcFreeHead = (list, id) => list.length > 1 ? `<div class="mc-head"><span>Camera ${Number(id.slice(4)) + 1}</span><button type="button" class="mc-del" data-act="mc-del" data-id="${id}" aria-label="Remove camera ${Number(id.slice(4)) + 1}">Remove</button></div>` : "";
 /* the camera list for "Any camera": a search field over every camera of the house, one per line */
 const mcCamList = (p, F, fid) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input data-sug="search" type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="${fid}" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
+/* the same camera at both rental houses under different names: one key, so the camera lists show it once */
+const CAM_SAME = [[/^sony (ilme-)?fx3$/i, "fx3"], [/^sony venice( 6k)?$/i, "venice"], [/^dji ronin 4d\b/i, "ronin4d"], [/^gopro hero ?black ?7$|^gopro hero7 black$/i, "gopro7"], [/^arri alexa 35( production set.*)?$/i, "alexa35"]];
+const camModelKey = n => { for (const [re, k] of CAM_SAME) if (re.test(n.trim())) return "=" + k; return qKey(n); };
 const mcFreeCams = houseId => { const seen = new Set();
-  return [...ITEM.keys()].filter(k => { const x = ITEM.get(k); if (!(houseId === "any" || x.h.id === houseId) || !hasRec(x) || /\bfor\b/i.test(x.it.name)) return false; const n = qKey(x.it.name); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name)); };
+  return [...ITEM.keys()].filter(k => { const x = ITEM.get(k); if (!(houseId === "any" || x.h.id === houseId) || !hasRec(x) || /\bfor\b/i.test(x.it.name)) return false; const n = camModelKey(x.it.name); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name)); };
 function mediaCamHtml(p, id) {
   const key = id; ({ p, id } = mcRoute(p, id));
   const unitTag = key !== id ? (/^u2~/.test(key) ? "2nd Unit" : "Main Unit") : "";
@@ -5750,7 +5753,7 @@ function mediaCamHtml(p, id) {
     else if (k === "card") {
       const types = [...new Set(choices.map(x => x.type))];
       body = types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(cardOpt).join("")).join("") : choices.map(cardOpt).join("");
-    } else if (k === "gb") body = `<div class="mc-chips three">${[64, 128, 256, 512, 1000, 2000].map(g => opt(k, g, l.rec.gb === g, g >= 1000 ? g / 1000 + "TB" : g + "GB")).join("")}</div>`;
+    } else if (k === "gb") body = `<div class="mc-chips three">${(MEDIA_SIZES[(() => { const x = ITEM.get(l.rec.card); return x ? grpOf(x.it, x.s) : ""; })()] || [64, 128, 256, 512, 1000, 2000]).map(g => opt(k, g, l.rec.gb === g, g >= 1000 ? g / 1000 + "TB" : g + "GB")).join("")}</div>`;
     return `<div class="mc-panel">${body}</div>`;
   };
   const pair = (a, b, ...ks) => `<div class="mc-pair${b ? "" : " one"}">${a}${b || ""}</div>${ks.map(panel).join("")}`;
@@ -6174,6 +6177,9 @@ function camCardChoices(p, c, e) {
   return out;
 }
 const camGb = g => g >= 1000 ? g / 1000 + "TB" : g + "GB";
+/* the sizes a catalog's plain card ("CFast Card") comes in at the rental house */
+const MEDIA_SIZES = { "CFast 2.0": [128, 256, 512] };
+const camCardOpts = (p, c, e) => camCardChoices(p, c, e).flatMap(x => !cardBytes(x.name) && MEDIA_SIZES[x.type] ? MEDIA_SIZES[x.type].map(g => ({ ...x, gb: g, v: x.id + "@" + g })) : [{ ...x, v: x.id }]);
 /* the wireless video's serial numbers, the transmitter's and the receiver's (their last 4 digits) */
 const camSnText = c => { const t = (c.sn || "").trim(), r = (c.snr || "").trim(); return t || r ? "SN " + [t ? "TX " + t : "", r ? "RX " + r : ""].filter(Boolean).join(" · ") : ""; };
 const camNotes = c => (c.notes || []).filter(n => (n.t || "").trim() || (n.v || "").trim());
@@ -6221,7 +6227,7 @@ function viewCams() {
   const caret = d => `<svg class="cf-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d ? "M7 14l5-5 5 5" : "M7 10l5 5 5-5"}"/></svg>`;
   const head = pageHead("Multicam management", "", list.length > 1 ? `<button class="iconbtn cb-cmp" type="button" data-act="cam-cmp" aria-pressed="${cmp}" aria-label="Compare the cameras" title="Compare">${COLS_ICON}</button>` : "");
   // the lists, folded: one row with their names; open, the lists to tick, their dates and what each unit's list holds (no list: a name and a date)
-  const fv = id ? named.map(x => `<bdi>${esc(x.name || "Untitled production")}</bdi>`).join(" + ") : `<span class="cf-ph">No list</span>${M.name ? ` · <bdi>${esc(M.name)}</bdi>` : ""}`;
+  const fv = id ? named.map(x => `<bdi>${esc(x.name || "Untitled production")}</bdi>`).join(" + ") : `<span class="cf-ph">None</span>${M.name ? ` · <bdi>${esc(M.name)}</bdi>` : ""}`;
   const fold = `<button type="button" class="cam-fold${open ? " open" : ""}" data-act="cam-fold" aria-expanded="${open}" aria-controls="cam-fp">${tile("list", "indigo", "cf-t")}<span class="cf-l">List${named.length > 1 ? "s" : ""}</span><span class="cf-v">${fv}</span>${caret(open)}</button>`;
   let panel = "";
   if (open) {
@@ -6235,7 +6241,7 @@ function viewCams() {
     const meta = id ? `<p class="cf-meta">${shoot || prep ? `<span>${[shoot ? `<b>Shoot</b> ${esc(shoot)}` : "", prep ? `<b>Prep</b> ${esc(prep)}` : ""].filter(Boolean).join(" · ")}</span>` : ""}${two ? [[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<span><b>${t}</b> ${holds(S.filter(s => camSrcU2(p, s) === w))}</span>`).join("") : `<span><b>On the list</b> ${holds(S)}</span>`}</p>`
       : `<div class="cam-meta"><div class="field"><label for="cam-pn">Production</label><div class="cm-row"><input id="cam-pn" data-cammeta="name" maxlength="60" value="${esc(M.name || "")}" placeholder="Name" dir="auto" autocomplete="off" data-sug="camProd" enterkeyhint="done">
       <button class="cm-cal${M.date ? " on" : ""}" type="button" data-act="cal-open" data-mode="day" aria-label="${M.date ? "Date: " + esc(fmtDate(M.date)) + ". Change it" : "Pick the date"}">${CAL_ICON}${M.date ? `<span>${esc(fmtDate(M.date).replace(/ \d{4}$/, ""))}</span>` : ""}</button></div></div></div>`;
-    panel = `<div class="cam-fp" id="cam-fp"><div class="cf-lists">${rows}${li("none", !id, "No list", "a name and a date")}</div>${meta}</div>`;
+    panel = `<div class="cam-fp" id="cam-fp"><div class="cf-lists">${rows}${li("none", !id, "None", "a title and a date of its own")}</div>${meta}</div>`;
   }
   // two units: a tab for each (its number of cameras); the letters are the unit shown's
   const useg = two ? `<div class="seg cam-useg" role="group" aria-label="Unit">${[[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<button type="button" data-act="cam-u" data-v="${w ? "2" : ""}" aria-pressed="${u === w}">${t}<i>${list.filter(x => !!x.u2 === w).length}</i></button>`).join("")}</div>` : "";
@@ -6271,9 +6277,9 @@ function camFormHtml(p, c) {
   let rec = "";
   if (!has) rec = `<p class="hint cam-first">Choose the camera, and its recording choices show here.</p>`;
   else {
-    const media = v.cards.length ? (() => { const [a, b] = splitTail(cardLabel(ITEM.get(c.rec.card)?.it.name || "", e.it.name)); const m = cPick("card", "Media", a ? esc(a) + (b ? ` <span class="cr-d">· ${esc(b)}</span>` : "") : ""); m.sub = v.per ? `${v.per} a card` : v.gbAsk ? "Choose its size" : ""; return m; })()
+    const media = v.cards.length ? (() => { const [a, b0] = splitTail(cardLabel(ITEM.get(c.rec.card)?.it.name || "", e.it.name)), b = v.gbAsk && c.rec.gb ? camGb(c.rec.gb) : b0; const m = cPick("card", "Media", a ? esc(a) + (b ? ` <span class="cr-d">· ${esc(b)}</span>` : "") : ""); m.sub = v.per ? `${v.per} a card` : v.gbAsk ? "Tap to choose its size" : ""; return m; })()
       : cIn("mediaT", "Media", c.mediaT, "Type and size");
-    const size = v.gbAsk ? cPick("gb", "Size", c.rec.gb ? camGb(c.rec.gb) : "") : null;
+    const size = null;
     if (v.prof) rec = `<div class="cam-grp">${row(cPick("codec", "Codec", esc(v.codec), ""), cPick("fps", "Frame rate", v.fps ? `${fpsLabel(v.fps)} fps` : "", "Not printed"))}
       ${row(v.scans ? (v.scans.length > 1 ? cPick("scan", "Sensor coverage", esc(v.sensor), scanSub) : cInfo("Sensor coverage", esc(v.sensor), scanSub)) : v.outOnly ? cIn("sensorT", "Sensor coverage", c.sensorT, "e.g. FF 4.2K") : cPick("sensor", "Sensor coverage", esc(v.sensor)))}
       ${row((v.outOnly || v.multi || v.scans) && v.modes > 1 ? cPick("mode", "File resolution", fileHtml) : cInfo("File resolution", fileHtml))}
@@ -6379,8 +6385,9 @@ function camPicker(k) {
     sheet("Media size", `<p class="hint cs-note">The catalog doesn't say this card's size. With the recording time each size holds.</p>`, [64, 128, 256, 512, 1000, 2000].map(one).join(""));
   }
   else if (k === "card") {
-    const choices = camCardChoices(p, c, e), types = [...new Set(choices.map(x => x.type))];
-    const one = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)), t = recResult({ rec: { ...c.rec, card: x.id, gb: x.id === c.rec.card ? c.rec.gb : undefined } }, e).per; return opt(x.id, c.rec.card === x.id, esc(a) + (b ? ` · ${esc(b)}` : ""), t ? fmtDur(t) : cardBytes(x.name) ? "" : "size to choose"); };
+    const choices = camCardOpts(p, c, e), types = [...new Set(choices.map(x => x.type))];
+    const one = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)), t = recResult({ rec: { ...c.rec, card: x.id, gb: x.gb } }, e).per;
+      return opt(x.v, c.rec.card === x.id && (!x.gb || c.rec.gb === x.gb), esc(a) + (x.gb ? ` · ${camGb(x.gb)}` : b ? ` · ${esc(b)}` : ""), t ? fmtDur(t) : ""); };
     sheet("Media", `<p class="hint cs-note">With the recording time each one holds.</p>`, types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(one).join("")).join("") : choices.map(one).join(""));
   }
 }

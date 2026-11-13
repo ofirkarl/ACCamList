@@ -889,7 +889,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.app.settings.camList = "none"; const fp = A.camCur();
   ok(fp.browse && A.camsOf(fp).length >= 1 && A.camsOf(fp)[0].L === "A", "with no list: cameras of your own, starting with A");
   A.app.settings.camsMeta = { name: "Pilot", date: "2026-12-01" }; A.camsOf(fp)[0].id = a35;
-  ok(/No list<\/span> · <bdi>Pilot/.test(A.viewCams()) && !/id="cam-pn"/.test(A.viewCams()) && (A.app.camFold = true, /id="cam-pn"/.test(A.viewCams()) && /data-act="cal-open" data-mode="day"/.test(A.viewCams()) && /<span>1 Dec<\/span>/.test(A.viewCams())) && (A.app.camFold = false, true) && /Pilot/.test(A.camCardHtml(fp, A.camsOf(fp)[0])) && /1 Dec 2026/.test(A.camCardHtml(fp, A.camsOf(fp)[0])), "with no list: a production name, and the date on a small calendar button; both on the cards");
+  ok(/None<\/span> · <bdi>Pilot/.test(A.viewCams()) && !/id="cam-pn"/.test(A.viewCams()) && (A.app.camFold = true, /id="cam-pn"/.test(A.viewCams()) && /data-act="cal-open" data-mode="day"/.test(A.viewCams()) && /<span>1 Dec<\/span>/.test(A.viewCams())) && (A.app.camFold = false, true) && /Pilot/.test(A.camCardHtml(fp, A.camsOf(fp)[0])) && /1 Dec 2026/.test(A.camCardHtml(fp, A.camsOf(fp)[0])), "with no list: a production name, and the date on a small calendar button; both on the cards");
   A.app.settings.camList = pc.id; A.app.view = "home"; A.app.settings.rules = keepRules; A.app.productions.splice(A.app.productions.indexOf(pc), 1); }
 // --- Multicam: wireless video and focus from lists, copying a camera's setup, notes on the card
 { const keepRules = A.app.settings.rules; A.app.settings.rules = [];
@@ -972,8 +972,9 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const fm = A.newProduction({ houseId: "fitussi", name: "Mini" }); A.app.productions.push(fm); made.push(fm);
   const mini = find("fitussi", /^ARRI Alexa Mini$/); A.setQty(fm, mini, 1); A.app.settings.camList = fm.id;
   const c = A.camsOf(fm)[0]; let v = A.camVals(fm, c);
-  ok(v.gbAsk && !v.per && /data-k="gb"/.test(A.camFormHtml(fm, c)) && /Choose its size/.test(A.camFormHtml(fm, c)), "a card with no size in the catalog: a Size choice beside it");
-  A.camSetVal(fm, c, "gb", "256"); v = A.camVals(fm, c);
+  ok(v.gbAsk && !v.per && !/data-k="gb"/.test(A.camFormHtml(fm, c)) && /Tap to choose its size/.test(A.camFormHtml(fm, c)), "a card with no size in the catalog: no extra field, it asks for its size");
+  A.camPicker("card"); const sh = A.modalsSeen ? "" : ""; 
+  A.camSetVal(fm, c, "card", c.rec.card + "@256"); v = A.camVals(fm, c);
   ok(c.rec.gb === 256 && v.per && /CFast 256GB/.test(v.media), "its size chosen: the recording time, and the size on the card (" + v.per + ")");
   A.app.settings.camList = "none"; const fp = A.camCur(), b = A.camsOf(fp)[0], keep = { id: b.id, rec: b.rec };
   b.rec = {}; A.camSetVal(fp, b, "cam", mini); b.rec.card = undefined; v = A.camVals(fp, b);
@@ -998,7 +999,8 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- One search rule everywhere: words in any order, spaces and hyphens aside, a letter off when nothing else fits
 ok(A.qHit("Canon EOS C400 6K", "canon c400") && A.qHit("Sony PXW-FX6", "fx6") && A.qHit("Sony PXW FX6", "fx-6") && A.qHit("ARRI Alexa Mini", "mini alexa"), "\"canon c400\" finds the EOS C400; fx6 and fx-6 find both FX6 spellings; words in any order");
 ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx mini", true) && !A.qHit("ARRI Alexa Mini", "sony", true), "a letter off only when loose (after exact matches came up empty)");
-{ const fx = A.mcFreeCams("any").filter(id => /fx6/i.test(A.ITEM.get(id).it.name.replace(/[^a-z0-9]/gi, ""))); ok(fx.length === 1, "no list: one FX6, not one from each rental house (" + fx.map(id => A.ITEM.get(id).it.name).join(", ") + ")"); }
+{ const free = A.mcFreeCams("any").map(id => A.ITEM.get(id).it.name), n = re => free.filter(x => re.test(x)).length;
+  ok(n(/fx6/i) === 1 && n(/fx3$/i) === 1 && n(/^sony venice( 6k)?$/i) === 1 && n(/ronin 4d/i) === 1 && n(/gopro hero ?(black ?)?7|hero7/i) === 1 && n(/^arri alexa 35( production|$)/i) === 1 && n(/c300 (ef|pl)/i) === 2, "no list: one of each camera across the rental houses (FX6, FX3, Venice, Ronin 4D, GoPro 7, Alexa 35); C300 EF and PL stay two"); }
 // --- Wireless video and focus: only what the rental houses have; the catalog's wording read right
 { const u = A.camDevAt("vid", ["utopia"]), f = A.camDevAt("foc", ["fitussi"]);
   ok(u.has("Teradek Bolt 6 LT 750") && !u.has("Teradek Bolt 6 XT 750") && u.has("Teradek Bolt 4K LT 750") && u.has("Teradek Bolt 4K LT 1500"), "Utopia's wireless video: what its catalog has (no Bolt 6 XT); \"Bolt 4K 750 LT\" is the Bolt 4K LT 750, a transmitter-and-receiver set counts");
