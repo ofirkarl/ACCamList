@@ -4436,6 +4436,7 @@ function render() {
   if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
+  document.querySelectorAll(".tx-pop:not(#txPop)").forEach(el => el.remove());   // a drawer still sliding shut doesn't linger over a page drawn anew
   txSync();   // a wireless set's open drawer follows its counter, or goes with it
 }
 
