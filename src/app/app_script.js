@@ -2596,7 +2596,25 @@ function treeHtml(p, h) {
 /* a cine lens from the side: mount, barrel with its focus and iris rings, wider front */
 const LENS_ICON = `<svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="1.8" y="9.2" width="2.7" height="5.6" rx=".5"/><rect x="4.5" y="7" width="10.5" height="10" rx="1"/><path d="M7.6 7v10M10.2 7v10M7.6 5.6v1.4M8.9 5.6v1.4M10.2 5.6v1.4"/><path d="M15 5.2h5.6a1 1 0 0 1 1 1v11.6a1 1 0 0 1-1 1H15z"/><path d="M18.3 8.2v7.6"/></svg>`;
 const RULER_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 18h18M5 18v-4M9 18v-7M12 18v-4M15 18v-7M19 18v-4"/></svg>`;
-const fin = () => app.finder || (app.finder = { on: false, f: "", t: "", kind: "", mount: "", cov: "", brand: "", more: {} });
+const fin = () => app.finder || (app.finder = { on: false, f: "", t: "", kind: "", mount: "", cov: "", brand: "", cfOn: false, cfIn: 24, more: {} });
+/* close focus as a filter: off unless you switch it on; then a slider, "up to" a distance, in steps that are finer where lenses differ most */
+const CF_STEPS = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 42, 48, 60];
+const inTxt = n => { const f = Math.floor(n / 12), i = n - f * 12; return f ? (i ? `${f}'${i}"` : `${f}'`) : `${i}"`; };
+/* a figure as the app writes it (1'2", 2'9½", 1'6"–3'1") in inches: a zoom's nearest end */
+function cfInches(s) {
+  if (!s) return null; s = String(s).split("–")[0];
+  const fr = { "½": .5, "¼": .25, "¾": .75 }, ft = s.match(/(\d+)'/), inch = s.match(/(\d+)?([½¼¾])?"/);
+  const v = (ft ? +ft[1] * 12 : 0) + (inch ? (+inch[1] || 0) + (fr[inch[2]] || 0) : 0);
+  return ft || inch ? v : null;
+}
+/* the close focus of a lens in the results: a set's lens at this focal length, or (no focal length) the set's nearest */
+function lensCfIn(it, sp, pos) {
+  const md = lensMod(it, sp); if (!md) return null;
+  if (md.one) return cfInches(md.one);
+  if (md.per) { const v = pos != null ? [md.per[pos]] : Object.values(md.per); const n = v.map(cfInches).filter(x => x != null); return n.length ? Math.min(...n) : null; }
+  return null;
+}
+const cfOut = (s, it, sp, pos) => { if (!s.cfOn) return false; const v = lensCfIn(it, sp, pos); return v == null || v > s.cfIn; };
 const numIn = s => parseFloat(String(s || "").replace(",", "."));
 const fmtN = x => String(Math.round(x * 10) / 10);
 const COVER = { "2/3": 0, S16: 1, MFT: 2, "APS-C": 3, S35: 4, FF: 5, LF: 6, MF: 7 };
@@ -2796,13 +2814,14 @@ function finderMatches(h) {
   const s = fin(), F = numIn(s.f), T = numIn(s.t) > 0 ? numIn(s.t) : null;
   // no focal length: any other choice (stop, type, mount, maker, covers) lists every lens that fits, the nearest stop first
   if (!(F > 0)) {
-    if (!(T != null || finList(s.kind).length || finList(s.mount).length || finList(s.brand).length || s.cov)) return null;
+    if (!(T != null || finList(s.kind).length || finList(s.mount).length || finList(s.brand).length || s.cov || s.cfOn)) return null;
     const kinds0 = finList(s.kind).map(kindTest), mounts0 = finList(s.mount), brands0 = finList(s.brand), flat = [];
     for (const [id, e, sp] of houseLenses(h)) {
       if (kinds0.length && !kinds0.some(fn => fn(sp))) continue;
       if (mounts0.length && !mounts0.some(m => sp.mounts.includes(m))) continue;
       if (brands0.length && !brands0.includes(e.it.brand || "Generic")) continue;
       if (s.cov && !((COVER[sp.cov] ?? -1) >= COVER[s.cov])) continue;
+      if (cfOut(s, e.it, sp, null)) continue;
       const g = stopGap(sp, T), ranged = !!(sp.stop && stopsBetween(sp.stop[1], sp.stop[0]) > 0.34), hit = T != null && g != null && !ranged && Math.abs(g) < 0.08;
       flat.push({ id, e, sp, type: lensType(sp), pos: null, d: 0, g, hit, exact: hit, score: T == null ? 0 : g == null ? 9 : Math.abs(g) + (ranged ? 0.3 : 0), label: sp.label, ssp: sp, f0: sp.zoom ? sp.zoom[0] : sp.focals[0] });
     }
@@ -2818,6 +2837,7 @@ function finderMatches(h) {
     if (s.cov && !((COVER[sp.cov] ?? -1) >= COVER[s.cov])) continue;
     const type = lensType(sp), { pos, d } = focalFit(sp, F);
     if (d > Math.log(2.05)) continue;
+    if (cfOut(s, e.it, sp, pos)) continue;
     // a set or zoom listed as "T1.5–T2.9" doesn't say which stop this focal length has, so it's close, never exact
     const lens = sp.per ? sp.per.find(x => x.f === pos) : null, one = lens && lens.n ? { stop: [lens.n, lens.n] } : null;
     const g = stopGap(one || sp, T), ranged = !one && !!(sp.stop && stopsBetween(sp.stop[1], sp.stop[0]) > 0.34);
@@ -2953,8 +2973,19 @@ function finderHtml(p, h) {
         <label class="f-field${s.mount ? " set" : ""}"><span>Mount</span><select data-fin="mount" multiple>${mounts}</select></label>
         <label class="f-field${s.cov ? " set" : ""}"><span>Covers</span><select data-fin="cov">${covs}</select></label>
       </div>
+      ${cfRowHtml(s)}
     </div>
     <div id="fRes" class="f-res">${finderResults(p, h)}</div>
+  </div>`;
+}
+/* the close focus row: a switch; on, a slider of "up to" distances with a few marks under it */
+function cfRowHtml(s) {
+  const i = Math.max(0, CF_STEPS.indexOf(s.cfIn)), n = CF_STEPS.length - 1, at = k => (CF_STEPS.indexOf(k) / n * 100).toFixed(1) + "%";
+  return `<div class="f-cf${s.cfOn ? " on" : ""}">
+    <div class="cf-top"><span class="cf-lab" id="cfLab">Close focus</span><span class="cf-val" id="cfVal">${s.cfOn ? "up to " + inTxt(s.cfIn) : "Any"}</span>
+      <button type="button" class="cf-sw" role="switch" aria-checked="${!!s.cfOn}" aria-labelledby="cfLab" data-act="fin-cf"></button></div>
+    ${s.cfOn ? `<input class="cf-range" type="range" min="0" max="${n}" step="1" value="${i}" data-fin-cf aria-labelledby="cfLab" aria-valuetext="up to ${inTxt(s.cfIn).replace(/"/g, "&quot;")}" style="--p:${(i / n * 100).toFixed(1)}%">
+      <div class="cf-ticks" aria-hidden="true">${[6, 12, 18, 24, 36, 60].map(k => `<span style="left:${at(k)}">${k === 60 ? "5'" : inTxt(k)}</span>`).join("")}</div>` : ""}
   </div>`;
 }
 /* the lens search's manufacturer: a list with a search field on top */
@@ -2970,6 +3001,7 @@ function finBrandDialog() {
     <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button></div></div>`);
   document.getElementById("bq")?.focus();
 }
+let cfRaf = 0;
 function centerFinder() { const r = document.getElementById("fRuler"); if (r) r.dataset.c = "1"; }  // the ruler runs down the page now: nothing to center
 function refreshFinder(keepKey) {
   const p = cur(), el = document.getElementById("fRes"); if (!p || !el) return;
@@ -5658,6 +5690,7 @@ document.addEventListener("click", e => {
     case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; s.brand = ""; }
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
     case "fin-close": fin().on = false; render(); break;
+    case "fin-cf": { const s = fin(); s.cfOn = !s.cfOn; s.more = {}; const row = document.querySelector(".finder .f-cf"); if (row) row.outerHTML = cfRowHtml(s); refreshFinder(); break; }
     case "fin-brand": finBrandDialog(); break;
     case "fin-brand-pick": { const s2 = fin(); s2.brand = b.dataset.b || ""; s2.more = {}; closeModal(); const v = document.getElementById("fb-val"); v?.closest(".f-field")?.classList.toggle("set", !!s2.brand); if (v) v.textContent = s2.brand || "Any manufacturer"; refreshFinder(); break; }
     case "fin-short": { const mo = fin().more || (fin().more = {}); mo.short = !mo.short; refreshFinder(); break; }
@@ -5907,6 +5940,12 @@ document.addEventListener("input", e => {
     close(); return;
   }
   if (t.name === "colorHex" && t.form) { const r = t.form.querySelector('input[name="color"][value="custom"]'); if (r) r.checked = true; t.closest(".sw")?.style.setProperty("--sw", t.value); return; }
+  if (t.matches && t.matches("[data-fin-cf]")) {  // the close focus slider: the figure and the results follow it
+    const s = fin(), i = +t.value, n = CF_STEPS.length - 1; s.cfIn = CF_STEPS[i]; s.more = {};
+    t.style.setProperty("--p", (i / n * 100).toFixed(1) + "%"); t.setAttribute("aria-valuetext", "up to " + inTxt(s.cfIn));
+    const v = document.getElementById("cfVal"); if (v) v.textContent = "up to " + inTxt(s.cfIn);
+    cancelAnimationFrame(cfRaf); cfRaf = requestAnimationFrame(() => refreshFinder()); return;
+  }
   if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.multiple ? [...t.selectedOptions].map(o => o.value).filter(Boolean).join("|") : t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!fin()[t.dataset.fin]); refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
   if (t.id === "lq") { app.lq = t.value; applyListFilter(); return; }
