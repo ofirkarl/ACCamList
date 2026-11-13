@@ -870,7 +870,7 @@ async function initAccount() {
   let db, user;
   try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch (e) { return; }
   if (!db || !user) return;
-  if (app.view === "welcome" && !typing()) render();  // sign-in is ready now: the welcome can offer it
+  if (app.view === "welcome") wlAuthFill();  // sign-in is ready now: the welcome offers it (in its place, so typing goes on)
   const me = await user.id();
   if (!me) return;
   try { COL = db.collection("data/users/" + me); } catch (e) { COL = null; return; }
@@ -1841,6 +1841,20 @@ function greetHtml() {
 }
 /* the first open: what the app does, and your name for the lists */
 const WELCOME_STEPS = [["camera", "Pick the rental house", "Utopia or Fitussi, with its whole catalog"], ["lenses", "Add the gear", "Search, tap, set how many"], ["camera_accessories", "Send the list", "As a PDF or a Word file"]];
+/* the welcome's Google sign-in: a clear second way in, beside typing a name. It appears as soon as the installed app's sign-in is
+   ready (filled into its place, so it never interrupts typing); signed in, it says with which account */
+function wlAuthHtml() {
+  const a = window.AC_AUTH, u = a && a.user ? a.user() : null; if (!a) return "";
+  if (u) return `<p class="hint wl-who">Signed in with Google${u.name ? ` as <b dir="auto">${esc(u.name)}</b>` : ""}. Your lists are kept in your account.</p>`;
+  return `<div class="wl-or" aria-hidden="true"><span>or</span></div>
+      <button class="btn wl-in" type="button" data-act="acct-in">Continue with Google</button>
+      <span class="hint wl-why">Keeps your lists in your Google account: safe, and on every phone you sign in on. Already have lists there? They come right back.</span>`;
+}
+function wlAuthFill() {
+  const el = typeof document !== "undefined" && document.getElementById("wlAuth"); if (!el) return; el.innerHTML = wlAuthHtml();
+  const u = window.AC_AUTH && window.AC_AUTH.user ? window.AC_AUTH.user() : null, n = document.getElementById("wl-name");
+  if (u && u.name && n && !n.value.trim()) n.value = u.name;   // signed in: the name comes from the Google account (still editable)
+}
 function viewWelcome() {
   const a = window.AC_AUTH, u = a && a.user ? a.user() : null, name = (app.settings.me || {}).name || (u && u.name) || "";
   return `<section class="welcome">
@@ -1852,7 +1866,7 @@ function viewWelcome() {
       <div class="field"><label for="wl-name">What's your name?</label><input id="wl-name" name="name" maxlength="80" autocomplete="name" enterkeyhint="go" value="${esc(name)}"></div>
       <span class="hint">It goes on your lists as 1st AC.</span>
       <button class="btn primary wl-go" type="submit">Get started</button>
-      ${a && !u ? `<button class="btn ghost wl-in" type="button" data-act="acct-in">Have lists already? Sign in</button>` : ""}
+      <div id="wlAuth">${wlAuthHtml()}</div>
     </form>
   </section>`;
 }
