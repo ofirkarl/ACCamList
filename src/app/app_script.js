@@ -147,12 +147,12 @@ function nameHtml(text, q) {
   return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u${/^\d+(?:\.\d+)?[-–]\d+(?:\.\d+)?mm$/i.test(w.join(" ")) ? " zr" : ""}">${hl(w.join(" "), q)}</span>`; }).join(" ");
 }
 /* a lens set on one flowing line, each lens with its stop: "18 T2.9 • 25 T2.1 • 35 T2.1 …" (the set name already says how many); hi marks the focal length being searched */
-function perHtml(per, hi, around) {
+function perHtml(per, hi, around, cf) {
   if (!per || !per.length) return "";
   // around: only the lenses next to the one you looked for (a set of 12 stays on one line)
   let list = per, pre = "", post = "";
   if (around != null) { const i = Math.max(0, per.findIndex(x => x.f === hi)), a = Math.max(0, i - around), b = Math.min(per.length, i + around + 1); list = per.slice(a, b); pre = a > 0 ? "… " : ""; post = b < per.length ? " …" : ""; }
-  return `<span class="lens-line">${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
+  return `<span class="lens-line${cf ? " cf" : ""}">${cf ? `<span class="ll-h">CF</span>` : ""}${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}${x.mod ? ` <i class="ll-cf" title="Close focus">${esc(x.mod)}</i>` : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
 }
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
@@ -167,15 +167,19 @@ function specsHtml(it, extra, o = {}) {
   if (it.lens) {
     const L = it.lens, e = ITEM.get(it.id), sp = lensSpec(it, e && e.s.id);
     if (L.coverage) out.push(`<span class="cov">${esc(L.coverage)}</span>`);
-    const perStops = sp && sp.per && sp.per.some(x => x.label);
-    if (L.stop && !perStops) out.push(`<span>${esc(L.stop)}</span>`);
+    const md = lensMod(it, sp), perStops = sp && sp.per && sp.per.some(x => x.label);
+    // a set whose lenses share one stop, with each lens's close focus: the stop once, then each lens with its close focus
+    const oneStop = !!(md && md.per && perStops && sp.per.every(x => x.label === sp.per[0].label));
+    if (oneStop) out.push(`<span>${esc(sp.per[0].label)}</span>`);
+    else if (L.stop && !perStops) out.push(`<span>${esc(L.stop)}</span>`);
     else if (!L.stop && sp && sp.label && !sp.per) out.push(`<span>${esc(sp.label)}</span>`);
     if (sp) { const m = sp.mounts.filter(x => x !== "Other"); if (m.length) out.push(`<span>${esc(m.join("/"))}</span>`); }
     if (L.focals && !(sp && sp.per) && !/\d\s*mm/i.test(lensShortName(it, sp))) out.push(`<span>${esc(L.focals)}</span>`);
     if (L.squeeze) out.push(`<span>${esc(L.squeeze)} anamorphic</span>`);
     if (L.note && !perStops) out.push(`<span>${esc(L.note)}</span>`);
     else if (L.note && !/standard speed/i.test(L.note)) out.push(`<span>${esc(L.note)}</span>`);
-    if (sp && sp.per) per = perHtml(sp.per);
+    if (md && md.one) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
+    if (sp && sp.per) per = perHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per, null, null, !!(md && md.per));
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
   if (o.link && out.length) out.push(o.link);  // the product page globe ends the line
@@ -2621,6 +2625,46 @@ function lensMounts(it, sub, sp) {
   }
   return [...m];
 }
+/* @@LENS_MOD: close focus by lens series, as each maker marks it, in feet and inches (generated from the research notes) */
+const LENS_MOD = [
+  ["arri-signature-zoom", /signature zoom/i, {"16-32": "1'6\"", "24-75": "2'6\"", "45-135": "3'4\"", "65-300": "6'"}],
+  ["arri-signature-prime", /signature prime/i, {"12": "1'2\"", "15": "1'2\"", "18": "1'2\"", "21": "1'2\"", "25": "1'2\"", "29": "1'2\"", "35": "1'2\"", "40": "1'2\"", "47": "1'6\"", "58": "1'6\"", "75": "2'2\"", "95": "2'9\"", "125": "3'4\"", "150": "5'", "200": "6'", "280": "8'3\""}],
+  ["arri-master-macro", /master macro/i, {"100": "1'1¾\""}],
+  ["arri-master-zoom", /master zoom/i, {"16.5-110": "2'4\""}],
+  ["arri-master-prime", /master prime/i, {"12": "1'4\"", "14": "1'2\"", "16": "1'2\"", "18": "1'2\"", "21": "1'2\"", "25": "1'2\"", "27": "1'2\"", "32": "1'2\"", "35": "1'2\"", "40": "1'4\"", "50": "1'8\"", "65": "2'3\"", "75": "2'9\"", "100": "3'6\"", "135": "3'3\"", "150": "4'11\""}],
+  ["ultra-prime", /^(?!.*super ?16).*ultra prime/i, {"8": "1'3\"", "12": "1'", "14": "9\"", "16": "1'", "20": "1'", "24": "1'", "28": "1'", "32": "1'3\"", "40": "1'3\"", "50": "2'", "65": "2'3\"", "85": "3'", "100": "3'3\"", "135": "5'", "180": "8'6\""}],
+  ["zeiss-supreme-radiance", /supreme (prime )?radiance/i, {"18": "1'2\"", "21": "1'2\"", "25": "10\"", "29": "1'1\"", "35": "1'1\"", "40": "1'5\"", "50": "1'6\"", "65": "2'", "85": "2'9\"", "100": "3'9\"", "135": "4'6\""}],
+  ["zeiss-cp3", /\bcp\.?3\b/i, {"15": "1'", "18": "1'", "21": "10\"", "25": "10\"", "28": "10\"", "35": "1'", "50": "1'6\"", "85": "3'3\"", "100": "2'6\"", "135": "3'3\""}],
+  ["zeiss-cp2-superspeed", /compact prime super speed/i, {"35": "1'", "50": "1'6\"", "85": "3'3\""}],
+  ["zeiss-cp2", /\bcp\.?2\b|compact prime/i, {"15": "1'", "18": "1'", "21": "10\"", "25 T2.9": "7\"", "25 T2.1": "10\"", "28": "10\"", "35": "1'", "50": "1'6\"", "85": "3'3\"", "100": "2'6\"", "135": "3'3\"", "50 macro": "10\""}],
+  ["zeiss-nano-prime", /nano prime/i, {"18": "10\"", "24": "1'2\"", "35": "1'6\"", "50": "1'8\"", "75": "2'6\"", "100": "3'3\""}],
+  ["zeiss-lwz3", /\blwz\.?3\b/i, {"21-100": "2'8\""}],
+  ["zeiss-cz2", /\bcz\.?2\b|compact zoom/i, {"15-30": "1'10\"", "28-80": "2'8\"", "70-200": "5'"}],
+  ["zeiss-super-speed", /^zeiss high speed/i, {"18": "10\"", "25": "10\"", "35": "1'2\"", "85": "3'"}],
+  ["cooke-anamorphic-i", /^cooke (s6i )?anamorphic/i, {"25": "2'9\"", "32": "2'9\"", "40": "2'9\"", "50": "2'9\"", "65": "1'6\"", "75": "3'3\"", "100": "3'8\"", "135": "4'8\"", "180": "6'6\"", "300": "10'"}],
+  ["cooke-sp3", /^cooke sp3/i, {"25": "10\"", "32": "1'1\"", "50": "1'8\"", "75": "3'", "100": "3'"}],
+  ["cooke-panchro-ff", /^cooke panchro/i, {"18": "11\"", "21": "11\"", "25": "1'1\"", "27": "1'1\"", "32": "1'1\"", "40": "1'1\"", "50": "1'4\"", "65": "1'1\"", "75": "2'6\"", "100": "2'", "135": "2'9\"", "152": "3'6\""}],
+  ["cooke-s4i", /^cooke s4/i, {"12": "9\"", "14": "9\"", "16": "9\"", "18": "9\"", "21": "9\"", "25": "9\"", "27": "10\"", "32": "1'", "35": "1'2\"", "40": "1'4\"", "50": "1'8\"", "65": "2'3\"", "75": "2'6\"", "100": "3'", "135": "2'9\"", "150": "3'6\"", "180": "4'3\"", "300": "7'"}],
+  ["leitz-summilux-c", /summilux[- ]c\b/i, {"16": "1'4\"", "18": "1'6\"", "21": "1'3\"", "25": "1'3\"", "29": "1'6\"", "35": "1'6\"", "40": "1'6\"", "50": "2'", "65": "1'6\"", "75": "2'6\"", "100": "3'3\"", "135": "4'1\""}],
+  ["leitz-summicron-c", /summicron[- ]c\b/i, {"15": "1'", "18": "1'", "21": "1'", "25": "1'", "29": "1'", "35": "1'2\"", "40": "1'6\"", "50": "2'", "75": "2'7\"", "100": "3'3\"", "135": "4'6\""}],
+  ["leica-m08", /\bm 0\.8\b/i, {"21": "2'3\"", "24": "2'3\"", "28": "2'3\"", "35": "2'3\"", "50": "2'3\"", "50 f/0.95": "3'3\"", "75": "2'3\"", "90": "3'3\""}],
+  ["angenieux-optimo", /^angenieux optimo/i, {"15-40": "2'", "28-76": "2'", "45-120": "3'1\"", "24-290": "4'", "28-340": "4'1\"", "19.5-94": "2'1\"", "56-152": "2'1\"", "30-72": "2'2\""}],
+  ["angenieux-ez", /^angenieux\b/i, {"30-90": "2'", "45-135": "2'", "15-40": "2'", "22-60": "2'", "45-165": "4'", "68-250": "4'"}],
+  ["arri-alura", /\balura\b/i, {"15.5-45": "2'", "30-80": "2'", "18-80": "2'4\"", "45-250": "3'11\""}],
+  ["fujinon-mk", /^fujinon mk\d/i, {"18-55": "2'9\"", "50-135": "3'11\""}, {"18-55": "1'3\"", "50-135": "2'9\""}],
+  ["fujinon-xk", /^fujinon (xk|cabrio premier)/i, {"20-120": "3'7\""}, {"20-120": "1'4\""}],
+  ["fujinon-zk", /^fujinon (zk|cine zoom cabrio)/i, {"14-35": "2'", "19-90": "2'9\"", "85-300": "3'11\"", "25-300": "3'11\""}, {"14-35": "1'1\"", "19-90": "1'3\"", "85-300": "3'2\"", "25-300": "1'11\""}],
+  ["canon-cine-servo", /^canon cine zoom 17-120/i, {"17-120": "2'9\""}],
+  ["sigma-cine-ff-hs", /^sigma (cine )?ff high[- ]speed/i, {"14": "11\"", "20": "11\"", "24": "10\"", "28": "1'", "35": "1'", "40": "1'4\"", "50": "1'4\"", "85": "2'10\"", "105": "3'4\"", "135": "2'11\""}],
+  ["tokina-cinema-macro", /^tokina cinema at-x 100/i, {"100": "1'"}],
+  ["tokina-cinema-zoom", /^tokina (cinema 11-|vista 16-28)/i, {"11-20": "1'", "16-28": "11\"", "11-16": "1'2\""}],
+  ["tokina-vista", /^tokina .*vista/i, {"18": "1'6\"", "21": "1'2\"", "25": "1'2\"", "29": "1'2\"", "35": "1'4\"", "40": "1'6\"", "50": "1'7\"", "65": "2'3\"", "85": "3'1½\"", "105": "3'9\"", "135": "4'7\""}],
+  ["nisi-athena", /^nisi athena/i, {"14": "10\"", "25": "1'", "35": "1'", "50": "1'8\"", "85": "2'8\"", "135": "3'3\""}],
+  ["dzofilm-vespid", /vespid/i, {"16": "10\"", "25": "1'", "35": "1'", "40": "1'", "50": "1'6\"", "75": "2'", "90": "10\"", "100": "2'4\"", "125": "2'7\""}],
+  ["dzofilm-catta-ace", /catta ace/i, {"18-35": "1'8\"", "35-80": "2'5\"", "70-135": "2'6\""}],
+  ["dzofilm-x-tract", /x-tract|^dzofilm 18-28mm t8/i, {"18-28": "1'7\""}],
+  ["laowa-ranger", /^laowa ranger/i, {"16-30": "1'1\"", "28-75": "1'7\"", "75-180": "2'11\""}]];
+/* @@END */
 const LENS_SPEC = new WeakMap();
 /* focal lengths (one, a set's list, or a zoom range), stop range, format, mounts and kind of a lens */
 function lensSpec(it, sub) {
@@ -2661,6 +2705,25 @@ function lensSpec(it, sub) {
   LENS_SPEC.set(it, spec);
   return spec;
 }
+const LENS_MOD_OF = new WeakMap();
+/* a lens's close focus as its maker marks it: one value (a prime or a zoom), or lens by lens for a set; null where it isn't known */
+function lensMod(it, sp) {
+  if (!it || !it.lens) return null;
+  if (LENS_MOD_OF.has(it)) return LENS_MOD_OF.get(it);
+  const row = LENS_MOD.find(r => r[1].test(it.name || "")); let out = null;
+  if (row) {
+    const t = row[2], mac = row[3] || {};
+    const at = (f, lab) => { const k = fmtN(f); return (lab && t[k + " " + lab]) || (sp && sp.macro && t[k + " macro"]) || t[k] || ""; };
+    if (!sp) { const v = Object.values(t); if (v.length === 1) out = { one: v[0] }; }
+    else if (sp.zoom) { const k = fmtN(sp.zoom[0]) + "-" + fmtN(sp.zoom[1]); if (t[k]) out = { one: t[k], macro: mac[k] || "" }; }
+    else if (sp.per) { const per = {}; for (const x of sp.per) { const v = at(x.f, x.label); if (v) per[x.f] = v; } if (Object.keys(per).length) out = { per }; }
+    else { const v = at(sp.focals[0], sp.label); if (v) out = { one: v }; }
+  }
+  LENS_MOD_OF.set(it, out);
+  return out;
+}
+/* the close focus written short: 1'2" (and the macro setting's, where the lens has one) */
+const modText = m => m && m.one ? m.one + (m.macro ? ` (macro ${m.macro})` : "") : "";
 const lensType = sp => sp.zoom ? "zoom" : sp.set ? "set" : "prime";
 /* the Lens type menu: spherical and anamorphic, each as primes, sets or zooms, then the specialty lenses */
 const KINDS = [
@@ -2738,10 +2801,14 @@ function finderCard(p, m, T) {
   const meta = [m.type === "set" ? (m.pos != null ? `${m.pos}mm from a ${sp.focals.length}-lens set` : `${sp.focals.length}-lens set`) : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
   // a tap anywhere on the line opens it to everything about the lens; the link and Add stay where they are
   const open = !!(fin().rows || {})[m.id];
+  const md = lensMod(it, sp), cf = md ? md.one ? modText(md) : m.pos != null && md.per ? md.per[m.pos] || "" : "" : "";
+  const per = sp.per && md && md.per ? sp.per.map(x => ({ ...x, mod: md.per[x.f] || "" })) : sp.per;
+  if (cf) meta.push("CF\u00a0" + cf);
   const facts = [["Covers", COV_LABEL[sp.cov] || sp.cov], ["Mount", sp.mounts.filter(x => x !== "Other").join(", ")],
     ["Stop", sp.label ? sp.label + (sp.per && m.type === "set" ? " (the set)" : "") : ""],
     ["Focal length", sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`],
-    ["Type", [sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", sp.probe ? "probe" : sp.tilt ? "tilt and shift" : sp.macro ? "macro" : sp.fisheye ? "fisheye" : ""].filter(Boolean).join(", ")]].filter(([, v]) => v);
+    ["Type", [sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", sp.probe ? "probe" : sp.tilt ? "tilt and shift" : sp.macro ? "macro" : sp.fisheye ? "fisheye" : ""].filter(Boolean).join(", ")],
+    ["Close focus", md ? md.one ? modText(md) : m.pos != null && md.per && md.per[m.pos] ? `${md.per[m.pos]} (the ${m.pos}mm)` : md.per ? "Lens by lens, below" : "" : ""]].filter(([, v]) => v);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}${open ? " open" : ""}" data-fcard="${esc(m.id)}">
     <button class="fv-tap" type="button" data-act="fv-row" data-id="${esc(m.id)}" aria-expanded="${open}" aria-label="${open ? "Less" : "More"} about ${esc(it.name)}"></button>
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
@@ -2749,11 +2816,11 @@ function finderCard(p, m, T) {
     <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
     <span class="ctl">${ctlHtml(p, m.id)}</span>
     <span class="f-meta">${meta.map(esc).join(" · ")}</span>
-    ${sp.per ? `<span class="f-per">${perHtml(sp.per, m.pos, 2)}</span>` : ""}
+    ${sp.per ? `<span class="f-per">${perHtml(per, m.pos, 2)}</span>` : ""}
     <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
       <dl>${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-      ${sp.per ? `<span class="f-set"><span class="f-set-h">Lens by lens</span>${perHtml(sp.per, m.pos)}</span>` : ""}
+      ${sp.per ? `<span class="f-set"><span class="f-set-h">Lens by lens${md && md.per ? " · stop · close focus" : ""}</span>${perHtml(per, m.pos)}</span>` : ""}
       ${noteOf(m.id) ? `<span class="inote">${esc(noteOf(m.id))}</span>` : ""}
     </span></span></span>
   </li>`;
@@ -3364,7 +3431,7 @@ function cardLabel(name, camName) {
   // a card of the camera's own make goes without the make: an ARRI camera's "Codex Compact Drive", a RED's "Mini-Mag SSD"
   const make = String(camName || "").split(/\s+/)[0], own = make && new RegExp(`^${make.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s+(?=\\S)`, "i");
   // its size, and a speed class written in its name (V30, V60, V90), stand apart, so a long name never hides them
-  const n = (own ? shortCard(name).replace(own, "") : shortCard(name)), m = n.match(/\b\d+(?:\.\d+)?\s?[TG]B\b/i), v = n.match(/\bV(30|60|90)\b/i);
+  const n = (own ? shortCard(name).replace(own, "") : shortCard(name)).replace(/\s*\b\d{2,4}\s*GB?(?:\s*[,/]\s*\d{2,4}\s*GB?)+\b/i, ""), m = n.match(/\b\d+(?:\.\d+)?\s?[TG]B\b/i), v = n.match(/\bV(30|60|90)\b/i);
   const base = [m, v].reduce((t, x) => x ? t.replace(x[0], "") : t, n).replace(/\s{2,}/g, " ").trim().replace(/[\s\-–]+$/, "");
   const tail = [m ? m[0].replace(/\s/g, "") : "", v ? v[0].toUpperCase() : ""].filter(Boolean).join(" ");
   return tail && base ? `${base} · ${tail}` : base || tail;
@@ -3519,7 +3586,7 @@ function mediaCamHtml(p, id) {
   recEnsure(l, e, p);
   const r = recResult(l, e), choices = cardChoices(e, mcHouseOf(p, e)), card = l.rec.card, onList = free ? F.n : card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, u = esc(key), open = mcOpen && mcOpen.id === key ? mcOpen.k : "";
-  const cardName = card ? ITEM.get(card)?.it.name || "" : "", sizeUnknown = card && !cardBytes(cardName);
+  const cardName = card ? ITEM.get(card)?.it.name || "" : "", sizeUnknown = card && !!mediaSizesOf(card);
   const lab = (label, x) => `<span class="t-l"><span>${label}</span>${x ? `<span class="t-x">${x}</span>` : ""}</span>`;
   const val = a => `<span class="t-v">${a}</span>`;
   const tap = (k, label, a, x) => `<button type="button" class="mc-tile tap${open === k ? " on" : ""}" data-act="mc-open" data-id="${u}" data-k="${k}" aria-expanded="${open === k}">${lab(label, x)}${val(a)}</button>`;
@@ -3546,7 +3613,7 @@ function mediaCamHtml(p, id) {
     else if (k === "card") {
       const types = [...new Set(choices.map(x => x.type))];
       body = types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(cardOpt).join("")).join("") : choices.map(cardOpt).join("");
-    } else if (k === "gb") body = `<div class="mc-chips three">${(MEDIA_SIZES[(() => { const x = ITEM.get(l.rec.card); return x ? grpOf(x.it, x.s) : ""; })()] || [64, 128, 256, 512, 1000, 2000]).map(g => opt(k, g, l.rec.gb === g, g >= 1000 ? g / 1000 + "TB" : g + "GB")).join("")}</div>`;
+    } else if (k === "gb") body = `<div class="mc-chips three">${(mediaSizesOf(l.rec.card) || []).map(g => opt(k, g, l.rec.gb === g, g >= 1000 ? g / 1000 + "TB" : g + "GB")).join("")}</div>`;
     return `<div class="mc-panel">${body}</div>`;
   };
   const pair = (a, b, ...ks) => `<div class="mc-pair${b ? "" : " one"}">${a}${b || ""}</div>${ks.map(panel).join("")}`;
@@ -3971,8 +4038,16 @@ function camCardChoices(p, c, e) {
 }
 const camGb = g => g >= 1000 ? g / 1000 + "TB" : g + "GB";
 /* the sizes a catalog's plain card ("CFast Card") comes in at the rental house */
-const MEDIA_SIZES = { "CFast 2.0": [128, 256, 512] };
-const camCardOpts = (p, c, e) => camCardChoices(p, c, e).flatMap(x => !cardBytes(x.name) && MEDIA_SIZES[x.type] ? MEDIA_SIZES[x.type].map(g => ({ ...x, gb: g, v: x.id + "@" + g })) : [{ ...x, v: x.id }]);
+const MEDIA_SIZES = { "CFast 2.0": [128, 256, 512], "XQD": [64, 120, 128], "SxS": [16, 32, 64, 128], "SD": [32, 64, 128, 256] };
+/* the sizes to choose from for a card whose name doesn't settle its size: one that lists several ("512G,256G") offers those */
+function mediaSizes(name, type) {
+  const many = [...new Set([...String(name || "").matchAll(/(\d{2,4})\s*GB?\b/gi)].map(m => Number(m[1])))];
+  if (many.length > 1) return many.sort((a, b) => a - b);
+  if (cardBytes(name)) return null;
+  if (type === "SD" && /\bv90\b/i.test(name || "")) return [128, 256];
+  return MEDIA_SIZES[type] || [64, 128, 256, 512, 1000, 2000];
+}
+const mediaSizesOf = id => { const x = ITEM.get(id); return x ? mediaSizes(x.it.name, grpOf(x.it, x.s)) : null; };
 /* the wireless video's serial numbers, the transmitter's and the receiver's (their last 4 digits) */
 const camSnText = c => { const t = (c.sn || "").trim(), r = (c.snr || "").trim(); return t || r ? "SN " + [t ? "TX " + t : "", r ? "RX " + r : ""].filter(Boolean).join(" · ") : ""; };
 const camNotes = c => (c.notes || []).filter(n => (n.t || "").trim() || (n.v || "").trim());
@@ -3990,7 +4065,7 @@ function camVals(p, c) {
   // no list: start on a card whose size is known (a catalog's plain "CFast Card" says nothing of its size)
   if (p.browse && !had && !cardBytes(ITEM.get(c.rec.card)?.it.name || "")) { const sized = v.cards.find(x => cardBytes(x.name)); if (sized) c.rec.card = sized.id; }
   const r = recResult(c, e); v.prof = r.prof;
-  v.gbAsk = !!(c.rec.card && !cardBytes(ITEM.get(c.rec.card)?.it.name || ""));
+  v.gbAsk = !!(c.rec.card && mediaSizesOf(c.rec.card));
   if (r.c && r.md) {
     const pt = modeParts(r.md[0]), parts = r.c.m.map(x => modeParts(x[0]));
     v.outOnly = parts.every(x => !x.out && OUT_ONLY.test(x.sensor));
@@ -4175,12 +4250,16 @@ function camPicker(k) {
   else if (k === "fps") sheet("Frame rate", `<p class="hint cs-note">For the recording time only. It isn't printed on the card.</p>`, `<div class="mc-chips">${REC_FPS.filter(f => !md || f <= md[3]).map(f => opt(f, c.rec.fps === f, fpsLabel(f))).join("")}</div>`);
   else if (k === "gb") {  // a card the catalog names without its size
     const one = g => { const t = recResult({ rec: { ...c.rec, gb: g } }, e).per; return opt(g, c.rec.gb === g, camGb(g), t ? fmtDur(t) : ""); };
-    sheet("Media size", `<p class="hint cs-note">The catalog doesn't say this card's size. With the recording time each size holds.</p>`, [64, 128, 256, 512, 1000, 2000].map(one).join(""));
+    sheet("Media size", `<p class="hint cs-note">The catalog doesn't say this card's size. With the recording time each size holds.</p>`, (mediaSizesOf(c.rec.card) || []).map(one).join(""));
   }
   else if (k === "card") {
-    const choices = camCardOpts(p, c, e), types = [...new Set(choices.map(x => x.type))];
-    const one = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)), t = recResult({ rec: { ...c.rec, card: x.id, gb: x.gb } }, e).per;
-      return opt(x.v, c.rec.card === x.id && (!x.gb || c.rec.gb === x.gb), esc(a) + (x.gb ? ` · ${camGb(x.gb)}` : b ? ` · ${esc(b)}` : ""), t ? fmtDur(t) : ""); };
+    const choices = camCardChoices(p, c, e), types = [...new Set(choices.map(x => x.type))];
+    // a card named with its size is one row; one named without it: its name, then its sizes to choose from
+    const one = x => { const [a, b] = splitTail(cardLabel(x.name, e.it.name)), g = mediaSizes(x.name, x.type), at = c.rec.card === x.id;
+      if (!g) { const t = recResult({ rec: { ...c.rec, card: x.id, gb: 0 } }, e).per; return opt(x.id, at, esc(a) + (b ? ` · ${esc(b)}` : ""), t ? fmtDur(t) : "").replace('class="mc-opt', 'class="mc-opt wrap'); }
+      const chip = gb => { const t = recResult({ rec: { ...c.rec, card: x.id, gb } }, e).per, on = at && c.rec.gb === gb;
+        return `<button type="button" class="mc-opt stack${on ? " on" : ""}" data-act="cam-set" data-k="card" data-v="${x.id}@${gb}" aria-pressed="${on}" aria-label="${esc(a)} ${camGb(gb)}"><span class="t-a">${camGb(gb)}</span>${t ? `<span class="t-b">${fmtDur(t)}</span>` : ""}</button>`; };
+      return `<div class="mc-cn${at ? " on" : ""}"><span>${esc(/card|drive|ssd|mag/i.test(a) ? a : a + " card")}</span>${b ? `<span class="t-b">${esc(b)}</span>` : ""}</div><div class="mc-chips">${g.map(chip).join("")}</div>`; };
     sheet("Media", `<p class="hint cs-note">With the recording time each one holds.</p>`, types.length > 1 ? types.map(t => grp(t) + choices.filter(x => x.type === t).map(one).join("")).join("") : choices.map(one).join(""));
   }
 }
