@@ -2440,17 +2440,24 @@ function stepper(act, id, val, field, small) {
 function ctlHtml(p, id) {
   const l = p.items[id];
   if (!l) return `<button class="add" type="button" data-act="cinc" data-id="${esc(id)}" aria-label="Add">+ Add</button>`;
-  return l.tx !== undefined ? `<span class="tr q-sets"><span>Sets</span>${stepper("c", id, lineQty(l), null, false)}</span>` : stepper("c", id, l.qty, null, false);
+  return l.tx !== undefined ? setsCtl("c", id, l) : stepper("c", id, l.qty, null, false);
 }
-/* a wireless set's transmitters and receivers, the same in Add Gear and in the list: a small tag under the name, which opens their two counters */
-const txTagHtml = (id, l) => `<button class="txrx-tag" type="button" data-act="txrx" data-id="${esc(id)}" aria-expanded="${app.open.has("tx:" + id)}" aria-label="Transmitters and receivers">TX <b>${l.tx}</b> · RX <b>${l.rx}</b>${CHEV}</button>`;
-const txRowHtml = (id, l, act, cls) => app.open.has("tx:" + id) ? `<div class="${cls}"><span class="tr"><span>TX</span>${stepper(act, id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper(act, id, l.rx, "rx", true)}</span></div>` : "";
+/* a wireless set: its counter counts sets; its transmitters and receivers live in a tiny dialog that drops open under that counter
+   when the set is added or its quantity is tapped (and from the small line under the counter, which also says how many of each).
+   One is open at a time; a tap anywhere else closes it. The same in Add Gear and in the list. */
+let txPop = null, txFresh = null;   // the line whose dialog is open; and, for one drawing, the one that has just opened (it animates)
+const setsCtl = (act, id, l) => `<span class="tr q-sets"><button class="q-cap" type="button" data-act="txrx" data-id="${esc(id)}" aria-expanded="${txPop === id}" aria-label="${l.tx} transmitters, ${l.rx} receivers: change">Sets · TX ${l.tx} · RX ${l.rx}</button>${stepper(act, id, lineQty(l), null, false)}</span>`;
+const txRowHtml = (id, l, act) => txPop === id ? `<div class="tx-row${txFresh === id ? " anim" : ""}"><div class="tx-pop" role="group" aria-label="Transmitters and receivers"><span class="tr"><span>TX</span>${stepper(act, id, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper(act, id, l.rx, "rx", true)}</span></div></div>` : "";
+function txCloseDom() { document.querySelectorAll(".tx-row").forEach(el => el.remove()); document.querySelectorAll('.q-cap[aria-expanded="true"]').forEach(el => el.setAttribute("aria-expanded", "false")); }
+function txClose() { if (!txPop) return; txPop = null; txFresh = null; txCloseDom(); }
+/* after a set's quantity changed: open its dialog (closing another's), or forget it when the set left the list */
+function txOpenFor(p, id) { const l = p && p.items[id]; if (l && l.tx !== undefined) { if (txPop !== id) { if (txPop) txCloseDom(); txFresh = id; } txPop = id; } else if (txPop === id) txPop = null; }
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h), wl = on && p.items[it.id].tx !== undefined ? p.items[it.id] : null;
   const specs = specsHtml(it, extra, { q }), nameLink = "";
   const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "";  // the product page globe sits in the row's top-right corner
   return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
-    <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}${wl ? txTagHtml(it.id, wl) : ""}</span><span class="ctl">${ctlHtml(p, it.id)}</span>${wl ? txRowHtml(it.id, wl, "c", "i-txrx") : ""}</li>`;
+    <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}</span><span class="ctl">${ctlHtml(p, it.id)}</span>${wl ? txRowHtml(it.id, wl, "c") : ""}</li>`;
 }
 
 /* ----- Add Gear: the rental house catalog ----- */
@@ -3495,10 +3502,9 @@ function lineHtml(p, id, l) {
   const e = ITEM.get(id);
   const key = l.custom ? favKeyCustom(l.name, l.section) : id;
   const qtys = l.tx !== undefined
-    ? `<span class="tr q-sets"><span>Sets</span>${stepper("l", id, lineQty(l), null, false)}</span>`   // wireless video: sets where every item has its quantity
+    ? setsCtl("l", id, l)   // wireless video: sets where every item has its quantity
     : stepper("l", id, l.qty, null, false);
-  // its transmitters and receivers: one small tag under the name ("TX 1 · RX 1"), which opens their two counters when they differ from the sets
-  const txTag = l.tx !== undefined ? txTagHtml(id, l) : "", txRow = l.tx !== undefined ? txRowHtml(id, l, "l", "l-txrx") : "";
+  const txRow = l.tx !== undefined ? txRowHtml(id, l, "l") : "";
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
@@ -3513,7 +3519,7 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}${txTag}</span>
+      <div class="l-grid"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}</span>
         <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
       <div class="l-bottom">${qtys}</div>${txRow}</div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
@@ -5495,6 +5501,7 @@ document.addEventListener("click", e => {
   if (lp.fired && e.target.closest && e.target.closest("[data-lp]")) { lp.fired = false; e.preventDefault(); return; }
   const b = e.target.closest("[data-act]");
   if (mcOpen && !(e.target.closest && e.target.closest(".mc-panel, [data-act='mc-open']"))) mcClose();
+  if (txPop && !(e.target.closest && e.target.closest(".tx-row, .q-sets"))) txClose();   // the wireless set's little dialog: a tap anywhere else closes it
   if (!b || b.disabled) return;
   const act = b.dataset.act, id = b.dataset.id, f = b.dataset.f;
   buzz("tap");
@@ -5770,7 +5777,9 @@ document.addEventListener("click", e => {
       const l = p.items[id];
       const cur0 = l ? (f ? l[f] : lineQty(l)) : 0;
       const ids = setQty(p, id, cur0 + (act === "cinc" ? 1 : -1), l ? f : undefined);
+      if (!(l && f)) txOpenFor(p, id);
       if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids);
+      txFresh = null;
       popQty("c", id, l ? f : undefined);
       break;
     }
@@ -5794,7 +5803,8 @@ document.addEventListener("click", e => {
       const l = p.items[id]; if (!l) break;
       const cur0 = f ? l[f] : lineQty(l);
       setQty(p, id, cur0 + (act === "linc" ? 1 : -1), f);
-      rerenderKeepScroll(); popQty("l", id, f);
+      if (!f) txOpenFor(p, id);
+      rerenderKeepScroll(); txFresh = null; popQty("l", id, f);
       break;
     }
     case "remove": {
@@ -5934,8 +5944,8 @@ document.addEventListener("click", e => {
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
     case "lab-open": labShow(true); break;
-    case "txrx": { const k = "tx:" + b.dataset.id; if (app.open.has(k)) app.open.delete(k); else app.open.add(k);
-      if (b.closest("[data-row]")) refreshRows(p, [b.dataset.id]); else rerenderKeepScroll(); break; }
+    case "txrx": { const was = txPop === id; if (txPop) txClose(); if (!was) { txPop = id; txFresh = id; }
+      if (b.closest("[data-row]")) refreshRows(p, [id]); else rerenderKeepScroll(); txFresh = null; break; }
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
