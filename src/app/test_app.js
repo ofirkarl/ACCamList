@@ -1079,9 +1079,10 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   ok(R.ones.length === 4 && R.ones.some(r => r.mm === "24–290" && r.cf === "4'") && R.ones.some(r => r.mm === "18–55" && r.macro === "1'3\"") && R.ones.some(r => r.mm === "10" && r.cf === ""), "single lenses and zooms: a row each, the macro too; one with no figure stays empty");
   const o = { lay: "compact", ink: "color" }, c = A.lensCardHtml(m, o);
   ok(c.n === 12 && /class="lcard lcc"/.test(c.html) && /<tr class="mm"><td>MM<\/td><td>18<\/td>/.test(c.html) && !/<tr class="t">/.test(c.html), "compact: the set's focal lengths over close focus, its one stop once");
-  ok(/class="lcard lct"/.test(A.lensCardHtml(m, { lay: "one", ink: "color" }).html) && /class="lc-cols"/.test(A.lensCardHtml(m, { lay: "two", ink: "bw" }).html) && / bw"/.test(A.lensCardHtml(m, { lay: "two", ink: "bw" }).html), "one table, two columns, black and white");
+  ok(/class="lcard lct"/.test(A.lensCardHtml(m, { lay: "one", ink: "color" }).html) && /class="lcard lct bw"/.test(A.lensCardHtml(m, { lay: "one", ink: "bw" }).html) && !/lc-cols/.test(A.lensCardHtml(m, { lay: "two", ink: "bw" }).html), "one table, black and white; no two columns any more");
+  ok(/style="--k:1\.5"/.test(A.lensCardHtml(m, { lay: "compact", ink: "color", k: { compact: 1.5 } }).html) && /style="--k:2\.5"/.test(A.lensCardHtml(m, { lay: "one", ink: "color", k: { one: 9 } }).html) && /style="--k:1"/.test(A.lensCardHtml(m, { lay: "one", ink: "color", k: { compact: 2 } }).html), "the size dragged: each layout its own, kept within 50%–250%");
   A.app.settings.lcList = m.id; A.app.view = "lenscard"; const v = A.viewLensCard();
-  ok((v.match(/data-act="lc-opt" data-k="lay"/g) || []).length === 3 && /id="lc-list"/.test(v) && /data-act="lc-save"/.test(v), "the page: the list, three layouts to jump between, Save PDF");
+  ok((v.match(/data-act="lc-opt" data-k="lay"/g) || []).length === 2 && /id="lc-list"/.test(v) && /data-act="lc-save"/.test(v) && /Lens Cards/.test(v) && /class="lc-grip" role="slider"/.test(v), "the page (Lens Cards): the list, two layouts, the corner to resize, Save PDF");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); A.app.view = "home"; }
 
 // --- Lens card: lines from a Word list or typed by hand are matched to catalog lenses by name, or read from their own name
@@ -1106,6 +1107,6 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   A.app.settings.lcList = q.id; A.app.view = "lenscard"; let v = A.viewLensCard();
   ok((v.match(new RegExp('<option value="' + m.id + '"', "g")) || []).length === 1 && !v.includes('<option value="' + q.id + '"') && /Thypoch/.test(v), "the production once in the list picker (a 2nd Unit picked before comes to its production), its lenses shown");
   add(m, /^Cooke S4i T2\/14mm$/); R = A.lcRows(m);
-  const c = A.lensCardHtml(m, { lay: "compact", ink: "color" }).html, t2 = A.lensCardHtml(m, { lay: "two", ink: "color" }).html;
-  ok(R.units.length === 2 && /class="lc-u">Main Unit</.test(c) && /class="lc-u">2nd Unit</.test(c) && (t2.match(/<table class="lc-t">/g) || []).length === 2, "both units with lenses: each under its name; two columns: Main Unit beside 2nd Unit");
+  const c = A.lensCardHtml(m, { lay: "compact", ink: "color" }).html, t1 = A.lensCardHtml(m, { lay: "one", ink: "color" }).html;
+  ok(R.units.length === 2 && /class="lc-u">Main Unit</.test(c) && /class="lc-u">2nd Unit</.test(c) && (t1.match(/<tr class="u">/g) || []).length === 2, "both units with lenses: each under its name");
   A.app.productions.splice(A.app.productions.indexOf(q), 1); A.app.productions.splice(A.app.productions.indexOf(m), 1); A.app.view = "home"; }
