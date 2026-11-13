@@ -3994,7 +3994,7 @@ function camFormHtml(p, c) {
     </div>
     <div class="cam-grp">${row(cIn("op", "Camera operator", c.op, "Name", 'data-sug="camCrew" enterkeyhint="next"'), cIn("fp", "Focus puller", c.fp, "Name", 'data-sug="camCrew" enterkeyhint="done"'), "t-crew")}</div>
     ${rec}
-    <div class="cam-grp">${row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "Last 4", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
+    <div class="cam-grp">${row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
       ${row(cPick("foc", "Focus", c.foc ? esc(c.foc) : ""), cIn("ch", "Ch / freq", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"'), "t-ch")}</div>
     <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">${camLt("Notes")}Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
 }

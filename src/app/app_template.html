@@ -2162,6 +2162,16 @@ body { overflow-x: clip; }
 .cam-row .cr-l { letter-spacing: .04em; }
 .cam-row .cr-l .tl-c.lt { margin-inline-end: 4px; }
 .cam-row.dual.t-crew { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+
+/* r32: the two columns' gap and line stay put whatever the typed text's direction (a Hebrew name made the input right-to-left,
+   flipping its inline start: the line jumped to the far edge); names start at the left like their labels */
+.cam-row.dual:not(.one) > :nth-child(2n+1) { padding-inline-end: 0; padding-right: 10px; }
+.cam-row.dual:not(.one) > :nth-child(2n) { padding-inline-start: 0; border-inline-start: 0; padding-left: 10px; border-left: 1px solid var(--hair); }
+.cam-row.dual.tri:not(.one) > * { padding-inline-start: 0; padding-inline-end: 0; border-inline-start: 0; padding-left: 0; padding-right: 0; border-left: 0; }
+.cam-row.dual.tri:not(.one) > :nth-child(3n+1) { padding-right: 10px; }
+.cam-row.dual.tri:not(.one) > :nth-child(3n+2), .cam-row.dual.tri:not(.one) > :nth-child(3n) { padding-left: 10px; border-left: 1px solid var(--hair); }
+.cam-row input, .cam-row .cr-in { text-align: left; }
+.cam-row.dual:not(.one) > .cr-pick:nth-child(2n), .cam-row.dual.tri:not(.one) > .cr-pick { border-radius: 0; }
 </style>
 
 <div class="app">
@@ -6173,7 +6183,7 @@ function camFormHtml(p, c) {
     </div>
     <div class="cam-grp">${row(cIn("op", "Camera operator", c.op, "Name", 'data-sug="camCrew" enterkeyhint="next"'), cIn("fp", "Focus puller", c.fp, "Name", 'data-sug="camCrew" enterkeyhint="done"'), "t-crew")}</div>
     ${rec}
-    <div class="cam-grp">${row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "Last 4", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
+    <div class="cam-grp">${row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
       ${row(cPick("foc", "Focus", c.foc ? esc(c.foc) : ""), cIn("ch", "Ch / freq", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"'), "t-ch")}</div>
     <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">${camLt("Notes")}Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
 }
