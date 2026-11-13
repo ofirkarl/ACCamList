@@ -2205,6 +2205,7 @@ function viewSettings() {
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
     <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>Settings</h2><span></span></div>${acct ? `<div class="set-title"><span></span>${acct}</div>` : ""}</div>
+    <div class="set-group"><button class="btn lab-open" type="button" data-act="lab-open">Color lab · try colors on the real pages</button></div>
     <div class="set-group me-group${meOpen ? " open" : ""}"><button class="me-head" type="button" data-act="me-toggle" aria-expanded="${meOpen}" aria-controls="meForm">
         <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
         <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
@@ -5927,6 +5928,7 @@ document.addEventListener("click", e => {
       wrap.innerHTML = pickerHtml(k);
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
+    case "lab-open": labShow(true); break;
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
@@ -6685,5 +6687,57 @@ function sendAppBack(draw) {
 }
 if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => sendAppBack(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(); });
+
+/* ---------- Color lab: sliders that recolor the real pages live, to settle the app's palette. What it shows is a short code to
+   send back; nothing here changes the lists. Kept on this device only. ---------- */
+const LAB_KEY = "acColorLab", LAB_DEF = { on: false, open: false, h: 245, s: 70, l: 55, cm: "same", ch: 200, hm: "same", hh: 30, pt: 0, bg: 45 };
+let lab = { ...LAB_DEF };
+try { Object.assign(lab, JSON.parse(localStorage.getItem(LAB_KEY) || "{}")); } catch (e) {}
+const labSave = () => { try { localStorage.setItem(LAB_KEY, JSON.stringify(lab)); } catch (e) {} };
+const labHsl = (h, s, l) => `hsl(${Math.round(((h % 360) + 360) % 360)} ${Math.round(s)}% ${Math.round(l)}%)`;
+/* black or white on a color, whichever reads better (relative luminance of the hsl color) */
+function labFg(h, s, l) {
+  s /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  const lin = v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4), L = .2126 * lin(f(0)) + .7152 * lin(f(8)) + .0722 * lin(f(4));
+  return 1.05 / (L + .05) >= 3.2 ? "#fff" : "#18171d";
+}
+const labCode = () => `B${lab.h}-${lab.s}-${lab.l} C${lab.cm === "same" ? "=" : lab.ch} H${lab.hm === "same" ? "=" : lab.hm === "comp" ? "~" : lab.hh} P${lab.pt} G${lab.bg}`;
+function labApply() {
+  let st = document.getElementById("lab-style");
+  if (!lab.on) { if (st) st.remove(); return; }
+  if (!st) { st = document.createElement("style"); st.id = "lab-style"; document.head.appendChild(st); }
+  const P = labHsl(lab.h, lab.s, lab.l), ch = lab.cm === "same" ? lab.h : lab.ch, C = labHsl(ch, lab.s, lab.l), Ci = labHsl(ch, lab.s, Math.max(18, Math.min(lab.l, 46) - 10));
+  const hh = lab.hm === "same" ? lab.h : lab.hm === "comp" ? lab.h + 180 : lab.hh, hl = lab.hm === "same" ? lab.l : Math.max(lab.l, 58), H = labHsl(hh, lab.s, hl), Hf = labFg(hh, lab.s, hl);
+  const bg = `color-mix(in srgb, ${labHsl(lab.h, lab.s, 88)} ${lab.pt}%, #f8f7f4)`;
+  st.textContent = `:root{--accent:${P};--accent-fg:${labFg(lab.h, lab.s, lab.l)};--bg:${bg};--bars-bg:${(lab.bg / 100 * .3).toFixed(3)};--sf:${C};--sf-ink:${Ci};--sf-tint:color-mix(in srgb,${C} 9%,var(--surface));--sf-line:color-mix(in srgb,${C} 28%,var(--line));--sf-on:color-mix(in srgb,${C} 17%,var(--surface));}
+body,.app{background:${bg}} .finder{--accent:${P} !important}
+.mc-res{background:${H};box-shadow:0 8px 18px -10px ${H}} .mc-res b{color:${Hf}} .mc-res .t-l{color:${Hf};opacity:.8}`;
+}
+function labHtml() {
+  const r = (k, label, min, max, hue) => `<label class="lab-r"><span>${label}</span><input type="range" min="${min}" max="${max}" value="${lab[k]}" data-lab="${k}"${hue ? ' class="hue"' : ""}><b id="lab-${k}">${lab[k]}</b></label>`;
+  const seg = (k, opts) => `<span class="lab-seg">${opts.map(([v, t]) => `<button type="button" data-labset="${k}" data-v="${v}" aria-pressed="${lab[k] === v}">${t}</button>`).join("")}</span>`;
+  if (!lab.open) return `<button type="button" class="lab-pill" data-labact="open" aria-label="Open the color lab">Colors</button>`;
+  return `<div class="lab-card"><div class="lab-top"><b>Color lab</b><span class="lab-code" id="lab-code">${labCode()}</span><button type="button" data-labact="copy">Copy</button><button type="button" data-labact="min" aria-label="Minimize">▾</button><button type="button" data-labact="off" aria-label="Close and restore the app's colors">✕</button></div>
+    <div class="lab-h">Buttons</div>${r("h", "Hue", 0, 360, 1)}${r("s", "Color", 10, 100)}${r("l", "Light", 20, 80)}
+    <div class="lab-h">Choices ${seg("cm", [["same", "Same"], ["own", "Own hue"]])}</div>${lab.cm === "own" ? r("ch", "Hue", 0, 360, 1) : ""}
+    <div class="lab-h">Result block ${seg("hm", [["same", "Same"], ["comp", "Opposite"], ["own", "Own hue"]])}</div>${lab.hm === "own" ? r("hh", "Hue", 0, 360, 1) : ""}
+    <div class="lab-h">Page</div>${r("pt", "Tint", 0, 60)}${r("bg", "Bars", 0, 100)}</div>`;
+}
+function labDraw() {
+  let el = document.getElementById("lab");
+  if (!lab.on) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "lab"; document.body.appendChild(el);
+    el.addEventListener("input", e => { const k = e.target.dataset.lab; if (!k) return; lab[k] = +e.target.value; const o = document.getElementById("lab-" + k); if (o) o.textContent = lab[k]; const c = document.getElementById("lab-code"); if (c) c.textContent = labCode(); labApply(); labSave(); });
+    el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
+      if (b.dataset.labset) { lab[b.dataset.labset] = b.dataset.v; }
+      else if (b.dataset.labact === "open") lab.open = true; else if (b.dataset.labact === "min") lab.open = false; else if (b.dataset.labact === "off") lab.on = false;
+      else if (b.dataset.labact === "copy") { const t = labCode(); (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Copied: " + t), () => toast(t)); return; }
+      labSave(); labApply(); labDraw(); });
+  }
+  el.innerHTML = labHtml();
+}
+function labShow(on) { lab.on = on; lab.open = on; labSave(); labApply(); labDraw(); }
+function labInit() { if (typeof document === "undefined" || !document.body || !document.body.appendChild) return; try { labApply(); labDraw(); } catch (e) {} }
 render();
 initAccount();
+labInit();
