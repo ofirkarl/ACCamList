@@ -2416,6 +2416,7 @@ const SECTIONS = DATA.sections;
 
 /* ---------- catalog index ---------- */
 const ITEM = new Map();
+let LENS_NAMES = null;  // catalog lenses by name, for list lines matched by name (made on first use)
 // the catalogs as scraped, kept untouched; the user's edits are layered on top by applyCatalog()
 const BASE = new Map(), BITEM = new Map(), BLOC = new Map();
 let ord = 0;
@@ -2754,7 +2755,7 @@ function deleteCustom(h, k) {
   applyCatalog(); touchSettings();
 }
 function applyCatalog() {
-  RANK = null;
+  RANK = null; LENS_NAMES = null;
   ITEM.clear();
   for (const h of HOUSES) {
     const ed = peekEdits(h.id), io = ed.items || {}, heads = ed.heads || {};
@@ -6261,15 +6262,40 @@ function viewTools() {
    One table (a row a lens) and Two columns (sets beside the rest). The PDF is the card's own size, nothing around it */
 const LC_LAYOUTS = { compact: "Compact", one: "One table", two: "2 columns" };
 const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (o.ink !== "bw") o.ink = "color"; return o; };
-function lcListId() { const k = app.settings.lcList; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
+const lcLists = () => app.productions.filter(x => !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));  // 2nd Unit lists too
+function lcListId() { const k = app.settings.lcList; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = lcLists()[0]; return l ? l.id : ""; }
+/* a list line's lens: its catalog item; a line typed by hand or brought in from a Word list or another rental house is matched
+   by name to a catalog lens (the list's own rental house first), or else read from its own name ("Cooke S4i 32mm") */
+const LENS_STOP = new Set(["set", "of", "lens", "lenses", "kit", "mount", "the", "and", "with", "pl", "lpl", "ef", "e", "rf", "l", "mft", "full", "frame", "ff", "s35", "super35", "cine", "feet", "metric", "imperial"]);
+const lensToks = n => norm(n).replace(/(\d)\s+mm\b/g, "$1mm").split(/[^a-z0-9.\u0590-\u05ff]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t && !LENS_STOP.has(t));
+function lensByName(name, hid) {
+  if (!LENS_NAMES) { LENS_NAMES = []; for (const [id, e] of ITEM) if (e.it.lens) LENS_NAMES.push({ e, key: qKey(e.it.name), toks: new Set(lensToks(e.it.name)) }); }
+  const key = qKey(name || ""), toks = lensToks(name || ""); if (!key || !toks.length) return null;
+  const same = LENS_NAMES.filter(x => x.key === key);
+  // every word of the line's name in the catalog lens's name ("ARRI Signature Prime Set Of 8" → "ARRI Signature Prime LPL-Mount Lens Set Of 8");
+  // only one such lens counts (the list's rental house first): "Cooke 50mm" fits many, so it's read from its own name instead
+  const fits = same.length ? same : LENS_NAMES.filter(x => toks.every(t => x.toks.has(t) || (!/\d/.test(t) && x.key.includes(qKey(t)))));
+  const one = a => a.length === 1 ? a[0].e : null;
+  return one(fits.filter(x => x.e.h.id === hid)) || (fits.some(x => x.e.h.id === hid) ? null : one(fits));
+}
+const LENS_WORD = /\b(lens(es)?|primes?|zoom|macro|anamorphic|probe|fisheye|summilux|summicron|cooke|zeiss|arri|signature|optimo|angenieux|cabrio|fujinon|canon|sigma|tokina|vista|laowa|leitz|leica|atlas|orion|dzofilm|dzo|vespid|catta|nisi|samyang|rokinon|sony|panasonic|lumix|tribe7|blackwing|viltrox|sirui|blazar|kowa|hawk|panavision|schneider|irix|meike|7artisans|ttartisan|nikon|helios|lomo)\b/i;
+const LENS_NOT = /adapter|filter|matte ?box|follow ?focus|motor|support|bracket|\bcase\b|\bcap\b|hood|\bring\b|booster|extender|mount kit|gear|\bnd\b|polariz|diopter|monitor|camera body/i;
+function lcLensOf(id, l, hid) {
+  const e = ITEM.get(id), name = (l && l.name) || (e && e.it.name) || "";
+  if (e && e.it.lens) return { it: e.it, sub: e.s.id };
+  const m = lensByName(name, hid); if (m) return { it: m.it, sub: m.s.id };
+  if (/\d+(?:\.\d+)?\s*mm\b/i.test(name) && LENS_WORD.test(name) && !LENS_NOT.test(name)) return { it: { name, lens: {} }, sub: "" };
+  return null;
+}
 const lcCur = () => findProd(lcListId()) || null;
 /* the list's lenses: sets first, then single lenses and zooms, in the list's order */
 function lcRows(p) {
   const sets = [], ones = [];
   for (const [id, l] of Object.entries(p && p.items || {})) {
-    const e = ITEM.get(id), q = lineQty(l); if (!e || !e.it.lens || !q) continue;
-    const sp = lensSpec(e.it, e.s.id); if (!sp) continue;
-    const md = lensMod(e.it, sp), nm = lensShortName(e.it, sp);
+    const q = lineQty(l), x = q ? lcLensOf(id, l, p.houseId) : null; if (!x) continue;
+    const it = x.it, sp = lensSpec(it, x.sub);
+    if (!sp) { const md0 = lensMod(it, null); if (md0) ones.push({ name: it.name.replace(/\s*\([^)]*mount[^)]*\)/i, ""), q, mm: "", t: "", cf: md0.one || "", macro: "" }); continue; }  // Master Macro 100: no "mm" in its name
+    const md = lensMod(it, sp), nm = lensShortName(it, sp);
     if (sp.per) sets.push({ name: nm.replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
       lenses: sp.per.map(x => ({ mm: fmtN(x.f), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
     else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
@@ -6299,7 +6325,7 @@ function lensCardHtml(p, o) {
 }
 function viewLensCard() {
   const p = lcCur(), o = lcOpts(), id = lcListId();
-  const opts = mcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}>${esc(x.name || "Untitled production")}</option>`).join("");
+  const opts = lcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}>${esc(x.name || "Untitled production")}</option>`).join("");
   const head = pageHead("Lens card");
   if (!p) return `${head}<section class="pad cam-out"><p class="hint">Make a list with lenses first. Its lenses come here, each with its close focus.</p></section>`;
   const seg = (k, v, t, sub) => `<button type="button" data-act="lc-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
