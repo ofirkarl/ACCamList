@@ -202,7 +202,7 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.view === "lenscard" ? lcCur() : app.productions.find(p => p.id === app.pid);
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
 /* the Media Calculator works on one list, or on none (any camera, from every catalog). The choice is kept: the list picked last,
    or at first the production worked on most recently */
@@ -1748,6 +1748,7 @@ function render() {
   else if (app.view === "favs" && cur()) v.innerHTML = viewFavsSolo();
   else if (app.view === "cams" && cur()) v.innerHTML = viewCams();
   else if (app.view === "camprint" && cur()) v.innerHTML = viewCamPrint();
+  else if (app.view === "lenscard") v.innerHTML = viewLensCard();
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
@@ -1755,9 +1756,9 @@ function render() {
   document.body.classList?.toggle("browse-on", app.view === "browse" || app.view === "lensfind" || app.view === "favs");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
-  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "lensfind" || app.view === "favs" || ((app.view === "cams" || app.view === "camprint") && cur() && !cur().browse)) && cur() ? cur().houseId : hp ? hp.dataset.value : "");
+  houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "lensfind" || app.view === "favs" || app.view === "lenscard" || ((app.view === "cams" || app.view === "camprint") && cur() && !cur().browse)) && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
-  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind", "tools", "favs", "cams", "camprint"].includes(app.view));
+  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind", "tools", "favs", "cams", "camprint", "lenscard"].includes(app.view));
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
@@ -3839,9 +3840,108 @@ function viewTools() {
     <section class="pad tools-list">
       ${row("cams", "idcard", "red", "Multicam management", "Each camera's setup, and its card")}
       ${row("lensfind", "lens", "amber", "Find a lens", "By focal length, per rental house")}
+      ${row("lenscard", "file", "orange", "Lens card", "Your list's lenses and close focus, to print")}
       ${row("rules-open", "box", "teal", "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
 }
+/* ---------- Lens card: the list's lenses on one small card to print, each with its stop and close focus.
+   Three layouts to choose from: Compact (a set in two lines: focal lengths over close focus; the card as small as what's on it),
+   One table (a row a lens) and Two columns (sets beside the rest). The PDF is the card's own size, nothing around it */
+const LC_LAYOUTS = { compact: "Compact", one: "One table", two: "2 columns" };
+const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (o.ink !== "bw") o.ink = "color"; return o; };
+function lcListId() { const k = app.settings.lcList; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
+const lcCur = () => findProd(lcListId()) || null;
+/* the list's lenses: sets first, then single lenses and zooms, in the list's order */
+function lcRows(p) {
+  const sets = [], ones = [];
+  for (const [id, l] of Object.entries(p && p.items || {})) {
+    const e = ITEM.get(id), q = lineQty(l); if (!e || !e.it.lens || !q) continue;
+    const sp = lensSpec(e.it, e.s.id); if (!sp) continue;
+    const md = lensMod(e.it, sp), nm = lensShortName(e.it, sp);
+    if (sp.per) sets.push({ name: nm.replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
+      lenses: sp.per.map(x => ({ mm: fmtN(x.f), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
+    else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
+      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || "", cf: md ? md.one || "" : "", macro: md && md.macro || "" }); }
+  }
+  return { sets, ones };
+}
+function lensCardHtml(p, o) {
+  const { sets, ones } = lcRows(p), bw = o.ink === "bw", n = sets.reduce((a, r) => a + r.lenses.length, 0) + ones.length;
+  const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
+  const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`;
+  const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
+  if (o.lay === "compact") {
+    const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, f) => `<tr class="${k}"><td>${k === "mm" ? "MM" : k === "t" ? "T" : "CF"}</td>${r.lenses.map(f).join("")}</tr>`;
+      return `<div class="lcc-s"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount, one ? r.lenses[0].t : ""].filter(Boolean).map(esc).join(" · ")}</span></div>
+        <table>${tr("mm", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", l => `<td>${esc(l.t)}</td>`)}${tr("cf", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
+    const oneB = ones.length ? `${sets.length ? `<div class="lcc-sep"></div>` : ""}<table class="lcc-o">${ones.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table>` : "";
+    return { n, html: `<div class="lcard lcc${bw ? " bw" : ""}">${head}${sets.map(setB).join("")}${oneB}</div>` };
+  }
+  const rows = (list, kind) => list.map(r => kind === "set"
+    ? `<tr class="g"><td colspan="3">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount].filter(Boolean).map(esc).join(" · ")}</span></td></tr>${r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join("")}`
+    : `<tr><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("");
+  const table = (s, w) => s.length || w.length ? `<table class="lc-t"><thead><tr><th>Lens · mm</th><th class="n">Stop</th><th class="n">Close focus</th></tr></thead><tbody>${rows(s, "set")}${rows(w, "one")}</tbody></table>` : "";
+  const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
+  const body = o.lay === "two" && sets.length && ones.length ? `<div class="lc-cols">${table(sets, [])}${table([], ones)}</div>` : table(sets, ones);
+  return { n, html: `<div class="lcard lct${o.lay === "two" ? " two" : ""}${bw ? " bw" : ""}">${head}${body}${foot}</div>` };
+}
+function viewLensCard() {
+  const p = lcCur(), o = lcOpts(), id = lcListId();
+  const opts = mcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}>${esc(x.name || "Untitled production")}</option>`).join("");
+  const head = pageHead("Lens card");
+  if (!p) return `${head}<section class="pad cam-out"><p class="hint">Make a list with lenses first. Its lenses come here, each with its close focus.</p></section>`;
+  const seg = (k, v, t, sub) => `<button type="button" data-act="lc-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
+  const card = lensCardHtml(p, o);
+  setTimeout(lcMeasure, 0); setTimeout(() => lcPdfPrep(p), 400);
+  return `${head}
+    <section class="pad mc-pick"><div class="field"><label for="lc-list">List</label><select id="lc-list" aria-label="Which list">${opts}</select></div></section>
+    <section class="pad cam-out">
+      <div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
+      ${card.n ? `<button type="button" class="lc-prev${app.lcZoom ? " zoom" : ""}" data-act="lc-zoom" aria-label="${app.lcZoom ? "Fit the card to the screen" : "Zoom in on the card"}">${card.html}</button><p class="hint ct-tip">${app.lcZoom ? "Swipe to see it all. Tap to fit it back." : "Tap the card to zoom in."}</p>` : `<p class="hint">No lenses on this list yet.</p>`}
+      <div class="cp-opts"><span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
+      ${card.n ? `<p class="hint cp-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · <span id="lc-size">…</span>. The PDF is the card's own size: print at actual size (100%).</p>` : ""}
+      <div class="co-acts"><button class="btn primary" type="button" data-act="lc-save" ${card.n ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="lc-share" ${card.n ? "" : "disabled"}>Share</button></div>
+    </section>`;
+}
+/* the card's size in mm, under the preview: measured as the PDF draws it, 4 px a mm */
+function lcMeasure() {
+  const out = document.getElementById("lc-size"), p = lcCur(); if (!out || !p) return;
+  const host = document.createElement("div"); host.className = "lc-host"; host.style.cssText = "position:fixed;left:-12000px;top:0;visibility:hidden";
+  host.innerHTML = lensCardHtml(p, lcOpts()).html; document.body.appendChild(host);
+  const c = host.firstElementChild; out.textContent = `${Math.round(c.offsetWidth / 4)} × ${Math.round(c.offsetHeight / 4)} mm`; host.remove();
+}
+const lcPdfKey = p => { const o = lcOpts(); return JSON.stringify([o.lay, o.ink, lensCardHtml(p, o).html]); };
+let lcPdfMade = null;  // { key, blob }
+async function lcPdfPrep(p) { if (app.view !== "lenscard" || !p) return; const key = lcPdfKey(p); if (lcPdfMade && lcPdfMade.key === key) return; try { const blob = await lcPdf(p); if (lcPdfKey(p) === key) lcPdfMade = { key, blob }; } catch (e) {} }
+async function lcPdf(p) {
+  if (!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+  if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+  const host = document.createElement("div"); host.className = "lc-host"; host.style.cssText = "position:fixed;left:-12000px;top:0";
+  host.innerHTML = lensCardHtml(p, lcOpts()).html; document.body.appendChild(host);
+  try {
+    try { await document.fonts.ready; } catch (e) {}
+    const node = host.firstElementChild, W = node.offsetWidth / 4, H = node.offsetHeight / 4;  // drawn at 4 px a mm
+    const cv = await window.html2canvas(node, { scale: 2.5, backgroundColor: "#ffffff" });
+    const pdf = new window.jspdf.jsPDF({ unit: "mm", format: [W, H], orientation: W > H ? "landscape" : "portrait" });
+    pdf.addImage(cv.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, W, H);
+    return pdf.output("blob");
+  } finally { host.remove(); }
+}
+async function lcPdfGo(b, share) {
+  const p = lcCur(); if (!p) return;
+  const key = lcPdfKey(p), was = b.textContent;
+  let blob = lcPdfMade && lcPdfMade.key === key ? lcPdfMade.blob : null;
+  if (!blob) { b.disabled = true; b.textContent = "Making the PDF…"; try { blob = await lcPdf(p); lcPdfMade = { key, blob }; } catch (err) { console.warn(err); toast("The PDF couldn't be made. Check the connection and try again."); b.disabled = false; b.textContent = was; return; } b.disabled = false; b.textContent = was; }
+  const nm = (p.name || "").replace(/[\\/:*?"<>|]+/g, " ").trim(), name = (nm ? `${nm} - Lens card` : "Lens card") + ".pdf";
+  if (share) {
+    const file = typeof File === "function" ? new File([blob], name, { type: "application/pdf" }) : null;
+    let can = false; try { can = !!(file && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+    if (can) { try { await navigator.share({ files: [file], title: name }); buzz("done"); return; } catch (err) { if (err && err.name === "AbortError") return; } }
+    toast("Sharing isn't available here, so the PDF is saved instead.");
+  }
+  if (await saveFile(name, blob)) { buzz("done"); toast("PDF saved. Print it at actual size."); }
+}
+
 /* ---------- Favorites from the start page: one rental house at a time, outside any production ----------
    Stars work as everywhere; a saved list starts a new production of that house */
 function favSolo() { const last = (mcLists()[0] || {}).houseId, hid = houseById(app.settings.favHouse) ? app.settings.favHouse : houseById(last) ? last : HOUSES[0].id; if (!app.favP || app.favP.houseId !== hid) app.favP = { id: "favs", browse: true, name: "", houseId: hid, items: {} }; return app.favP; }
@@ -5289,6 +5389,11 @@ document.addEventListener("click", e => {
       window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     }
     case "cams": closeModal(); app.view = "cams"; app.camCmp = false; render(); window.scrollTo(0, 0); break;
+    case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
+    case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
+    case "lc-zoom": app.lcZoom = !app.lcZoom; rerenderKeepScroll(); break;
+    case "lc-save": lcPdfGo(b, false); break;
+    case "lc-share": lcPdfGo(b, true); break;
     case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
     case "cam-u": { const w = !!b.dataset.v, l = camsOf(p); app.camU = w; app.camK = (l.find(x => !!x.u2 === w) || {}).k || app.camK; app.camCmp = false; rerenderKeepScroll(); break; }
     case "cam-fold": app.camFold = !app.camFold; if (app.camFold) app.camFoldOrder = mcLists().map(x => x.id); rerenderKeepScroll(); break;
@@ -5701,6 +5806,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
+  if (t.id === "lc-list") { app.settings.lcList = t.value; touchSettings(); render(); return; }  // the Lens card's list: kept for next time
   if (t.id === "mc-list") { app.settings.mcList = t.value || "none"; touchSettings(); mcOpen = null; render(); return; }  // the Media Calculator's list: kept for next time
   if (t.form && t.form.id === "catItemForm" && ["c", "s", "g"].includes(t.name)) { catDialogSync(t.name); return; }
   if (t.id === "nh-cat") {
