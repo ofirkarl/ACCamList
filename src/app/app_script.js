@@ -6882,7 +6882,7 @@ body,.app{background:${bg}} .finder{--accent:${P} !important}`;
 /* Settings: the palettes, and Custom */
 function lookPickerHtml() {
   const cur = lookId();
-  return `<div class="set-group"><h3>App colors</h3><div class="look-sw" role="radiogroup" aria-label="App colors">${LOOKS.map(([id, name, p]) => { const [a, b] = lookSw(p);
+  return `<div class="set-group"><h3 class="look-h"><span>App colors</span><button class="btn sm" type="button" data-act="look" data-v="sea"${cur === "sea" ? " disabled" : ""}>Reset</button></h3><div class="look-sw" role="radiogroup" aria-label="App colors">${LOOKS.map(([id, name, p]) => { const [a, b] = lookSw(p);
     return `<button type="button" class="look-dot" role="radio" data-act="look" data-v="${id}" aria-checked="${cur === id}" aria-label="${name}" title="${name}" style="--a:${a};--b:${b}"><span></span></button>`; }).join("")}
     <button type="button" class="look-dot custom" role="radio" data-act="look" data-v="custom" aria-checked="${cur === "custom"}" aria-label="Custom: set your own" title="Custom"><span></span></button></div>
     <span class="hint">Custom opens sliders over the page, so you see the colors as you set them.</span></div>`;
@@ -6904,7 +6904,7 @@ function labHtml() {
     <div class="lab-h">Choices ${seg("cm", [["same", "Same"], ["own", "Own hue"]])}</div>${x.cm === "own" ? r("ch", "Hue", 0, 360, "t-hue") : ""}
     <div class="lab-h">Result block ${seg("hm", [["same", "Same"], ["comp", "Opposite"], ["own", "Own hue"]])}</div>${x.hm === "own" ? r("hh", "Hue", 0, 360, "t-hue") : ""}
     <div class="lab-h">Page</div>${r("pt", "Tint", 0, 100, "t-tint")}${r("bg", "Bars", 0, 100, "t-bars")}${r("fade", "Fade", 0, 100, "t-fade")}
-    <div class="lab-foot"><button type="button" data-labact="reset">Back to the app's own colors</button></div></div>`;
+    <div class="lab-foot"><button type="button" data-labact="reset">Reset to the app's own colors</button></div></div>`;
 }
 function labDraw() {
   if (typeof document === "undefined" || !document.body || !document.body.appendChild) return;
