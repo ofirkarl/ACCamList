@@ -2405,6 +2405,25 @@ body { overflow-x: clip; }
 .mc-tile.info { box-shadow: none; background: none; }
 .nsel-btn { box-shadow: 0 1px 2px rgba(24,23,29,.06), 0 6px 14px -10px rgba(24,23,29,.3); }
 .nsel-btn::after { content: ""; flex: none; width: 16px; height: 16px; background: var(--accent); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272.6%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272.6%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E") center/contain no-repeat; }
+/* the tools' icons: the colors of the bars line, one tone (the same palette as the test pattern, never a color of its own) */
+:root { --pal-bar-yellow: #b9a700; --pal-bar-cyan: #0aa5a5; --pal-bar-green: #0f9d4a; --pal-bar-magenta: #b62fb6; --pal-bar-red: #c4202a; --pal-bar-blue: #2b3fd6; }
+:root[data-theme="dark"] { --pal-bar-yellow: #d6c62a; --pal-bar-cyan: #35cfcf; --pal-bar-green: #3fce78; --pal-bar-magenta: #dc6adc; --pal-bar-red: #ee5a62; --pal-bar-blue: #7385ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pal-bar-yellow: #d6c62a; --pal-bar-cyan: #35cfcf; --pal-bar-green: #3fce78; --pal-bar-magenta: #dc6adc; --pal-bar-red: #ee5a62; --pal-bar-blue: #7385ff; } }
+/* a tool's name is always in capitals, in the display face */
+.hs-btn .hs-t, .tool-row .tl-t b { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
+.hs-btn .hs-t { font-size: 10.5px; }
+.tool-row .tl-t b { font-size: 15px; }
+/* Media Calculator in the app's colors, by role: what you choose is a tile in the selection color (as in Find a lens), its label in
+   small capitals; what is only reported is bare; the answer is the one strong block, in the action color */
+.mc-tile .t-l, .mc-res .t-l, .mc-pick .field > label, .mc-head > span { font-size: 10.5px; line-height: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.mc-tile.tap, .mc-card { background: var(--sf-tint); border-color: var(--sf-line); }
+.mc-tile.tap .t-l, .mc-card > .mc-tile .t-l { color: var(--sf-ink); }
+.mc-tile.tap::after, .mc-card > .mc-tile::after { background: var(--sf); }
+.mc-tile.tap.on, .mc-card.on { background: var(--sf-on); box-shadow: inset 0 0 0 1.5px var(--sf); }
+.mc-tile.on .t-v, .mc-card.on > .mc-tile .t-v, .mc-tile.on .t-x, .mc-card.on .t-x { color: var(--sf-ink); }
+.mc-res { padding: 14px 16px; background: var(--accent); box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--accent) 80%, transparent); }
+.mc-res .t-l { color: color-mix(in srgb, var(--accent-fg) 78%, transparent); }
+.mc-res b { color: var(--accent-fg); }
 </style>
 
 <div class="app">
@@ -4327,7 +4346,7 @@ function viewMcalc() {
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
 const homeShortcuts = () => { const s = (act, icon, col, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, col, "hs-i")}<span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", "card", "sky", "Media calc")}${s("catalogs", "book", "indigo", "Catalogs")}${s("favs", "star", "amber", "Favorites")}${s("tools", "grid", "violet", "More tools")}</div>`; };
+  return `<div class="home-shorts">${s("mcalc", "card", "bar-cyan", "Media calc")}${s("catalogs", "book", "bar-blue", "Catalogs")}${s("favs", "star", "bar-yellow", "Favorites")}${s("tools", "grid", "bar-magenta", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -6324,10 +6343,10 @@ function viewTools() {
   const row = (act, icon, col, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, col, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
   return `${pageHead("More tools")}
     <section class="pad tools-list">
-      ${row("cams", "idcard", "red", "Multicam management", "Each camera's setup, and its card")}
-      ${row("lensfind", "lens", "amber", "Find a lens", "By focal length, per rental house")}
-      ${row("lenscard", "file", "orange", "Lens Cards", "Your list's lenses and close focus, to print")}
-      ${row("rules-open", "box", "teal", "Packages", "Items that come in together", ` data-to="pkg"`)}
+      ${row("cams", "idcard", "bar-red", "Multicam management", "Each camera's setup, and its card")}
+      ${row("lensfind", "lens", "bar-green", "Find a lens", "By focal length, per rental house")}
+      ${row("lenscard", "file", "bar-yellow", "Lens Cards", "Your list's lenses and close focus, to print")}
+      ${row("rules-open", "box", "bar-cyan", "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
 }
 /* ---------- Lens Cards: the list's lenses on one small card to print, each with its stop and close focus.

@@ -1905,7 +1905,7 @@ function viewMcalc() {
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
 const homeShortcuts = () => { const s = (act, icon, col, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, col, "hs-i")}<span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", "card", "sky", "Media calc")}${s("catalogs", "book", "indigo", "Catalogs")}${s("favs", "star", "amber", "Favorites")}${s("tools", "grid", "violet", "More tools")}</div>`; };
+  return `<div class="home-shorts">${s("mcalc", "card", "bar-cyan", "Media calc")}${s("catalogs", "book", "bar-blue", "Catalogs")}${s("favs", "star", "bar-yellow", "Favorites")}${s("tools", "grid", "bar-magenta", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -3902,10 +3902,10 @@ function viewTools() {
   const row = (act, icon, col, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, col, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
   return `${pageHead("More tools")}
     <section class="pad tools-list">
-      ${row("cams", "idcard", "red", "Multicam management", "Each camera's setup, and its card")}
-      ${row("lensfind", "lens", "amber", "Find a lens", "By focal length, per rental house")}
-      ${row("lenscard", "file", "orange", "Lens Cards", "Your list's lenses and close focus, to print")}
-      ${row("rules-open", "box", "teal", "Packages", "Items that come in together", ` data-to="pkg"`)}
+      ${row("cams", "idcard", "bar-red", "Multicam management", "Each camera's setup, and its card")}
+      ${row("lensfind", "lens", "bar-green", "Find a lens", "By focal length, per rental house")}
+      ${row("lenscard", "file", "bar-yellow", "Lens Cards", "Your list's lenses and close focus, to print")}
+      ${row("rules-open", "box", "bar-cyan", "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
 }
 /* ---------- Lens Cards: the list's lenses on one small card to print, each with its stop and close focus.
