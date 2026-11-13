@@ -5037,7 +5037,7 @@ function exportRows(id, l) {
   const kids = (l.children || []).map(c => `${c.qty}x ${c.name}`);
   const base = { extra, kids, sku: l.sku || (e && e.it.sku) || "", l };
   // whole sets: just the sets. A set broken up: how many of each, on one line ("2x TX · 3x RX")
-  if (l.tx !== undefined) return [{ ...base, kids: [wlBal(l) ? "" : [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · "), ...kids].filter(Boolean), qty: lineQty(l), name: l.name }];
+  if (l.tx !== undefined) return [{ ...base, kids: [wlBal(l) ? "" : [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · "), ...kids].filter(Boolean), qty: wlBal(l) ? lineQty(l) : "", name: l.name }];   // a broken set has no count of sets: its TX and RX say it
   return [{ ...base, qty: l.qty, name: l.name }];
 }
 function listText(p, o = {}) {
@@ -5047,7 +5047,7 @@ function listText(p, o = {}) {
     if (!by[s.id].length) continue;
     out.push(secName(s.id).toUpperCase());
     for (const [id, l] of by[s.id]) for (const r of exportRows(id, l)) {
-      out.push(`${r.qty}x ${r.name}${skuOn() && r.sku ? ` [${r.sku}]` : ""}${r.extra.length ? ` (${r.extra.join("; ")})` : ""}`);
+      out.push(`${r.qty === "" ? "" : r.qty + "x "}${r.name}${skuOn() && r.sku ? ` [${r.sku}]` : ""}${r.extra.length ? ` (${r.extra.join("; ")})` : ""}`);
       for (const k of r.kids) out.push(`   - ${k}`);
     }
     out.push("");
@@ -5123,7 +5123,7 @@ function exportHtmlClean(p, o = {}) {
   for (const s of allSections()) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
     if (!rows.length) continue;
-    body += `<div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty} x</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("");
+    body += `<div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty === "" ? "" : r.qty + " x"}</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("");
   }
   const info = infoRows(p), cols = crewCols(p);
   const line = r => `<div class="cl-i"><b>${esc(r.k)}:</b> <bdi>${esc(r.v)}</bdi></div>`;
@@ -5168,7 +5168,7 @@ function docxXmlClean(p) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
     if (!rows.length) continue;
     body += para(wRun(secName(s.id), { b: true, sz: 20 }), { bdr: true, keep: true, before: 200, after: 30 });
-    body += table(sku ? [Q, N, S] : [Q, N], rows.map(r => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty + " x", { b: true, sz: 19 })))}${cell(N, para(wRun(r.name, { b: true, sz: 19 })) + r.kids.map(t => para(wRun(t, { sz: 17 }))).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 17 }))).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`));
+    body += table(sku ? [Q, N, S] : [Q, N], rows.map(r => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: 19 })))}${cell(N, para(wRun(r.name, { b: true, sz: 19 })) + r.kids.map(t => para(wRun(t, { sz: 17 }))).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 17 }))).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`));
   }
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1250" w:right="1134" w:bottom="1134" w:left="1134" w:header="560" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 }

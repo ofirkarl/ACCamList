@@ -126,7 +126,7 @@ ok((tree.match(/class="item/g) || []).length > 20, "search '35mm' also finds set
 // --- exports
 const txt = A.listText(p);
 console.log("\n" + txt);
-ok(/2x .*Bolt 6 LT 750[^\n]*\n   - 2x TX · 3x RX\n/.test(txt) && !/\(TX\)|\(RX\)/.test(txt), "a broken set (2 TX, 3 RX) exported as its 2 whole sets, with TX and RX on one line under it");
+ok(/\n(Teradek|[^\n\d]*Bolt) 6 LT 750[^\n]*\n   - 2x TX · 3x RX\n/.test(txt) && !/\dx [^\n]*Bolt 6 LT 750/.test(txt) && !/\(TX\)|\(RX\)/.test(txt), "a broken set (2 TX, 3 RX) exported with no count of sets, its TX and RX on one line under it");
 { const w = A.newProduction({ houseId: "utopia", name: "W" }); A.setQty(w, bolt, 2); ok(!/- \d+x [TR]X/.test(A.listText(w)), "whole sets exported as just the sets, no TX or RX under them"); }
 ok(/- 1x USB Hub/.test(txt), "sub-items exported");
 fs.writeFileSync(DOC, A.docxXml(p));
