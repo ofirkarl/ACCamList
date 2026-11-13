@@ -7687,7 +7687,8 @@ function exportRows(id, l) {
   if (e && e.it.lens && e.it.lens.set && e.it.lens.focals) extra.push(e.it.lens.focals);
   const kids = (l.children || []).map(c => `${c.qty}x ${c.name}`);
   const base = { extra, kids, sku: l.sku || (e && e.it.sku) || "", l };
-  if (l.tx !== undefined) return [{ ...base, kids: [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : "", ...kids].filter(Boolean), qty: lineQty(l), name: l.name }];
+  // whole sets: just the sets. A set broken up: how many of each, on one line ("2x TX · 3x RX")
+  if (l.tx !== undefined) return [{ ...base, kids: [wlBal(l) ? "" : [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · "), ...kids].filter(Boolean), qty: lineQty(l), name: l.name }];
   return [{ ...base, qty: l.qty, name: l.name }];
 }
 function listText(p, o = {}) {
