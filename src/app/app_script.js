@@ -1744,6 +1744,7 @@ function applyTheme() {
   const root = document.documentElement; if (!root || !root.setAttribute) return;
   const want = theme.pref === "auto" ? theme.host : theme.pref;
   if (want) { if (root.getAttribute("data-theme") !== want) root.setAttribute("data-theme", want); } else root.removeAttribute("data-theme");
+  if (typeof lookApply === "function") try { lookApply(); } catch (e) {}
   const b = document.getElementById("themeBtn");
   if (b) { b.innerHTML = THEME_ICONS[theme.pref]; b.setAttribute("aria-label", "Theme: " + THEME_NAMES[theme.pref] + ". Tap to change."); b.title = "Theme: " + THEME_NAMES[theme.pref]; }
   const tt = document.getElementById("toolTheme"); if (tt) { tt.querySelector(".tr-i").innerHTML = THEME_ICONS[theme.pref]; tt.querySelector("small").textContent = THEME_NAMES[theme.pref] + " · tap to change"; }
@@ -1817,7 +1818,8 @@ function render() {
   if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
   uiSave(); navSync();
-  document.querySelectorAll(".tx-pop:not(#txPop)").forEach(el => el.remove());   // a drawer still sliding shut doesn't linger over a page drawn anew
+  document.querySelectorAll(".tx-pop:not(#txPop)").forEach(el => el.remove());
+  lookApply();   // the user's colors (they may just have come from the account)   // a drawer still sliding shut doesn't linger over a page drawn anew
   txSync();   // a wireless set's open drawer follows its counter, or goes with it
 }
 
@@ -2241,6 +2243,7 @@ function viewSettings() {
         <div class="field"><label for="me-name">Your name (1st AC)</label><input data-sug="ac" id="me-name" name="name" maxlength="80" value="${esc(me.name || "")}"></div>
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
+    ${lookPickerHtml()}
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       const maker = !window.AC_STATS || app.isAdmin;   // the catalog file is the maker's tool; a user keeps only their removed items
       return maker ? `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
@@ -6048,7 +6051,8 @@ document.addEventListener("click", e => {
       wrap.innerHTML = pickerHtml(k);
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
       break; }
-    case "lab-open": labShow(true); break;
+    case "lab-open": labShow(); break;
+    case "look": lookPick(b.dataset.v); break;
     case "copy-uid": { const t = window.AC_STATS ? window.AC_STATS.uid : ""; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Account ID copied"), () => toast(t)); break; }
     case "ids-show": { const t = Date.now(); app.idTaps = (app.idTaps || []).filter(x => t - x < 2500).concat(t); if (app.idTaps.length >= 5) { app.idTaps = []; app.showIds = !app.showIds; rerenderKeepScroll(); } break; }
     case "admin-check": app.adminSay = "Checking…"; rerenderKeepScroll(); adminCheck(true); break;
@@ -6834,12 +6838,14 @@ function sendAppBack(draw) {
 if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => sendAppBack(true));
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") uiSave(); });
 
-/* ---------- Color lab: sliders that recolor the real pages live, to settle the app's palette. What it shows is a short code to
-   send back; nothing here changes the lists. Kept on this device only. ---------- */
-const LAB_KEY = "acColorLab2", LAB_DEF = { on: false, open: false, h: 198, s: 52, l: 38, cm: "same", ch: 200, hm: "same", hh: 30, pt: 0, bg: 45 };
-let lab = { ...LAB_DEF };
-try { Object.assign(lab, JSON.parse(localStorage.getItem(LAB_KEY) || "{}")); } catch (e) {}
-const labSave = () => { try { localStorage.setItem(LAB_KEY, JSON.stringify(lab)); } catch (e) {} };
+/* ---------- App colors. Every user picks the app's colors in Settings: one of the ready palettes (each a color and its opposite), or
+   their own (Custom) in a small panel at the bottom of the screen whose sliders recolor the real pages as they move. The choice is
+   kept with the user's settings (on every phone signed in to the account). The maker opens the same panel from the Control room,
+   with a short code to copy. Sea is the app's own palette: choosing it removes every override. ---------- */
+const LOOK_DEF = { h: 198, s: 52, l: 39, cm: "same", ch: 200, hm: "comp", hh: 18, pt: 0, bg: 22, fade: 96 };
+const LOOKS = [["sea", "Sea", { h: 198, l: 39 }], ["blue", "Blue", { h: 220, l: 42 }], ["indigo", "Indigo", { h: 245, l: 42 }], ["violet", "Violet", { h: 270, l: 42 }],
+  ["rose", "Rose", { h: 335, l: 42 }], ["clay", "Clay", { h: 18, l: 42 }], ["green", "Green", { h: 140, l: 33 }], ["teal", "Teal", { h: 175, l: 32 }]];
+let lookUi = { open: false, min: false }, look = null;   // the panel; the colors being tried in it (custom), before they are kept
 const labHsl = (h, s, l) => `hsl(${Math.round(((h % 360) + 360) % 360)} ${Math.round(s)}% ${Math.round(l)}%)`;
 /* black or white on a color, whichever reads better (relative luminance of the hsl color) */
 function labFg(h, s, l) {
@@ -6847,45 +6853,80 @@ function labFg(h, s, l) {
   const lin = v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4), L = .2126 * lin(f(0)) + .7152 * lin(f(8)) + .0722 * lin(f(4));
   return 1.05 / (L + .05) >= 3.2 ? "#fff" : "#18171d";
 }
-const labCode = () => `B${lab.h}-${lab.s}-${lab.l} C${lab.cm === "same" ? "=" : lab.ch} H${lab.hm === "same" ? "=" : lab.hm === "comp" ? "~" : lab.hh} P${lab.pt} G${lab.bg}`;
-function labApply() {
-  let st = document.getElementById("lab-style");
-  if (!lab.on) { if (st) st.remove(); return; }
-  if (!st) { st = document.createElement("style"); st.id = "lab-style"; document.head.appendChild(st); }
-  const P = labHsl(lab.h, lab.s, lab.l), ch = lab.cm === "same" ? lab.h : lab.ch, C = labHsl(ch, lab.s, lab.l), Ci = labHsl(ch, lab.s, Math.max(18, Math.min(lab.l, 46) - 10));
-  const hh = lab.hm === "same" ? lab.h : lab.hm === "comp" ? lab.h + 180 : lab.hh, hl = lab.hm === "same" ? lab.l : Math.max(lab.l, 58), H = labHsl(hh, lab.s, hl), Hf = labFg(hh, lab.s, hl);
-  const dk = document.documentElement.dataset.theme === "dark" || (document.documentElement.dataset.theme !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
-  const bg = dk ? `color-mix(in srgb, ${labHsl(lab.h, lab.s, 30)} ${lab.pt}%, #0f0f14)` : `color-mix(in srgb, ${labHsl(lab.h, lab.s, 88)} ${lab.pt}%, #f8f7f4)`;
-  const I = " !important";  // over the rental house's color and the dark theme's, which are set on the same element
-  st.textContent = `:root{--accent:${P}${I};--accent-fg:${labFg(lab.h, lab.s, lab.l)}${I};--accent-soft:color-mix(in srgb,${P} 10%,var(--surface))${I};--bg:${bg}${I};--bars-bg:${(lab.bg / 100 * .3).toFixed(3)}${I};--sf:${C}${I};--sf-ink:${dk ? labHsl(ch, lab.s, 78) : Ci}${I};--sf-tint:color-mix(in srgb,${C} 9%,var(--surface))${I};--sf-line:color-mix(in srgb,${C} 28%,var(--line))${I};--sf-on:color-mix(in srgb,${C} 17%,var(--surface))${I};}
-body,.app{background:${bg}} .finder{--accent:${P} !important}
-.mc-res{background:${H};box-shadow:0 8px 18px -10px ${H}} .mc-res b{color:${Hf}} .mc-res .t-l{color:${Hf};opacity:.8}`;
+/* the colors in force: those being tried in the panel, else the user's choice, else none (the app's own) */
+function lookParams() {
+  if (look) return look;
+  const c = app.settings.look; if (!c || !c.id || c.id === "sea") return null;
+  if (c.id === "custom") return { ...LOOK_DEF, ...c };
+  const pr = LOOKS.find(x => x[0] === c.id); return pr ? { ...LOOK_DEF, ...pr[2] } : null;
 }
+const lookId = () => look ? "custom" : (app.settings.look && app.settings.look.id) || "sea";
+const labCode = () => { const x = lookParams() || LOOK_DEF; return `B${x.h}-${x.s}-${x.l} C${x.cm === "same" ? "=" : x.ch} H${x.hm === "same" ? "=" : x.hm === "comp" ? "~" : x.hh} P${x.pt} G${x.bg} F${x.fade}`; };
+const lookDark = () => document.documentElement.dataset.theme === "dark" || (document.documentElement.dataset.theme !== "light" && !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches));
+/* a palette's two colors, as its swatch shows them */
+const lookSw = p => { const x = { ...LOOK_DEF, ...p }; return [labHsl(x.h, x.s, x.l), labHsl(x.h + 180, Math.min(x.s + 10, 100), 60)]; };
+function lookApply() {
+  if (typeof document === "undefined" || !document.head || !document.createElement) return;
+  let st = document.getElementById("look-style"); const x = lookParams();
+  if (!x) { if (st) st.remove(); return; }
+  if (!st) { st = document.createElement("style"); st.id = "look-style"; document.head.appendChild(st); }
+  const dk = lookDark(), I = " !important";  // over the rental house's color and the dark theme's, set on the same element
+  const l = dk ? Math.max(x.l, 64) : x.l, P = labHsl(x.h, x.s, l), ch = x.cm === "same" ? x.h : x.ch, C = labHsl(ch, x.s, l);
+  const Ci = dk ? labHsl(ch, x.s, 80) : labHsl(ch, x.s, Math.max(16, Math.min(x.l, 46) - 12));
+  const hh = x.hm === "same" ? x.h : x.hm === "comp" ? x.h + 180 : x.hh, hs = x.hm === "same" ? x.s : Math.min(x.s + 10, 100), hl = x.hm === "same" ? l : Math.max(l, 60), H = labHsl(hh, hs, hl), Hf = labFg(hh, hs, hl);
+  const t = x.pt, bg = dk ? `color-mix(in srgb, ${labHsl(x.h, Math.min(x.s, 60), 24)} ${t}%, #0f0f14)` : `color-mix(in srgb, ${labHsl(x.h, Math.min(x.s, 70), 82)} ${t}%, #f8f7f4)`;
+  const css = `:root{--accent:${P}${I};--accent-fg:${labFg(x.h, x.s, l)}${I};--accent-soft:color-mix(in srgb,${P} 10%,var(--surface))${I};--bg:${bg}${I};--bars-bg:${(x.bg / 100 * .6).toFixed(3)}${I};--bars-mid:${(1 - x.fade / 100).toFixed(2)}${I};--sf:${C}${I};--sf-ink:${Ci}${I};--sf-tint:color-mix(in srgb,${C} 9%,var(--surface))${I};--sf-line:color-mix(in srgb,${C} 28%,var(--line))${I};--sf-on:color-mix(in srgb,${C} 17%,var(--surface))${I};--comp:${H}${I};--comp-fg:${Hf}${I};}
+body,.app{background:${bg}} .finder{--accent:${P} !important}`;
+  if (st.textContent !== css) st.textContent = css;
+}
+/* Settings: the palettes, and Custom */
+function lookPickerHtml() {
+  const cur = lookId();
+  return `<div class="set-group"><h3>App colors</h3><div class="look-sw" role="radiogroup" aria-label="App colors">${LOOKS.map(([id, name, p]) => { const [a, b] = lookSw(p);
+    return `<button type="button" class="look-dot" role="radio" data-act="look" data-v="${id}" aria-checked="${cur === id}" aria-label="${name}" title="${name}" style="--a:${a};--b:${b}"><span></span></button>`; }).join("")}
+    <button type="button" class="look-dot custom" role="radio" data-act="look" data-v="custom" aria-checked="${cur === "custom"}" aria-label="Custom: set your own" title="Custom"><span></span></button></div>
+    <span class="hint">Custom opens sliders over the page, so you see the colors as you set them.</span></div>`;
+}
+function lookPick(v) {
+  if (v === "custom") { look = { ...(lookParams() || LOOK_DEF), id: "custom" }; lookUi = { open: true, min: false }; }
+  else { look = null; lookUi.open = false; app.settings.look = v === "sea" ? null : { id: v }; touchSettings(); }
+  lookApply(); labDraw(); if (app.view === "settings") rerenderKeepScroll();
+}
+function lookKeep() { if (!look) return; app.settings.look = { ...look, id: "custom" }; touchSettings(); }
+/* the panel */
 function labHtml() {
-  const r = (k, label, min, max, hue) => `<label class="lab-r"><span>${label}</span><input type="range" min="${min}" max="${max}" value="${lab[k]}" data-lab="${k}"${hue ? ' class="hue"' : ""}><b id="lab-${k}">${lab[k]}</b></label>`;
-  const seg = (k, opts) => `<span class="lab-seg">${opts.map(([v, t]) => `<button type="button" data-labset="${k}" data-v="${v}" aria-pressed="${lab[k] === v}">${t}</button>`).join("")}</span>`;
-  if (!lab.open) return `<button type="button" class="lab-pill" data-labact="open" aria-label="Open the color lab">Colors</button>`;
-  return `<div class="lab-card"><div class="lab-top"><b>Color lab</b><span class="lab-code" id="lab-code">${labCode()}</span><button type="button" data-labact="copy">Copy</button><button type="button" data-labact="min" aria-label="Minimize">▾</button><button type="button" data-labact="off" aria-label="Close and restore the app's colors">✕</button></div>
-    <div class="lab-h">Buttons</div>${r("h", "Hue", 0, 360, 1)}${r("s", "Color", 10, 100)}${r("l", "Light", 20, 80)}
-    <div class="lab-h">Choices ${seg("cm", [["same", "Same"], ["own", "Own hue"]])}</div>${lab.cm === "own" ? r("ch", "Hue", 0, 360, 1) : ""}
-    <div class="lab-h">Result block ${seg("hm", [["same", "Same"], ["comp", "Opposite"], ["own", "Own hue"]])}</div>${lab.hm === "own" ? r("hh", "Hue", 0, 360, 1) : ""}
-    <div class="lab-h">Page</div>${r("pt", "Tint", 0, 60)}${r("bg", "Bars", 0, 100)}</div>`;
+  const x = look || { ...LOOK_DEF };
+  const r = (k, label, min, max, cls) => `<label class="lab-r"><span>${label}</span><input type="range" min="${min}" max="${max}" value="${x[k]}" data-lab="${k}" class="${cls || ""}"><b id="lab-${k}">${x[k]}</b></label>`;
+  const seg = (k, opts) => `<span class="lab-seg">${opts.map(([v, t]) => `<button type="button" data-labset="${k}" data-v="${v}" aria-pressed="${x[k] === v}">${t}</button>`).join("")}</span>`;
+  if (lookUi.min) return `<button type="button" class="lab-pill" data-labact="open" aria-label="Open the colors panel">Colors</button>`;
+  return `<div class="lab-card" style="--h:${x.h};--s:${x.s}%;--l:${x.l}%;--ch:${x.ch};--hh:${x.hh}"><div class="lab-top"><b>Custom colors</b>${app.isAdmin ? `<span class="lab-code" id="lab-code">${labCode()}</span><button type="button" data-labact="copy">Copy</button>` : `<span class="grow"></span>`}<button type="button" data-labact="min" aria-label="Minimize">▾</button><button type="button" class="lab-done" data-labact="done">Done</button></div>
+    <div class="lab-h">Buttons</div>${r("h", "Hue", 0, 360, "t-hue")}${r("s", "Color", 10, 100, "t-sat")}${r("l", "Light", 20, 70, "t-lig")}
+    <div class="lab-h">Choices ${seg("cm", [["same", "Same"], ["own", "Own hue"]])}</div>${x.cm === "own" ? r("ch", "Hue", 0, 360, "t-hue") : ""}
+    <div class="lab-h">Result block ${seg("hm", [["same", "Same"], ["comp", "Opposite"], ["own", "Own hue"]])}</div>${x.hm === "own" ? r("hh", "Hue", 0, 360, "t-hue") : ""}
+    <div class="lab-h">Page</div>${r("pt", "Tint", 0, 100, "t-tint")}${r("bg", "Bars", 0, 100, "t-bars")}${r("fade", "Fade", 0, 100, "t-fade")}
+    <div class="lab-foot"><button type="button" data-labact="reset">Back to the app's own colors</button></div></div>`;
 }
 function labDraw() {
+  if (typeof document === "undefined" || !document.body || !document.body.appendChild) return;
   let el = document.getElementById("lab");
-  if (!lab.on) { if (el) el.remove(); return; }
+  if (!lookUi.open) { if (el) el.remove(); return; }
   if (!el) { el = document.createElement("div"); el.id = "lab"; document.body.appendChild(el);
-    el.addEventListener("input", e => { const k = e.target.dataset.lab; if (!k) return; lab[k] = +e.target.value; const o = document.getElementById("lab-" + k); if (o) o.textContent = lab[k]; const c = document.getElementById("lab-code"); if (c) c.textContent = labCode(); labApply(); labSave(); });
-    el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return;
-      if (b.dataset.labset) { lab[b.dataset.labset] = b.dataset.v; }
-      else if (b.dataset.labact === "open") lab.open = true; else if (b.dataset.labact === "min") lab.open = false; else if (b.dataset.labact === "off") lab.on = false;
-      else if (b.dataset.labact === "copy") { const t = labCode(); (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Copied: " + t), () => toast(t)); return; }
-      labSave(); labApply(); labDraw(); });
+    el.addEventListener("input", e => { const k = e.target.dataset.lab; if (!k || !look) return; look[k] = +e.target.value; const o = document.getElementById("lab-" + k); if (o) o.textContent = look[k];
+      const card = el.querySelector(".lab-card"); if (card) { card.style.setProperty("--h", look.h); card.style.setProperty("--s", look.s + "%"); card.style.setProperty("--l", look.l + "%"); }
+      const c = document.getElementById("lab-code"); if (c) c.textContent = labCode(); lookApply(); });
+    el.addEventListener("change", e => { if (e.target.dataset.lab) lookKeep(); });
+    el.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const a = b.dataset.labact;
+      if (b.dataset.labset && look) { look[b.dataset.labset] = b.dataset.v; lookKeep(); }
+      else if (a === "open") lookUi.min = false; else if (a === "min") lookUi.min = true;
+      else if (a === "done") { lookKeep(); look = null; lookUi.open = false; if (app.view === "settings") rerenderKeepScroll(); }
+      else if (a === "reset") { look = null; lookUi.open = false; app.settings.look = null; touchSettings(); if (app.view === "settings") rerenderKeepScroll(); }
+      else if (a === "copy") { const t = labCode(); (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Copied: " + t), () => toast(t)); return; }
+      lookApply(); labDraw(); });
   }
   el.innerHTML = labHtml();
 }
-function labShow(on) { lab.on = on; lab.open = on; labSave(); labApply(); labDraw(); }
-function labInit() { if (typeof document === "undefined" || !document.body || !document.body.appendChild) return; try { labApply(); labDraw(); } catch (e) {} }
+function labShow() { lookPick("custom"); }
+function labInit() { if (typeof document === "undefined" || !document.body || !document.body.appendChild) return; try { lookApply(); if (window.matchMedia) matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", lookApply); } catch (e) {} }
 
 /* ---------- how much the app is used, for its maker (the installed app only; nothing of the lists themselves).
    Each phone keeps its own counts (minutes with the app in front and in use, exports, shares of the app, lists made, days used)
