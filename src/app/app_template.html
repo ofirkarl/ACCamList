@@ -2115,16 +2115,21 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lcc table { border-collapse: collapse; font-family: var(--font-mono); width: auto; align-self: flex-start; }  /* each table its own width: no stretched columns */
 .lcc td, .lcc th { padding: calc(var(--u) * .45) calc(var(--u) * 1.5); white-space: nowrap; font-size: calc(var(--u) * 2.7); line-height: 1.25; }
 .lcc-m td { text-align: center; }
-.lcc-m th { padding-left: 0; text-align: left; font-family: var(--font-body); font-size: calc(var(--u) * 2.1); font-weight: 700; letter-spacing: .06em; color: #8a8694; }
+.lcc-m th, .lcc-o th { padding-left: 0; text-align: left; font-family: var(--font-body); font-size: calc(var(--u) * 2.1); font-weight: 700; letter-spacing: .06em; color: #8a8694; }
 .lcc-m td:nth-child(even) { background: var(--lc-z); }
 .lcc-m tr.mm td { font-weight: 700; }
 .lcc-m tr.cf td { color: var(--lc-a); font-weight: 700; }
-.lcc-o tr:nth-child(odd) td { background: var(--lc-z); }
-.lcc-o td:first-child { text-align: left; font-family: var(--font-body); font-weight: 600; padding-right: calc(var(--u) * 3); }
-.lcc-o td { text-align: right; }
-.lcc-o .lcc-mm { font-family: var(--font-mono); }
+/* the single lenses: the same labels as the sets over their columns (Lens, MM, T, CF), a row a lens, every other one tinted */
+.lcc-o th { padding-bottom: calc(var(--u) * .2); text-transform: uppercase; }
+.lcc-o th.n { text-align: right; padding-left: calc(var(--u) * 1.5); }
+.lcc-o th:first-child { padding-left: calc(var(--u) * 1.5); }
+.lcc-o tbody tr:nth-child(odd) td { background: var(--lc-z); }
+.lcc-o td.nm { text-align: left; font-family: var(--font-body); font-weight: 600; padding-right: calc(var(--u) * 3); }
+.lcc-o td.n { text-align: right; padding-left: calc(var(--u) * 2.4); }
+.lcc-o td.mm { font-weight: 700; }
 .lcc-o td.cf { color: var(--lc-a); font-weight: 700; }
-.lcc-o td.mac { color: #6b6875; font-family: var(--font-body); font-size: calc(var(--u) * 2.2); text-align: left; padding-left: 0; }
+.lcc-o th.mac { padding-left: calc(var(--u) * 1.5); }
+.lcc-o td.mac { color: #6b6875; font-size: calc(var(--u) * 2.4); text-align: left; }
 /* One table: each set, and the single lenses, a block: its name, the column names, a row a lens (every other one tinted) */
 .lct { display: inline-flex; flex-direction: column; min-width: calc(var(--u) * 60); padding: calc(var(--u) * 3.6) calc(var(--u) * 4.4) calc(var(--u) * 3.2); gap: calc(var(--u) * 2); }
 .lct .lc-head b { font-size: calc(var(--u) * 4); } .lct .lc-head span { font-size: calc(var(--u) * 2.8); }
@@ -2139,6 +2144,7 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lc-t th.n, .lc-t td.n { text-align: right; padding-left: calc(var(--u) * 4); }
 .lc-t tr.in:nth-child(odd) td { background: var(--lc-z); }
 .lc-t td.n { font-family: var(--font-mono); font-size: calc(var(--u) * 3.1); }
+.lc-t td.nm { font-weight: 600; }
 .lc-t td.cf { font-weight: 700; color: var(--lc-a); }
 .lc-t .lc-mm { font-family: var(--font-mono); font-weight: 700; }
 .lc-t td small { display: block; font-size: calc(var(--u) * 2.3); color: #6b6875; font-weight: 400; }
@@ -2149,12 +2155,11 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 .lc-bold .lc-head { background: var(--lc-l); border: 0; border-radius: calc(var(--u) * .8); padding: calc(var(--u) * 1.4) calc(var(--u) * 2.4); }
 .lc-bold .lc-head b, .lc-bold .lc-head span { color: #fff; }
 .lc-bold .lcc-n { background: var(--lc-z); border-radius: calc(var(--u) * .6); padding: calc(var(--u) * .6) calc(var(--u) * 1.5); }
-.lc-bold .lcc-m td:nth-child(even), .lc-bold .lcc-o tr:nth-child(odd) td, .lc-bold .lc-t tr.in:nth-child(odd) td { background: #f3f2ef; }
+.lc-bold .lcc-m td:nth-child(even), .lc-bold .lcc-o tbody tr:nth-child(odd) td, .lc-bold .lc-t tr.in:nth-child(odd) td { background: #f3f2ef; }
 .lc-bold .lc-t tr.g td { border-bottom-width: calc(var(--u) * .7); }
 /* Grid: every lens in a box of thin lines; no tint (clear in black and white) */
-.lc-grid .lcc-m td, .lc-grid .lcc-m th, .lc-grid .lcc-o td, .lc-grid .lc-t tr.in td, .lc-grid .lc-t tr.h th { background: none !important; border: calc(var(--u) * .25) solid #b9b3a8; }
-.lc-grid .lcc-m th, .lc-grid .lc-t tr.h th { background: #f4f3f0 !important; }
-.lc-grid .lcc-o td.mac { border: 0; }
+.lc-grid .lcc-m td, .lc-grid .lcc-m th, .lc-grid .lcc-o td, .lc-grid .lcc-o th, .lc-grid .lc-t tr.in td, .lc-grid .lc-t tr.h th { background: none !important; border: calc(var(--u) * .25) solid #b9b3a8; }
+.lc-grid .lcc-m th, .lc-grid .lcc-o th, .lc-grid .lc-t tr.h th { background: #f4f3f0 !important; }
 .lc-grid .lcc-m th { padding-left: calc(var(--u) * 1.2); }
 .lc-grid .lcc-g + .lcc-g { border-top: 0; padding-top: calc(var(--u) * .8); }
 .lc-grid .lcc-g + .lcc-ones { border-top: calc(var(--u) * .5) solid #18171d; padding-top: calc(var(--u) * 1.6); }
@@ -5026,7 +5031,8 @@ const LENS_MOD = [
   ["nisi-aureus", /^nisi aureus/i, {"18": "10\"", "24": "1'1\"", "35": "1'2\"", "50": "1'10\"", "85": "2'11\""}],
   ["dzofilm-linglung", /^dzofilm (10-24|20-70)mm t2\.9 mft/i, {"10-24": "2'", "20-70": "2'7\""}],
   ["thypoch-simera", /^dzofilm thypoch simera/i, {"21": "9\"", "28": "1'4\"", "35": "1'6\"", "50": "1'6\"", "75": "1'10\""}],
-  ["dzofilm-gnosis-24", /^dzofilm 24mm t2\.8 gnosis/i, {"24": "6\""}]];
+  ["dzofilm-gnosis-24", /^dzofilm 24mm t2\.8 gnosis/i, {"24": "6\""}],
+  ["dulens-apo-mini", /^dulens apo mini prime/i, {"21": "1'", "31": "1'3\"", "43": "1'10\"", "58": "2'3\"", "85": "2'9\""}]];
 /* @@END */
 const LENS_SPEC = new WeakMap();
 /* focal lengths (one, a set's list, or a zoom range), stop range, format, mounts and kind of a lens */
@@ -6260,17 +6266,19 @@ function lensCardHtml(p, o) {
     const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, lab, f) => `<tr class="${k}"><th>${lab}</th>${r.lenses.map(f).join("")}</tr>`;
       return `<div class="lcc-g"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${sub([r.cov, r.mount, one ? r.lenses[0].t : ""])}</span></div>
         <table class="lcc-m">${tr("mm", "MM", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", "T", l => `<td>${esc(l.t)}</td>`)}${tr("cf", "CF", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
-    // the single lenses: a block of their own, under their own name, a row a lens
-    const oneB = list => list.length ? `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o">${list.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table></div>` : "";
+    // the single lenses: a block of their own, under their own name; a row a lens under the same labels as the sets (MM, T, CF), each in its own column
+    const oneB = list => { if (!list.length) return ""; const mac = list.some(r => r.macro);
+      return `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o"><thead><tr><th>Lens</th><th class="n">MM</th><th class="n">T</th><th class="n">CF</th>${mac ? `<th class="mac">Macro</th>` : ""}</tr></thead><tbody>${list.map(r => `<tr><td class="nm">${esc(r.name)}${x(r.q)}</td><td class="n mm">${esc(r.mm)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}</td>${mac ? `<td class="mac">${r.macro ? esc(r.macro) : ""}</td>` : ""}</tr>`).join("")}</tbody></table></div>`; };
     const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones)}`;
     return { n, html: `<div class="${cls} lcc" style="${sty}">${head}${units.map(unitB).join("")}</div>` };
   }
   // one table: each set, and the single lenses, a block of its own: its name, then the column names, then a row a lens
-  const block = (name, meta, labs, rows) => `<tbody class="grp"><tr class="g"><td colspan="3"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
-    <tr class="h"><th>${labs}</th><th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
-  const setT = r => block(esc(r.name) + x(r.q), sub([r.cov, r.mount]), "mm", r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
-  const oneT = list => list.length ? block(ONES, "", "Lens · mm", list.map(r => `<tr class="in"><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) .replace('<tbody class="grp">', '<tbody class="grp ones">') : "";
-  const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="3">${u.label}</td></tr></tbody>` : "";
+  // four columns: a set's mm takes the first two; the single lenses the lens's name, then its mm in a column of its own
+  const block = (cls, name, meta, labs, rows) => `<tbody class="grp${cls}"><tr class="g"><td colspan="4"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
+    <tr class="h">${labs}<th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
+  const setT = r => block("", esc(r.name) + x(r.q), sub([r.cov, r.mount]), `<th colspan="2">mm</th>`, r.lenses.map(l => `<tr class="in"><td colspan="2"><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
+  const oneT = list => list.length ? block(" ones", ONES, "", `<th>Lens</th><th class="n">mm</th>`, list.map(r => `<tr class="in"><td class="nm">${esc(r.name)}${x(r.q)}</td><td class="n mm"><span class="lc-mm">${esc(r.mm)}</span></td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) : "";
+  const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="4">${u.label}</td></tr></tbody>` : "";
   const table = units.length ? `<table class="lc-t">${units.map(u => uRow(u) + u.sets.map(setT).join("") + oneT(u.ones)).join("")}</table>` : "";
   const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
   return { n, html: `<div class="${cls} lct" style="${sty}">${head}${table}${foot}</div>` };

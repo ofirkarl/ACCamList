@@ -2690,7 +2690,8 @@ const LENS_MOD = [
   ["nisi-aureus", /^nisi aureus/i, {"18": "10\"", "24": "1'1\"", "35": "1'2\"", "50": "1'10\"", "85": "2'11\""}],
   ["dzofilm-linglung", /^dzofilm (10-24|20-70)mm t2\.9 mft/i, {"10-24": "2'", "20-70": "2'7\""}],
   ["thypoch-simera", /^dzofilm thypoch simera/i, {"21": "9\"", "28": "1'4\"", "35": "1'6\"", "50": "1'6\"", "75": "1'10\""}],
-  ["dzofilm-gnosis-24", /^dzofilm 24mm t2\.8 gnosis/i, {"24": "6\""}]];
+  ["dzofilm-gnosis-24", /^dzofilm 24mm t2\.8 gnosis/i, {"24": "6\""}],
+  ["dulens-apo-mini", /^dulens apo mini prime/i, {"21": "1'", "31": "1'3\"", "43": "1'10\"", "58": "2'3\"", "85": "2'9\""}]];
 /* @@END */
 const LENS_SPEC = new WeakMap();
 /* focal lengths (one, a set's list, or a zoom range), stop range, format, mounts and kind of a lens */
@@ -3924,17 +3925,19 @@ function lensCardHtml(p, o) {
     const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, lab, f) => `<tr class="${k}"><th>${lab}</th>${r.lenses.map(f).join("")}</tr>`;
       return `<div class="lcc-g"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${sub([r.cov, r.mount, one ? r.lenses[0].t : ""])}</span></div>
         <table class="lcc-m">${tr("mm", "MM", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", "T", l => `<td>${esc(l.t)}</td>`)}${tr("cf", "CF", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
-    // the single lenses: a block of their own, under their own name, a row a lens
-    const oneB = list => list.length ? `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o">${list.map(r => `<tr><td>${esc(r.name)} <span class="lcc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td>${esc(r.t)}</td><td class="cf">${cf(r.cf)}</td><td class="mac">${r.macro ? "macro " + esc(r.macro) : ""}</td></tr>`).join("")}</table></div>` : "";
+    // the single lenses: a block of their own, under their own name; a row a lens under the same labels as the sets (MM, T, CF), each in its own column
+    const oneB = list => { if (!list.length) return ""; const mac = list.some(r => r.macro);
+      return `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o"><thead><tr><th>Lens</th><th class="n">MM</th><th class="n">T</th><th class="n">CF</th>${mac ? `<th class="mac">Macro</th>` : ""}</tr></thead><tbody>${list.map(r => `<tr><td class="nm">${esc(r.name)}${x(r.q)}</td><td class="n mm">${esc(r.mm)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}</td>${mac ? `<td class="mac">${r.macro ? esc(r.macro) : ""}</td>` : ""}</tr>`).join("")}</tbody></table></div>`; };
     const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones)}`;
     return { n, html: `<div class="${cls} lcc" style="${sty}">${head}${units.map(unitB).join("")}</div>` };
   }
   // one table: each set, and the single lenses, a block of its own: its name, then the column names, then a row a lens
-  const block = (name, meta, labs, rows) => `<tbody class="grp"><tr class="g"><td colspan="3"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
-    <tr class="h"><th>${labs}</th><th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
-  const setT = r => block(esc(r.name) + x(r.q), sub([r.cov, r.mount]), "mm", r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
-  const oneT = list => list.length ? block(ONES, "", "Lens · mm", list.map(r => `<tr class="in"><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) .replace('<tbody class="grp">', '<tbody class="grp ones">') : "";
-  const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="3">${u.label}</td></tr></tbody>` : "";
+  // four columns: a set's mm takes the first two; the single lenses the lens's name, then its mm in a column of its own
+  const block = (cls, name, meta, labs, rows) => `<tbody class="grp${cls}"><tr class="g"><td colspan="4"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
+    <tr class="h">${labs}<th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
+  const setT = r => block("", esc(r.name) + x(r.q), sub([r.cov, r.mount]), `<th colspan="2">mm</th>`, r.lenses.map(l => `<tr class="in"><td colspan="2"><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
+  const oneT = list => list.length ? block(" ones", ONES, "", `<th>Lens</th><th class="n">mm</th>`, list.map(r => `<tr class="in"><td class="nm">${esc(r.name)}${x(r.q)}</td><td class="n mm"><span class="lc-mm">${esc(r.mm)}</span></td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) : "";
+  const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="4">${u.label}</td></tr></tbody>` : "";
   const table = units.length ? `<table class="lc-t">${units.map(u => uRow(u) + u.sets.map(setT).join("") + oneT(u.ones)).join("")}</table>` : "";
   const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
   return { n, html: `<div class="${cls} lct" style="${sty}">${head}${table}${foot}</div>` };
