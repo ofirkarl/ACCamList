@@ -4782,7 +4782,8 @@ function viewSettings() {
     ${window.AC_STATS ? `<div class="set-group"><h3>About your use</h3>
       <p class="hint" style="margin:0">The app tells its maker how much it is used: your name, how many lists you made, exported and shared, and your time in the app. Never what is in your lists.</p>
       ${app.isAdmin ? `<div><button class="btn primary" type="button" data-act="admin-open">Control room</button></div>` : ""}
-      <div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div></div>` : ""}
+      <div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div>
+      ${app.isAdmin ? "" : `<div class="acct-id"><button class="btn sm" type="button" data-act="admin-check">Check Control room access</button></div>${app.adminSay ? `<p class="hint${app.adminWhy === "ok" ? "" : " warn"}" style="margin:0">${esc(app.adminSay)}</p>` : ""}`}</div>` : ""}
     ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
       <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
       ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
@@ -8149,7 +8150,7 @@ document.addEventListener("click", e => {
   const p = cur();
   switch (act) {
     case "home": closePreview(); closeModal(); app.view = "home"; app.pid = null; app.editing = null; app.dupFrom = null; app.lq = ""; app.fq = ""; render(); window.scrollTo(0, 0); break;
-    case "settings": if (app.view === "settings") { histPop(); break; } /* a second tap closes it: back to where you were */ closePreview(); closeModal(); app.setFrom = null; app.view = "settings"; render(); window.scrollTo(0, 0); break;
+    case "settings": if (app.view === "settings") { histPop(); break; } /* a second tap closes it: back to where you were */ closePreview(); closeModal(); app.setFrom = null; app.view = "settings"; app.adminSay = ""; render(); window.scrollTo(0, 0); adminCheck(false); break;
     case "theme": cycleTheme(); break;
     case "acct-in": if (window.AC_AUTH) window.AC_AUTH.signIn().catch(err => { console.warn(err); toast("Sign-in didn't go through. Try again."); }); break;
     case "acct-out": if (window.AC_AUTH) window.AC_AUTH.signOut(); break;
@@ -8577,6 +8578,7 @@ document.addEventListener("click", e => {
       break; }
     case "lab-open": labShow(true); break;
     case "copy-uid": { const t = window.AC_STATS ? window.AC_STATS.uid : ""; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Account ID copied"), () => toast(t)); break; }
+    case "admin-check": app.adminSay = "Checking…"; rerenderKeepScroll(); adminCheck(true); break;
     case "admin-open": app.view = "admin"; app.adminData = null; render(); window.scrollTo(0, 0); adminLoad(); break;
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
     case "lists-export": {
@@ -9465,6 +9467,13 @@ function viewAdmin() {
 render();
 initAccount();
 labInit();
-/* is this the maker's account? (asked once the installed app's sign-in has answered) */
-if (typeof window !== "undefined" && window.claude && typeof window.claude.use === "function") Promise.resolve(window.claude.use("user")).then(() => window.AC_STATS && window.AC_STATS.isAdmin()).then(v => { app.isAdmin = !!v; if (app.view === "settings" && !typing()) render(); }).catch(() => {});
+/* is this the maker's account? Asked once the installed app's sign-in has answered, again each time Settings opens, and on demand
+   (then it says why not: no admin mark for this account, rules not published, or no connection) */
+const ADMIN_SAY = { ok: "Control room is open for this account.", missing: "Firebase has no document in 'admins' named with this Account ID. Check the Document ID (not an auto-ID, no spaces).",
+  denied: "Firebase refused to answer: the new database rules aren't published yet.", offline: "No connection. Try again when online." };
+function adminCheck(say) {
+  const S = typeof window !== "undefined" && window.AC_STATS; if (!S || !S.check) { if (say) { app.adminSay = "The app hasn't connected to Firebase yet. Try again in a moment."; rerenderKeepScroll(); } return; }
+  S.check().then(r => { app.isAdmin = r === "ok"; app.adminWhy = r; if (say) app.adminSay = ADMIN_SAY[r] || `Couldn't check (${r}).`; if (app.view === "settings" && !typing()) rerenderKeepScroll(); });
+}
+if (typeof window !== "undefined" && window.claude && typeof window.claude.use === "function") Promise.resolve(window.claude.use("user")).then(() => adminCheck(false)).catch(() => {});
 </script>

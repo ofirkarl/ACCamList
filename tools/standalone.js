@@ -67,7 +67,9 @@
       window.AC_STATS = {
         uid: me,
         write: function (d) { return F.setDoc(F.doc(fs, 'stats/' + me), enc(d), {merge: true}).catch(function () {}); },
-        isAdmin: function () { return F.getDoc(F.doc(fs, 'admins/' + me)).then(function (x) { return x.exists(); }).catch(function () { return false; }); },
+        // straight from the server (never a cached answer): 'ok', 'missing', 'denied' (rules), 'offline', or the error's code
+        check: function () { return F.getDocFromServer(F.doc(fs, 'admins/' + me)).then(function (x) { return x.exists() ? 'ok' : 'missing'; }).catch(function (e) { var c = e && e.code || 'error'; return c === 'permission-denied' ? 'denied' : c === 'unavailable' ? 'offline' : c; }); },
+        isAdmin: function () { return window.AC_STATS.check().then(function (r) { return r === 'ok'; }); },
         list: function () { return F.getDocs(F.collection(fs, 'stats')).then(function (x) { return x.docs.map(function (d) { return Object.assign({uid: d.id}, dec(d.data())); }); }); }
       };
       var mapCol = function (path) {
