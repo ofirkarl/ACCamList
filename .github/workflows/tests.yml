@@ -1,0 +1,27 @@
+# Runs the app's tests on every push that touches the app or its catalog. A failing test fails the run
+# (GitHub then emails the repository owner).
+name: App tests
+on:
+  push:
+    branches: [main]
+    paths: ["src/app/**", "src/catalog/**", ".github/workflows/tests.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build the app page from source
+        run: bash src/app/build.sh
+      - name: Run the tests
+        run: |
+          node src/app/test_app.js > test.log || true
+          grep -c "^PASS" test.log
+          if grep "^FAIL" test.log; then exit 1; fi
+          test "$(grep -c '^PASS' test.log)" -gt 400

@@ -3311,14 +3311,20 @@ function sectionSlots(sel) {
 /* ---------- storage: browser copy always, account copy when available ---------- */
 const LS_KEY = "accam-productions-v1", LS_UI = "accam-ui-v1", LS_SET = "accam-settings-v1";
 const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v ?? d; } catch (e) { return d; } };
-const lsPut = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let lsFailed = false;
+const lsPut = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); lsFailed = false; } catch (e) {
+  if (!lsFailed) { lsFailed = true; try { toast(app.storage === "cloud" ? "This phone's storage is full. Your lists are still saved to your account." : "This phone's storage is full: new changes may not be kept. Free some space, or sign in to save to your account."); } catch (x) {} } } };
 const lsSave = () => lsPut(LS_KEY, app.productions);
 const uiSave = () => lsPut(LS_UI, { view: app.view === "production" ? "production" : "home", pid: app.pid, tab: app.tab, at: Date.now() });
 const RESUME_MS = 15 * 60 * 1000;  // back within 15 minutes (say, after sending the list on WhatsApp): the same list; later: the home page
 const needsWelcome = () => !app.settings.welcomed && !app.productions.length && !((app.settings.me || {}).name);
 
 let COL = null;
-const timers = new Map(), chains = new Map(), dirty = new Set();
+const timers = new Map(), chains = new Map(), dirty = new Set(), tries = new Map();
+/* productions deleted on purpose are remembered for 90 days (id → when), in the settings that travel with the account, so another
+   phone that still holds a copy drops it instead of sending it back up */
+const GONE_MS = 90 * 864e5;
+function goneMerge(a, b) { const o = {}, now = Date.now(); for (const g of [a, b]) for (const [k, t] of Object.entries(g || {})) if (now - t < GONE_MS && !(o[k] >= t)) o[k] = t; return o; }
 let prevRemote = new Set();
 const SETTINGS_ID = "settings";
 
@@ -3349,8 +3355,14 @@ function flush(id) {
       catch (e) {
         if (e && e.code === "quota_exceeded") toast("Your account storage is full. Changes are kept in this browser.");
         else if (e && (e.code === "invalid_argument" || e.code === "revoked")) { COL = null; app.storage = "local"; }
+        else {  // the network, or the account busy: the change stays marked unsaved and is sent again (after 5 s, then 15 s, then every minute)
+          const n = (tries.get(id) || 0) + 1; tries.set(id, n);
+          if (!timers.has(id)) timers.set(id, setTimeout(() => flush(id), n === 1 ? 5000 : n === 2 ? 15000 : 60000));
+          setSaveState("offline"); return;
+        }
       }
     }
+    tries.delete(id);
     dirty.delete(id);
     if (!dirty.size && !timers.size) setSaveState("saved");
   });
@@ -3383,14 +3395,21 @@ async function initAccount() {
     if (!snap.metadata.fromCache && !settled) {
       settled = true; clearTimeout(slow);
       app.storage = "cloud";
-      const ids = new Set(remote.map(r => r.id));
-      for (const p of app.productions) if (!ids.has(p.id)) schedule(p.id);
-      if (!rset && app.settings.updatedAt) schedule(SETTINGS_ID);
+      const byId = new Map(remote.map(r => [r.id, r])), rs = rset ? rset.data() : null;
+      const gone = goneMerge(app.settings.gone, rs && rs.gone);
+      for (const p of [...app.productions]) {
+        const r = byId.get(p.id);
+        if (r) { if ((p.updatedAt || 0) > (r.updatedAt || 0)) schedule(p.id); }  // changed here while away from the account: sent up
+        else if (gone[p.id] && gone[p.id] >= (p.updatedAt || 0)) { app.productions.splice(app.productions.indexOf(p), 1); changed = true; }  // deleted on another phone: dropped here too
+        else schedule(p.id);
+      }
+      if (!rs ? app.settings.updatedAt : (app.settings.updatedAt || 0) > (rs.updatedAt || 0)) schedule(SETTINGS_ID);
       setSaveState("saved");
     }
     if (rset && !dirty.has(SETTINGS_ID) && !timers.has(SETTINGS_ID)) {
       const r = rset.data();
-      if ((r.updatedAt || 0) > (app.settings.updatedAt || 0)) { app.settings = { favorites: {}, rules: [], ...r }; applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); changed = true; }
+      const gone = goneMerge(app.settings.gone, r.gone);
+      if ((r.updatedAt || 0) > (app.settings.updatedAt || 0)) { app.settings = { favorites: {}, rules: [], ...r, gone }; applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); changed = true; }
     }
     const remoteIds = new Set(remote.map(r => r.id));
     for (const r of remote) {
@@ -4442,6 +4461,7 @@ function deleteProductions(ids) {
   const set = new Set(ids);
   for (const id of ids) { const x = findProd(id); if (x && x.unit2) set.add(x.unit2); }  // a production goes with its 2nd Unit
   app.productions = app.productions.filter(x => !set.has(x.id));
+  const gone = app.settings.gone = goneMerge(app.settings.gone, null); for (const id of set) gone[id] = Date.now(); touchSettings();
   lsSave(); for (const id of set) removeRemote(id);
 }
 /* a copy of a production, and of its 2nd Unit when it has one */
