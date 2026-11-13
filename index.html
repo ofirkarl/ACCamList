@@ -181,7 +181,7 @@
   --zebra: color-mix(in srgb, var(--fg) var(--zebra-a), var(--surface));
   --picked: color-mix(in srgb, var(--accent) 8%, var(--surface));
   --hair: color-mix(in srgb, var(--line) 72%, var(--surface));
-  --bars: linear-gradient(90deg, #e5484d 0 16.66%, #f5a524 0 33.33%, #22b45e 0 50%, #1e9be8 0 66.66%, #4f46e5 0 83.33%, #d946ef 0);
+  --bars: linear-gradient(90deg, #c0c0c0 0 14.29%, #c0c000 0 28.57%, #00c0c0 0 42.86%, #00c000 0 57.14%, #c000c0 0 71.43%, #c00000 0 85.71%, #0000c0 0);
   --font-display: "Rubik", "Segoe UI", system-ui, sans-serif;
   --font-body: "Rubik", "Segoe UI", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -196,7 +196,7 @@
     --tape-camera: #f2696d; --tape-lenses: #f7ba4d; --tape-camera_accessories: #4cc2f1; --tape-filters: #a78bfa; --tape-custom: #94a3b8; --warn: #fbbf5c; --warn-bg: #2b2110; --star: #f7ba4d; --desk: #24242c; --paper: #ffffff;
     --pal-red: #f2696d; --pal-orange: #fb923c; --pal-amber: #f7ba4d; --pal-olive: #b5cf4a; --pal-green: #4ade80; --pal-teal: #2dd4bf; --pal-sky: #67e8f9; --pal-blue: #4cc2f1; --pal-indigo: #8b8df8; --pal-violet: #a78bfa; --pal-pink: #e879f9; --pal-slate: #94a3b8;
     --sec-support: #2dd4bf; --sec-display: #e879f9; --sec-media: #4ade80; --sec-power: #fb923c; --sec-grip: #c9a27a; --sec-aks: #a09dad; --tint-a: 14%; --tint-b: 8%; --zebra-a: 3%;
-    --bars: linear-gradient(90deg, #f2696d 0 16.66%, #f7ba4d 0 33.33%, #4ade80 0 50%, #4cc2f1 0 66.66%, #8b87ff 0 83.33%, #e879f9 0);
+    --bars: linear-gradient(90deg, #c8c8c8 0 14.29%, #d4d400 0 28.57%, #00cfcf 0 42.86%, #00c800 0 57.14%, #d000d0 0 71.43%, #d81c1c 0 85.71%, #3a3aff 0);
     --seg-track: #16161c; --seg-on: #2c2c38;
     color-scheme: dark;
   }
@@ -207,18 +207,24 @@
   --tape-camera: #f2696d; --tape-lenses: #f7ba4d; --tape-camera_accessories: #4cc2f1; --tape-filters: #a78bfa; --tape-custom: #94a3b8; --warn: #fbbf5c; --warn-bg: #2b2110; --star: #f7ba4d; --desk: #24242c; --paper: #ffffff;
   --pal-red: #f2696d; --pal-orange: #fb923c; --pal-amber: #f7ba4d; --pal-olive: #b5cf4a; --pal-green: #4ade80; --pal-teal: #2dd4bf; --pal-sky: #67e8f9; --pal-blue: #4cc2f1; --pal-indigo: #8b8df8; --pal-violet: #a78bfa; --pal-pink: #e879f9; --pal-slate: #94a3b8;
   --sec-support: #2dd4bf; --sec-display: #e879f9; --sec-media: #4ade80; --sec-power: #fb923c; --sec-grip: #c9a27a; --sec-aks: #a09dad; --tint-a: 14%; --tint-b: 8%; --zebra-a: 3%;
-  --bars: linear-gradient(90deg, #f2696d 0 16.66%, #f7ba4d 0 33.33%, #4ade80 0 50%, #4cc2f1 0 66.66%, #8b87ff 0 83.33%, #e879f9 0);
+  --bars: linear-gradient(90deg, #c8c8c8 0 14.29%, #d4d400 0 28.57%, #00cfcf 0 42.86%, #00c800 0 57.14%, #d000d0 0 71.43%, #d81c1c 0 85.71%, #3a3aff 0);
   --seg-track: #16161c; --seg-on: #2c2c38;
   color-scheme: dark;
 }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
 .app { max-width: 760px; margin: 0 auto; padding-bottom: 96px; position: relative; isolation: isolate; }
-/* the brand behind every page: the color bars down the whole screen, faint at the top and bottom edges and fading to 90% transparent in the middle */
-.app::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bars); opacity: var(--bars-bg, .1);
-  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1) 50%, #000); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1) 50%, #000); }
-:root[data-theme="dark"] { --bars-bg: .08; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bars-bg: .08; } }
+/* the brand behind every page: the SMPTE color bars test pattern, the whole screen. The seven bars in broadcast order from the top,
+   then the castellations (blue, magenta, cyan under their bars) and the PLUGE row along the bottom; strongest at the top and bottom
+   edges, fading in the middle where the content is */
+.app::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: var(--bars-bg, .13);
+  background:
+    linear-gradient(90deg, #00214c 0 17.86%, #fff 0 35.71%, #32006a 0 53.57%, #131313 0 71.43%, #090909 0 76.19%, #131313 0 80.95%, #1d1d1d 0 85.71%, #131313 0) left 0 bottom 0 / 100% 20vh no-repeat,
+    linear-gradient(90deg, #0000c0 0 14.29%, #131313 0 28.57%, #c000c0 0 42.86%, #131313 0 57.14%, #00c0c0 0 71.43%, #131313 0 85.71%, #c0c0c0 0) left 0 bottom 20vh / 100% 7vh no-repeat,
+    linear-gradient(90deg, #c0c0c0 0 14.29%, #c0c000 0 28.57%, #00c0c0 0 42.86%, #00c000 0 57.14%, #c000c0 0 71.43%, #c00000 0 85.71%, #0000c0 0) 0 0 / 100% 73vh no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .3) 45%, rgba(0, 0, 0, .3) 60%, #000 73%); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .3) 45%, rgba(0, 0, 0, .3) 60%, #000 73%); }
+:root[data-theme="dark"] { --bars-bg: .11; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bars-bg: .11; } }
 /* what stays put over a scrolling page lets the bars show through, softly */
 .bar, .mc-segwrap { background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1); }
 .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
