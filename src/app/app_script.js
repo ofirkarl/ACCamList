@@ -1995,7 +1995,6 @@ const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec
 /* press and hold a production: duplicate, delete, or start selecting several */
 function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
-  try { navigator.vibrate && navigator.vibrate(12); } catch (e) {}
   showModal(`<div class="sheet"><h3 class="plain">${esc(p.name || "Untitled production")}</h3>
     <div class="sheet-acts"><button class="btn" type="button" data-act="pm-edit" data-id="${esc(id)}">Edit details</button><button class="btn" type="button" data-act="pm-dup" data-id="${esc(id)}">Duplicate</button>
       <button class="btn" type="button" data-act="pm-select" data-id="${esc(id)}">Select several</button>
@@ -3232,7 +3231,7 @@ function refreshRows(p, ids) {
 }
 /* touch feedback on phones that can vibrate (Android): a short tap on every press, a pattern when something is added,
    removed or needs a look, and a tiny tick as the lens ruler passes each focal length. Off in Settings. */
-const HAPTIC = { tap: 8, tick: 5, add: [10, 35, 12], warn: [18, 60, 18], done: [8, 45, 18] };
+const HAPTIC = { tap: 8, tick: 5, hold: 10, add: [10, 35, 12], warn: [18, 60, 18], done: [8, 45, 18] };
 const canBuzz = () => typeof navigator !== "undefined" && typeof navigator.vibrate === "function";
 function buzz(kind) { if (app.settings.haptics === false || !canBuzz()) return; try { navigator.vibrate(HAPTIC[kind] || 8); } catch (e) {} }
 /* restart a short CSS animation on an element */
@@ -5645,17 +5644,25 @@ function copyText(text, done) {
 function kidRef(p, ref) { const [lid, kid] = ref.split("|"); const l = p.items[lid]; const c = l && (l.children || []).find(k => k.id === kid); return { l, c }; }
 function rerenderKeepScroll() { const y = window.scrollY; render(); window.scrollTo(0, y); }
 /* press and hold (a production card): a menu instead of opening it */
-const lp = { t: 0, x: 0, y: 0, el: null, fired: false };
-function longPress(el) { if (el.dataset.lp === "prod" && !app.sel) prodMenu(el.dataset.id); }
+const lp = { t: 0, h: 0, x: 0, y: 0, el: null, fired: false };
+/* how it feels: a moment into the press the card sinks a little, as it is held; when the menu comes it springs back, with one soft tick */
+const lpCard = el => el && el.closest && el.closest(".prod-card");
+function lpRelease() { clearTimeout(lp.t); clearTimeout(lp.h); const c = lpCard(lp.el); if (c) c.classList.remove("lp-hold"); lp.el = null; }
+function longPress(el) {
+  const c = lpCard(el); if (c) { c.classList.remove("lp-hold"); replay(c, "lp-pop"); }
+  buzz("hold");
+  if (el.dataset.lp === "prod" && !app.sel) prodMenu(el.dataset.id);
+}
 document.addEventListener("pointerdown", e => {
-  lp.fired = false; clearTimeout(lp.t); lp.el = null;
+  lp.fired = false; lpRelease();
   const el = e.target.closest && e.target.closest("[data-lp]");
   if (!el || e.button > 0 || app.sel) return;
   lp.el = el; lp.x = e.clientX; lp.y = e.clientY;
-  lp.t = setTimeout(() => { if (lp.el === el && el.isConnected) { lp.fired = true; longPress(el); } }, 520);
+  lp.h = setTimeout(() => { const c = lpCard(lp.el); if (c && lp.el === el) c.classList.add("lp-hold"); }, 120);   // not on a quick tap or the start of a scroll
+  lp.t = setTimeout(() => { if (lp.el === el && el.isConnected) { lp.fired = true; lpRelease(); longPress(el); } }, 480);
 });
-document.addEventListener("pointermove", e => { if (lp.el && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) { clearTimeout(lp.t); lp.el = null; } });
-for (const t of ["pointerup", "pointercancel", "scroll"]) document.addEventListener(t, () => { clearTimeout(lp.t); lp.el = null; }, true);
+document.addEventListener("pointermove", e => { if (lp.el && Math.hypot(e.clientX - lp.x, e.clientY - lp.y) > 10) lpRelease(); });
+for (const t of ["pointerup", "pointercancel", "scroll"]) document.addEventListener(t, lpRelease, true);
 document.addEventListener("contextmenu", e => {
   const el = e.target.closest && e.target.closest("[data-lp]"); if (!el || app.sel) return;
   e.preventDefault();
