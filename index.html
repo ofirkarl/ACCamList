@@ -213,7 +213,14 @@
 }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
-.app { max-width: 760px; margin: 0 auto; padding-bottom: 96px; }
+.app { max-width: 760px; margin: 0 auto; padding-bottom: 96px; position: relative; isolation: isolate; }
+/* the brand behind every page: the color bars down the whole screen, faint at the top and fading to 90% transparent at the bottom */
+.app::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bars); opacity: var(--bars-bg, .1);
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1)); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1)); }
+:root[data-theme="dark"] { --bars-bg: .08; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bars-bg: .08; } }
+/* what stays put over a scrolling page lets the bars show through, softly */
+.bar, .mc-segwrap { background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: blur(14px) saturate(1.1); backdrop-filter: blur(14px) saturate(1.1); }
 .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
