@@ -3939,7 +3939,7 @@ function viewLensCard() {
     <section class="pad cam-out">
       <div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
       ${card.n ? `<div class="lc-prev"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
-        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span>${k !== 1 ? `<button type="button" class="btn sm" data-act="lc-k1">Actual size</button>` : ""}</div>` : `<p class="hint">No lenses on this list yet.</p>`}
+        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span><button type="button" class="btn sm" data-act="lc-k1"${k !== 1 ? "" : " hidden"}>Actual size</button></div>` : `<p class="hint">No lenses on this list yet.</p>`}
       <div class="cp-opts"><span class="cr-l">Colors</span><div class="seg cp-seg">${seg("ink", "color", "Color")}${seg("ink", "bw", "Black & white")}</div></div>
       ${card.n ? `<p class="hint cp-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · <span id="lc-size">…</span>. The PDF is the card's own size: print at actual size (100%).</p>` : ""}
       <div class="co-acts"><button class="btn primary" type="button" data-act="lc-save" ${card.n ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="lc-share" ${card.n ? "" : "disabled"}>Share</button></div>
@@ -3954,39 +3954,52 @@ function lcNatural(p) {
 }
 let lcNat = null;  // { w, h } of the card on screen at its actual size
 const lcSizeText = k => lcNat ? `${Math.round(lcNat.w * k)} × ${Math.round(lcNat.h * k)} mm` : "…";
-/* the preview: the card fills the width (4.5 px a mm at most, so a small card stays readable) */
+/* the preview's scale, px a mm: fitted when the page opens on a list and layout (4.5 at most, so a small card stays readable), then
+   kept while the card is resized, so nothing jumps; a card bigger than the preview is shown smaller, never cut */
+function lcPu(prev, k) {
+  const room = Math.max(40, prev.clientWidth - 40 - 12), key = lcListId() + "|" + lcOpts().lay;
+  if (!app.lcPu || app.lcPu.key !== key || app.lcPu.room !== room) app.lcPu = { key, room, pu: Math.min(4.5, room / (lcNat.w * k)) };
+  return Math.min(app.lcPu.pu, room / (lcNat.w * k));
+}
 function lcFit() {
   const prev = document.querySelector(".lc-prev"), fr = prev && prev.querySelector(".lc-frame"), p = lcCur(); if (!fr || !p) return;
-  lcNat = lcNatural(p); const k = lcK(), room = prev.clientWidth - 40 - 12;
-  prev.style.setProperty("--pu", Math.min(4.5, room / (lcNat.w * k)) + "px");
-  const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(k);
+  lcNat = lcNatural(p);
+  prev.classList.add("still"); lcShowK(lcK()); void prev.offsetWidth; prev.classList.remove("still");  // drawn at once, no easing on opening
 }
-/* the corner: dragged like a window's, the card grows or shrinks with everything on it; the preview fits again on letting go */
+/* the card at size k: on screen, its size in mm, the corner's value, Actual size when it isn't */
+function lcShowK(k) {
+  const prev = document.querySelector(".lc-prev"), c = prev && prev.querySelector(".lcard"); if (!c || !lcNat) return;
+  c.style.setProperty("--k", k); prev.style.setProperty("--pu", lcPu(prev, k) + "px");
+  const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(k);
+  const g = prev.querySelector(".lc-grip"); if (g) { g.setAttribute("aria-valuenow", Math.round(k * 100)); g.setAttribute("aria-valuetext", Math.round(k * 100) + "%"); }
+  const one = document.querySelector('[data-act="lc-k1"]'); if (one) one.hidden = Math.abs(k - 1) < .005;
+}
+/* a new size kept: for the PDF and next time */
+function lcSetK(k) { const o = lcOpts(); k = Math.round(Math.min(LC_K[1], Math.max(LC_K[0], k)) * 100) / 100; if (k === 1) delete o.k[o.lay]; else o.k[o.lay] = k; lcPdfMade = null; touchSettings(); return k; }
+/* the corner: dragged like a window's, the card grows or shrinks with everything on it, following the finger frame by frame */
 let lcDrag = null;
 document.addEventListener("pointerdown", e => {
   const g = e.target.closest && e.target.closest(".lc-grip"); if (!g || !lcNat) return;
-  const fr = g.closest(".lc-frame"), prev = g.closest(".lc-prev"), pu = parseFloat(getComputedStyle(prev).getPropertyValue("--pu")) || 2;
-  lcDrag = { fr, pu, x: e.clientX, y: e.clientY, k0: lcK(), w0: lcNat.w, h0: lcNat.h, k: lcK() };
+  const prev = g.closest(".lc-prev"), pu = parseFloat(getComputedStyle(prev).getPropertyValue("--pu")) || 2;
+  lcDrag = { prev, pu, x: e.clientX, y: e.clientY, k0: lcK(), k: lcK(), raf: 0 };
   try { g.setPointerCapture(e.pointerId); } catch (err) {}
-  fr.classList.add("drag"); e.preventDefault();
+  prev.style.minHeight = prev.offsetHeight + "px";  // the page below stays put while the card shrinks
+  prev.classList.add("drag"); e.preventDefault();
 });
 document.addEventListener("pointermove", e => {
   if (!lcDrag) return; const d = lcDrag;
   // along the card's diagonal: right and down make it bigger, left and up smaller
-  const dx = e.clientX - d.x, dy = e.clientY - d.y, w = d.w0 * d.k0 * d.pu, h = d.h0 * d.k0 * d.pu, len = Math.hypot(w, h);
-  const grow = (dx * w + dy * h) / len, k = Math.min(LC_K[1], Math.max(LC_K[0], d.k0 * (len + grow) / len));
-  d.k = Math.round(k * 100) / 100; d.fr.style.setProperty("--k", d.k); const c = d.fr.querySelector(".lcard"); if (c) c.style.setProperty("--k", d.k);
-  const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(d.k);
-  const g = d.fr.querySelector(".lc-grip"); if (g) { g.setAttribute("aria-valuenow", Math.round(d.k * 100)); g.setAttribute("aria-valuetext", Math.round(d.k * 100) + "%"); }
+  const w = lcNat.w * d.k0 * d.pu, h = lcNat.h * d.k0 * d.pu, len = Math.hypot(w, h), grow = ((e.clientX - d.x) * w + (e.clientY - d.y) * h) / len;
+  d.k = Math.min(LC_K[1], Math.max(LC_K[0], d.k0 * (len + grow) / len));
+  if (!d.raf) d.raf = requestAnimationFrame(() => { d.raf = 0; if (lcDrag === d) lcShowK(d.k); });
 });
-const lcDragEnd = () => { if (!lcDrag) return; const o = lcOpts(); o.k[o.lay] = lcDrag.k; lcDrag = null; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); };
+const lcDragEnd = () => { if (!lcDrag) return; const d = lcDrag; lcDrag = null; if (d.raf) cancelAnimationFrame(d.raf); d.prev.classList.remove("drag"); lcShowK(lcSetK(d.k)); setTimeout(() => lcPdfPrep(lcCur()), 400); };
 document.addEventListener("pointerup", lcDragEnd); document.addEventListener("pointercancel", lcDragEnd);
 /* the corner by keyboard: arrows make it 5% bigger or smaller */
 document.addEventListener("keydown", e => {
   const g = e.target && e.target.classList && e.target.classList.contains("lc-grip") ? e.target : null; if (!g) return;
   const st = { ArrowRight: .05, ArrowUp: .05, ArrowLeft: -.05, ArrowDown: -.05 }[e.key]; if (!st) return;
-  e.preventDefault(); const o = lcOpts(); o.k[o.lay] = Math.round(Math.min(LC_K[1], Math.max(LC_K[0], lcK(o) + st)) * 100) / 100; lcPdfMade = null; touchSettings(); rerenderKeepScroll();
-  const n = document.querySelector(".lc-grip"); if (n) n.focus();
+  e.preventDefault(); lcShowK(lcSetK(lcK() + st));
 });
 const lcPdfKey = p => { const o = lcOpts(); return JSON.stringify([o.lay, o.ink, lcK(o), lensCardHtml(p, o).html]); };
 let lcPdfMade = null;  // { key, blob }
@@ -5469,7 +5482,7 @@ document.addEventListener("click", e => {
     case "cams": closeModal(); app.view = "cams"; app.camCmp = false; render(); window.scrollTo(0, 0); break;
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
-    case "lc-k1": { const o = lcOpts(); delete o.k[o.lay]; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); break; }
+    case "lc-k1": lcShowK(lcSetK(1)); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
     case "lc-save": lcPdfGo(b, false); break;
     case "lc-share": lcPdfGo(b, true); break;
     case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
