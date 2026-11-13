@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611131930";
+window.AC_BUILD = "202611131932";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2678,6 +2678,11 @@ body { overflow-x: clip; }
 .lab-r .t-fade { --track: linear-gradient(90deg, #8a8a8a, #ededed); }
 .lab-foot { margin-top: 8px; display: flex; justify-content: flex-start; }
 .lab-foot button { border: 0; padding: 0; min-height: 28px; color: #6b6874; text-decoration: underline; background: none; }
+/* Settings and the Control room: their buttons wear the app's color (and change with it) */
+.set-group .btn:not(.primary), .ad .btn:not(.primary) { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 38%, var(--line)); color: var(--accent); font-weight: 600; }
+.set-group .btn:not(.primary):active, .ad .btn:not(.primary):active { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); }
+.set-group .btn:not(.primary) svg { color: currentColor; }
+.me-group .me-av { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
 </style>
 </head>
 <body>
