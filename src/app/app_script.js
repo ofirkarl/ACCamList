@@ -1970,8 +1970,7 @@ function viewForm() {
   const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;
   const u2 = unit2Of(editing || src), u2same = u2 ? u2.sameDates !== false : true, u2days = u2 && u2.days || {};
   return `<section class="pad">
-    <div class="prod-head"><button class="btn ghost back" type="button" ${back}>← ${editing ? "Back to list" : "Productions"}</button>
-    <h2 class="page">${editing ? "Production details" : src ? "Duplicate production" : "New production"}</h2>
+    <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" ${back} aria-label="${editing ? "Back to list" : "Productions"}" title="${editing ? "Back to list" : "Productions"}">${BACK_ICON_L}</button><h2>${editing ? "Production details" : src ? "Duplicate production" : "New production"}</h2><span></span></div>
     ${src ? `<p class="hint" style="margin:0">A copy of ${esc(src.name || "the production")} with all ${totals(src).lines} items. Nothing is made until you tap Create.</p>` : ""}</div>
     <form class="form" id="prodForm" autocomplete="off">
       <div class="row2">
@@ -2205,7 +2204,7 @@ function viewSettings() {
   const meOpen = app.open.has("me") || !(me.name || "").trim();  // filled in once: folded away after that
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
-    <div class="prod-head"><button class="btn ghost back" type="button" data-act="back">← Back</button><div class="set-title"><h2 class="page">Settings</h2>${acct}</div></div>
+    <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>Settings</h2><span></span></div>${acct ? `<div class="set-title"><span></span>${acct}</div>` : ""}</div>
     <div class="set-group me-group${meOpen ? " open" : ""}"><button class="me-head" type="button" data-act="me-toggle" aria-expanded="${meOpen}" aria-controls="meForm">
         <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
         <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
@@ -3922,7 +3921,11 @@ const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard
   const L = lcLook(o); o.style = L.st; o.col = L.col; delete o.ink; return o; };
 const lcK = o => { o = o || lcOpts(); return Math.min(LC_K[1], Math.max(LC_K[0], Number((o.k || {})[o.lay]) || 1)); };
 const lcLists = () => mcLists();  // each production once: its 2nd Unit's lenses come with it
-function lcListId() { const k = app.settings.lcList, q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && !isArchived(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
+function lcListId() { const k = app.settings.lcList; if (k === "none") return ""; const q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && !isArchived(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
+/* with no list: a card of your own. Lenses typed one at a time (matched to the catalogs by name, so their stop and close focus come
+   with them; a lens the catalogs don't know keeps what you typed), kept in the app's settings */
+const lcOwn = () => { const s = app.settings; if (!s.lcOwn || typeof s.lcOwn !== "object") s.lcOwn = { name: "", items: {} }; if (!s.lcOwn.items) s.lcOwn.items = {}; return s.lcOwn; };
+const lcOwnP = () => { const o = lcOwn(); return { id: "lcown", browse: true, name: o.name || "", houseId: "any", items: o.items }; };
 /* a list line's lens: its catalog item; a line typed by hand or brought in from a Word list or another rental house is matched
    by name to a catalog lens (the list's own rental house first), or else read from its own name ("Cooke S4i 32mm") */
 const LENS_STOP = new Set(["set", "of", "lens", "lenses", "kit", "mount", "the", "and", "with", "pl", "lpl", "ef", "e", "rf", "l", "mft", "full", "frame", "ff", "s35", "super35", "cine", "feet", "metric", "imperial"]);
@@ -3951,7 +3954,14 @@ function lcLensOf(id, l, hid) {
   if (/\d+(?:\.\d+)?\s*mm\b/i.test(name)) return { it: { name, lens: {} }, sub: "" };
   return null;
 }
-const lcCur = () => findProd(lcListId()) || null;
+const lcCur = () => findProd(lcListId()) || lcOwnP();
+/* a typed single lens of a series the catalogs carry as a set ("Cooke S4i 32mm"): its stop from that set, when every such set agrees */
+function lcStopOf(name, f) {
+  lensByName("x", ""); const toks = lensToks(name || "").filter(t => !/\d/.test(t) || /[a-z]/i.test(t)); if (!toks.length || !LENS_NAMES) return "";
+  const got = new Set();
+  for (const x of LENS_NAMES) { if (!x.e.it.lens.set || !toks.every(t => x.toks.has(t))) continue; const sp = lensSpec(x.e.it, x.e.s.id), per = sp && sp.per && sp.per.find(y => y.f === f); if (per && (per.label || sp.label)) got.add(per.label || sp.label); }
+  return got.size === 1 ? [...got][0] : "";
+}
 /* the list's lenses: sets first, then single lenses and zooms, in the list's order */
 /* the production's lenses, Main Unit and 2nd Unit each on its own (sets and ones together across both, too) */
 function lcRows(p) {
@@ -3962,14 +3972,16 @@ function lcRows(p) {
 function lcRowsOf(p) {
   const sets = [], ones = [];
   for (const [id, l] of Object.entries(p && p.items || {})) {
-    const q = lineQty(l), x = q ? lcLensOf(id, l, p.houseId) : null; if (!x) continue;
+    const q = lineQty(l), x = q ? lcLensOf(id, l, p.houseId) : null;
+    if (!x) { if (p.browse && q && l.name) ones.push({ name: l.name, q, mm: "", t: "", cf: l.cf || "", macro: "" }); continue; }  // your own card: whatever you typed is a lens
     const it = x.it, sp = lensSpec(it, x.sub);
+    if (!sp && p.browse && !lensMod(it, null)) { ones.push({ name: l.name || it.name, q, mm: "", t: "", cf: l.cf || "", macro: "" }); continue; }
     if (!sp) { const md0 = lensMod(it, null); if (md0) ones.push({ name: it.name.replace(/\s*\([^)]*mount[^)]*\)/i, ""), q, mm: "", t: "", cf: md0.one || "", macro: "" }); continue; }  // Master Macro 100: no "mm" in its name
     const md = lensMod(it, sp), nm = lensShortName(it, sp);
     if (sp.per) sets.push({ name: nm.replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
       lenses: sp.per.map(x => ({ mm: fmtN(x.f), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
     else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
-      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || "", cf: md ? md.one || "" : "", macro: md && md.macro || "" }); }
+      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || (p.browse && sp.focals ? lcStopOf(l.name, sp.focals[0]) : ""), cf: (md ? md.one || "" : "") || l.cf || "", macro: md && md.macro || "" }); }
   }
   return { sets, ones };
 }
@@ -3983,7 +3995,7 @@ function lensCardHtml(p, o) {
   const L = lcLook(o), C = LC_COLS[L.col], cls = `lcard lc-${L.st}${L.col === "black" ? " bw" : ""}`, sty = `--lck:${lcK(o)};--lc-a:${C[0]};--lc-l:${C[1]};--lc-z:${C[2]}`;
   const h = houseById(p.houseId), when = fmtRange(p.shootStart, p.shootEnd), x = q => q > 1 ? ` <span class="lc-q">×${q}</span>` : "";
   const cf = v => v ? esc(v) : `<span class="lc-na">–</span>`, sub = a => a.filter(Boolean).map(esc).join(" · ");
-  const head = `<div class="lc-head"><b dir="auto">${esc(p.name || "Untitled production")}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
+  const head = `<div class="lc-head"><b dir="auto">${esc(p.name || (p.browse ? "Lenses" : "Untitled production"))}</b><span>Lenses${h ? " · " + esc(h.name) : ""}</span>${when ? `<span class="lc-dt">${esc(when)}</span>` : ""}</div>`;
   const ONES = "Single lenses";
   if (o.lay === "compact") {
     // a set: its name, then its lenses side by side, a column a lens (focal length over stop and close focus), every other one tinted
@@ -4009,9 +4021,14 @@ function lensCardHtml(p, o) {
 }
 function viewLensCard() {
   const p = lcCur(), o = lcOpts(), id = lcListId();
-  const opts = lcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}${listDir(x.name)}>${esc(x.name || "Untitled production")}</option>`).join(""), curL = lcLists().find(x => x.id === id);
+  const opts = `<option value="none"${id ? "" : " selected"}>No list · my own lenses</option>` + lcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}${listDir(x.name)}>${esc(x.name || "Untitled production")}</option>`).join(""), curL = lcLists().find(x => x.id === id);
   const head = pageHead("Lens Cards");
-  if (!p) return `${head}<section class="pad cam-out"><p class="hint">Make a list with lenses first. Its lenses come here, each with its close focus.</p></section>`;
+  // no list: the card's title, a line to add a lens (and its close focus, for one the catalogs don't know), and the lenses added
+  const own = p.browse ? `<div class="lc-own">
+      <input class="lc-in" id="lc-name" type="text" dir="auto" maxlength="60" autocomplete="off" value="${esc(lcOwn().name)}" placeholder="Card title, e.g. the production" aria-label="Card title">
+      <div class="lc-addrow"><input class="lc-in" id="lc-add" type="text" dir="auto" maxlength="120" autocomplete="off" placeholder="Add a lens: Cooke S4i 32mm" aria-label="Lens to add"><input class="lc-in lc-cfin" id="lc-addcf" type="text" maxlength="12" autocomplete="off" placeholder="CF" aria-label="Close focus, if the app doesn't know it"><button type="button" class="btn primary lc-addbtn" data-act="lc-add" aria-label="Add the lens">+</button></div>
+      ${Object.keys(p.items).length ? `<div class="lc-lines">${Object.entries(p.items).map(([k, l]) => `<span class="lc-line"><span dir="auto">${esc(l.name)}${l.cf ? ` · ${esc(l.cf)}` : ""}</span><button type="button" data-act="lc-del" data-id="${esc(k)}" aria-label="Remove ${esc(l.name)}">×</button></span>`).join("")}</div>` : ""}
+    </div>` : "";
   const seg = (k, v, t, sub) => `<button type="button" data-act="lc-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
   const card = lensCardHtml(p, o);
   setTimeout(lcFit, 0); setTimeout(() => lcPdfPrep(p), 400);
@@ -4020,12 +4037,13 @@ function viewLensCard() {
   return `${head}
     <section class="pad cam-out lc-page">
       <div class="field lc-top"><select id="lc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
+      ${own}
       ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--lck:${k}">${card.html}</div></div>
         <div class="lc-bar">
           <span class="stepper lc-step" role="group" aria-label="Card size">${sb("lc-k", -1, "Smaller card", "−", k <= LC_K[0])}<span id="lc-size" aria-live="polite">…</span>${sb("lc-k", 1, "Bigger card", "+", k >= LC_K[1])}</span>
           <button type="button" class="iconbtn lc-reset" data-act="lc-k1" aria-label="Back to the first size" title="Back to the first size"${k !== 1 ? "" : " hidden"}>${RESET_ICON}</button>
           <span class="stepper lc-step lc-zs" role="group" aria-label="Zoom the preview">${sb("lc-zoom", -1, "Zoom out", ZOOM_OUT_ICON, zi <= 0)}<span id="lc-zl" aria-live="polite">${z}×</span>${sb("lc-zoom", 1, "Zoom in", ZOOM_IN_ICON, zi >= LC_Z.length - 1)}</span>
-        </div></div>` : `<p class="hint">No lenses on this list yet.</p>`}
+        </div></div>` : `<p class="hint">${p.browse ? "Add your lenses above. A lens the catalogs know brings its stop and close focus." : "No lenses on this list yet."}</p>`}
       <div class="lc-opts"><span class="cr-l">Layout</span><div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
         <span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
         <span class="cr-l">Colors</span><div class="lc-swatches" role="radiogroup" aria-label="Colors">${Object.entries(LC_COLS).map(([v, c]) => `<button type="button" class="lc-sw${v === "black" ? " bw" : ""}" role="radio" data-act="lc-opt" data-k="col" data-v="${v}" aria-checked="${o.col === v}" aria-label="${c[3]}" title="${c[3]}" style="--sw:${c[1]}"></button>`).join("")}</div></div>
@@ -5560,6 +5578,9 @@ document.addEventListener("click", e => {
     case "cams": closeModal(); app.view = "cams"; app.camCmp = false; render(); window.scrollTo(0, 0); break;
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
+    case "lc-add": { const i = document.getElementById("lc-add"), c = document.getElementById("lc-addcf"), nm = i && i.value.trim(); if (!nm) { i && i.focus(); break; }
+      lcOwn().items[uid("own-")] = { qty: 1, name: nm.slice(0, 120), custom: true, cf: c ? c.value.trim().slice(0, 12) : "" }; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); document.getElementById("lc-add")?.focus(); break; }
+    case "lc-del": delete lcOwn().items[b.dataset.id]; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); break;
     case "lc-k1": lcShowK(lcSetK(1)); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
     case "lc-k": lcShowK(lcSetK(lcStepK(lcK(), +b.dataset.v))); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
     case "lc-zoom": { app.lcZi = Math.max(0, Math.min(LC_Z.length - 1, (app.lcZi | 0) + (+b.dataset.v))); const z = lcZ(), pv = document.querySelector(".lc-prev");
@@ -5949,7 +5970,7 @@ document.addEventListener("click", e => {
     }
   }
 });
-document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key === "Enter" && e.target && (e.target.id === "lc-add" || e.target.id === "lc-addcf")) { e.preventDefault(); document.querySelector('[data-act="lc-add"]')?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
 document.addEventListener("toggle", e => {
   const k = e.target && e.target.dataset && e.target.dataset.k;
   if (!k || app.q.trim()) return;
@@ -5988,6 +6009,7 @@ document.addEventListener("input", e => {
 document.addEventListener("change", e => {
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
+  if (t.id === "lc-name") { lcOwn().name = t.value.trim(); lcPdfMade = null; touchSettings(); const h = document.querySelector(".lcard .lc-head b"); if (h) h.textContent = lcOwn().name || "Lenses"; return; }
   if (t.id === "lc-list") { app.settings.lcList = t.value; touchSettings(); render(); return; }  // the Lens card's list: kept for next time
   if (t.id === "mc-list") { app.settings.mcList = t.value || "none"; touchSettings(); mcOpen = null; render(); return; }  // the Media Calculator's list: kept for next time
   if (t.form && t.form.id === "catItemForm" && ["c", "s", "g"].includes(t.name)) { catDialogSync(t.name); return; }
