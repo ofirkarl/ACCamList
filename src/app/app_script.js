@@ -3916,7 +3916,7 @@ function lensCardHtml(p, o) {
     return { n, html: `<div class="lcard lcc${bw ? " bw" : ""}">${head}${units.map(unitB).join("")}</div>` };
   }
   const rows = (list, kind) => list.map(r => kind === "set"
-    ? `<tr class="g"><td colspan="3">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount].filter(Boolean).map(esc).join(" · ")}</span></td></tr>${r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join("")}`
+    ? `<tr class="g"><td colspan="3"><div class="lc-gn">${esc(r.name)}${x(r.q)}<span>${[r.cov, r.mount].filter(Boolean).map(esc).join(" · ")}</span></div></td></tr>${r.lenses.map(l => `<tr class="in"><td><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join("")}`
     : `<tr><td>${esc(r.name)} <span class="lc-mm">${esc(r.mm)}</span>${x(r.q)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("");
   const uRow = u => two ? `<tr class="u"><td colspan="3">${u.label}</td></tr>` : "";
   const table = us => us.some(u => u.sets.length || u.ones.length) ? `<table class="lc-t"><thead><tr><th>Lens · mm</th><th class="n">Stop</th><th class="n">Close focus</th></tr></thead><tbody>${us.map(u => uRow(u) + rows(u.sets, "set") + rows(u.ones, "one")).join("")}</tbody></table>` : "";
