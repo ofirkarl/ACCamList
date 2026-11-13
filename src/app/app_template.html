@@ -4268,11 +4268,11 @@ function viewWelcome() {
     </form>
   </section>`;
 }
-/* a production whose last shoot day is more than a day behind goes to the Archive by itself (nothing is deleted); "Move to Archive" / "Restore" in its menu overrides that */
+/* a production whose last shoot day has passed goes to the Archive by itself, the morning after (nothing is deleted); "Move to Archive" / "Restore" in its menu overrides that */
 function lastDayOf(p) { const q = unit2Of(p); return [p.shootEnd || p.shootStart, q && (q.shootEnd || q.shootStart)].filter(Boolean).sort().pop() || ""; }
 function isArchived(p) {
   if (p.arch === "on") return true; if (p.arch === "off") return false;
-  const e = lastDayOf(p); return !!e && dayGap(e, todayIso()) >= 2;
+  const e = lastDayOf(p); return !!e && dayGap(e, todayIso()) >= 1;
 }
 function viewHome(archPage) {
   const list = app.productions.filter(p => !(p.mainOf && findProd(p.mainOf))).sort((a, b) => Math.max(b.updatedAt || 0, unit2Of(b)?.updatedAt || 0) - Math.max(a.updatedAt || 0, unit2Of(a)?.updatedAt || 0));
