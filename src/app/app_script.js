@@ -3756,10 +3756,11 @@ function camWhen(p, c) {
 /* the wireless video and focus systems rental houses carry, by maker (checked against the makers' own names) */
 const DEV_VID = [
   ["Teradek", ["Bolt 6 LT 750", "Bolt 6 LT 1500", "Bolt 6 XT 750", "Bolt 6 XT 1500", "Bolt 6 XT 3000", "Bolt 6 XT MAX", "Bolt 4K LT 750", "Bolt 4K LT 1500", "Bolt 4K LT MAX", "Bolt 4K 750", "Bolt 4K 1500", "Bolt 4K 3000", "Bolt 500 XT", "Bolt 1000 XT", "Bolt 3000 XT", "Ace 500", "Ace 750"]],
-  ["Hollyland", ["Mars 4K", "Mars 400S PRO", "Mars 400S PRO II", "Mars 300 PRO", "Mars M1", "Mars M1 Enhanced", "Pyro S", "Pyro H", "Pyro 7", "Pyro Ultra", "Cosmo C1", "Cosmo C2", "Cosmo 400", "Cosmo 600", "Cosmo 1000", "Cosmo 1200", "Cosmo 1500"]],
+  ["Hollyland", ["Mars 4K", "Mars 400S PRO", "Mars 400S PRO II", "Mars 300 PRO", "Mars M1", "Mars M1 Enhanced", "Pyro S", "Pyro H", "Pyro 7", "Pyro Ultra", "Cosmo C1", "Cosmo C2", "Cosmo 400", "Cosmo 600", "Cosmo 1000", "Cosmo 1200", "Cosmo 1500", "Syscom 421"]],
   ["Accsoon", ["CineView SE", "CineView HE", "CineView Master 4K", "CineView Quad"]],
   ["DJI", ["Video Transmitter", "SDR Transmission"]],
-  ["Vaxis", ["Storm 3000", "Atom 500"]]];
+  ["Vaxis", ["Storm 3000", "Atom 500"]],
+  ["Vrriis", ["WL087 II"]], ["Amimon", ["Connex"]], ["BOXX", ["Meridian"]]];
 const DEV_FOC = [
   ["ARRI", ["WCU-4", "Hi-5", "WCU-3"]],
   ["Teradek RT", ["CTRL.1", "CTRL.3", "CTRL.5", "MK3.1"]],
@@ -3767,7 +3768,10 @@ const DEV_FOC = [
   ["Preston", ["FI+Z HU3", "FI+Z HU4", "Microforce"]],
   ["cmotion", ["cPRO", "Compact One", "Compact LCS", "cvolution"]],
   ["DJI", ["Focus Pro", "Wireless Follow Focus"]],
-  ["Movcam", ["Single-Axis Wireless Lens Control"]]];
+  ["Movcam", ["Single-Axis Wireless Lens Control"]],
+  ["Cine RT", ["Focus Bug"]]];
+/* other names the catalogs give a maker ("RT Motion MK3.1", a Nucleus without "Tilta") */
+const DEV_MAKER = { teradek: ["teradek", "rtmotion"], tilta: ["tilta", "nucleus"] };
 const CAM_LETTERS = "ABCDEFGH".split("");
 function camListId() { const k = app.settings.camList; if (k === "none") return ""; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
 function camCur() { const id = camListId(); if (id) return findProd(id); if (!app.camP) app.camP = { id: "cams", browse: true, name: "", houseId: "any", items: {} }; return app.camP; }
@@ -3777,11 +3781,24 @@ function camNew(list, id) { const L = CAM_LETTERS.find(x => !list.some(c => c.L 
    known makers and models (the longest model that fits the item's name: "Nucleus-Nano II" before "Nucleus-Nano") */
 const camKey = s => norm(s).replace(/[^a-z0-9]+/g, "");
 const CAM_SKIP = { vid: /monitor|receiver|\brx\b|antenna|router|\bserv\b|vidiu|\blink\b|cage/i, foc: /motor|cforce|zoom control|pan-bar|adapter|wheel|steady zoom/i };
+/* the device a gear name is (its maker and model, the longest model that fits), or null: a monitor, receiver, motor… isn't one */
+const camDevFlat = k => (k === "vid" ? DEV_VID : DEV_FOC).flatMap(([mk, ms]) => ms.map(m => { const a = camKey(mk.split(" ")[0]); return { full: `${mk} ${m}`, mk, m, mks: DEV_MAKER[a] || [a], mm: camKey(m) }; }));
+function camDevOf(name, k) {
+  if (!name || (CAM_SKIP[k].test(name) && !(k === "vid" && /transmitter/i.test(name) && !/monitor/i.test(name)))) return null;  // a transmitter-and-receiver set is one
+  // the model's words together ("Bolt 6 LT 750") or each of them somewhere in the name ("Bolt 4K 750 LT …" is the Bolt 4K LT 750)
+  const key = camKey(name), words = new Set(norm(name).split(/[^a-z0-9.+]+/).filter(Boolean)), has = d => key.includes(d.mm) || norm(d.m).split(/[\s-]+/).every(w => words.has(w));
+  return camDevFlat(k).filter(d => has(d) && d.mks.some(x => key.includes(x))).sort((a, b) => b.mm.length - a.mm.length)[0] || null;
+}
+/* the devices the rental houses have (each with the houses that have it): what the pickers offer */
+function camDevAt(k, houses) {
+  const at = new Map();
+  for (const [, e] of ITEM) { if (!houses.includes(e.h.id)) continue; const d = camDevOf(e.it.name, k); if (!d) continue; if (!at.has(d.full)) at.set(d.full, new Set()); at.get(d.full).add(e.h.id); }
+  return at;
+}
 function camDevOnList(p, k) {
-  const D = k === "vid" ? DEV_VID : DEV_FOC, flat = D.flatMap(([mk, ms]) => ms.map(m => ({ full: `${mk} ${m}`, mk: camKey(mk.split(" ")[0]), m: camKey(m) }))), out = [];
+  const out = [];
   for (const [id, l] of Object.entries(p.items || {})) {
-    const n = (ITEM.get(id) || {}).it?.name || l.name || ""; if (!n || CAM_SKIP[k].test(n)) continue;
-    const key = camKey(n), hit = flat.filter(d => key.includes(d.m) && key.includes(d.mk)).sort((a, b) => b.m.length - a.m.length)[0];
+    const hit = camDevOf((ITEM.get(id) || {}).it?.name || l.name || "", k);
     if (!hit) continue;
     const units = k === "vid" && l.tx !== undefined ? l.tx : lineQty(l);
     for (let i = 0; i < units; i++) out.push(hit.full);
@@ -4054,14 +4071,17 @@ function camPicker(k) {
     return;
   }
   if (k === "vid" || k === "foc") {  // wireless video or focus: makers and models, and the ones on the list first
-    const us = p.browse ? [p] : camUnitSrcs(p, c), D = k === "vid" ? DEV_VID : DEV_FOC, now = c[k] || "";
-    const names = us.flatMap(s => Object.values(s.items || {}).map(l => norm(l.name || "")).concat(Object.keys(s.items || {}).map(id => norm(ITEM.get(id)?.it.name || ""))));
-    const flat = D.flatMap(([mk, ms]) => ms.map(m => ({ mk, m, full: `${mk} ${m}` })));
-    const onList = flat.filter(d => names.some(n => n.includes(norm(d.m)) && n.includes(norm(d.mk.split(" ")[0]))));
-    const one = d => opt(d.full, now === d.full, `${esc(d.mk)} <b>${esc(d.m)}</b>`, "", ` data-n="${esc(norm(d.full))}"`);
-    const custom = now && !flat.some(d => d.full === now) ? grp("Typed") + opt(now, true, esc(now)) : "";
+    const us = p.browse ? [] : camUnitSrcs(p, c), now = c[k] || "", flat = camDevFlat(k);
+    // the rental house's own (no list: every house's, each with the houses that have it)
+    const houses = p.browse ? HOUSES.map(h => h.id) : [...new Set([camHome(p, c).houseId, ...us.map(s => s.houseId)])].filter(Boolean);
+    const at = camDevAt(k, houses), have = flat.filter(d => at.has(d.full));
+    const onList = [...new Set(us.flatMap(s => camDevOnList(s, k)))].map(f => flat.find(d => d.full === f)).filter(Boolean);
+    const where = d => houses.length > 1 ? [...at.get(d.full) || []].map(id => (houseById(id) || {}).name || id).map(x => esc(x.split(" ")[0])).join(" · ") : "";
+    const one = (d, sub) => opt(d.full, now === d.full, `${esc(d.mk)} <b>${esc(d.m)}</b>`, sub || "", ` data-n="${esc(norm(d.full))}"`);
+    const custom = now && !have.some(d => d.full === now) && !onList.some(d => d.full === now) ? grp("Typed") + opt(now, true, esc(now), "", ` data-n="${esc(norm(now))}"`) : "";
+    const makers = [...new Set(have.map(d => d.mk))];
     sheet(k === "vid" ? "Wireless video" : "Focus", search(k === "vid" ? "Search wireless video" : "Search focus systems"),
-      custom + (onList.length ? grp("On the list") + onList.map(one).join("") : "") + `<div class="cs-all">${D.map(([mk, ms]) => grp(mk) + flat.filter(d => d.mk === mk).map(one).join("")).join("")}</div>`
+      custom + (onList.length ? grp("On the list") + onList.map(d => one(d)).join("") : "") + `<div class="cs-all">${makers.map(mk => grp(mk) + have.filter(d => d.mk === mk).map(d => one(d, where(d))).join("")).join("")}</div>`
       + `<form class="cs-other" id="camDevOther" data-k="${k}" autocomplete="off"><input name="n" maxlength="60" placeholder="Not listed? Type it" aria-label="Another device, by name" dir="auto"><button class="btn sm" type="submit">Use</button></form>`);
     return;
   }
@@ -5467,7 +5487,13 @@ document.addEventListener("input", e => {
   const t = e.target, p = cur();
   if (t.dataset && (t.dataset.camf || t.dataset.camnote) && p) { camField(p, t); return; }
   if (t.dataset && t.dataset.cammeta) { camMeta()[t.dataset.cammeta] = t.value.slice(0, 60); touchSettings(); return; }
-  if (t.hasAttribute && t.hasAttribute("data-camq")) { const q = norm(t.value.trim()); document.querySelectorAll("#modal .cs-all .mc-opt").forEach(o => { o.hidden = !!q && !(o.dataset.n || "").includes(q); }); return; }
+  if (t.hasAttribute && t.hasAttribute("data-camq")) {
+    const toks = norm(t.value).split(/\s+/).map(camKey).filter(Boolean), list = document.querySelector("#modal .cs-list"); if (!list) return;
+    list.querySelectorAll(".mc-opt[data-n]").forEach(o => { const key = camKey(o.dataset.n); o.hidden = toks.length > 0 && !toks.every(x => key.includes(x)); });
+    let head = null, any = false; const close = () => { if (head) head.hidden = !any; };
+    for (const el of list.querySelectorAll(".mc-grp, .mc-opt")) { if (el.classList.contains("mc-grp")) { close(); head = el; any = false; } else if (!el.hidden) any = true; }
+    close(); return;
+  }
   if (t.name === "colorHex" && t.form) { const r = t.form.querySelector('input[name="color"][value="custom"]'); if (r) r.checked = true; t.closest(".sw")?.style.setProperty("--sw", t.value); return; }
   if (t.dataset && t.dataset.fin && p) { fin()[t.dataset.fin] = t.multiple ? [...t.selectedOptions].map(o => o.value).filter(Boolean).join("|") : t.value.trim(); fin().more = {}; if (t.tagName === "SELECT") t.closest(".f-field")?.classList.toggle("set", !!fin()[t.dataset.fin]); refreshFinder(); return; }
   if (t.id === "q") { app.q = t.value; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId)); return; }
