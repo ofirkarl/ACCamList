@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611131835";
+window.AC_BUILD = "202611131852";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -4912,7 +4912,7 @@ function viewSettings() {
   const meOpen = app.open.has("me") || !(me.name || "").trim();  // filled in once: folded away after that
   const themeSeg = `<div class="seg" role="radiogroup" aria-label="Light or dark">${[["light", "Light"], ["dark", "Dark"], ["auto", "Auto"]].map(([v, t]) => `<label><input type="radio" name="theme" value="${v}" ${theme.pref === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div>`;
   return `<section class="pad">
-    <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>Settings</h2><span></span></div>${acct ? `<div class="set-title"><span></span>${acct}</div>` : ""}</div>
+    <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2 data-act="ids-show">Settings</h2><span></span></div>${acct ? `<div class="set-title"><span></span>${acct}</div>` : ""}</div>
     <div class="set-group me-group${meOpen ? " open" : ""}"><button class="me-head" type="button" data-act="me-toggle" aria-expanded="${meOpen}" aria-controls="meForm">
         <span class="me-av" aria-hidden="true">${esc(((me.name || "").trim()[0] || "?").toUpperCase())}</span>
         <span class="me-t"><b>${esc(me.name || "Your details")}</b><small>${me.name ? esc(["1st AC", me.phone].filter(Boolean).join(" · ")) : "Your name and phone, for every new production"}</small></span>${CHEV}</button>
@@ -4921,14 +4921,16 @@ function viewSettings() {
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one.</span></form></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
-      return `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
+      const maker = !window.AC_STATS || app.isAdmin;   // the catalog file is the maker's tool; a user keeps only their removed items
+      return maker ? `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-catimport="1" hidden>${LOAD_ICON}<span>Load a catalog file</span></label></div>
-      <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add Gear.</span></div>`; })()}
+      <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add Gear.</span></div>`
+        : rows ? `<div class="set-group"><h3>Catalog</h3>${rows}</div>` : ""; })()}
     <div class="set-group"><h3>My lists</h3>
       <div class="cat-io"><button class="btn" type="button" data-act="lists-export">${SAVE_ICON}<span>Save all my lists as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-listsimport="1" hidden>${LOAD_ICON}<span>Load lists from a file</span></label></div>
       <span class="hint">A backup of every production and its gear. Loading one adds its lists to yours; a list you already have is replaced only by a newer copy.</span></div>
-    ${window.AC_STATS ? `<div class="set-group"><h3 data-act="ids-show">About your use</h3>
+    ${window.AC_STATS && (app.isAdmin || app.showIds) ? `<div class="set-group"><h3>About your use</h3>
       <p class="hint" style="margin:0">The app tells its maker how much it is used: your name, how many lists you made, exported and shared, and your time in the app. Never what is in your lists.</p>
       ${app.isAdmin ? `<div><button class="btn primary" type="button" data-act="admin-open">Control room</button></div>` : ""}
       ${app.isAdmin || app.showIds ? `<div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div>` : ""}
