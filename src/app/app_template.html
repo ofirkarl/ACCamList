@@ -666,7 +666,6 @@ details.more > summary::-webkit-details-marker { display: none; }
 .item.edit > .ext, .item.edit > .ext-gap { flex: none; width: 26px; display: inline-flex; justify-content: center; }
 .lens-line .sep { color: var(--fg); opacity: .4; font-weight: 700; margin: 0 1px; }
 .line .qtys { flex-wrap: wrap; gap: 8px 14px; align-items: center; }
-.q-sets > span:first-child { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
 .q-txrx { display: inline-flex; gap: 12px; flex-wrap: nowrap; }
 .more-acts { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
 .seg.sm { border-radius: 7px; }
@@ -2471,23 +2470,30 @@ body { overflow-x: clip; }
 @media (max-width: 345px) { .hs-btn .hs-t { font-size: 9px; letter-spacing: 0; } }
 /* a list line: its name never runs under the small tools at its corner, and a wireless set takes one row like any item */
 .line .l-grid > .nm-col .to-cat { white-space: normal; text-align: start; }
-.q-sets { display: inline-flex; flex-direction: column-reverse; align-items: center; gap: 1px; }
 .section, .fav-cat { padding-inline: 8px; }
 .item.has-tx { flex-wrap: wrap; }
-/* a wireless set: under its counter a small line (sets, transmitters, receivers), and the tiny drawer that slides out from under
-   the counter. The drawer floats over the page: the row keeps its size and nothing around it moves */
-.q-cap { border: 0; background: none; margin: 0; padding: 3px 2px 0; font-family: var(--font-mono); font-size: 9px; line-height: 11px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; color: var(--muted); cursor: pointer; }
-.q-cap[aria-expanded="true"] { color: var(--sf-ink); font-weight: 700; }
-.tx-pop { position: fixed; z-index: 15; box-sizing: border-box; display: grid; gap: 3px; padding: 0 6px 0 9px; max-height: 0; opacity: 0; overflow: hidden; border: 1px solid var(--sf-line); border-radius: 5px 5px 12px 12px; background: var(--surface); box-shadow: 0 10px 18px -10px rgba(24, 23, 29, .4);
-  transition: max-height .6s cubic-bezier(.4, 0, .2, 1), padding .6s cubic-bezier(.4, 0, .2, 1), opacity .3s ease; }
-.tx-pop.up { border-radius: 12px 12px 5px 5px; box-shadow: 0 -8px 18px -10px rgba(24, 23, 29, .35); }
-.tx-pop.open { max-height: var(--h, 70px); padding-block: 5px; opacity: 1; }
-.tx-pop .tr { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
-.tx-pop .tr > span:first-child { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .06em; color: var(--sf-ink); }
-.tx-pop .stepper { padding: 1px; gap: 1px; }
-.tx-pop .stepper button { width: 24px; height: 24px; font-size: 14px; }
-.tx-pop .stepper input { width: 22px; height: 24px; font-size: 12px; }
-@media (prefers-reduced-motion: reduce) { .tx-pop { transition: none; } }
+/* a wireless set. Whole sets: the usual counter, its number a button that opens the drawer. Uneven: how many of each, in place
+   of the counter and the same size, so the row keeps its shape. The drawer: tiny, floating over the page, sliding out from under
+   the control (only its position moves, so it stays smooth on a phone) */
+.q-sets { display: inline-flex; }
+.stepper .st-n { width: 34px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg); font-family: var(--font-mono); font-size: 14px; font-weight: 600; box-shadow: none; }
+.stepper .st-n:hover { background: none; }
+.stepper .st-n[aria-expanded="true"] { color: var(--sf-ink); }
+.tx-pill { display: inline-flex; align-items: center; justify-content: center; gap: 9px; box-sizing: border-box; min-width: 98px; height: 34px; padding: 0 10px; border: 1px solid var(--sf-line); border-radius: 999px; background: var(--sf-tint); color: var(--sf-ink); font: inherit; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: .04em; white-space: nowrap; cursor: pointer; }
+.tx-pill b { font-size: 15px; font-weight: 700; letter-spacing: 0; color: var(--fg); margin-inline-start: 1px; }
+.tx-pill[aria-expanded="true"] { background: var(--sf-on); border-color: var(--sf); }
+.tx-pop { position: fixed; z-index: 15; overflow: hidden; padding: 0 10px 14px; pointer-events: none; }
+.tx-pop.up { padding: 14px 10px 0; }
+.tx-in { pointer-events: auto; box-sizing: border-box; display: grid; gap: 3px; padding: 5px 6px 5px 10px; border: 1px solid var(--sf-line); border-radius: 4px 4px 12px 12px; background: var(--surface); box-shadow: 0 8px 14px -8px rgba(24, 23, 29, .4);
+  transform: translateY(-105%); transition: transform .6s cubic-bezier(.4, 0, .2, 1); will-change: transform; }
+.tx-pop.up .tx-in { transform: translateY(105%); border-radius: 12px 12px 4px 4px; box-shadow: 0 -6px 14px -8px rgba(24, 23, 29, .35); }
+.tx-pop.open .tx-in { transform: none; }
+.tx-in .tr { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
+.tx-in .tr > span:first-child { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--sf-ink); }
+.tx-in .stepper { padding: 1px; gap: 1px; }
+.tx-in .stepper button { width: 24px; height: 24px; font-size: 14px; }
+.tx-in .stepper input { width: 22px; height: 24px; font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .tx-in { transition: none; } }
 </style>
 
 <div class="app">
@@ -3426,7 +3432,11 @@ function lineFromCatalog(id) {
   if (e.it.txrx) { l.sets = 1; l.tx = 1; l.rx = 1; l.qty = 1; }  // wireless video: counted in sets; each set starts with one TX and one RX
   return l;
 }
-const lineQty = l => l.tx !== undefined ? (l.sets ?? 1) : (l.qty || 0);
+/* a wireless video line is either whole sets (as many transmitters as receivers: 2 sets = 2 TX and 2 RX) or, once one of them is
+   counted on its own, simply so many TX and so many RX. Its quantity: the sets; when uneven, the whole sets in it (one at least) */
+const wlBal = l => (l.tx || 0) === (l.rx || 0);
+const wlFix = l => { if (l && l.tx !== undefined && !l.tx && !l.rx) { const n = l.sets || l.qty || 1; l.tx = n; l.rx = n; } return l; };  // an older line left with sets but no TX or RX: whole sets
+const lineQty = l => l.tx !== undefined ? (wlBal(l) ? (l.tx || l.sets || 1) : Math.max(1, Math.min(l.tx || 0, l.rx || 0))) : (l.qty || 0);
 function totals(p) {
   const v = Object.values(p.items || {});
   return { lines: v.length, pcs: v.reduce((a, x) => a + lineQty(x), 0) };
@@ -4160,24 +4170,26 @@ let bulkAdd = false;
 function setQty(p, id, qty, field) {
   qty = clampQ(qty);
   const wasNew = !p.items[id];
-  const und = !wasNew && qty === 0 && !field ? snapItems(p) : null, gone = und ? p.items[id].name : "";
-  let l = p.items[id];
+  let l = wlFix(p.items[id]);
+  const last = !!(field && l && l.tx !== undefined && qty === 0 && !(field === "tx" ? l.rx : l.tx));  // its last transmitter or receiver taken away: the line goes
+  const und = !wasNew && qty === 0 && (!field || last) ? snapItems(p) : null, gone = und ? p.items[id].name : "";
   if (!l) {
     if (qty === 0 || !ITEM.has(id)) return [];
     l = p.items[id] = lineFromCatalog(id);
     if (l.tx !== undefined) { l.sets = qty; l.tx = qty; l.rx = qty; }
     else l.qty = qty;
   } else if (field && l.tx !== undefined) {
-    l[field] = qty;  // TX and RX are counted on their own; the sets stay as they are
-  } else if (l.tx !== undefined) {  // another set (or one less) brings one TX and one RX with it
-    const d = qty - lineQty(l);
-    l.sets = qty; l.tx = Math.max(0, (l.tx || 0) + d); l.rx = Math.max(0, (l.rx || 0) + d);
-    if (qty === 0) delete p.items[id];
+    l[field] = qty;  // a transmitter or a receiver counted on its own: the line is then so many TX and so many RX, no longer sets
+    if (!l.tx && !l.rx) delete p.items[id];
+  } else if (l.tx !== undefined) {
+    if (wlBal(l)) { l.tx = qty; l.rx = qty; }  // whole sets: each is one TX and one RX
+    else { const d = qty - lineQty(l); l.tx = Math.max(0, (l.tx || 0) + d); l.rx = Math.max(0, (l.rx || 0) + d); }  // uneven: one more (or less) of each
+    if (qty === 0 || (!l.tx && !l.rx)) delete p.items[id];
   } else {
     l.qty = qty;
     if (qty === 0) delete p.items[id];
   }
-  if (p.items[id]) p.items[id].qty = lineQty(p.items[id]);
+  if (p.items[id]) { const x = p.items[id]; x.qty = lineQty(x); if (x.tx !== undefined) x.sets = x.qty; }
   const changed = [id];
   changed.push(...applyDefaults(p));
   clashSettle(p);
@@ -4949,55 +4961,63 @@ function ctlHtml(p, id) {
   if (!l) return `<button class="add" type="button" data-act="cinc" data-id="${esc(id)}" aria-label="Add">+ Add</button>`;
   return l.tx !== undefined ? setsCtl("c", id, l) : stepper("c", id, l.qty, null, false);
 }
-/* a wireless set: its counter counts sets; its transmitters and receivers live in a tiny drawer that slides out from under that
-   counter when the set is added or its quantity is tapped (and from the small line under the counter, which also says how many of
-   each). It floats over the page, so the item's row never changes size and nothing around it moves. One is open at a time; a tap
-   anywhere else closes it. The same in Add Gear and in the list. */
+/* a wireless set's control. Whole sets: the usual counter (− 2 +), with nothing written under it; its number opens the drawer.
+   Uneven: no counter of sets any more, just how many of each ("TX 1  RX 2"), which opens the drawer too.
+   The drawer is tiny, holds the two counters (TX, RX), and slides out from under the control when a set is added or its quantity
+   tapped. It floats over the page, so the row keeps its size and nothing around it moves. One is open at a time; a tap anywhere
+   else slides it back. The same in Add Gear and in the list. */
 let txPop = null, txAct = "l";   // the line whose drawer is open, and whose counters it uses ("c" in Add Gear, "l" in the list)
-const setsCtl = (act, id, l) => `<span class="tr q-sets"><button class="q-cap" type="button" data-act="txrx" data-id="${esc(id)}" aria-expanded="${txPop === id}" aria-label="${l.tx} transmitters, ${l.rx} receivers: change">Sets · TX ${l.tx} · RX ${l.rx}</button>${stepper(act, id, lineQty(l), null, false)}</span>`;
+const setsCtl = (act, id, l) => {
+  const open = txPop === id, n = lineQty(l), i = esc(id);
+  return wlBal(l)
+    ? `<span class="q-sets"><span class="stepper" data-txa><button type="button" data-act="${act}dec" data-id="${i}" aria-label="One set less">−</button><button type="button" class="st-n" data-act="txrx" data-id="${i}" data-${act}qty="${i}" aria-expanded="${open}" aria-label="${n} set${n === 1 ? "" : "s"}. Its transmitters and receivers">${n}</button><button type="button" data-act="${act}inc" data-id="${i}" aria-label="One set more">+</button></span></span>`
+    : `<span class="q-sets"><button type="button" class="tx-pill" data-txa data-act="txrx" data-id="${i}" aria-expanded="${open}" aria-label="${l.tx || 0} transmitters, ${l.rx || 0} receivers: change"><span>TX <b>${l.tx || 0}</b></span><span>RX <b>${l.rx || 0}</b></span></button></span>`;
+};
 const txEl = () => document.getElementById("txPop");
-const txAnchor = () => { for (const c of document.querySelectorAll(`.q-cap[data-id="${CSS.escape(txPop)}"]`)) { const s = c.parentElement && c.parentElement.querySelector(".stepper"); if (s && s.getBoundingClientRect().width) return { cap: c, step: s }; } return null; };
-/* where the drawer sits: right under the counter, its right edges in line; above it when there is no room below (the bottom bar);
-   gone when its counter has scrolled out of sight or under the search bar */
+const txAnchor = () => { for (const a of document.querySelectorAll(".q-sets [data-txa]")) { const b = a.dataset.id ? a : a.querySelector('[data-act="txrx"]'); if (b && b.dataset.id === txPop && a.getBoundingClientRect().width) return { main: a, btn: b }; } return null; };
+/* where the drawer sits: right under the control, right edges in line; above it when there is no room below (the bottom bar);
+   gone when the control has scrolled out of sight or under the search bar */
+const TX_PAD = 10;  // room around the drawer for its shadow
 function txPlace() {
   const el = txEl(), a = txPop && txAnchor(); if (!el || !a) return false;
-  const r = a.step.getBoundingClientRect(), cr = a.cap.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, h = el.scrollHeight + 12;
-  el.style.setProperty("--h", h + "px"); el.style.minWidth = Math.ceil(cr.width) + "px";   // as wide as the small line it slides over
+  const r = a.main.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, h = el.offsetHeight;
   const nav = document.querySelector(".navbar:not([hidden]), .dock:not([hidden])"), floor = nav ? nav.getBoundingClientRect().top : vh;
   const bar = document.querySelector(".bar.pad"), br = bar ? bar.getBoundingClientRect() : null, roof = br && br.top <= 1 ? br.bottom : 0;
   if (r.top < roof - 4 || r.bottom > floor + 4) return false;
   const up = r.bottom + 3 + h > floor - 4 && r.top - 3 - h > roof;
   el.classList.toggle("up", up);
-  el.style.right = Math.max(6, vw - Math.max(r.right, cr.right)) + "px";
+  el.firstElementChild.style.minWidth = Math.ceil(r.width) + "px";
+  el.style.right = Math.max(0, vw - r.right - TX_PAD) + "px";
   el.style.top = up ? "" : (r.bottom + 3) + "px"; el.style.bottom = up ? (vh - r.top + 3) + "px" : "";
   return true;
 }
-const txInner = l => `<span class="tr"><span>TX</span>${stepper(txAct, txPop, l.tx, "tx", true)}</span><span class="tr"><span>RX</span>${stepper(txAct, txPop, l.rx, "rx", true)}</span>`;
-/* after the page or a row was drawn again: the drawer keeps its place and shows the new numbers (no second animation) */
+const txInner = l => `<div class="tx-in"><span class="tr"><span>TX</span>${stepper(txAct, txPop, l.tx || 0, "tx", true)}</span><span class="tr"><span>RX</span>${stepper(txAct, txPop, l.rx || 0, "rx", true)}</span></div>`;
+/* after the page or a row was drawn again: the drawer keeps its place and its numbers follow, in place (nothing is rebuilt, so
+   nothing flickers or slides twice) */
 function txSync() {
   if (!txPop) return;
   const el = txEl(), p = cur(), l = p && p.items[txPop], a = txAnchor();
   if (!el || !a || !l || l.tx === undefined) { txClose(true); return; }
-  if (!(document.activeElement && el.contains(document.activeElement) && document.activeElement.tagName === "INPUT")) el.innerHTML = txInner(l);
-  a.cap.setAttribute("aria-expanded", "true");
+  for (const f of ["tx", "rx"]) { const i = el.querySelector(`input[data-f="${f}"]`), v = String(l[f] || 0); if (i && i !== document.activeElement && i.value !== v) i.value = v; }
+  a.btn.setAttribute("aria-expanded", "true");
   if (!txPlace()) txClose(true);
 }
 function txClose(now) {
   if (!txPop) return; txPop = null;
-  document.querySelectorAll('.q-cap[aria-expanded="true"]').forEach(c => c.setAttribute("aria-expanded", "false"));
+  document.querySelectorAll('.q-sets [aria-expanded="true"]').forEach(c => c.setAttribute("aria-expanded", "false"));
   const el = txEl(); if (!el) return;
   el.removeAttribute("id"); el.classList.remove("open");   // slides back in, then goes
   if (now) el.remove(); else setTimeout(() => el.remove(), 640);
 }
 /* a set was added or its quantity tapped: open its drawer (closing another's); a set that left the list takes its drawer with it */
 function txOpenFor(p, id, act) {
-  const l = p && p.items[id];
+  const l = wlFix(p && p.items[id]);
   if (!l || l.tx === undefined) { if (txPop === id) txClose(true); return; }
   if (txPop === id) { txSync(); return; }
   txClose(true); txPop = id; txAct = act;
   const el = document.createElement("div"); el.id = "txPop"; el.className = "tx-pop"; el.setAttribute("role", "group"); el.setAttribute("aria-label", "Transmitters and receivers");
   el.innerHTML = txInner(l); document.body.appendChild(el);
-  const a = txAnchor(); if (a) a.cap.setAttribute("aria-expanded", "true");
+  const a = txAnchor(); if (a) a.btn.setAttribute("aria-expanded", "true");
   if (!txPlace()) { txClose(true); return; }
   void el.offsetHeight; el.classList.add("open");
 }
@@ -9232,6 +9252,7 @@ document.addEventListener("keydown", e => {
 
 /* ---------- start ---------- */
 app.productions = lsGet(LS_KEY, []);
+for (const pr of app.productions) for (const l of Object.values(pr.items || {})) wlFix(l);
 if (!Array.isArray(app.productions)) app.productions = [];
 {
   const s = lsGet(LS_SET, null);
