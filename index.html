@@ -214,9 +214,9 @@
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
 .app { max-width: 760px; margin: 0 auto; padding-bottom: 96px; position: relative; isolation: isolate; }
-/* the brand behind every page: the color bars down the whole screen, faint at the top and fading to 90% transparent at the bottom */
+/* the brand behind every page: the color bars down the whole screen, faint at the top and bottom edges and fading to 90% transparent in the middle */
 .app::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--bars); opacity: var(--bars-bg, .1);
-  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1)); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1)); }
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1) 50%, #000); mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, .1) 50%, #000); }
 :root[data-theme="dark"] { --bars-bg: .08; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bars-bg: .08; } }
 /* what stays put over a scrolling page lets the bars show through, softly */
@@ -1113,14 +1113,14 @@ h2.page, .ph-name, .prod-title h2, .f-title { font-family: var(--font-body); fon
 /* settings */
 .set-group { gap: 12px; padding-block: 18px; }
 .set-group h3 { font-size: 15px; font-weight: 700; letter-spacing: -.005em; text-transform: none; color: var(--fg); }
-.seg { border-radius: 12px; background: var(--seg-track); border-color: transparent; padding: 3px; gap: 3px; }
-.seg span { border-radius: 9px; padding: 8px 16px; }
-.seg label + label span { border-inline-start: 0; }
-.seg input:checked + span { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .1), 0 2px 6px rgba(48, 40, 28, .06); }
-.seg button { border-radius: 9px; }
-.seg button + button { border-inline-start: 0; }
-.seg button { transition: background-color .22s var(--ease), color .22s, box-shadow .22s; }
-.seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 2px rgba(48, 40, 28, .1), 0 2px 6px rgba(48, 40, 28, .06); }
+/* a choice of a few: no track behind them. Each option a button of its own, framed, the page showing between them;
+   the one that's on takes the buttons' color (the house color): its frame and its words */
+.seg { border: 0; border-radius: 0; background: none; padding: 0; gap: 6px; overflow: visible; }
+.seg span, .seg button { border-radius: 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 78%, transparent); color: var(--fg);
+  transition: background-color .2s var(--ease), color .2s, border-color .2s, box-shadow .2s; }
+.seg span { padding: 8px 16px; }
+.seg label + label span, .seg button + button { border-inline-start: 1px solid var(--line); }
+.seg input:checked + span, .seg button[aria-pressed="true"] { background: var(--surface); color: var(--accent); font-weight: 600; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent), 0 2px 8px -4px color-mix(in srgb, var(--accent) 45%, transparent); }
 .rule { padding: 14px 16px; }
 
 /* preview */
@@ -1177,6 +1177,10 @@ button.ph-chip:active { transform: scale(.97); }
 .tab .num { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; font-size: 11px; font-weight: 600;
   background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); vertical-align: 0; position: static; border: 0; }
 .tab[aria-selected="true"] .num { background: var(--accent); color: var(--accent-fg); }
+/* no track behind the tabs either: each tab framed on the page, the open one in the house color's frame (as every choice of a few) */
+.tabs { background: none; padding: 0; gap: 6px; }
+.tab { border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--line)); background: color-mix(in srgb, var(--surface) 78%, transparent); }
+.tab[aria-selected="true"] { background: var(--surface); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent), 0 2px 8px -4px color-mix(in srgb, var(--accent) 45%, transparent); }
 .tab .num:empty { display: none; }
 :root[data-theme="dark"] .tabs { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabs { background: color-mix(in srgb, var(--accent) 10%, var(--bg)); } }
