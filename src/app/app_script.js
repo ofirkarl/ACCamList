@@ -3849,7 +3849,9 @@ function viewTools() {
    Two layouts: Compact (a set in two lines: focal lengths over close focus) and One table (a row a lens). The card is as big
    as what's on it; its corner drags it bigger or smaller like a window, everything on it in proportion. The PDF is the card's own size */
 const LC_LAYOUTS = { compact: "Compact", one: "One table" };
-const LC_K = [0.5, 2.5];  // how much smaller or bigger the card may be dragged
+const LC_K = [0.5, 4];  // how much smaller or bigger the card may be made
+const LC_Z = [1, 1.25, 1.5, 2, 2.5, 3];  // the preview's zoom steps, over the card fitted to it
+const lcZ = () => LC_Z[Math.max(0, Math.min(LC_Z.length - 1, app.lcZi | 0))];
 const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard = {}); if (!LC_LAYOUTS[o.lay]) o.lay = "compact"; if (!o.k || typeof o.k !== "object") o.k = {};
   const L = lcLook(o); o.style = L.st; o.col = L.col; delete o.ink; return o; };
 const lcK = o => { o = o || lcOpts(); return Math.min(LC_K[1], Math.max(LC_K[0], Number((o.k || {})[o.lay]) || 1)); };
@@ -3946,20 +3948,25 @@ function viewLensCard() {
   const card = lensCardHtml(p, o);
   setTimeout(lcFit, 0); setTimeout(() => lcPdfPrep(p), 400);
   const k = lcK(o);
+  const z = lcZ(), zi = app.lcZi | 0, sb = (act, v, lab, icon, off) => `<button type="button" data-act="${act}" data-v="${v}" aria-label="${lab}" title="${lab}"${off ? " disabled" : ""}>${icon}</button>`;
   return `${head}
-    <section class="pad mc-pick"><div class="field"><label for="lc-list">List</label><select id="lc-list" aria-label="Which list">${opts}</select></div></section>
-    <section class="pad cam-out">
-      <div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
-      ${card.n ? `<div class="lc-prev${app.lcZoom ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
-        <div class="lc-sz"><span class="hint">Drag the corner to resize.</span><button type="button" class="iconbtn lc-zoom" data-act="lc-zoom" aria-pressed="${!!app.lcZoom}" aria-label="${app.lcZoom ? "Zoom out of the preview" : "Zoom in on the preview"}">${app.lcZoom ? ZOOM_OUT_ICON : ZOOM_IN_ICON}</button><button type="button" class="btn sm" data-act="lc-k1"${k !== 1 ? "" : " hidden"}>Actual size</button></div>` : `<p class="hint">No lenses on this list yet.</p>`}
-      <div class="cp-opts"><span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
+    <section class="pad cam-out lc-page">
+      <div class="lc-top"><div class="field"><select id="lc-list" aria-label="Which list">${opts}</select></div><div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div></div>
+      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" title="Drag to resize" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
+        <div class="lc-bar">
+          <span class="stepper lc-step" role="group" aria-label="Card size">${sb("lc-k", -1, "Smaller card", "−", k <= LC_K[0])}<span id="lc-size" aria-live="polite">…</span>${sb("lc-k", 1, "Bigger card", "+", k >= LC_K[1])}</span>
+          <button type="button" class="iconbtn lc-reset" data-act="lc-k1" aria-label="Back to the first size" title="Back to the first size"${k !== 1 ? "" : " hidden"}>${RESET_ICON}</button>
+          <span class="stepper lc-step lc-zs" role="group" aria-label="Zoom the preview">${sb("lc-zoom", -1, "Zoom out", ZOOM_OUT_ICON, zi <= 0)}<span id="lc-zl" aria-live="polite">${z}×</span>${sb("lc-zoom", 1, "Zoom in", ZOOM_IN_ICON, zi >= LC_Z.length - 1)}</span>
+        </div></div>` : `<p class="hint">No lenses on this list yet.</p>`}
+      <div class="lc-opts"><span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
         <span class="cr-l">Colors</span><div class="lc-swatches" role="radiogroup" aria-label="Colors">${Object.entries(LC_COLS).map(([v, c]) => `<button type="button" class="lc-sw${v === "black" ? " bw" : ""}" role="radio" data-act="lc-opt" data-k="col" data-v="${v}" aria-checked="${o.col === v}" aria-label="${c[3]}" title="${c[3]}" style="--sw:${c[1]}"></button>`).join("")}</div></div>
-      ${card.n ? `<p class="hint cp-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · <span id="lc-size">…</span>. The PDF is the card's own size: print at actual size (100%).</p>` : ""}
       <div class="co-acts"><button class="btn primary" type="button" data-act="lc-save" ${card.n ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="lc-share" ${card.n ? "" : "disabled"}>Share</button></div>
+      ${card.n ? `<p class="hint cp-note lc-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · Print the PDF at 100%.</p>` : ""}
     </section>`;
 }
-const ZOOM_IN_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M10.5 7.5v6M7.5 10.5h6"/></svg>`;
-const ZOOM_OUT_ICON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M7.5 10.5h6"/></svg>`;
+const RESET_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></svg>`;
+const ZOOM_IN_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M10.5 7.5v6M7.5 10.5h6"/></svg>`;
+const ZOOM_OUT_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 20 20M7.5 10.5h6"/></svg>`;
 const GRIP_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M20 10 10 20M20 15.5 15.5 20M20 4.5 4.5 20"/></svg>`;
 /* the card's size at its actual size (mm), measured as the PDF draws it, 4 px a mm */
 function lcNatural(p) {
@@ -3968,28 +3975,40 @@ function lcNatural(p) {
   const c = host.firstElementChild, r = { w: c.offsetWidth / 4, h: c.offsetHeight / 4 }; host.remove(); return r;
 }
 let lcNat = null;  // { w, h } of the card on screen at its actual size
-const lcSizeText = k => lcNat ? `${(lcNat.w * k / 10).toFixed(1)} × ${(lcNat.h * k / 10).toFixed(1)} cm` : "…";
-/* the preview's scale, px a mm: fitted when the page opens on a list and layout (4.5 at most, so a small card stays readable), then
-   kept while the card is resized, so nothing jumps; a card bigger than the preview is shown smaller, never cut */
+const lcSizeText = k => lcNat ? `${(lcNat.w * k / 10).toFixed(1)}\u202f×\u202f${(lcNat.h * k / 10).toFixed(1)}\u00a0cm` : "…";
+/* the preview's scale, px a mm: fitted when the page opens on a list and layout, to the preview's width and to the height left on the
+   screen (so the whole page shows with no scrolling), 4.5 at most so a small card stays readable; then kept while the card is resized,
+   so nothing jumps; a card bigger than the preview is shown smaller, never cut. Zoom: the preview only, in steps, to read it */
+const LC_PAD = 18;
 function lcPu(prev, k) {
-  const room = Math.max(40, prev.clientWidth - 56), key = lcListId() + "|" + lcOpts().lay;
-  if (!app.lcPu || app.lcPu.key !== key || app.lcPu.room !== room) app.lcPu = { key, room, pu: Math.min(4.5, room / (lcNat.w * k)) };
-  const fit = Math.min(app.lcPu.pu, room / (lcNat.w * k));
-  return app.lcZoom ? Math.max(fit * 2, 6) : fit;  // zoomed in: the preview only, to read it; the card's size stays
+  const room = Math.max(40, prev.clientWidth - 2 * LC_PAD), roomH = app.lcRoomH || 1e4, key = lcListId() + "|" + lcOpts().lay;
+  const most = kk => Math.min(room / (lcNat.w * kk), roomH / (lcNat.h * kk));
+  if (!app.lcPu || app.lcPu.key !== key || app.lcPu.room !== room || app.lcPu.roomH !== roomH) app.lcPu = { key, room, roomH, pu: Math.min(4.5, most(k)) };
+  return Math.min(app.lcPu.pu, most(k));
+}
+/* the height the card may take: the screen less what is above and below the preview (with a floor, on a short screen it scrolls) */
+function lcRoomH(prev) {
+  const r = prev.getBoundingClientRect(), app0 = prev.closest(".app") || document.body, below = app0.getBoundingClientRect().bottom - r.bottom;
+  return Math.max(150, (window.innerHeight - (r.top + window.scrollY) - below - 2 * LC_PAD) * .96);  // a little spare: small type rounds up
 }
 function lcFit() {
   const prev = document.querySelector(".lc-prev"), fr = prev && prev.querySelector(".lc-frame"), p = lcCur(); if (!fr || !p) return;
-  lcNat = lcNatural(p);
+  lcNat = lcNatural(p); app.lcRoomH = lcRoomH(prev);
   prev.classList.add("still"); lcShowK(lcK()); void prev.offsetWidth; prev.classList.remove("still");  // drawn at once, no easing on opening
 }
 /* the card at size k: on screen, its size in mm, the corner's value, Actual size when it isn't */
 function lcShowK(k) {
   const prev = document.querySelector(".lc-prev"), c = prev && prev.querySelector(".lcard"); if (!c || !lcNat) return;
-  c.style.setProperty("--k", k); prev.style.setProperty("--pu", lcPu(prev, k) + "px");
+  const fit = lcPu(prev, k), z = lcZ();
+  c.style.setProperty("--k", k); prev.style.setProperty("--pu", fit * z + "px");
+  prev.style.height = z > 1 ? Math.round(lcNat.h * k * fit + 2 * LC_PAD) + "px" : "";  // zoomed in, the window keeps its size and scrolls
   const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(k);
   const g = prev.querySelector(".lc-grip"); if (g) { g.setAttribute("aria-valuenow", Math.round(k * 100)); g.setAttribute("aria-valuetext", Math.round(k * 100) + "%"); }
   const one = document.querySelector('[data-act="lc-k1"]'); if (one) one.hidden = Math.abs(k - 1) < .005;
+  for (const b of document.querySelectorAll('[data-act="lc-k"]')) b.disabled = b.dataset.v < 0 ? k <= LC_K[0] + 1e-6 : k >= LC_K[1] - 1e-6;
 }
+/* the card's size by the stepper: to the next tenth, up or down */
+const lcStepK = (k, d) => (d > 0 ? Math.floor(k * 10 + 1e-6) + 1 : Math.ceil(k * 10 - 1e-6) - 1) / 10;
 /* a new size kept: for the PDF and next time */
 function lcSetK(k) { const o = lcOpts(); k = Math.round(Math.min(LC_K[1], Math.max(LC_K[0], k)) * 100) / 100; if (k === 1) delete o.k[o.lay]; else o.k[o.lay] = k; lcPdfMade = null; touchSettings(); return k; }
 /* the corner: dragged like a window's, the card grows or shrinks with everything on it, following the finger frame by frame */
@@ -5499,8 +5518,12 @@ document.addEventListener("click", e => {
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
     case "lc-k1": lcShowK(lcSetK(1)); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
-    case "lc-zoom": { app.lcZoom = !app.lcZoom; const pv = document.querySelector(".lc-prev"); if (pv) { pv.classList.toggle("zoom", app.lcZoom); lcShowK(lcK()); }
-      b.setAttribute("aria-pressed", String(!!app.lcZoom)); b.setAttribute("aria-label", app.lcZoom ? "Zoom out of the preview" : "Zoom in on the preview"); b.innerHTML = app.lcZoom ? ZOOM_OUT_ICON : ZOOM_IN_ICON; break; }
+    case "lc-k": lcShowK(lcSetK(lcStepK(lcK(), +b.dataset.v))); setTimeout(() => lcPdfPrep(lcCur()), 400); break;
+    case "lc-zoom": { app.lcZi = Math.max(0, Math.min(LC_Z.length - 1, (app.lcZi | 0) + (+b.dataset.v))); const z = lcZ(), pv = document.querySelector(".lc-prev");
+      if (pv) { pv.classList.toggle("zoom", z > 1); lcShowK(lcK()); }
+      const zl = document.getElementById("lc-zl"); if (zl) zl.textContent = z + "×";
+      for (const x of document.querySelectorAll('[data-act="lc-zoom"]')) x.disabled = x.dataset.v < 0 ? app.lcZi <= 0 : app.lcZi >= LC_Z.length - 1;
+      break; }
     case "lc-save": lcPdfGo(b, false); break;
     case "lc-share": lcPdfGo(b, true); break;
     case "cam-sel": app.camK = b.dataset.k; app.camU = undefined; app.camCmp = false; rerenderKeepScroll(); break;
