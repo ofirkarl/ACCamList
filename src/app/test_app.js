@@ -1092,3 +1092,8 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   ok(R.ones.some(r => r.mm === "32" && r.cf === "1'") && R.ones.some(r => r.name === "Cooke" && r.mm === "50" && !r.cf), "one lens matched by name; one that fits many (Cooke 50mm) read from its own name, no close focus guessed");
   ok(!R.ones.some(r => /Matte/.test(r.name)) && R.ones.some(r => /Master Macro/.test(r.name) && r.cf === "1'1\u00be\""), "not a lens: left out; the Master Macro (no mm in its name) is in");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); }
+{ const m = A.newProduction({ houseId: "fitussi", name: "Thypoch" }); A.app.productions.push(m);
+  for (const n of ["DZO Thypoch Simera-C set", "Thypoch Simera 21/28/35/50/75", "Thypoch Simera-C 21,28,35,50,75mm T1.5"]) { const id = A.addCustomLine(m, n, "lenses"); m.items[id].qty = 1; }
+  const R = A.lcRows(m);
+  ok(R.sets.length === 3 && R.sets.every(r => /Thypoch/.test(r.name) && r.lenses.length === 5 && r.lenses[4].cf === "1'10\""), "the DZO Thypoch set however it's written (another rental house's list too): found, each lens with its close focus");
+  A.app.productions.splice(A.app.productions.indexOf(m), 1); }

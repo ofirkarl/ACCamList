@@ -6127,24 +6127,29 @@ function lcListId() { const k = app.settings.lcList; if (k && findProd(k) && !is
 /* a list line's lens: its catalog item; a line typed by hand or brought in from a Word list or another rental house is matched
    by name to a catalog lens (the list's own rental house first), or else read from its own name ("Cooke S4i 32mm") */
 const LENS_STOP = new Set(["set", "of", "lens", "lenses", "kit", "mount", "the", "and", "with", "pl", "lpl", "ef", "e", "rf", "l", "mft", "full", "frame", "ff", "s35", "super35", "cine", "feet", "metric", "imperial"]);
-const lensToks = n => norm(n).replace(/(\d)\s+mm\b/g, "$1mm").split(/[^a-z0-9.\u0590-\u05ff]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t && !LENS_STOP.has(t));
+const lensToks = n => norm(n).replace(/(\d)\s*mm\b/g, "$1").split(/[^a-z0-9.\u0590-\u05ff]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t && !LENS_STOP.has(t));
 function lensByName(name, hid) {
-  if (!LENS_NAMES) { LENS_NAMES = []; for (const [id, e] of ITEM) if (e.it.lens) LENS_NAMES.push({ e, key: qKey(e.it.name), toks: new Set(lensToks(e.it.name)) }); }
+  if (!LENS_NAMES) { LENS_NAMES = []; for (const [id, e] of ITEM) if (e.it.lens) LENS_NAMES.push({ e, key: qKey(e.it.name), toks: new Set(lensToks(e.it.name + " " + (e.it.lens.focals || "") + " " + (e.it.lens.stop || ""))) }); }
   const key = qKey(name || ""), toks = lensToks(name || ""); if (!key || !toks.length) return null;
   const same = LENS_NAMES.filter(x => x.key === key);
   // every word of the line's name in the catalog lens's name ("ARRI Signature Prime Set Of 8" → "ARRI Signature Prime LPL-Mount Lens Set Of 8");
   // only one such lens counts (the list's rental house first): "Cooke 50mm" fits many, so it's read from its own name instead
-  const fits = same.length ? same : LENS_NAMES.filter(x => toks.every(t => x.toks.has(t) || (!/\d/.test(t) && x.key.includes(qKey(t)))));
+  // a set only for a line that says set or kit or lists focal lengths; one focal length ("32mm") is a single lens, never a set
+  const nf = name.replace(/\b[tf]\s*\/?\s*\d+(?:\.\d+)?/gi, " "), isSet = /\b(set|kit)\b/i.test(name) || /\d\s*[,/]\s*\d/.test(nf), oneF = !isSet && /\d+(?:\.\d+)?\s*mm\b/i.test(name);
+  const fits = same.length ? same : LENS_NAMES.filter(x => (isSet ? x.e.it.lens.set : oneF ? !x.e.it.lens.set : true) && toks.every(t => x.toks.has(t) || (!/\d/.test(t) && x.key.includes(qKey(t)))));
   const one = a => a.length === 1 ? a[0].e : null;
   return one(fits.filter(x => x.e.h.id === hid)) || (fits.some(x => x.e.h.id === hid) ? null : one(fits));
 }
-const LENS_WORD = /\b(lens(es)?|primes?|zoom|macro|anamorphic|probe|fisheye|summilux|summicron|cooke|zeiss|arri|signature|optimo|angenieux|cabrio|fujinon|canon|sigma|tokina|vista|laowa|leitz|leica|atlas|orion|dzofilm|dzo|vespid|catta|nisi|samyang|rokinon|sony|panasonic|lumix|tribe7|blackwing|viltrox|sirui|blazar|kowa|hawk|panavision|schneider|irix|meike|7artisans|ttartisan|nikon|helios|lomo)\b/i;
+const LENS_WORD = /\b(lens(es)?|primes?|zoom|macro|anamorphic|probe|fisheye|thypoch|simera|gnosis|pictor|arles|x-?tract|ranger|nanomorph|athena|aureus|supreme|radiance|ultra ?primes?|master ?primes?|nano ?primes?|cp\.?[23]|s4i?|sp3|panchro|speed panchro|summilux|summicron|cooke|zeiss|arri|signature|optimo|angenieux|cabrio|fujinon|canon|sigma|tokina|vista|laowa|leitz|leica|atlas|orion|dzofilm|dzo|vespid|catta|nisi|samyang|rokinon|sony|panasonic|lumix|tribe7|blackwing|viltrox|sirui|blazar|kowa|hawk|panavision|schneider|irix|meike|7artisans|ttartisan|nikon|helios|lomo)\b/i;
 const LENS_NOT = /adapter|filter|matte ?box|follow ?focus|motor|support|bracket|\bcase\b|\bcap\b|hood|\bring\b|booster|extender|mount kit|gear|\bnd\b|polariz|diopter|monitor|camera body/i;
 function lcLensOf(id, l, hid) {
   const e = ITEM.get(id), name = (l && l.name) || (e && e.it.name) || "";
   if (e && e.it.lens) return { it: e.it, sub: e.s.id };
   const m = lensByName(name, hid); if (m) return { it: m.it, sub: m.s.id };
-  if (/\d+(?:\.\d+)?\s*mm\b/i.test(name) && LENS_WORD.test(name) && !LENS_NOT.test(name)) return { it: { name, lens: {} }, sub: "" };
+  if (LENS_NOT.test(name) || !LENS_WORD.test(name)) return null;
+  const fl = (name.match(/\b\d{1,3}(?:\.\d)?(?=\s*(?:mm\b|[,/]|\s*$))/gi) || []).filter((v, i, a) => a.indexOf(v) === i);
+  if (fl.length > 1 && /\d\s*[,/]\s*\d/.test(name.replace(/\b[tf]\s*\/?\s*\d+(?:\.\d+)?/gi, " ")) && !/\d\s*[-–]\s*\d/.test(name)) return { it: { name, lens: { set: true, focals: fl.join(", ") } }, sub: "" };
+  if (/\d+(?:\.\d+)?\s*mm\b/i.test(name)) return { it: { name, lens: {} }, sub: "" };
   return null;
 }
 const lcCur = () => findProd(lcListId()) || null;
@@ -6156,7 +6161,7 @@ function lcRows(p) {
     const it = x.it, sp = lensSpec(it, x.sub);
     if (!sp) { const md0 = lensMod(it, null); if (md0) ones.push({ name: it.name.replace(/\s*\([^)]*mount[^)]*\)/i, ""), q, mm: "", t: "", cf: md0.one || "", macro: "" }); continue; }  // Master Macro 100: no "mm" in its name
     const md = lensMod(it, sp), nm = lensShortName(it, sp);
-    if (sp.per) sets.push({ name: nm.replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
+    if (sp.per) sets.push({ name: nm.replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
       lenses: sp.per.map(x => ({ mm: fmtN(x.f), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
     else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
       ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || "", cf: md ? md.one || "" : "", macro: md && md.macro || "" }); }
