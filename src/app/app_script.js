@@ -6690,7 +6690,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 /* ---------- Color lab: sliders that recolor the real pages live, to settle the app's palette. What it shows is a short code to
    send back; nothing here changes the lists. Kept on this device only. ---------- */
-const LAB_KEY = "acColorLab", LAB_DEF = { on: false, open: false, h: 245, s: 70, l: 55, cm: "same", ch: 200, hm: "same", hh: 30, pt: 0, bg: 45 };
+const LAB_KEY = "acColorLab2", LAB_DEF = { on: false, open: false, h: 198, s: 52, l: 38, cm: "same", ch: 200, hm: "same", hh: 30, pt: 0, bg: 45 };
 let lab = { ...LAB_DEF };
 try { Object.assign(lab, JSON.parse(localStorage.getItem(LAB_KEY) || "{}")); } catch (e) {}
 const labSave = () => { try { localStorage.setItem(LAB_KEY, JSON.stringify(lab)); } catch (e) {} };

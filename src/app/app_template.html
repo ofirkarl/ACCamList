@@ -2445,6 +2445,18 @@ body { overflow-x: clip; }
 .lab-r input.hue::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid #18171d; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
 .lab-r input.hue::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid #18171d; }
 .lab-open { width: 100%; justify-content: center; }
+/* ── THE PALETTE (chosen 13.11): one color and its opposite. Cyan-blue for everything you press or choose, its very light tint for
+   the choice fields, and vermilion, the opposite hue, in one place a page (the answer). A rental house keeps its color in its dot
+   and name only. ── */
+:root, :root[data-house] { --accent: #2f7593; --accent-fg: #ffffff; --bg: #f6fafb; --comp: #d8805a; --comp-fg: #18171d;
+  --sf: #2f7593; --sf-ink: #20576f; --sf-tint: color-mix(in srgb, #2f7593 8%, var(--surface)); --sf-line: color-mix(in srgb, #2f7593 26%, var(--line)); --sf-on: color-mix(in srgb, #2f7593 16%, var(--surface)); }
+:root[data-theme="dark"], :root[data-theme="dark"][data-house] { --accent: #6bb6d6; --accent-fg: #0c161b; --bg: #0e1215; --comp: #e39a78; --comp-fg: #18171d;
+  --sf: #6bb6d6; --sf-ink: #a5d5ea; --sf-tint: color-mix(in srgb, #6bb6d6 9%, var(--surface)); --sf-line: color-mix(in srgb, #6bb6d6 26%, var(--line)); --sf-on: color-mix(in srgb, #6bb6d6 18%, var(--surface)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]), :root:not([data-theme="light"])[data-house] { --accent: #6bb6d6; --accent-fg: #0c161b; --bg: #0e1215; --comp: #e39a78; --comp-fg: #18171d;
+  --sf: #6bb6d6; --sf-ink: #a5d5ea; --sf-tint: color-mix(in srgb, #6bb6d6 9%, var(--surface)); --sf-line: color-mix(in srgb, #6bb6d6 26%, var(--line)); --sf-on: color-mix(in srgb, #6bb6d6 18%, var(--surface)); } }
+.mc-res { background: var(--comp); box-shadow: 0 8px 18px -10px var(--comp); }
+.mc-res b { color: var(--comp-fg); }
+.mc-res .t-l { color: var(--comp-fg); opacity: .8; }
 </style>
 
 <div class="app">
@@ -9152,7 +9164,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 /* ---------- Color lab: sliders that recolor the real pages live, to settle the app's palette. What it shows is a short code to
    send back; nothing here changes the lists. Kept on this device only. ---------- */
-const LAB_KEY = "acColorLab", LAB_DEF = { on: false, open: false, h: 245, s: 70, l: 55, cm: "same", ch: 200, hm: "same", hh: 30, pt: 0, bg: 45 };
+const LAB_KEY = "acColorLab2", LAB_DEF = { on: false, open: false, h: 198, s: 52, l: 38, cm: "same", ch: 200, hm: "same", hh: 30, pt: 0, bg: 45 };
 let lab = { ...LAB_DEF };
 try { Object.assign(lab, JSON.parse(localStorage.getItem(LAB_KEY) || "{}")); } catch (e) {}
 const labSave = () => { try { localStorage.setItem(LAB_KEY, JSON.stringify(lab)); } catch (e) {} };
