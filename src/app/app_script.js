@@ -1871,9 +1871,9 @@ function viewLensFind() {
 /* the Media Calculator: which list it works on (or none: any camera), then the cameras */
 function viewMcalc() {
   const p = cur(), h = houseById(p.houseId), id = mcListId();
-  const opts = `<option value="none"${id ? "" : " selected"}>No list · any camera</option>` + mcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}>${esc(x.name || "Untitled production")}</option>`).join("");
+  const opts = `<option value="none"${id ? "" : " selected"}>No list · any camera</option>` + mcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}${listDir(x.name)}>${esc(x.name || "Untitled production")}</option>`).join(""), curL = id && mcLists().find(x => x.id === id);
   return `${pageHead("Media Calculator")}
-    <section class="pad mc-pick"><div class="field"><label for="mc-list">List</label><select id="mc-list" aria-label="Which list">${opts}</select></div></section>
+    <section class="pad mc-pick"><div class="field"><label for="mc-list">List</label><select id="mc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div></section>
     <div class="tabpane">${viewMedia(p, h, !id)}</div>`;
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
@@ -3849,6 +3849,8 @@ function viewTools() {
 /* ---------- Lens Cards: the list's lenses on one small card to print, each with its stop and close focus.
    Two layouts: Compact (a set in two lines: focal lengths over close focus) and One table (a row a lens). The card is as big
    as what's on it; its corner drags it bigger or smaller like a window, everything on it in proportion. The PDF is the card's own size */
+/* a list named in Hebrew (most are) reads right to left in its picker */
+const listDir = s => /[\u0590-\u05FF]/.test(s || "") ? ' dir="rtl"' : "";
 const LC_LAYOUTS = { compact: "Compact", one: "One table" };
 const LC_K = [0.5, 4];  // how much smaller or bigger the card may be made
 const LC_Z = [1, 1.25, 1.5, 2, 2.5, 3];  // the preview's zoom steps, over the card fitted to it
@@ -3944,7 +3946,7 @@ function lensCardHtml(p, o) {
 }
 function viewLensCard() {
   const p = lcCur(), o = lcOpts(), id = lcListId();
-  const opts = lcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}>${esc(x.name || "Untitled production")}</option>`).join("");
+  const opts = lcLists().map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}${listDir(x.name)}>${esc(x.name || "Untitled production")}</option>`).join(""), curL = lcLists().find(x => x.id === id);
   const head = pageHead("Lens Cards");
   if (!p) return `${head}<section class="pad cam-out"><p class="hint">Make a list with lenses first. Its lenses come here, each with its close focus.</p></section>`;
   const seg = (k, v, t, sub) => `<button type="button" data-act="lc-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
@@ -3954,14 +3956,15 @@ function viewLensCard() {
   const z = lcZ(), zi = app.lcZi | 0, sb = (act, v, lab, icon, off) => `<button type="button" data-act="${act}" data-v="${v}" aria-label="${lab}" title="${lab}"${off ? " disabled" : ""}>${icon}</button>`;
   return `${head}
     <section class="pad cam-out lc-page">
-      <div class="lc-top"><div class="field"><select id="lc-list" aria-label="Which list">${opts}</select></div><div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div></div>
+      <div class="field lc-top"><select id="lc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
       ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--k:${k}">${card.html}<span class="lc-grip" role="slider" tabindex="0" title="Drag to resize" aria-label="Card size" aria-valuemin="${LC_K[0] * 100}" aria-valuemax="${LC_K[1] * 100}" aria-valuenow="${Math.round(k * 100)}" aria-valuetext="${Math.round(k * 100)}%">${GRIP_ICON}</span></div></div>
         <div class="lc-bar">
           <span class="stepper lc-step" role="group" aria-label="Card size">${sb("lc-k", -1, "Smaller card", "−", k <= LC_K[0])}<span id="lc-size" aria-live="polite">…</span>${sb("lc-k", 1, "Bigger card", "+", k >= LC_K[1])}</span>
           <button type="button" class="iconbtn lc-reset" data-act="lc-k1" aria-label="Back to the first size" title="Back to the first size"${k !== 1 ? "" : " hidden"}>${RESET_ICON}</button>
           <span class="stepper lc-step lc-zs" role="group" aria-label="Zoom the preview">${sb("lc-zoom", -1, "Zoom out", ZOOM_OUT_ICON, zi <= 0)}<span id="lc-zl" aria-live="polite">${z}×</span>${sb("lc-zoom", 1, "Zoom in", ZOOM_IN_ICON, zi >= LC_Z.length - 1)}</span>
         </div></div>` : `<p class="hint">No lenses on this list yet.</p>`}
-      <div class="lc-opts"><span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
+      <div class="lc-opts"><span class="cr-l">Layout</span><div class="seg cp-seg lc-lay">${Object.entries(LC_LAYOUTS).map(([k, t]) => seg("lay", k, t)).join("")}</div>
+        <span class="cr-l">Design</span><div class="seg cp-seg lc-sty">${Object.entries(LC_STYLES).map(([v, t]) => seg("style", v, t)).join("")}</div>
         <span class="cr-l">Colors</span><div class="lc-swatches" role="radiogroup" aria-label="Colors">${Object.entries(LC_COLS).map(([v, c]) => `<button type="button" class="lc-sw${v === "black" ? " bw" : ""}" role="radio" data-act="lc-opt" data-k="col" data-v="${v}" aria-checked="${o.col === v}" aria-label="${c[3]}" title="${c[3]}" style="--sw:${c[1]}"></button>`).join("")}</div></div>
       <div class="co-acts"><button class="btn primary" type="button" data-act="lc-save" ${card.n ? "" : "disabled"}>Save PDF</button><button class="btn" type="button" data-act="lc-share" ${card.n ? "" : "disabled"}>Share</button></div>
       ${card.n ? `<p class="hint cp-note lc-note"><span class="num">${card.n}</span> lens${card.n === 1 ? "" : "es"} · Print the PDF at 100%.</p>` : ""}
@@ -3992,11 +3995,14 @@ function lcPu(prev, k) {
 /* the height the card may take: the screen less what is above and below the preview (with a floor, on a short screen it scrolls) */
 function lcRoomH(prev) {
   const r = prev.getBoundingClientRect(), app0 = prev.closest(".app") || document.body, below = app0.getBoundingClientRect().bottom - r.bottom;
-  return Math.max(150, (window.innerHeight - (r.top + window.scrollY) - below - 2 * LC_PAD) * .96);  // a little spare: small type rounds up
+  return Math.max(150, (window.innerHeight - (r.top + window.scrollY) - below - 2 * LC_PAD - 4) * .96);  // a little spare: small type rounds up
 }
 function lcFit() {
   const prev = document.querySelector(".lc-prev"), fr = prev && prev.querySelector(".lc-frame"), p = lcCur(); if (!fr || !p) return;
-  lcNat = lcNatural(p); app.lcRoomH = lcRoomH(prev);
+  lcNat = lcNatural(p);
+  // the window's height: the room left on the screen, the same for every list, layout, size and zoom, so the tools never move;
+  // the card grows or shrinks inside it, and is shown smaller once it would overflow
+  app.lcRoomH = Math.round(lcRoomH(prev));
   prev.classList.add("still"); lcShowK(lcK()); void prev.offsetWidth; prev.classList.remove("still");  // drawn at once, no easing on opening
 }
 /* the card at size k: on screen, its size in mm, the corner's value, Actual size when it isn't */
@@ -4004,7 +4010,7 @@ function lcShowK(k) {
   const prev = document.querySelector(".lc-prev"), c = prev && prev.querySelector(".lcard"); if (!c || !lcNat) return;
   const fit = lcPu(prev, k), z = lcZ();
   c.style.setProperty("--k", k); prev.style.setProperty("--pu", fit * z + "px");
-  prev.style.height = z > 1 ? Math.round(lcNat.h * k * fit + 2 * LC_PAD) + "px" : "";  // zoomed in, the window keeps its size and scrolls
+  prev.style.height = Math.round((app.lcRoomH || lcNat.h * k * fit) + 2 * LC_PAD) + "px";  // one height whatever the size or zoom: zoomed in, it scrolls
   const out = document.getElementById("lc-size"); if (out) out.textContent = lcSizeText(k);
   const g = prev.querySelector(".lc-grip"); if (g) { g.setAttribute("aria-valuenow", Math.round(k * 100)); g.setAttribute("aria-valuetext", Math.round(k * 100) + "%"); }
   const one = document.querySelector('[data-act="lc-k1"]'); if (one) one.hidden = Math.abs(k - 1) < .005;
@@ -4021,7 +4027,6 @@ document.addEventListener("pointerdown", e => {
   const prev = g.closest(".lc-prev"), pu = parseFloat(getComputedStyle(prev).getPropertyValue("--pu")) || 2;
   lcDrag = { prev, pu, x: e.clientX, y: e.clientY, k0: lcK(), k: lcK(), raf: 0 };
   try { g.setPointerCapture(e.pointerId); } catch (err) {}
-  prev.style.minHeight = prev.offsetHeight + "px";  // the page below stays put while the card shrinks
   prev.classList.add("drag"); e.preventDefault();
 });
 document.addEventListener("pointermove", e => {
