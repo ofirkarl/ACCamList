@@ -3474,12 +3474,13 @@ const SETTINGS_ID = "settings";
 const SET_META = new Set(["_t", "updatedAt", "gone", "v"]);
 /* saved data carries the version of its shape (v). Older data is brought up to date as it is read (from this phone, the account
    or a lists file); data saved by a newer version of the app is kept as it is, and the page asks for a reload to get that version */
-const SCHEMA = 1;
+const SCHEMA = 2;
 let newerSaid = false;
 function upData(o, kind) {
   if (!o || typeof o !== "object") return o;
   if ((o.v || 0) > SCHEMA) { if (!newerSaid && typeof document !== "undefined" && document.getElementById && document.getElementById("toast")) { newerSaid = true; setTimeout(() => toast("Some of your lists were saved by a newer version of the app. Reload to update."), 800); } return o; }
   if (kind === "production") for (const l of Object.values(o.items || {})) wlFix(l);   // v1: wireless video sets as TX and RX
+  if (kind === "production" && (o.v || 0) < 2) for (const [id, l] of Object.entries(o.items || {})) if (l.tx !== undefined && !wlBal(l) && wlEven(id, l)) { const n = Math.max(l.tx || 0, l.rx || 0); l.tx = n; l.rx = n; l.qty = n; l.sets = n; }   // v2: a 1:1 set is whole sets
   o.v = SCHEMA;
   return o;
 }
@@ -3668,6 +3669,10 @@ function lineFromCatalog(id) {
 /* a wireless video line is either whole sets (as many transmitters as receivers: 2 sets = 2 TX and 2 RX) or, once one of them is
    counted on its own, simply so many TX and so many RX. Its quantity: the sets; when uneven, the whole sets in it (one at least) */
 const wlBal = l => (l.tx || 0) === (l.rx || 0);
+/* which wireless video sets can come with more receivers than transmitters (or the other way round): every Teradek and every Hollyland
+   (Ofir's list, 14.11); every other maker's set comes only 1:1, as whole sets: its counter counts sets, with no TX/RX drawer */
+const WL_MULTI = /^(teradek|hollyland)\b/i;
+function wlEven(id, l) { const e = ITEM.get(id), n = (e && e.it.name) || (l && l.name) || ""; return !!(l ? l.tx !== undefined : e && e.it.txrx) && !WL_MULTI.test(n.trim()); }
 const wlFix = l => { if (l && l.tx !== undefined && !l.tx && !l.rx) { const n = l.sets || l.qty || 1; l.tx = n; l.rx = n; } return l; };  // an older line left with sets but no TX or RX: whole sets
 const lineQty = l => l.tx !== undefined ? (wlBal(l) ? (l.tx || l.sets || 1) : Math.max(1, Math.min(l.tx || 0, l.rx || 0))) : (l.qty || 0);
 function totals(p) {
@@ -4411,6 +4416,8 @@ function setQty(p, id, qty, field) {
     l = p.items[id] = lineFromCatalog(id);
     if (l.tx !== undefined) { l.sets = qty; l.tx = qty; l.rx = qty; }
     else l.qty = qty;
+  } else if (field && l.tx !== undefined && wlEven(id, l)) {
+    l.tx = qty; l.rx = qty; if (!qty) delete p.items[id];   // 1:1 only: one more transmitter is one more set
   } else if (field && l.tx !== undefined) {
     l[field] = qty;  // a transmitter or a receiver counted on its own: the line is then so many TX and so many RX, no longer sets
     if (!l.tx && !l.rx) delete p.items[id];
@@ -5249,7 +5256,7 @@ function stepper(act, id, val, field, small) {
 function ctlHtml(p, id) {
   const l = p.items[id];
   if (!l) return `<button class="add" type="button" data-act="cinc" data-id="${esc(id)}" aria-label="Add">+ Add</button>`;
-  return l.tx !== undefined ? setsCtl("c", id, l) : stepper("c", id, l.qty, null, false);
+  return l.tx !== undefined && !wlEven(id, l) ? setsCtl("c", id, l) : stepper("c", id, lineQty(l), null, false);
 }
 /* a wireless set's control. Whole sets: the usual counter (− 2 +), with nothing written under it; its number opens the drawer.
    Uneven: no counter of sets any more, just how many of each ("TX 1  RX 2"), which opens the drawer too.
@@ -5302,6 +5309,7 @@ function txClose(now) {
 /* a set was added or its quantity tapped: open its drawer (closing another's); a set that left the list takes its drawer with it */
 function txOpenFor(p, id, act) {
   const l = wlFix(p && p.items[id]);
+  if (l && wlEven(id, l)) { if (txPop === id) txClose(true); return; }
   if (!l || l.tx === undefined) { if (txPop === id) txClose(true); return; }
   if (txPop === id) { txSync(); return; }
   txClose(true); txPop = id; txAct = act;
@@ -6373,7 +6381,7 @@ function lineHtml(p, id, l) {
   const e = ITEM.get(id);
   const key = l.custom ? favKeyCustom(l.name, l.section) : id;
   const qtys = l.tx !== undefined
-    ? setsCtl("l", id, l)   // wireless video: sets where every item has its quantity
+    ? (wlEven(id, l) ? stepper("l", id, lineQty(l), null, false) : setsCtl("l", id, l))   // wireless video: sets where every item has its quantity (a 1:1 set: whole sets only)
     : stepper("l", id, l.qty, null, false);
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
