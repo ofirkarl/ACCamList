@@ -7616,8 +7616,8 @@ function okLine(el) {   // does this field get the ✓?
   if (el.closest(".stepper, .nsel, .tx-pop") || el.matches(OK_OWN) || okFormSends(el)) return false;
   return true;
 }
-function okNext(el) {   // the next field to type in, in the same group
-  const box = el.form || el.closest(".cam-grp, .field, .row2, .dialog, section") || document.body;
+function okNext(el) {   // the next line to type in, below this one (in the same form, dialog or page)
+  const box = el.form || el.closest(".dialog, .modal-card, .sheet, section, #view") || document.body;
   const all = [...box.querySelectorAll("input, textarea")].filter(x => !x.disabled && !x.readOnly && x.offsetParent && (x.tagName === "TEXTAREA" || OK_TEXT.test(x.type)));
   return all[all.indexOf(el) + 1] || null;
 }
@@ -7636,7 +7636,7 @@ if (typeof document !== "undefined" && document.addEventListener) {
     if (!okEl || !okFor) return;
     const r = okFor.getBoundingClientRect(), rtl = getComputedStyle(okFor).direction === "rtl" || (okFor.dir === "auto" && /[\u0590-\u05FF\u0600-\u06FF]/.test(okFor.value || okFor.placeholder || ""));
     if (!r.width || r.bottom < 0 || r.top > innerHeight) { okEl.hidden = true; return; }
-    const sz = Math.min(28, Math.max(22, r.height - 10)); okEl.style.width = okEl.style.height = sz + "px";
+    const sz = Math.min(20, Math.max(16, r.height - 16)); okEl.style.width = okEl.style.height = sz + "px";
     okEl.style.top = (r.top + (r.height - sz) / 2) + "px"; okEl.style.left = (rtl ? r.left + 6 : r.right - sz - 6) + "px"; okEl.hidden = false;
     okFor.classList.toggle("ok-rtl", rtl);
   };
@@ -7649,7 +7649,9 @@ if (typeof document !== "undefined" && document.addEventListener) {
     if (!okEl) {
       okEl = document.createElement("button"); okEl.type = "button"; okEl.className = "ok-tick"; okEl.setAttribute("aria-label", "Done"); okEl.hidden = true;
       okEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
-      okEl.addEventListener("pointerdown", ev => { ev.preventDefault(); const f = okFor; if (f) { buzz("tap"); f.blur(); } });   // the field keeps its focus until this tap closes it
+      // a tap: the ring fills for a moment, then the next line below takes the typing (or, the last one, the keyboard closes)
+      okEl.addEventListener("pointerdown", ev => { ev.preventDefault(); const f = okFor; if (!f || okEl.classList.contains("on")) return; buzz("tap"); okEl.classList.add("on");
+        setTimeout(() => { okEl.classList.remove("on"); if (okFor !== f) return; const nx = okNext(f); if (nx) nx.focus(); else f.blur(); }, 170); });
       document.body.appendChild(okEl);
     }
     if (okFor && okFor !== el) okFor.classList.remove("ok-pad", "ok-rtl");

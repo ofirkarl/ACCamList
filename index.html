@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611141141";
+window.AC_BUILD = "202611141143";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2629,14 +2629,14 @@ body.form-on, body.form-on .app, body.form-on .house-opt, body.form-on .btn, bod
 .ad-err code { display: block; margin-top: 3px; font-family: var(--font-mono); font-size: 11.5px; color: var(--fg); overflow-wrap: anywhere; }
 .cr-none { color: var(--muted); font-weight: 500; }
 /* the small ✓ that confirms the line being typed in */
-.ok-tick { position: fixed; z-index: 70; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-fg); box-shadow: 0 2px 6px -2px color-mix(in srgb, var(--accent) 70%, transparent); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: ok-in .18s var(--ease); }
+.ok-tick { position: fixed; z-index: 70; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; box-sizing: border-box; border: 1.6px solid var(--accent); border-radius: 50%; background: var(--surface); color: var(--accent); cursor: pointer; -webkit-tap-highlight-color: transparent; animation: ok-in .18s var(--ease); transition: background-color .12s, color .12s; }
+.ok-tick.on { background: var(--accent); color: var(--accent-fg); }
 .ok-tick[hidden] { display: none; }
-.ok-tick svg { width: 62%; height: 62%; }
-.ok-tick::after { content: ""; position: absolute; inset: -8px; }
-.ok-tick:active { transform: scale(.92); }
+.ok-tick svg { width: 66%; height: 66%; }
+.ok-tick::after { content: ""; position: absolute; inset: -12px; }
 @keyframes ok-in { from { opacity: 0; transform: scale(.6); } }
-input.ok-pad { padding-inline-end: 38px !important; }
-input.ok-pad.ok-rtl { padding-inline-start: 38px !important; }
+input.ok-pad { padding-inline-end: 30px !important; }
+input.ok-pad.ok-rtl { padding-inline-start: 30px !important; }
 /* Add Gear: each level of the catalog a shade lighter, in the category's own color: the subcategory, then its folders, then the items */
 #tree details.sub > summary { background: color-mix(in srgb, var(--tape) 15%, var(--surface)); }
 #tree details.brand > summary { background: color-mix(in srgb, var(--tape) 7%, var(--surface)); }
@@ -10355,8 +10355,8 @@ function okLine(el) {   // does this field get the ✓?
   if (el.closest(".stepper, .nsel, .tx-pop") || el.matches(OK_OWN) || okFormSends(el)) return false;
   return true;
 }
-function okNext(el) {   // the next field to type in, in the same group
-  const box = el.form || el.closest(".cam-grp, .field, .row2, .dialog, section") || document.body;
+function okNext(el) {   // the next line to type in, below this one (in the same form, dialog or page)
+  const box = el.form || el.closest(".dialog, .modal-card, .sheet, section, #view") || document.body;
   const all = [...box.querySelectorAll("input, textarea")].filter(x => !x.disabled && !x.readOnly && x.offsetParent && (x.tagName === "TEXTAREA" || OK_TEXT.test(x.type)));
   return all[all.indexOf(el) + 1] || null;
 }
@@ -10375,7 +10375,7 @@ if (typeof document !== "undefined" && document.addEventListener) {
     if (!okEl || !okFor) return;
     const r = okFor.getBoundingClientRect(), rtl = getComputedStyle(okFor).direction === "rtl" || (okFor.dir === "auto" && /[\u0590-\u05FF\u0600-\u06FF]/.test(okFor.value || okFor.placeholder || ""));
     if (!r.width || r.bottom < 0 || r.top > innerHeight) { okEl.hidden = true; return; }
-    const sz = Math.min(28, Math.max(22, r.height - 10)); okEl.style.width = okEl.style.height = sz + "px";
+    const sz = Math.min(20, Math.max(16, r.height - 16)); okEl.style.width = okEl.style.height = sz + "px";
     okEl.style.top = (r.top + (r.height - sz) / 2) + "px"; okEl.style.left = (rtl ? r.left + 6 : r.right - sz - 6) + "px"; okEl.hidden = false;
     okFor.classList.toggle("ok-rtl", rtl);
   };
@@ -10388,7 +10388,9 @@ if (typeof document !== "undefined" && document.addEventListener) {
     if (!okEl) {
       okEl = document.createElement("button"); okEl.type = "button"; okEl.className = "ok-tick"; okEl.setAttribute("aria-label", "Done"); okEl.hidden = true;
       okEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
-      okEl.addEventListener("pointerdown", ev => { ev.preventDefault(); const f = okFor; if (f) { buzz("tap"); f.blur(); } });   // the field keeps its focus until this tap closes it
+      // a tap: the ring fills for a moment, then the next line below takes the typing (or, the last one, the keyboard closes)
+      okEl.addEventListener("pointerdown", ev => { ev.preventDefault(); const f = okFor; if (!f || okEl.classList.contains("on")) return; buzz("tap"); okEl.classList.add("on");
+        setTimeout(() => { okEl.classList.remove("on"); if (okFor !== f) return; const nx = okNext(f); if (nx) nx.focus(); else f.blur(); }, 170); });
       document.body.appendChild(okEl);
     }
     if (okFor && okFor !== el) okFor.classList.remove("ok-pad", "ok-rtl");
