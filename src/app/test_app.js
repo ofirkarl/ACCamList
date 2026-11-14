@@ -901,7 +901,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   ok(/Multicam management/.test(h) && !/data-act="cam-print"/.test(h) && /data-act="cam-create"/.test(h) && /data-act="cam-fold"/.test(h) && (h.match(/class="cam-chip( on)?"/g) || []).length === 3 && /data-act="cam-cmp"/.test(h) && /data-camf="op"/.test(h) && /data-k="codec"/.test(h) && /Not printed/.test(h), "the page: Multicam management, the list, A B C, Compare, the camera's card to fill in, then Create cards");
   ok(/data-k="mode"/.test(h), "4K 16:9 in ProRes makes 4K, UHD, 2K or HD: there File resolution is a menu");
   A.camSetVal(pc, cs[0], "sensor", "4.6K 3:2 Open Gate"); const h1 = A.viewCams();
-  ok(!/data-k="mode"/.test(h1) && /<span class="cr-l"><span class="tl-c lt"[^>]*>[\s\S]*?<\/span>File resolution<\/span>[\s\S]*?<span class="cr-pv cr-info">4.6K <span class="mono">4608×3164/.test(h1), "a sensor area that makes one file: File resolution is just shown");
+  ok(!/data-k="mode"/.test(h1) && /<span class="cr-l"><span class="tl-c lt cam-lt"[^>]*>[\s\S]*?<\/span>File resolution<\/span>[\s\S]*?<span class="cr-pv cr-info">4.6K <span class="mono">4608×3164/.test(h1), "a sensor area that makes one file: File resolution is just shown");
   A.camSetVal(pc, cs[0], "sensor", "4K 16:9"); A.camSetVal(pc, cs[0], "mode", "4K 16:9 → UHD");
   modals.length = 0; A.camPicker("sensor"); const ms = modals.pop() || "";
   ok(!/→/.test(ms) && (ms.match(/data-k="sensor"/g) || []).length === 8, "the Sensor coverage list: each sensor area once, no arrows");
@@ -1203,3 +1203,12 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   const old = { id: "o", v: 1, items: { [vr]: { name: "Vrriis WL087 II Wireless Transmission Set", tx: 1, rx: 3, sets: 1, qty: 1 } } };
   A.upData(old, "production"); ok(old.items[vr].tx === 3 && old.items[vr].rx === 3 && old.v === A.SCHEMA, "an older list with an uneven 1:1 set: whole sets, the larger count");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); }
+
+// --- a camera's label icons wear the camera's color (and the ink that reads on it)
+{ const pc = A.newProduction({ houseId: "utopia", name: "LT" }); A.app.productions.push(pc);
+  const am = [...A.ITEM].find(([id, e]) => e.h.id === "utopia" && /^ARRI Alexa Mini$/.test(e.it.name))[0]; A.setQty(pc, am, 2);
+  A.app.settings.camList = pc.id; const cs = A.camsOf(pc); A.camAutoFill && A.camAutoFill(pc);
+  const c = A.camsOf(pc)[1] || A.camsOf(pc)[0]; c.col = "#e8f20c"; const h = A.camFormHtml(pc, c);
+  const ic = h.match(/<span class="tl-c lt cam-lt" style="([^"]+)"/g) || [];
+  ok(ic.length >= 6 && ic.every(x => x.includes("--k:#e8f20c;--kf:#18171d")), "every label icon on a yellow camera's page: yellow, with dark ink");
+  A.app.productions.splice(A.app.productions.indexOf(pc), 1); }

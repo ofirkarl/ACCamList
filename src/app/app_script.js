@@ -324,7 +324,7 @@ Object.assign(TAPE_ICONS, {
   idcard: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><rect x="5.8" y="8.3" width="4.6" height="4.6" rx="1"/><path d="M13 9h5M13 12h3.5M5.8 15.8h12.2"/>'
 });
 // one color for every icon tile: the app's own (Ofir: no spread of colors that aren't the palette's)
-const tile = (icon, cls) => `<span class="tl-c${cls ? " " + cls : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[icon]}</svg></span>`;
+const tile = (icon, cls, st) => `<span class="tl-c${cls ? " " + cls : ""}"${st ? ` style="${st}"` : ""} aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[icon]}</svg></span>`;
 function catTape(c) {
   const v = (app.settings.catColors || {})[c.id];
   if (isHex(v)) return v;
@@ -4936,7 +4936,8 @@ if (typeof document !== "undefined" && document.addEventListener) {
    wireless video olive (the monitors'), focus teal, notes slate */
 const CAM_LT = { "Camera operator": "person", "Focus puller": "person", Codec: "film", "Frame rate": "clock",
   "Sensor coverage": "frame", "File resolution": "file", Media: "card", "Wireless video": "signal", Focus: "knob", Notes: "tag" };
-const camLt = label => CAM_LT[label] ? tile(CAM_LT[label], "lt") : "";
+// on a camera's page every label icon wears that camera's color (Ofir: it sets the cameras apart at a glance)
+const camLt = (label, c) => CAM_LT[label] ? tile(CAM_LT[label], "lt cam-lt", `--k:${c.col};--kf:${camInk(c.col)}`) : "";
 const NONE_PV = `<span class="cr-none">None</span>`;   // wireless video or focus set to none on purpose
 function camFormHtml(p, c) {
   const v = camVals(p, c), e = camE(c), k = esc(c.k), has = !!(e || c.name);
@@ -4945,9 +4946,9 @@ function camFormHtml(p, c) {
   // a cell: its label over a picked value (a menu), a typed value, or a value shown; two cells to a row, like the card
   // a menu: a small caret by its label (so the value keeps the whole width); a tap anywhere on it opens the choices
   const caret = `<svg class="cr-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>`;
-  const cPick = (kk, label, val, sub) => ({ l: camLt(label) + label + caret, h: `<button type="button" class="cr-pick" data-act="cam-pick" data-k="${kk}" aria-label="${esc(label)}"><span class="cr-pv">${val || `<span class="cr-ph">Choose</span>`}</span></button>`, sub });
-  const cIn = (f, label, val, ph, more, cls) => ({ l: camLt(label) + label, h: inp(f, val, ph, more, cls) });
-  const cInfo = (label, val, sub) => ({ l: camLt(label) + label, h: `<span class="cr-pv cr-info">${val || "—"}</span>`, sub });
+  const cPick = (kk, label, val, sub) => ({ l: camLt(label, c) + label + caret, h: `<button type="button" class="cr-pick" data-act="cam-pick" data-k="${kk}" aria-label="${esc(label)}"><span class="cr-pv">${val || `<span class="cr-ph">Choose</span>`}</span></button>`, sub });
+  const cIn = (f, label, val, ph, more, cls) => ({ l: camLt(label, c) + label, h: inp(f, val, ph, more, cls) });
+  const cInfo = (label, val, sub) => ({ l: camLt(label, c) + label, h: `<span class="cr-pv cr-info">${val || "—"}</span>`, sub });
   const scanSub = esc([v.sensorMm, v.sensorNote].filter(Boolean).join(" · "));
   const row = (a, b, cls) => `<div class="cam-row dual${cls ? " " + cls : ""}${b ? "" : " one"}"><span class="cr-l">${a.l}</span>${b ? `<span class="cr-l">${b.l}</span>` : ""}${a.h}${b ? b.h : ""}${a.sub !== undefined || (b && b.sub !== undefined) ? `<span class="cr-sub">${a.sub || ""}</span>${b ? `<span class="cr-sub">${b.sub || ""}</span>` : ""}` : ""}</div>`;
   const row3 = (a, b, d) => `<div class="cam-row dual tri"><span class="cr-l">${a.l}</span><span class="cr-l">${b.l}</span><span class="cr-l">${d.l}</span>${a.h}${b.h}${d.h}</div>`;
@@ -4975,7 +4976,7 @@ function camFormHtml(p, c) {
     ${rec}
     <div class="cam-grp">${!c.vid && c.vidU ? row(cPick("vid", "Wireless video", NONE_PV)) : row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
       ${!c.foc && c.focU ? row(cPick("foc", "Focus", NONE_PV)) : row(cPick("foc", "Focus", c.foc ? esc(c.foc) : ""), cIn("ch", "Ch / freq", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"'), "t-ch")}</div>
-    <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">${camLt("Notes")}Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
+    <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">${camLt("Notes", c)}Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
 }
 /* all the cameras side by side, one column each; two focus units on the same channel are marked */
 /* two cameras that would fight: the same focus system on the same channel, or the same wireless video serial; the other camera's letter */
