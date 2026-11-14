@@ -72,10 +72,11 @@
         isAdmin: function () { return window.AC_STATS.check().then(function (r) { return r === 'ok'; }); },
         list: function () { return F.getDocs(F.collection(fs, 'stats')).then(function (x) { return x.docs.map(function (d) { return Object.assign({uid: d.id}, dec(d.data())); }); }); }
       };
+      // data/users/<me>: the lists and settings (users/<uid>/docs); data/users/<me>/f/files: the rental forms' files, in pieces (users/<uid>/files)
       var mapCol = function (path) {
-        var m = /^data\/users\/([^/]+)$/.exec(path);
+        var m = /^data\/users\/([^/]+)(\/f\/files)?$/.exec(path);
         if (!m || m[1] !== me) throw {code: 'invalid_argument'};
-        return docsOf(me);
+        return m[2] ? F.collection(fs, 'users/' + me + '/files') : docsOf(me);
       };
       var db = {
         collection: function (path) {
@@ -85,6 +86,7 @@
               var ref = F.doc(col, id);
               return {
                 set: function (d) { return F.setDoc(ref, enc(d)).catch(function (e) { throw wrapErr(e); }); },
+                get: function () { return F.getDoc(ref).then(function (x) { return {id: x.id, exists: x.exists(), data: function () { return dec(x.data()); }}; }).catch(function (e) { throw wrapErr(e); }); },
                 delete: function () { return F.deleteDoc(ref).catch(function (e) { throw wrapErr(e); }); }
               };
             },

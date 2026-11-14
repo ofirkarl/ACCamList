@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { wlEven, ctlHtml, ntModel, ntPlain, ntHtml, ntDocx, upData, SCHEMA, setMerge, setStamp, setPrevReset, stab, errText, pcListId, pcData, pcCount, viewPrep, lineQty, histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, viewCamPrint, camListId, camInk, CAM_COLORS, camCompareHtml, savedListsHtml, savedListOpenHtml, camCopy, camLayout, camLayoutSet, camTableHtml, camClash, camDevOnList, camSrcs, camSrcU2, camTwo, camSrcToggle, camWhen, camOrdered, camHome, camSel, camFormHtml, camScanOf, SCANS, camDevOf, camDevAt, qHit, mcFreeCams, mediaSizes, lensMod, specsHtml, lensCardHtml, lcRows, viewLensCard, lcOpts, lcStepK, cfInches, inTxt, CF_STEPS, addCustomLine, modalsSeen: () => 0 };`)();
+;return { rfLines, rfText, rfParse, rfMatch, rfCompare, rfToks, rfScore, formsOf, copyProduction, wlEven, ctlHtml, ntModel, ntPlain, ntHtml, ntDocx, upData, SCHEMA, setMerge, setStamp, setPrevReset, stab, errText, pcListId, pcData, pcCount, viewPrep, lineQty, histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, viewCamPrint, camListId, camInk, CAM_COLORS, camCompareHtml, savedListsHtml, savedListOpenHtml, camCopy, camLayout, camLayoutSet, camTableHtml, camClash, camDevOnList, camSrcs, camSrcU2, camTwo, camSrcToggle, camWhen, camOrdered, camHome, camSel, camFormHtml, camScanOf, SCANS, camDevOf, camDevAt, qHit, mcFreeCams, mediaSizes, lensMod, specsHtml, lensCardHtml, lcRows, viewLensCard, lcOpts, lcStepK, cfInches, inTxt, CF_STEPS, addCustomLine, modalsSeen: () => 0 };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -1212,3 +1212,50 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   const ic = h.match(/<span class="tl-c lt cam-lt" style="([^"]+)"/g) || [];
   ok(ic.length >= 6 && ic.every(x => x.includes("--k:#e8f20c;--kf:#18171d")), "every label icon on a yellow camera's page: yellow, with dark ink");
   A.app.productions.splice(A.app.productions.indexOf(pc), 1); }
+
+// --- rental forms: reading Utopia's form (words with their places, as the PDF reader gives them; a made-up form, no real names)
+{ const W = (s, x, y, w, r, f, h) => ({ s, x, y, w, r: r !== undefined ? r : /[\u0590-\u05FF]/.test(s), f: f || "F3", h: h || 7.15 });
+  ok(A.rfText([W("מוניטור", 503, 329, 20), W("Sony LMD-A170", 440, 329, 60, false)]) === "מוניטור Sony LMD-A170", "a line reads right to left, its Latin part left to right");
+  ok(A.rfText([W("סט", 520, 10, 8), W("משדר", 500, 10, 15), W("750 LT", 470, 10, 25, false), W("Bolt 6", 440, 10, 25, false)]) === "סט משדר Bolt 6 750 LT", "a run of Latin words keeps its order");
+  const B = (s, x, y, w) => W(s, x, y, w, true, "F2", 6.95);
+  const p1 = [W("ציוד", 536, 730, 20), W("ברשות", 487, 730, 30), W("הלקוח", 441, 730, 30),
+    W("השכרה", 519, 705, 20), W(":", 514, 705, 5, false), W("700/111111", 256, 705, 76, false),
+    W("לקוח", 540, 665, 17), W(":", 537, 665, 3, false), W("הפקות", 480, 665, 23), W("טסט", 455, 665, 15),
+    W("Date Out:", 36, 665, 39, false), W("01/09/25 11:20", 130, 665, 60, false), W("תאריך", 261, 665, 22), W("הנפקה", 234, 665, 24),
+    W("פרויקט", 532, 652, 25), W(":", 529, 652, 3, false), W("הצעיר", 462, 652, 20), W("החתול", 485, 652, 25),
+    B("כמות", 548, 547, 14), B("דגם", 512, 547, 11), B("תכולה", 375, 547, 18), B("פיסית", 356, 547, 17), B("הערות", 193, 547, 18), B("מספר", 86, 547, 16), B("אוטופי", 66, 547, 18),
+    B("מוניטור", 470, 537, 21),
+    W("2", 560, 526, 4, false, "F1"), W("מוניטור", 503, 525, 20), W("Sony LMD-A170", 440, 525, 60, false), W(":LMD-A170 - 944", 330, 525, 60, false), W("944 ,798", 75, 525, 28, false),
+    W("*", 386, 515, 3, false), W("כבל", 375, 515, 10), W("BNC", 358, 515, 15, false),
+    B("אלחוטי", 471, 500, 18),
+    W("1", 560, 490, 4, false, "F1"), W("קורא", 509, 490, 13), W("כרטיסים", 484, 490, 23), W("CFexpress Type A /", 420, 490, 62, false), W("488", 91, 490, 12, false),
+    W("SD", 513, 480, 10, false),
+    W("עמוד", 90, 23, 13), W("1", 78, 24, 4, false)];
+  const p2 = [W("השכרה", 518, 703, 20), W("700/111111", 256, 702, 76, false), W("המשך", 543, 688, 14), W("...", 537, 688, 6, false),
+    W("6", 560, 660, 4, false, "F1"), W("V-LOCK 250", 450, 660, 50, false), W("272 ,281", 75, 660, 28, false),
+    W("טבלת", 520, 600, 20), W("עזר", 500, 600, 15), W("3", 560, 590, 4, false, "F1"), W("כבל", 503, 590, 20)];
+  const r = A.rfParse([p1, p2]);
+  ok(r.ok && r.house === "utopia" && r.no === "700/111111" && r.project === "החתול הצעיר" && r.client === "הפקות טסט" && r.outIso === "2025-09-01" && r.title === "ציוד ברשות הלקוח", "a form's head: house, rental no., project, client, date out, title");
+  ok(r.rows.length === 3 && r.rows[0].qty === 2 && r.rows[0].model === "מוניטור Sony LMD-A170" && r.rows[0].cat === "מוניטור" && r.rows[0].nums === "944,798", "a row: quantity, model, its category, its Utopia numbers");
+  ok(r.rows[1].model === "קורא כרטיסים CFexpress Type A / SD" && r.rows[1].cat === "אלחוטי", "a model on two lines reads as one");
+  ok(r.rows[2].qty === 6 && r.rows[2].model === "V-LOCK 250" && r.rows[2].cat === "אלחוטי", "rows go on on the next page, under the last category; the summary table after them is left out");
+  ok(r.rows[0].cont.length === 2 && /כבל BNC/.test(r.rows[0].cont[1]), "what's in it (the physical contents) stays with its row");
+  // which list it goes into
+  const pa = A.newProduction({ houseId: "utopia", name: "החתול הצעיר", prep: "2025-08-30", shootStart: "2025-09-02", shootEnd: "2025-09-10" }), pb = A.newProduction({ houseId: "utopia", name: "משהו אחר", prep: "2025-09-01" });
+  A.app.productions.push(pa, pb);
+  ok(A.rfMatch(r)[0].p === pa, "the form goes to the list with the project's name");
+  pa.forms = [{ id: "rfx", no: "700/111111" }]; pa.name = "Other"; ok(A.rfMatch(r)[0].p === pa, "the same rental number again: the list that already has its form");
+  ok(!A.copyProduction(pa).forms, "a copy of a list starts without the house's forms");
+  // the form's items against the list
+  const find = re => [...A.ITEM].find(([id, e]) => e.h.id === "utopia" && re.test(e.it.name))[0];
+  const a170 = find(/^Sony LMD-A170/), a240 = find(/^Sony LMD-A240/), bolt = find(/Bolt 6 LT 750/);
+  A.setQty(pb, a170, 2); A.setQty(pb, a240, 1); A.setQty(pb, bolt, 1);
+  const rows = [{ cat: "", qty: 2, model: "מוניטור Sony LMD-A170" }, { cat: "", qty: 1, model: "מוניטור Sony LMD-B240" }, { cat: "", qty: 2, model: "משדר Teradek Bolt 6 750 LT" }, { cat: "", qty: 1, model: "עגלת מגליינר HD" }, { cat: "", qty: 1, model: "אביזרי Sony LMD-A170" }];
+  const c = A.rfCompare(pb, rows);
+  ok(c.rows[0].st === "same" && c.rows[0].line.id === a170, "the same item, the same count: a match");
+  ok(c.rows[1].st === "none", "LMD-B240 isn't LMD-A240: its numbers must all be there");
+  ok(c.rows[2].st === "diff" && c.rows[2].line.id === bolt && c.rows[2].listQty === 1, "the Bolt in another word order: found, the counts differ");
+  ok(c.rows[3].st === "none" && c.rows[4].st === "none", "one shared word (HD) is no match; accessories aren't the item");
+  ok(c.missing.length === 1 && c.missing[0].id === a240, "a list line no row came to: on the list, not on the form");
+  ok(A.rfToks("CFexpress Type A").includes("typea") && A.rfScore(A.rfToks("קורא כרטיסים CFexpress Type A / SD"), A.rfToks("ProGrade CFexpress Type B Card Reader")) === 0, "Type A isn't Type B");
+  A.app.productions.splice(A.app.productions.indexOf(pa), 1); A.app.productions.splice(A.app.productions.indexOf(pb), 1); }

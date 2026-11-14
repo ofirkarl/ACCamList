@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611141216";
+window.AC_BUILD = "202611141343";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -91,10 +91,11 @@ window.AC_BUILD = "202611141216";
         isAdmin: function () { return window.AC_STATS.check().then(function (r) { return r === 'ok'; }); },
         list: function () { return F.getDocs(F.collection(fs, 'stats')).then(function (x) { return x.docs.map(function (d) { return Object.assign({uid: d.id}, dec(d.data())); }); }); }
       };
+      // data/users/<me>: the lists and settings (users/<uid>/docs); data/users/<me>/f/files: the rental forms' files, in pieces (users/<uid>/files)
       var mapCol = function (path) {
-        var m = /^data\/users\/([^/]+)$/.exec(path);
+        var m = /^data\/users\/([^/]+)(\/f\/files)?$/.exec(path);
         if (!m || m[1] !== me) throw {code: 'invalid_argument'};
-        return docsOf(me);
+        return m[2] ? F.collection(fs, 'users/' + me + '/files') : docsOf(me);
       };
       var db = {
         collection: function (path) {
@@ -104,6 +105,7 @@ window.AC_BUILD = "202611141216";
               var ref = F.doc(col, id);
               return {
                 set: function (d) { return F.setDoc(ref, enc(d)).catch(function (e) { throw wrapErr(e); }); },
+                get: function () { return F.getDoc(ref).then(function (x) { return {id: x.id, exists: x.exists(), data: function () { return dec(x.data()); }}; }).catch(function (e) { throw wrapErr(e); }); },
                 delete: function () { return F.deleteDoc(ref).catch(function (e) { throw wrapErr(e); }); }
               };
             },
@@ -2719,6 +2721,45 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 /* on a camera's page: its label icons are small tiles in the camera's own color, the glyph in the ink that reads on it */
 .tl-c.cam-lt { background: var(--k); color: var(--kf); border-radius: 4px; width: 16px; height: 16px; }
 .tl-c.cam-lt svg { width: 11px; height: 11px; stroke-width: 2.3; }
+/* ── Rental forms: the button on a production's top row (a count on it once there are forms), the sheets, and the full-screen form ── */
+.ph-stack .ph-nav .grow { flex: 1; }
+.ph-forms { position: relative; width: 40px; height: 40px; margin-inline-end: 8px; display: grid; place-items: center; color: var(--accent); }
+.ph-forms i { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-style: normal; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+.rf-card, .rf-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: start; }
+.rf-row { width: 100%; font: inherit; color: var(--fg); cursor: pointer; }
+.rf-row > svg:last-child { flex: none; color: var(--muted); }
+.rf-rows { display: grid; gap: 8px; }
+.rf-ic { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: var(--accent-fg); }
+.rf-ct { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rf-ct b { font-size: 15px; }
+.rf-ct span { font-size: 13px; color: var(--muted); }
+.rf-add { justify-content: center; min-height: 44px; color: var(--accent); }
+.rf-tabs { display: flex; justify-content: center; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.rf-scroll { padding: 12px; }
+.rf-pages { display: grid; gap: 12px; justify-content: center; }
+.rf-pages.zoom { justify-content: start; }
+.rf-page { display: block; max-width: 100%; height: auto; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .08), 0 14px 30px -12px rgba(0, 0, 0, .3); }
+.rf-pages.zoom .rf-page { max-width: none; }
+.rf-wait { text-align: center; padding: 32px 0; }
+.rf-acts { display: flex; grid-template-columns: none; justify-content: stretch; gap: 8px; }
+.rf-acts .btn { padding-inline: 12px; }
+.rf-acts .grow { flex: 1; }
+.rf-items { max-width: 640px; margin: 0 auto; display: grid; gap: 6px; }
+.rf-test { margin: 0 0 4px; }
+.rf-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; }
+.rf-sum span { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--line); }
+.rf-cat { margin: 12px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.rf-it { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); border-inline-start-width: 4px; }
+.rf-q { font-weight: 700; font-size: 15px; text-align: center; }
+.rf-m { display: grid; gap: 2px; min-width: 0; font-size: 14px; }
+.rf-m small { font-size: 12px; color: var(--muted); }
+.rf-st { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.rf-it.ok, .rf-sum .ok { border-color: var(--line); border-inline-start-color: var(--accent); }
+.rf-it.ok .rf-st, .rf-sum .ok { color: var(--accent); }
+.rf-it.diff, .rf-it.none, .rf-sum .diff, .rf-sum .none { border-inline-start-color: var(--comp); }
+.rf-it.diff .rf-st, .rf-it.none .rf-st, .rf-sum .diff, .rf-sum .none { color: color-mix(in srgb, var(--comp) 75%, var(--fg)); }
+.rf-it.miss { border-inline-start-color: var(--line); }
+.rf-it.miss .rf-st, .rf-sum .miss { color: var(--muted); }
 </style>
 </head>
 <body>
@@ -3735,6 +3776,7 @@ if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") { const f = document.getElementById("meForm"); if (f && meT) meSave(f); } });
 }
 function typing() { const a = document.activeElement; return !!(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT")); }
+let rfSynced = false;
 async function initAccount() {
   if (!window.claude || typeof window.claude.use !== "function") return;
   let db, user;
@@ -3744,6 +3786,7 @@ async function initAccount() {
   const me = await user.id();
   if (!me) return;
   try { COL = db.collection("data/users/" + me); } catch (e) { COL = null; return; }
+  try { FCOL = db.collection("data/users/" + me + "/f/files"); } catch (e) { FCOL = null; }
   let settled = false;
   const slow = setTimeout(() => { if (!settled) setSaveState("offline"); }, 10000);
   COL.onSnapshot(snap => {
@@ -3793,7 +3836,7 @@ async function initAccount() {
       if (app.view === "production" && !cur()) app.view = "home";
       if (!typing()) render();
     }
-    if (settled) meFromAccount();
+    if (settled) { meFromAccount(); if (!rfSynced) { rfSynced = true; rfSyncUp(); } }
   }, () => { settled = true; clearTimeout(slow); COL = null; app.storage = "local"; setSaveState("saved"); });
 }
 
@@ -3806,7 +3849,7 @@ function newProduction(fields) {
 /* a copy of a production with all its items, under a new id (the caller names it) */
 function copyProduction(p, fields) {
   const c = JSON.parse(JSON.stringify(p));
-  delete c._w; delete c.arch; delete c.check;   // a copy starts with a fresh prep checklist
+  delete c._w; delete c.arch; delete c.check; delete c.forms;   // a copy starts with a fresh prep checklist, and without the house's forms
   return Object.assign(c, { id: uid("p"), createdAt: Date.now(), updatedAt: Date.now() }, fields || {});
 }
 function lineFromCatalog(id) {
@@ -4860,6 +4903,7 @@ function prodMenu(id) {
 function deleteProductions(ids) {
   const set = new Set(ids);
   for (const id of ids) { const x = findProd(id); if (x && x.unit2) set.add(x.unit2); }  // a production goes with its 2nd Unit
+  for (const x of app.productions) if (set.has(x.id)) formsOf(x).forEach(rfDropFile);
   app.productions = app.productions.filter(x => !set.has(x.id));
   const gone = app.settings.gone = goneMerge(app.settings.gone, null); for (const id of set) gone[id] = Date.now(); touchSettings();
   lsSave(); for (const id of set) removeRemote(id);
@@ -5374,7 +5418,7 @@ function viewProduction() {
   const ou2 = otherUnit(p), ost = ou2 ? prodStatus(ou2) : null;
   const sub = (p.company ? `<span class="ph-co" dir="auto">${esc(p.company)}</span>` : "") + (st ? `<span class="ph-st ${st.k}">${esc(st.t)}</span>` : "");
   const head = finder ? "" : `<div class="prod-head ph-stack">
-      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
+      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><span class="grow"></span><button class="iconbtn ph-forms" type="button" data-act="rf-list" aria-label="Rental forms${formsOf(p).length ? ": " + formsOf(p).length : ""}" title="Rental forms">${RF_ICON}${formsOf(p).length ? `<i class="num">${formsOf(p).length}</i>` : ""}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
       <h2 class="ph-name" dir="auto">${esc(p.name || "Untitled production")}</h2>
       ${sub ? `<p class="ph-sub">${sub}</p>` : ou2 && (ou2.company || ost) ? `<p class="ph-sub" aria-hidden="true">&nbsp;</p>` : ""}
     </div>`;
@@ -9281,7 +9325,14 @@ document.addEventListener("click", e => {
     case "copy": copyText(listText(p), () => { commitVer(p); toast(`List copied · version ${p.docVer}`); }); break;
     case "export-txt": saveFile(fileBase(p) + ".txt", listText(p)).then(ok => { if (ok) savedVer(p); }); break;
     case "preview": openPreview(p); break;
-    case "preview-close": closePreview(); break;
+    case "preview-close": closePreview(); rfOpen = null; break;
+    case "rf-list": if (p) rfList(p); break;
+    case "rf-open": { const f = formsOf(p).find(x => x.id === id); if (f) rfView(p, f); break; }
+    case "rf-save": { const s = document.getElementById("rf-to"); if (s) rfSave(s.value); break; }
+    case "rf-tab": if (rfOpen) { rfOpen.tab = b.dataset.v; b.parentNode.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); document.querySelector(".rf-acts [data-act='rf-zoom']").hidden = rfOpen.tab !== "pages"; rfPaint(); } break;
+    case "rf-zoom": if (rfOpen) { rfOpen.zoom = !rfOpen.zoom; b.setAttribute("aria-pressed", String(rfOpen.zoom)); rfPaint(); } break;
+    case "rf-share": rfShare(); break;
+    case "rf-del": if (b.classList.contains("armed")) { if (rfOpen) rfDelete(rfOpen.p, rfOpen.f); } else { b.classList.add("armed"); b.querySelector("span").textContent = "Delete the form"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.querySelector("span").textContent = "Delete"; } }, 3000); } break;
     case "preview-sku": {
       app.settings.exportSku = !skuOn(); touchSettings();
       b.setAttribute("aria-pressed", String(skuOn())); b.textContent = "SKU " + (skuOn() ? "on" : "off");
@@ -9335,6 +9386,8 @@ document.addEventListener("input", e => {
 });
 document.addEventListener("change", e => {
   if (e.target && e.target.dataset && e.target.dataset.listsimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importLists(f); return; }
+  if (e.target && e.target.dataset && e.target.dataset.rfimport) { const f = e.target.files && e.target.files[0], pid = e.target.dataset.rfimport; e.target.value = ""; if (f) { closeModal(); rfImport(f, pid); } return; }
+  if (e.target && e.target.id === "rf-to") { rfRepHint(); return; }
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
   if (t.id === "lc-name") { lcOwn().name = t.value.trim(); lcPdfMade = null; touchSettings(); const h = document.querySelector(".lcard .lc-head b"); if (h) h.textContent = lcOwn().name || "Lenses"; return; }
@@ -10411,9 +10464,360 @@ if (typeof document !== "undefined" && document.addEventListener) {
   if (typeof window !== "undefined" && window.addEventListener) { window.addEventListener("scroll", okFollow, { passive: true, capture: true }); window.addEventListener("resize", okFollow); if (window.visualViewport) window.visualViewport.addEventListener("resize", okFollow); }
   document.addEventListener("input", e => { if (e.target === okFor && e.target.dir === "auto") okFollow(); });
 }
+/* ---------- Rental forms, reading: a page's words (as the PDF reader gives them: text, where it sits, which way it reads, its font)
+   become lines, the table's columns are found by its header row (כמות · דגם · תכולה פיסית · הערות · מספר אוטופי, right to left),
+   and each row with a quantity starts an item. Utopia's forms (any of its kinds: issue, credit, gear with the client) share this table ---------- */
+const RF_HEAD = { "כמות": "qty", "דגם": "model", "תכולה": "cont", "הערות": "note", "מספר": "nums" };
+// a page's words in lines, top to bottom; each line's words right to left (the order a Hebrew line reads)
+function rfLines(items) {
+  const lines = [];
+  for (const it of [...items].sort((a, b) => b.y - a.y)) {
+    const L = lines.find(l => Math.abs(l.y - it.y) <= 2.2);
+    if (L) L.items.push(it); else lines.push({ y: it.y, items: [it] });
+  }
+  for (const l of lines) l.items.sort((a, b) => (b.x + b.w) - (a.x + a.w));
+  return lines.sort((a, b) => b.y - a.y);
+}
+// a line's words as text: Hebrew words in their right-to-left order, a run of Latin words and numbers read left to right
+function rfText(items) {
+  const out = []; let run = [];
+  const flush = () => { if (run.length) { out.push(run.reverse().map(i => i.s.trim()).join(" ")); run = []; } };
+  for (const it of items) { if (it.r) { flush(); out.push(it.s.trim()); } else run.push(it); }
+  flush();
+  return out.join(" ").replace(/\s+/g, " ").replace(/\s+([:;,.])/g, "$1").trim();
+}
+const rfNum = s => { const m = /^\s*(\d+(?:\.\d+)?)\s*$/.exec(s || ""); return m ? +m[1] : null; };
+// dd/mm/yy (hh:mm) → yyyy-mm-dd
+const rfIso = s => { const m = /(\d{2})\/(\d{2})\/(\d{2,4})/.exec(s || ""); return m ? `${m[3].length === 2 ? "20" + m[3] : m[3]}-${m[2]}-${m[1]}` : ""; };
+function rfParse(pages) {
+  const f = { house: "", title: "", no: "", nos: [], project: "", client: "", out: "", outIso: "", rows: [], pages: pages.length };
+  const all = pages.flat(), first = rfLines(pages[0] || []);
+  if (all.some(i => /אוטופי/.test(i.s))) f.house = "utopia";
+  // the head: the title on top; a label (word + ":") with its value to its left, on the right half of the page
+  if (first.length) f.title = rfText(first[0].items.filter(i => i.x > 250));
+  const valueOf = re => {
+    for (const l of first) {
+      // a label is a word with its colon right after it (to its left)
+      const lab = l.items.find(i => i.r && re.test(i.s.trim()) && i.x > 300 && l.items.some(c => c.s.trim() === ":" && Math.abs(c.x + c.w - i.x) < 6)); if (!lab) continue;
+      const v = rfText(l.items.filter(i => i.x + i.w < lab.x - 1 && i.x > 300 && i.s.trim() !== ":"));
+      if (v) return v;
+    }
+    return "";
+  };
+  f.project = valueOf(/^פרויקט$/); f.client = valueOf(/^לקוח$/);
+  for (const l of first) {   // the rental number(s): on the line of השכרה / השכרות
+    if (!l.items.some(i => /^השכר(ה|ות)$/.test(i.s.trim()))) continue;
+    for (const i of l.items) for (const m of i.s.matchAll(/\b\d{3}\/\d{5,7}\b/g)) if (!f.nos.includes(m[0])) f.nos.push(m[0]);
+  }
+  f.no = f.nos[0] || "";
+  const outLine = first.find(l => l.items.some(i => /^Date Out:?$/.test(i.s.trim()))) || first.find(l => l.items.some(i => /^הנפקה$/.test(i.s.trim())));
+  const dt = outLine && outLine.items.find(i => /\d{2}\/\d{2}\/\d{2}/.test(i.s));
+  if (dt) f.out = (/\d{2}\/\d{2}\/\d{2,4}(?: \d{1,2}:\d{2})?/.exec(dt.s) || [""])[0];
+  else { const asOf = first.find(l => l.items.some(i => /^לתאריך$/.test(i.s.trim()))), d2 = asOf && asOf.items.find(i => /\d{2}\/\d{2}\/\d{2}/.test(i.s)); if (d2) f.out = (/\d{2}\/\d{2}\/\d{2,4}/.exec(d2.s) || [""])[0]; }
+  f.outIso = rfIso(f.out);
+  // the table: its header row gives each column's right edge (the columns are right-aligned, as the page reads right to left)
+  let cols = null, catFont = "", catSize = 0, row = null, cat = "", done = false;
+  for (let pi = 0; pi < pages.length && !done; pi++) {
+    const lines = rfLines(pages[pi]); let on = false;
+    for (const l of lines) {
+      const txt = rfText(l.items);
+      if (/טבלת עזר|הסכם חתימה|^סה"כ/.test(txt)) { done = true; break; }
+      const hd = l.items.filter(i => RF_HEAD[i.s.trim()]);
+      if (hd.length >= 3 && hd.some(i => i.s.trim() === "כמות")) {
+        if (!cols) { cols = hd.map(i => ({ k: RF_HEAD[i.s.trim()], R: i.x + i.w })).sort((a, b) => a.R - b.R); const q = hd.find(i => i.s.trim() === "כמות"); catFont = q.f; catSize = q.h; }
+        on = true; continue;
+      }
+      if (!cols) continue;
+      if (!on) { if (/המשך/.test(txt)) on = true; continue; }   // a later page: its own head first, then "המשך..." and the rows go on
+      if (l.y < 40 || (l.items.some(i => i.s.trim() === "עמוד") && l.items.some(i => i.s.trim() === "מתוך"))) continue;   // the page number
+      const cell = {};
+      for (const it of l.items) { const r = it.x + it.w, c = cols.find(c => c.R + 14 >= r) || cols[cols.length - 1]; (cell[c.k] || (cell[c.k] = [])).push(it); }
+      const q = cell.qty ? rfNum(rfText(cell.qty)) : null;
+      const model = cell.model ? rfText(cell.model) : "";
+      if (q !== null) { row = { cat, qty: q, model, cont: [], note: "", nums: "" }; f.rows.push(row); }
+      else if (cell.model && !cell.cont && !cell.nums && !cell.note && cell.model.every(i => i.f === catFont || Math.abs((i.h || 0) - catSize) < .05)) { cat = model; row = null; continue; }
+      else if (row && model) row.model = (row.model + " " + model).trim();
+      if (!row) continue;
+      if (cell.cont) row.cont.push(rfText(cell.cont));
+      if (cell.note) row.note = (row.note + " " + rfText(cell.note)).trim();
+      if (cell.nums) row.nums = (row.nums + " " + rfText(cell.nums)).trim();
+    }
+  }
+  f.ok = !!(cols && f.rows.length);
+  return f;
+}
+
+/* ---------- Rental forms: the house's own form for the gear that actually went out (Utopia sends it as a PDF, by WhatsApp or mail,
+   once prep is done). It comes in by Share (from WhatsApp or the mail app, to AC Cam List) or from the production's Forms sheet; the app
+   reads its head (rental no., project, date out) to know which production it belongs to, and keeps it there: the file in this browser
+   and, in pieces, in the account; what it read of it with the production. Its items can be set against the list (testing) ---------- */
+const PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/";
+let pdfjsP = null;
+function pdfLib() {
+  return pdfjsP || (pdfjsP = import(PDFJS + "pdf.min.mjs").then(m => { m.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.mjs"; return m; })
+    .catch(e => { pdfjsP = null; throw e; }));
+}
+const RF_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>`;
+const rfClean = s => String(s || "").replace(/\s*(["'״׳])\s*/g, "$1").replace(/\s+-\s+/g, "-").trim();
+const rfHouseName = f => (houseById(f.house) || {}).name || "Rental house";
+const rfDate = iso => { const q = parseDate(iso); return q ? `${q.d}.${q.m}.${String(q.y).slice(2)}` : ""; };
+const formsOf = p => (p && Array.isArray(p.forms) ? p.forms : []);
+
+/* the file itself: in this browser (IndexedDB), and in the account in pieces small enough for one database document each */
+const RF_PART = 180000;   // characters of base64 in one piece
+let FCOL = null;
+function rfIdb() {
+  return new Promise((res, rej) => { const r = indexedDB.open("accam-files", 1); r.onupgradeneeded = () => r.result.createObjectStore("f"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+}
+async function rfLocal(op, id, val) {
+  const db = await rfIdb();
+  return new Promise((res, rej) => {
+    const t = db.transaction("f", op === "get" ? "readonly" : "readwrite"), st = t.objectStore("f");
+    const q = op === "get" ? st.get(id) : op === "put" ? st.put(val, id) : st.delete(id);
+    t.oncomplete = () => res(q.result); t.onerror = () => rej(t.error);
+  });
+}
+const rfB64 = bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s); };
+const rfUnB64 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+async function rfUp(f, bytes) {
+  if (!FCOL) return false;
+  const b = rfB64(bytes), n = Math.max(1, Math.ceil(b.length / RF_PART));
+  for (let i = 0; i < n; i++) await FCOL.doc(f.id + "_" + i).set({ d: b.slice(i * RF_PART, (i + 1) * RF_PART), i, n, type: f.type });
+  f.parts = n; f.up = true; return true;
+}
+async function rfBytes(f) {
+  try { const r = await rfLocal("get", f.id); if (r && r.bytes) return r.bytes; } catch (e) {}
+  if (!FCOL || !f.up) return null;
+  let s = "";
+  for (let i = 0; i < (f.parts || 1); i++) { const d = await FCOL.doc(f.id + "_" + i).get(); if (!d || !d.exists) return null; s += d.data().d || ""; }
+  const bytes = rfUnB64(s);
+  try { await rfLocal("put", f.id, { bytes, type: f.type }); } catch (e) {}
+  return bytes;
+}
+async function rfDropFile(f) {
+  try { await rfLocal("del", f.id); } catch (e) {}
+  if (FCOL) for (let i = 0; i < (f.parts || 1); i++) FCOL.doc(f.id + "_" + i).delete().catch(() => {});
+}
+// forms saved while the account couldn't be reached go up once it can
+async function rfSyncUp() {
+  if (!FCOL) return;
+  for (const p of app.productions) for (const f of formsOf(p)) {
+    if (f.up) continue;
+    try { const r = await rfLocal("get", f.id); if (r && r.bytes && await rfUp(f, r.bytes)) touch(p); } catch (e) {}
+  }
+}
+
+/* reading: the PDF's words, page by page (text, where it sits, which way it reads, its font and size) */
+async function rfRead(bytes) {
+  const L = await pdfLib();
+  const doc = await L.getDocument({ data: bytes.slice(0), isEvalSupported: false }).promise, pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const tc = await (await doc.getPage(i)).getTextContent();
+    pages.push(tc.items.filter(it => it.str && it.str.trim()).map(it => ({ s: it.str, x: it.transform[4], y: it.transform[5], w: it.width, r: it.dir === "rtl", f: it.fontName, h: Math.abs(it.transform[0]) })));
+  }
+  return { doc, pages };
+}
+
+/* which production a form is for, best first: the same rental number already there, the project's name, the date it went out
+   (from three days before prep to the last shoot day), the rental house */
+const rfNorm = s => String(s || "").toLowerCase().replace(/[֑-ׇ]/g, "").replace(/["'״׳`]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+function rfMatch(f) {
+  const ft = rfNorm(f.project).split(" ").filter(Boolean), out = f.outIso;
+  const back = (iso, n) => { const q = parseDate(iso); if (!q) return ""; const d = new Date(Date.UTC(q.y, q.m - 1, q.d - n)); return d.toISOString().slice(0, 10); };
+  return app.productions.filter(p => !p.browse).map(p => {
+    let sc = 0; const pt = rfNorm(p.name).split(" ").filter(Boolean);
+    if (ft.length && pt.length) { sc += 6 * ft.filter(t => pt.includes(t)).length / Math.max(ft.length, pt.length); if (rfNorm(p.name) === rfNorm(f.project)) sc += 4; }
+    const a = p.prep || p.shootStart, z = p.shootEnd || p.shootStart || p.prep;
+    if (out && a && out >= back(a, 3) && out <= z) sc += 3;
+    if (f.house && p.houseId === f.house) sc += 1;
+    if (f.no && formsOf(p).some(x => x.no === f.no)) sc += 10;
+    return { p, sc };
+  }).sort((a, b) => b.sc - a.sc || (b.p.updatedAt || 0) - (a.p.updatedAt || 0));
+}
+
+/* a form comes in: read, matched, then a short sheet says what it is and which list it goes to */
+let rfPending = null;
+async function rfImport(file, pid) {
+  if (!file) return;
+  const pdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name || ""), img = /^image\//.test(file.type);
+  if (!pdf && !img) { toast("That file isn't a PDF or a photo."); return; }
+  if (file.size > 12e6) { toast("That file is too large (over 12 MB)."); return; }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const f = { id: uid("rf"), name: file.name || (pdf ? "form.pdf" : "form.jpg"), type: pdf ? "application/pdf" : file.type || "image/jpeg", size: bytes.length, at: Date.now(), house: "", title: "", no: "", project: "", out: "", outIso: "", pages: 1 };
+  if (pdf) {
+    toast("Reading the form…");
+    try { const r = rfParse((await rfRead(bytes)).pages); Object.assign(f, { house: r.house, title: r.title, no: r.no, project: rfClean(r.project), client: rfClean(r.client), out: r.out, outIso: r.outIso, pages: r.pages, read: r.ok }); }
+    catch (e) { errNote(e, "rf-read"); }
+  }
+  const m = rfMatch(f), best = pid ? app.productions.find(x => x.id === pid) : m.length && m[0].sc >= 3 ? m[0].p : cur() && !cur().browse ? cur() : m.length ? m[0].p : null;
+  rfPending = { f, bytes };
+  const t = document.getElementById("toast"); if (t && /^Reading the form/.test(t.textContent)) { clearTimeout(toast._t); t.hidden = true; }   // read: the sheet says the rest
+  rfConfirm(best, m);
+}
+function rfFormLine(f) {
+  const t = [f.house ? rfHouseName(f) : "", f.no].filter(Boolean).join(" · ") || f.name;
+  const s = [f.outIso ? "Out " + rfDate(f.outIso) : "", f.pages > 1 ? f.pages + " pages" : "", f.title].filter(Boolean).join(" · ");
+  return { t, s };
+}
+function rfConfirm(best, m) {
+  const { f } = rfPending, L = rfFormLine(f);
+  if (!app.productions.length) { toast("Make a list first; the form goes into it."); rfPending = null; return; }
+  const order = [...new Set([...(best ? [best] : []), ...m.map(x => x.p)])];
+  const opt = p => `<option value="${esc(p.id)}"${p === best ? " selected" : ""}${listDir(p.name)}>${esc((p.name || "Untitled production") + (p.mainOf ? " · 2nd Unit" : "") + (p.prep || p.shootStart ? " · " + fmtDM(p.prep || p.shootStart) : ""))}</option>`;
+  showModal(`<div class="sheet rf-sheet"><h3 class="plain">Rental form</h3>
+    <div class="rf-card"><span class="rf-ic">${RF_ICON}</span><span class="rf-ct"><b>${esc(L.t)}</b><span>${esc(L.s)}</span>${f.project ? `<span>Project <bdi dir="auto">${esc(f.project)}</bdi></span>` : ""}</span></div>
+    ${f.type === "application/pdf" && !f.no ? `<p class="hint">The app couldn't read this form's details; it's kept as it is.</p>` : ""}
+    <div class="field"><label for="rf-to">Goes into</label><select id="rf-to"${listDir(best && best.name)}>${order.map(opt).join("")}</select></div>
+    <p class="hint" id="rf-rep" hidden>It replaces the earlier copy of this form in that list.</p>
+    <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button><span class="grow"></span><button class="btn primary" type="button" data-act="rf-save">Save the form</button></div></div>`);
+  rfRepHint();
+}
+function rfRepHint() { const s = document.getElementById("rf-to"), h = document.getElementById("rf-rep"); if (!s || !h || !rfPending) return; const p = app.productions.find(x => x.id === s.value); h.hidden = !(p && rfPending.f.no && formsOf(p).some(x => x.no === rfPending.f.no)); }
+async function rfSave(pid) {
+  const pend = rfPending, p = app.productions.find(x => x.id === pid); if (!pend || !p) return;
+  rfPending = null; closeModal();
+  const { f, bytes } = pend;
+  try { await rfLocal("put", f.id, { bytes, type: f.type }); } catch (e) { errNote(e, "rf-store"); }
+  const old = f.no ? formsOf(p).filter(x => x.no === f.no) : [];   // the same rental again: the newer copy takes its place
+  p.forms = [f, ...formsOf(p).filter(x => !old.includes(x))];
+  for (const o of old) rfDropFile(o);
+  touch(p);
+  toast(`Form saved in ${p.name || "the list"}.`);
+  if (app.view === "production" && app.pid === p.id) rerenderKeepScroll();
+  try { if (await rfUp(f, bytes)) touch(p); } catch (e) { /* the account can't be reached now: it goes up later (rfSyncUp) */ }
+}
+
+/* the production's Forms sheet: its forms, newest first, and a way to add one */
+function rfList(p) {
+  const fs = formsOf(p);
+  const row = f => { const L = rfFormLine(f); return `<button type="button" class="rf-row" data-act="rf-open" data-id="${esc(f.id)}"><span class="rf-ic">${RF_ICON}</span><span class="rf-ct"><b>${esc(L.t)}</b><span>${esc(L.s)}</span></span>${CHEV_R}</button>`; };
+  showModal(`<div class="sheet rf-sheet"><div class="cs-head"><h3 class="plain">Rental forms</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
+    ${fs.length ? `<div class="rf-rows">${fs.map(row).join("")}</div>` : `<p class="hint">The rental house's form for the gear that went out. Share it to AC Cam List from WhatsApp or your mail, or add it here.</p>`}
+    <label class="btn rf-add"><input type="file" accept="application/pdf,.pdf,image/*" data-rfimport="${esc(p.id)}" hidden>+ Add a form</label></div>`);
+}
+
+/* the form itself, full screen: its pages, and (testing) what the app read of it set against the list */
+let rfOpen = null;   // { p, f, bytes, doc, parsed, tab, zoom }
+async function rfView(p, f) {
+  closeModal(); closePreview();
+  const o = document.createElement("div");
+  o.className = "preview rf-view"; o.id = "preview"; o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Rental form");
+  const L = rfFormLine(f);
+  o.innerHTML = `<div class="pv-bar"><b>${esc(L.t)}</b><span class="hint">${esc(L.s)}</span><button class="x" type="button" data-act="preview-close" aria-label="Close">×</button></div>
+    ${f.type === "application/pdf" ? `<div class="rf-tabs"><span class="seg sm" role="group" aria-label="Show"><button type="button" data-act="rf-tab" data-v="pages" aria-pressed="true">Form</button><button type="button" data-act="rf-tab" data-v="items" aria-pressed="false">Items · testing</button></span></div>` : ""}
+    <div class="pv-scroll rf-scroll" id="rfBody"><p class="hint rf-wait">Opening…</p></div>
+    <div class="pv-actions rf-acts"><button class="btn" type="button" data-act="rf-share">${SHARE_ICON}<span>Share</span></button><button class="btn" type="button" data-act="rf-zoom" aria-pressed="false"><span>Zoom</span></button><span class="grow"></span><button class="btn danger" type="button" data-act="rf-del">${TRASH_ICON}<span>Delete</span></button></div>`;
+  document.body.appendChild(o); document.body.style.overflow = "hidden"; navSync();
+  rfOpen = { p, f, tab: "pages", zoom: false };
+  const bytes = await rfBytes(f).catch(() => null);
+  if (rfOpen.f !== f) return;
+  if (!bytes) { document.getElementById("rfBody").innerHTML = `<p class="hint rf-wait">This form isn't on this phone, and the account can't be reached now.</p>`; return; }
+  rfOpen.bytes = bytes;
+  rfPaint();
+}
+async function rfPaint() {
+  const s = rfOpen, body = document.getElementById("rfBody"); if (!s || !body) return;
+  if (s.tab === "items") { body.innerHTML = await rfItemsHtml(s).catch(e => { errNote(e, "rf-items"); return `<p class="hint rf-wait">The app couldn't read this form's items.</p>`; }); return; }
+  if (s.f.type !== "application/pdf") { const url = URL.createObjectURL(new Blob([s.bytes], { type: s.f.type })); body.innerHTML = `<div class="rf-pages${s.zoom ? " zoom" : ""}"><img class="rf-page" src="${url}" alt="The form"></div>`; return; }
+  try {
+    if (!s.doc) { const L = await pdfLib(); s.doc = await L.getDocument({ data: s.bytes.slice(0), isEvalSupported: false }).promise; }
+    body.innerHTML = `<div class="rf-pages${s.zoom ? " zoom" : ""}"></div>`;
+    const wrap = body.firstChild, w = Math.min(body.clientWidth || 360, 900) * (s.zoom ? 2 : 1), dpr = Math.min(window.devicePixelRatio || 1, 3);
+    for (let i = 1; i <= s.doc.numPages; i++) {
+      const pg = await s.doc.getPage(i), v0 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: w * dpr / v0.width });
+      const c = document.createElement("canvas"); c.className = "rf-page"; c.width = Math.round(vp.width); c.height = Math.round(vp.height); c.style.width = w + "px";
+      wrap.appendChild(c);
+      await pg.render({ canvasContext: c.getContext("2d"), canvas: c, viewport: vp }).promise;
+      if (rfOpen !== s || s.tab !== "pages") return;
+    }
+  } catch (e) { errNote(e, "rf-paint"); body.innerHTML = `<p class="hint rf-wait">This form couldn't be shown here. Share it to open it in another app.</p>`; }
+}
+async function rfItemsHtml(s) {
+  if (!s.parsed) { const L = await pdfLib(); if (!s.doc) s.doc = await L.getDocument({ data: s.bytes.slice(0), isEvalSupported: false }).promise; s.parsed = rfParse((await rfRead(s.bytes)).pages); }
+  const r = s.parsed; if (!r.ok) return `<p class="hint rf-wait">The app couldn't find the form's table of items.</p>`;
+  const c = rfCompare(s.p, r.rows), n = k => c.rows.filter(x => x.st === k).length;
+  const ST = { same: ["ok", "✓"], diff: ["diff", ""], none: ["none", "Not on the list"] };
+  let lastCat = null;
+  const rows = c.rows.map(x => {
+    const head = x.row.cat !== lastCat ? `<h4 class="rf-cat" dir="auto">${esc(x.row.cat || "Items")}</h4>` : ""; lastCat = x.row.cat;
+    const st = x.st === "diff" ? (x.line.tx !== undefined && x.line.tx !== x.line.rx ? `List ${x.line.tx} TX · ${x.line.rx} RX` : `List ${x.listQty}`) : ST[x.st][1];
+    return `${head}<div class="rf-it ${ST[x.st][0]}"><span class="rf-q num">${x.row.qty}</span><span class="rf-m"><bdi dir="auto">${esc(x.row.model)}</bdi>${x.line ? `<small dir="auto">${esc(x.line.name)}</small>` : ""}</span><span class="rf-st">${esc(st)}</span></div>`;
+  }).join("");
+  const miss = c.missing.map(l => `<div class="rf-it miss"><span class="rf-q num">${l.qty}</span><span class="rf-m"><bdi dir="auto">${esc(l.name)}</bdi></span><span class="rf-st">Not on the form</span></div>`).join("");
+  return `<div class="rf-items"><p class="hint rf-test">Testing: check this against the form. The app reads the form's table and looks for each item on your list.</p>
+    <p class="rf-sum"><span class="ok">${n("same")} match</span><span class="diff">${n("diff")} differ</span><span class="none">${n("none")} not on the list</span><span class="miss">${c.missing.length} not on the form</span></p>
+    ${rows}${miss ? `<h4 class="rf-cat">On the list, not on the form</h4>${miss}` : ""}</div>`;
+}
+
+/* the form's items against the list: each row to the list line whose name holds its model best (the model's numbers must all be
+   there: B240 isn't A240); rows of one item add up; list lines no row came to are "not on the form" */
+const RF_STOP = new Set(["set", "kit", "with", "for", "and", "the", "of", "to", "סט", "ל", "עם", "של"]);
+function rfToks(s) {
+  return String(s || "").toLowerCase().replace(/[″"״'׳`]/g, "").replace(/\bf\s*\/\s*(?=\d)/g, "f").replace(/(\d)\s+(gb|tb|mm|w|wh)\b/g, "$1$2")
+    .replace(/\bcfexpress\s+(?:type\s+)?([ab])\b/g, "cfexpress type$1").replace(/\btype\s+([a-c])\b/g, "type$1")   // Type A isn't Type B
+    .split(/[^\p{L}\p{N}.]+/u).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t && !RF_STOP.has(t));
+}
+function rfScore(ft, lt) {
+  const L = new Set(lt), lat = ft.filter(t => /[a-z0-9]/.test(t)), base = lat.length ? lat : ft; if (!base.length) return 0;
+  // the numbers (two figures or more: 750, 72mm, f1.4, a170) must all be on the line; of the other words, two must be (one when the
+  // numbers say a lot, or the row has only one); a single digit or letter says nothing
+  const strong = base.filter(t => /\d/.test(t) && t.length >= 2), sig = base.filter(t => !/\d/.test(t) && t.length >= 2);
+  if (strong.some(t => !L.has(t))) return 0;
+  const hit = sig.filter(t => L.has(t)).length;
+  if (!(hit >= Math.min(2, sig.length) || (strong.length >= 2 && hit >= 1))) return 0;
+  if (!strong.length && sig.length < 2) return 0;   // one plain word (HD, USB) is no match
+  if (!strong.length && !hit) return 0;
+  // numbers alone: only a model code (A170, BM5, C300) or two of them; a size or a count (100mm, 15) could be anything
+  const unit = t => /^\d+(\.\d+)?(mm|cm|m|gb|tb|g|kg|w|wh|v|k|p|fps|nits?)?$/.test(t);
+  if (!hit && !(strong.length >= 2 || strong.some(t => /[a-z]/.test(t) && !unit(t)))) return 0;
+  return strong.length ? .5 + .5 * (sig.length ? hit / sig.length : 1) : hit / sig.length;
+}
+// what kind of thing a row is, by its first Hebrew word: a card reader is no card, accessories aren't the item, a charger isn't the battery
+// [the row's Hebrew word, the line's English one, both ways: a line of that kind takes only rows of that kind]
+const RF_KIND = [[/^קורא/, /reader/i, true], [/^אביזרי/, /accessor/i, false], [/^מטען/, /charger/i, true], [/^כבל/, /cable/i, false], [/^סוללה/, /batter|v-?lock|v-?mount|gold|np-?f|bp-?u|\d\s?wh\b/i, false]];
+const rfKindOk = (model, name) => RF_KIND.every(([h, e, both]) => h.test(model.trim()) ? e.test(name) : !(both && e.test(name)));
+function rfCompare(p, rows) {
+  const lines = Object.entries(p.items || {}).map(([id, l]) => ({ id, name: l.name || (ITEM.get(id) || { it: {} }).it.name || "", qty: lineQty(l), tx: l.tx, rx: l.rx })).filter(l => l.qty > 0 && l.name);
+  const lt = new Map(lines.map(l => [l.id, rfToks(l.name)]));
+  const out = rows.map(row => {
+    const ft = rfToks(row.model); let best = null, bs = 0;
+    for (const l of lines) { if (!rfKindOk(row.model, l.name)) continue;
+      const sc = rfScore(ft, lt.get(l.id)) - lt.get(l.id).length * .001; if (sc > bs) { bs = sc; best = l; } }
+    return { row, line: bs >= .6 ? best : null };
+  });
+  const sum = new Map(); for (const x of out) if (x.line) sum.set(x.line.id, (sum.get(x.line.id) || 0) + x.row.qty);
+  for (const x of out) { if (!x.line) { x.st = "none"; continue; } x.listQty = x.line.qty; x.st = sum.get(x.line.id) === x.line.qty ? "same" : "diff"; }
+  return { rows: out, missing: lines.filter(l => !sum.has(l.id)) };
+}
+
+async function rfShare() {
+  const s = rfOpen; if (!s || !s.bytes) return;
+  const name = s.f.name || "form.pdf", blob = new Blob([s.bytes], { type: s.f.type });
+  try { const file = new File([blob], name, { type: s.f.type }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
+  try { const d = await window.claude?.use?.("downloads"); if (d) { await d.save({ filename: name, data: blob }); return; } } catch (e) {}
+  const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+function rfDelete(p, f) {
+  p.forms = formsOf(p).filter(x => x !== f); rfDropFile(f); touch(p);
+  closePreview(); rfOpen = null; toast("Form deleted."); if (app.view === "production") rerenderKeepScroll();
+}
+
+/* Share → AC Cam List: the service worker keeps the shared files for a moment and opens the app with ?shared; they're taken here */
+async function rfTakeShared() {
+  if (typeof location === "undefined" || !/[?&]shared=/.test(location.search) || typeof caches === "undefined") return;
+  try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+  try {
+    const c = await caches.open("accam-share"), keys = await c.keys(), files = [];
+    for (const k of keys) { const r = await c.match(k); if (r) files.push(new File([await r.blob()], decodeURIComponent(r.headers.get("x-name") || "form.pdf"), { type: r.headers.get("content-type") || "" })); await c.delete(k); }
+    if (!files.length) { toast("Nothing came with the share. Try again from the file itself."); return; }
+    for (const f of files.slice(0, 1)) await rfImport(f);
+  } catch (e) { errNote(e, "rf-share-in"); }
+}
+
 render();
 initAccount().then(() => { if (window.AC_AUTH && (app.view === "home" || app.view === "settings")) render(); });
 labInit();
+rfTakeShared();
 /* is this the maker's account? Asked once the installed app's sign-in has answered, again each time Settings opens, and on demand
    (then it says why not: no admin mark for this account, rules not published, or no connection) */
 const ADMIN_SAY = { ok: "Control room is open for this account.", missing: "Firebase has no document in 'admins' named with this Account ID. Check the Document ID (not an auto-ID, no spaces).",
