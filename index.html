@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611140930";
+window.AC_BUILD = "202611140949";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2758,6 +2758,7 @@ button, a, label, summary, [data-act], [data-lp] { -webkit-tap-highlight-color: 
 .pc-addrow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; }
 .pc-saved { min-height: 18px; text-align: end; }
 .pc-done { text-align: center; }
+.pc-unit { justify-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
 </style>
 </head>
 <body>
@@ -2983,8 +2984,13 @@ const cur = () => app.view === "prep" ? pcCur() : app.view === "browse" ? app.br
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
 /* the Media Calculator works on one list, or on none (any camera, from every catalog). The choice is kept: the list picked last,
    or at first the production worked on most recently */
-const mcLists = () => app.productions.filter(x => !isArchived(x) && !(x.mainOf && findProd(x.mainOf))).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-function mcListId() { const k = app.settings.mcList; if (k === "none") return ""; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
+/* the tools' list pickers (Media Calculator, Multicam, Lens Cards, Prep Checklist): one row a production, and only one with gear in it
+   (in either unit); an empty list has nothing to offer there */
+const hasGear = x => !!x && Object.values(x.items || {}).some(l => lineQty(l) > 0);
+const prodHasGear = x => { const m = mainOf(x); return hasGear(m) || hasGear(unit2Of(m)); };
+const pickable = x => !!x && !isArchived(x) && prodHasGear(x);
+const mcLists = () => app.productions.filter(x => !isArchived(x) && !(x.mainOf && findProd(x.mainOf)) && prodHasGear(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+function mcListId() { const k = app.settings.mcList; if (k === "none") return ""; if (k && pickable(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
 function mcCur() { const id = mcListId(); if (id) return findProd(id); if (!app.mcP) app.mcP = { id: "mc", browse: true, name: "", houseId: "any", items: {} }; return app.mcP; }
 const mcHouseOf = (p, e) => p.houseId === "any" ? e.h.id : p.houseId;  // with no list, each camera's cards come from its own catalog  // browsing a catalog: a list that is never kept
 
@@ -6855,16 +6861,18 @@ function viewTools() {
    It opens on the production whose prep is nearest (or the one last worked on), never asks for a list first: To-do and Notes work
    with no list at all. A production's checklist travels with it (its account copy too); a copy of a production starts fresh. ---------- */
 const pcLists = () => app.productions.filter(x => !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+const pcMains = () => pcLists().filter(x => !(x.mainOf && findProd(x.mainOf)) && prodHasGear(x));   // the picker: one row a production with gear; its 2nd Unit is reached by the switch
 function pcListId() {
   const k = app.settings.pcList; if (k === "none") return "";
-  if (k && pcLists().some(x => x.id === k)) return k;
-  const t = todayIso(), ls = pcLists();
+  const kp = k && findProd(k);
+  if (kp && pickable(kp)) { if (hasGear(kp)) return k; const o = kp.mainOf ? mainOf(kp) : unit2Of(kp); if (hasGear(o)) return o.id; }   // the chosen unit, or its other unit when only that one has gear
+  const t = todayIso(), ls = pcLists().filter(hasGear);
   // no choice yet: a prep today, else the nearest prep or shoot ahead, else the list last worked on
   const live = ls.find(x => x.prep === t); if (live) return live.id;
   const ahead = ls.map(x => [x, [x.prep, x.shootStart].filter(d => d && d >= t).sort()[0]]).filter(x => x[1]).sort((a, b) => a[1] < b[1] ? -1 : 1)[0];
   return ahead ? ahead[0].id : ls[0] ? ls[0].id : "";
 }
-const pcCur = () => pcLists().find(x => x.id === pcListId()) || null;
+const pcCur = () => findProd(pcListId()) || null;
 function pcData(p) {
   const d = p ? (p.check || (p.check = {})) : (app.settings.pcFree || (app.settings.pcFree = {}));
   if (p && (!d.ok || typeof d.ok !== "object")) d.ok = {};
@@ -6898,9 +6906,9 @@ const PC_EYE_OFF = '<path d="M3 3l18 18M10.6 6.1A9.7 9.7 0 0 1 12 6c6 0 9.5 6 9.
 function viewPrep() {
   const p = pcCur(), id = p ? p.id : "", d = pcData(p);
   const tab = !p && (app.pcTab || "gear") === "gear" ? "todo" : app.pcTab || "gear";
-  const ls = pcLists(), curL = ls.find(x => x.id === id);
-  const nm = x => (x.name || "Untitled production") + (x.mainOf ? " · 2nd Unit" : "");
-  const opts = ls.map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}${listDir(x.name)}>${esc(nm(x))}</option>`).join("") + `<option value="none"${id ? "" : " selected"}>No list · to-dos and notes</option>`;
+  const m = p ? mainOf(p) : null, q = p && hasGear(m) && hasGear(unit2Of(p)) ? unit2Of(p) : null, ls = pcMains(), curL = m;   // the unit switch: only when both units have gear
+  const opts = ls.map(x => `<option value="${esc(x.id)}"${m && x.id === m.id ? " selected" : ""}${listDir(x.name)}>${esc(x.name || "Untitled production")}</option>`).join("") + `<option value="none"${id ? "" : " selected"}>No list · to-dos and notes</option>`;
+  const unitSw = q ? `<div class="seg sm unit-sw pc-unit" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pc-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : "";
   const c = p ? pcCount(p) : null, td = d.todo, tdOk = td.filter(x => x.done).length;
   const tabBtn = (v, t, n) => `<button type="button" role="tab" data-act="pc-tab" data-v="${v}" aria-selected="${tab === v}">${t}${n ? `<span class="num">${n}</span>` : ""}</button>`;
   let body = "";
@@ -6928,6 +6936,7 @@ function viewPrep() {
   return `${pageHead("Prep Checklist")}
     <section class="pad pc-page">
       <div class="field lc-top"><select id="pc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
+      ${unitSw}
       <div class="pc-tabs" role="tablist">${p ? tabBtn("gear", "Gear", `${c.ok}/${c.n}`) : ""}${tabBtn("todo", "To-do", td.length ? `${tdOk}/${td.length}` : "")}${tabBtn("notes", "Notes", d.pad.trim() ? "•" : "")}</div>
       ${body}
     </section>`;
@@ -6980,7 +6989,7 @@ const lcOpts = () => { const o = app.settings.lensCard || (app.settings.lensCard
   const L = lcLook(o); o.style = L.st; o.col = L.col; delete o.ink; return o; };
 const lcK = o => { o = o || lcOpts(); return Math.min(LC_K[1], Math.max(LC_K[0], Number((o.k || {})[o.lay]) || 1)); };
 const lcLists = () => mcLists();  // each production once: its 2nd Unit's lenses come with it
-function lcListId() { const k = app.settings.lcList; if (k === "none") return ""; const q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && !isArchived(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
+function lcListId() { const k = app.settings.lcList; if (k === "none") return ""; const q = k && findProd(k) ? mainOf(findProd(k)) : null; if (q && pickable(q)) return q.id; const l = lcLists()[0]; return l ? l.id : ""; }
 /* with no list: a card of your own. Lenses typed one at a time (matched to the catalogs by name, so their stop and close focus come
    with them; a lens the catalogs don't know keeps what you typed), kept in the app's settings */
 const lcOwn = () => { const s = app.settings; if (!s.lcOwn || typeof s.lcOwn !== "object") s.lcOwn = { name: "", items: {} }; if (!s.lcOwn.items) s.lcOwn.items = {}; return s.lcOwn; };
@@ -7234,7 +7243,7 @@ const DEV_FOC = [
 /* other names the catalogs give a maker ("RT Motion MK3.1", a Nucleus without "Tilta") */
 const DEV_MAKER = { teradek: ["teradek", "rtmotion"], tilta: ["tilta", "nucleus"] };
 const CAM_LETTERS = "ABCDEFGH".split("");
-function camListId() { const k = app.settings.camList; if (k === "none") return ""; if (k && findProd(k) && !isArchived(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
+function camListId() { const k = app.settings.camList; if (k === "none") return ""; if (k && pickable(findProd(k))) return k; const l = mcLists()[0]; return l ? l.id : ""; }
 function camCur() { const id = camListId(); if (id) return findProd(id); if (!app.camP) app.camP = { id: "cams", browse: true, name: "", houseId: "any", items: {} }; return app.camP; }
 const camLines = p => p.browse ? [] : Object.entries(p.items).filter(([id]) => hasRec(ITEM.get(id)));
 function camNew(list, id) { const L = CAM_LETTERS.find(x => !list.some(c => c.L === x)) || "A"; return { k: uid("cm"), L, col: CAM_COLORS[CAM_LETTERS.indexOf(L)] || CAM_COLORS[0], id: id || "", rec: {} }; }
@@ -8661,6 +8670,7 @@ document.addEventListener("click", e => {
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "prep": closeModal(); app.view = "prep"; app.pcNote = null; render(); window.scrollTo(0, 0); break;
     case "pc-tab": app.pcTab = b.dataset.v; app.pcNote = null; render(); break;
+    case "pc-unit": if (findProd(b.dataset.id)) { app.settings.pcList = b.dataset.id; app.pcNote = null; touchSettings(); rerenderKeepScroll(); } break;
     case "pc-ok": pcToggle(b.dataset.id); break;
     case "pc-note": app.pcNote = app.pcNote === b.dataset.id ? null : b.dataset.id; rerenderKeepScroll(); if (app.pcNote) { const t = document.querySelector(".pc-note-in"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } } break;
     case "pc-note-done": app.pcNote = null; rerenderKeepScroll(); break;

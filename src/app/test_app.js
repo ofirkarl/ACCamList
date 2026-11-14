@@ -825,13 +825,15 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // Prep Checklist: opens on the production whose prep is today (never asks for a list), keeps checks and notes with the production, a copy starts fresh
 { const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   const keep = A.app.productions.slice(), ks = A.app.settings.pcList; delete A.app.settings.pcList;
-  const a = A.newProduction({ name: "A", houseId: "utopia", updatedAt: Date.now() + 5000 }), pr = A.newProduction({ name: "Prep today", houseId: "utopia", prep: iso, updatedAt: 1 });
+  const a = A.newProduction({ name: "A", houseId: "utopia", updatedAt: Date.now() + 5000, items: { y1: { qty: 1, name: "Gear" } } }), pr = A.newProduction({ name: "Prep today", houseId: "utopia", prep: iso, updatedAt: 1, items: { x0: { qty: 1, name: "Gear zero" } } });
   A.app.productions.push(a, pr); ok(A.pcListId() === pr.id, "Prep Checklist opens on the production whose prep is today");
   A.app.settings.pcList = "none"; ok(A.pcListId() === "", "No list: to-dos and notes only"); delete A.app.settings.pcList;
   pr.items.x1 = { qty: 2, name: "Gear one" }; pr.items.x2 = { qty: 1, name: "Gear two" }; const d = A.pcData(pr); d.ok.x1 = 1; d.note.x2 = "Battery plate loose";
-  const c = A.pcCount(pr); ok(c.n === 2 && c.ok === 1 && c.att === 1, "gear counted: 2 items, 1 checked, 1 to look at");
+  delete pr.items.x0; const c = A.pcCount(pr); ok(c.n === 2 && c.ok === 1 && c.att === 1, "gear counted: 2 items, 1 checked, 1 to look at");
   A.app.view = "prep"; const h = A.viewPrep(); ok(/Prep Checklist/.test(h) && /aria-checked="true"/.test(h) && /Battery plate loose/.test(h) && />To-do</.test(h) && />Notes</.test(h), "the page shows the gear with its check and its note, and the To-do and Notes tabs");
   ok(!A.copyProduction(pr).check, "a copy of a production starts with a fresh checklist");
+  const e = A.newProduction({ name: "Empty", houseId: "utopia", prep: iso, updatedAt: Date.now() + 9000 }); A.app.productions.push(e);
+  ok(A.pcListId() === pr.id && !/>Empty</.test(A.viewPrep()), "empty lists stay out of the tools' pickers: the checklist skips an empty production, even with its prep today");
   A.app.productions.length = 0; A.app.productions.push(...keep); if (ks !== undefined) A.app.settings.pcList = ks; A.app.view = "home"; }
 
 // --- round 18: a Camera List line like a Favorites row: the star before the name, the page, edit and remove in the corner
