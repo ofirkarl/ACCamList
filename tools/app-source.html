@@ -2560,6 +2560,55 @@ button, a, label, summary, [data-act], [data-lp] { -webkit-tap-highlight-color: 
 .prod-card.lp-pop { animation: lp-pop .36s cubic-bezier(.2, .9, .3, 1.25); }
 @keyframes lp-pop { 0% { transform: scale(.975); } 55% { transform: scale(1.012); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .prod-card { transition: none; } .prod-card.lp-pop { animation: none; } }
+/* Prep Checklist */
+.pc-page { display: grid; gap: 12px; }
+.pc-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.pc-tabs button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--surface) 78%, transparent); color: var(--fg); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pc-tabs button[aria-selected="true"] { background: var(--surface); color: var(--accent); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.pc-tabs .num { font-size: 12px; font-weight: 500; color: var(--muted); }
+.pc-tabs button[aria-selected="true"] .num { color: var(--accent); }
+.pc-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pc-prog { flex-basis: 100%; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); overflow: hidden; }
+.pc-prog i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width .35s ease; }
+.pc-cnt { flex: 1; font-size: 13px; color: var(--muted); }
+.pc-cnt b { color: var(--fg); }
+.pc-attn { color: var(--comp); font-weight: 600; }
+.pc-bar .iconbtn { width: 34px; height: 34px; }
+.pc-bar .iconbtn svg { width: 18px; height: 18px; }
+.pc-bar .iconbtn[aria-pressed="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.pc-sec, .pc-todo { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--frame-shadow); overflow: hidden; }
+.pc-sec h3 { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 9px 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.pc-sec h3 .num { letter-spacing: 0; }
+.pc-rows { list-style: none; margin: 0; padding: 0; }
+.pc-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; border-top: 1px solid var(--line); }
+.pc-rows .pc-row:first-child { border-top: 0; }
+.pc-main { display: grid; grid-template-columns: 26px auto minmax(0, 1fr); align-items: center; gap: 10px; min-height: 48px; padding: 6px 4px 6px 12px; cursor: pointer; -webkit-user-select: none; user-select: none; }
+.pc-todo .pc-main { grid-template-columns: 26px minmax(0, 1fr); }
+.pc-ck { display: grid; place-items: center; width: 26px; height: 26px; box-sizing: border-box; border: 2px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 8px; color: transparent; transition: background .15s, border-color .15s, color .15s; }
+.pc-ck svg { width: 17px; height: 17px; }
+.pc-row.ok .pc-ck { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.pc-ck.pop { animation: pc-pop .28s cubic-bezier(.2, .9, .3, 1.4); }
+@keyframes pc-pop { 0% { transform: scale(.8); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+.pc-q { min-width: 22px; font-size: 13px; color: var(--muted); text-align: end; }
+.pc-n { display: grid; gap: 2px; min-width: 0; font-size: 15px; }
+.pc-n > span { overflow-wrap: anywhere; }
+.pc-n small { font-size: 12px; color: var(--muted); }
+.pc-row.ok .pc-n > span { color: var(--muted); }
+.pc-todo .pc-row.ok .pc-n > span { text-decoration: line-through; }
+.pc-nt { font-style: normal; font-size: 12.5px; color: var(--comp); font-weight: 600; overflow-wrap: anywhere; }
+.pc-nt::before { content: "! "; }
+.pc-row.att::before { content: ""; position: absolute; inset: 6px auto 6px 0; width: 3px; border-radius: 0 3px 3px 0; background: var(--comp); }
+.pc-nb { display: grid; place-items: center; width: 40px; height: 40px; margin-inline-end: 4px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
+.pc-nb svg { width: 18px; height: 18px; }
+.pc-nb.on { color: var(--comp); }
+.pc-nb[aria-expanded="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.pc-note { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; padding: 0 12px 10px 48px; }
+.pc-note-in, .pc-pad { width: 100%; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--surface); color: var(--fg); font: inherit; font-size: 16px; padding: 8px 10px; resize: vertical; }
+.pc-note-in:focus, .pc-pad:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+.pc-pad { min-height: 52vh; line-height: 1.5; box-shadow: var(--frame-shadow); }
+.pc-addrow { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px; }
+.pc-saved { min-height: 18px; text-align: end; }
+.pc-done { text-align: center; }
 </style>
 
 <div class="app">
@@ -2780,7 +2829,7 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.view === "lenscard" ? lcCur() : app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "prep" ? pcCur() : app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.view === "lenscard" ? lcCur() : app.productions.find(p => p.id === app.pid);
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
 /* the Media Calculator works on one list, or on none (any camera, from every catalog). The choice is kept: the list picked last,
    or at first the production worked on most recently */
@@ -3536,7 +3585,7 @@ function newProduction(fields) {
 /* a copy of a production with all its items, under a new id (the caller names it) */
 function copyProduction(p, fields) {
   const c = JSON.parse(JSON.stringify(p));
-  delete c._w; delete c.arch;
+  delete c._w; delete c.arch; delete c.check;   // a copy starts with a fresh prep checklist
   return Object.assign(c, { id: uid("p"), createdAt: Date.now(), updatedAt: Date.now() }, fields || {});
 }
 function lineFromCatalog(id) {
@@ -4404,6 +4453,7 @@ function render() {
   else if (app.view === "mcalc" && cur()) v.innerHTML = viewMcalc();
   else if (app.view === "lensfind" && cur()) v.innerHTML = viewLensFind();
   else if (app.view === "tools") v.innerHTML = viewTools();
+  else if (app.view === "prep") v.innerHTML = viewPrep();
   else if (app.view === "admin" && app.isAdmin) v.innerHTML = viewAdmin();
   else if (app.view === "favs" && cur()) v.innerHTML = viewFavsSolo();
   else if (app.view === "cams" && cur()) v.innerHTML = viewCams();
@@ -4418,7 +4468,7 @@ function render() {
   const hp = app.view === "form" ? document.getElementById("housePick") : null;
   houseTheme((app.view === "production" || app.view === "browse" || app.view === "mcalc" || app.view === "lensfind" || app.view === "favs" || app.view === "lenscard" || ((app.view === "cams" || app.view === "camprint") && cur() && !cur().browse)) && cur() ? cur().houseId : hp ? hp.dataset.value : "");
   document.body.classList?.toggle("finder-on", app.view === "production" && app.tab === "add" && fin().on);
-  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind", "tools", "favs", "cams", "camprint", "lenscard"].includes(app.view));
+  document.body.classList?.toggle("in-prod", ["production", "archive", "mcalc", "browse", "rules", "lensfind", "tools", "favs", "cams", "camprint", "lenscard", "prep"].includes(app.view));
   if (app.view === "production" && app.tab === "list") applyListFilter();
   if ((app.view === "production" && app.tab === "fav") || app.view === "favs") applyFavFilter();
   histTrack(); hist.last = pageSnap();
@@ -6642,9 +6692,130 @@ function viewTools() {
     <section class="pad tools-list">
       ${row("cams", "idcard", "bar-red", "Multicam management", "Each camera's setup, and its card")}
       ${row("lensfind", "lens", "bar-green", "Find a lens", "By focal length, per rental house")}
+      ${row("prep", "list", "bar-blue", "Prep Checklist", "Check the gear, your to-dos, and notes")}
       ${row("lenscard", "file", "bar-yellow", "Lens Cards", "Your list's lenses and close focus, to print")}
       ${row("rules-open", "box", "bar-cyan", "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
+}
+
+/* ---------- Prep Checklist: for a production's prep day. Three tabs:
+   Gear: the list's gear, a check by each item once it's gone over and found right, and a note by any item that needs attention;
+   To-do: a checklist of the user's own, ticked off line by line;
+   Notes: a notepad, free writing.
+   It opens on the production whose prep is nearest (or the one last worked on), never asks for a list first: To-do and Notes work
+   with no list at all. A production's checklist travels with it (its account copy too); a copy of a production starts fresh. ---------- */
+const pcLists = () => app.productions.filter(x => !isArchived(x)).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+function pcListId() {
+  const k = app.settings.pcList; if (k === "none") return "";
+  if (k && pcLists().some(x => x.id === k)) return k;
+  const t = todayIso(), ls = pcLists();
+  // no choice yet: a prep today, else the nearest prep or shoot ahead, else the list last worked on
+  const live = ls.find(x => x.prep === t); if (live) return live.id;
+  const ahead = ls.map(x => [x, [x.prep, x.shootStart].filter(d => d && d >= t).sort()[0]]).filter(x => x[1]).sort((a, b) => a[1] < b[1] ? -1 : 1)[0];
+  return ahead ? ahead[0].id : ls[0] ? ls[0].id : "";
+}
+const pcCur = () => pcLists().find(x => x.id === pcListId()) || null;
+function pcData(p) {
+  const d = p ? (p.check || (p.check = {})) : (app.settings.pcFree || (app.settings.pcFree = {}));
+  if (p && (!d.ok || typeof d.ok !== "object")) d.ok = {};
+  if (p && (!d.note || typeof d.note !== "object")) d.note = {};
+  if (!Array.isArray(d.todo)) d.todo = [];
+  if (typeof d.pad !== "string") d.pad = "";
+  return d;
+}
+const pcSave = p => p ? touch(p) : touchSettings();
+/* the gear lines, in the list's own order and sections */
+function pcLines(p) {
+  const by = linesBySection(p), out = [];
+  for (const s of allSections()) { const ls = (by[s.id] || []).filter(([, l]) => lineQty(l) > 0); if (ls.length) out.push([s, ls]); }
+  return out;
+}
+const pcCount = p => { const d = pcData(p), ids = Object.keys(p.items).filter(id => lineQty(p.items[id]) > 0); return { n: ids.length, ok: ids.filter(id => d.ok[id]).length, att: ids.filter(id => (d.note[id] || "").trim()).length }; };
+const PC_CK = `<span class="pc-ck" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>`;
+function pcRowHtml(p, id, l) {
+  const d = pcData(p), ok = !!d.ok[id], note = (d.note[id] || "").trim(), open = app.pcNote === id;
+  const wl = l.tx !== undefined, q = wl && !wlBal(l) ? "" : `${lineQty(l)}×`;
+  const sub = [wl && !wlBal(l) ? [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · ") : "", ...(l.children || []).map(c => `${c.qty}x ${c.name}`)].filter(Boolean);
+  return `<li class="pc-row${ok ? " ok" : ""}${note ? " att" : ""}" data-pcrow="${esc(id)}">
+    <div class="pc-main" data-act="pc-ok" data-id="${esc(id)}" role="checkbox" aria-checked="${ok}" tabindex="0">${PC_CK}
+      <span class="pc-q num">${q}</span>
+      <span class="pc-n"><span dir="auto">${esc(l.name)}</span>${sub.length ? `<small dir="auto">${esc(sub.join(" · "))}</small>` : ""}${note && !open ? `<em class="pc-nt" dir="auto">${esc(note)}</em>` : ""}</span></div>
+    <button class="pc-nb${note ? " on" : ""}" type="button" data-act="pc-note" data-id="${esc(id)}" aria-expanded="${open}" aria-label="${note ? "Change the note" : "Add a note"}" title="Note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg></button>
+    ${open ? `<div class="pc-note"><textarea class="pc-note-in" data-pcnote="${esc(id)}" rows="2" dir="auto" maxlength="400" placeholder="What needs attention?">${esc(d.note[id] || "")}</textarea><button class="btn sm" type="button" data-act="pc-note-done">Done</button></div>` : ""}</li>`;
+}
+const PC_EYE = '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="3"/>';
+const PC_EYE_OFF = '<path d="M3 3l18 18M10.6 6.1A9.7 9.7 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-2.6 3.3M6.6 7.6A16 16 0 0 0 2.5 12S6 18 12 18a9 9 0 0 0 4.4-1.2"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>';
+function viewPrep() {
+  const p = pcCur(), id = p ? p.id : "", d = pcData(p);
+  const tab = !p && (app.pcTab || "gear") === "gear" ? "todo" : app.pcTab || "gear";
+  const ls = pcLists(), curL = ls.find(x => x.id === id);
+  const nm = x => (x.name || "Untitled production") + (x.mainOf ? " · 2nd Unit" : "");
+  const opts = ls.map(x => `<option value="${esc(x.id)}"${x.id === id ? " selected" : ""}${listDir(x.name)}>${esc(nm(x))}</option>`).join("") + `<option value="none"${id ? "" : " selected"}>No list · to-dos and notes</option>`;
+  const c = p ? pcCount(p) : null, td = d.todo, tdOk = td.filter(x => x.done).length;
+  const tabBtn = (v, t, n) => `<button type="button" role="tab" data-act="pc-tab" data-v="${v}" aria-selected="${tab === v}">${t}${n ? `<span class="num">${n}</span>` : ""}</button>`;
+  let body = "";
+  if (tab === "gear") {
+    if (!c.n) body = `<p class="hint">No gear on this list yet. Add it in the list, and it comes here to be checked.</p>`;
+    else {
+      const hide = !!app.settings.pcHide;
+      body = `<div class="pc-bar"><div class="pc-prog" role="progressbar" aria-valuemin="0" aria-valuemax="${c.n}" aria-valuenow="${c.ok}" aria-label="Gear checked"><i style="width:${Math.round(c.ok / c.n * 100)}%"></i></div>
+        <span class="pc-cnt"><b class="num" id="pcOk">${c.ok}</b> of <span class="num">${c.n}</span> checked${c.att ? ` · <span class="pc-attn">${c.att} to look at</span>` : ""}</span>
+        <button class="iconbtn sm" type="button" data-act="pc-hide" aria-pressed="${hide}" aria-label="${hide ? "Show checked items" : "Hide checked items"}" title="${hide ? "Show checked" : "Hide checked"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${hide ? PC_EYE_OFF : PC_EYE}</svg></button>
+        <button class="iconbtn sm" type="button" data-act="pc-reset" aria-label="Uncheck all" title="Uncheck all"${c.ok ? "" : " disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v4.5H8"/></svg></button></div>
+        ${pcLines(p).map(([s, rows]) => { const okN = rows.filter(([k]) => d.ok[k]).length, shown = hide ? rows.filter(([k]) => !d.ok[k]) : rows;
+          return shown.length ? `<div class="pc-sec"><h3><span>${esc(secName(s.id))}</span><span class="num" data-pcsec="${esc(s.id)}">${okN}/${rows.length}</span></h3><ul class="pc-rows">${shown.map(([k, l]) => pcRowHtml(p, k, l)).join("")}</ul></div>` : ""; }).join("")}
+        ${hide && c.ok === c.n ? `<p class="hint pc-done">Everything is checked.</p>` : ""}`;
+    }
+  } else if (tab === "todo") {
+    const order = [...td.filter(x => !x.done), ...td.filter(x => x.done)];
+    body = `<div class="pc-addrow"><input class="lc-in" id="pc-add" type="text" dir="auto" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="Add a to-do: call the rental house" aria-label="New to-do"><button class="btn primary lc-addbtn" type="button" data-act="pc-add" aria-label="Add the to-do">+</button></div>
+      ${order.length ? `<ul class="pc-rows pc-todo">${order.map(t => `<li class="pc-row${t.done ? " ok" : ""}"><div class="pc-main" data-act="pc-do" data-id="${esc(t.id)}" role="checkbox" aria-checked="${!!t.done}" tabindex="0">${PC_CK}<span class="pc-n"><span dir="auto">${esc(t.t)}</span></span></div>
+        <button class="pc-nb" type="button" data-act="pc-del" data-id="${esc(t.id)}" aria-label="Delete this to-do" title="Delete">×</button></li>`).join("")}</ul>` : `<p class="hint">Your own checklist for the prep: what to call, buy, bring or ask. Tick each line once it's done.</p>`}`;
+  } else {
+    body = `<textarea class="pc-pad" id="pc-pad" dir="auto" placeholder="Anything to remember: what's missing, what to ask the rental house, who to call…" aria-label="Notes">${esc(d.pad)}</textarea>
+      <span class="hint pc-saved"><b id="pcSaved" class="me-saved" hidden>✓ Saved</b></span>`;
+  }
+  return `${pageHead("Prep Checklist")}
+    <section class="pad pc-page">
+      <div class="field lc-top"><select id="pc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
+      <div class="pc-tabs" role="tablist">${p ? tabBtn("gear", "Gear", `${c.ok}/${c.n}`) : ""}${tabBtn("todo", "To-do", td.length ? `${tdOk}/${td.length}` : "")}${tabBtn("notes", "Notes", d.pad.trim() ? "•" : "")}</div>
+      ${body}
+    </section>`;
+}
+/* a check: on the row itself, its section's count and the bar above; nothing else is drawn again (unless checked items are hidden) */
+function pcToggle(id) {
+  const p = pcCur(); if (!p || !p.items[id]) return;
+  const d = pcData(p); if (d.ok[id]) delete d.ok[id]; else d.ok[id] = Date.now();
+  buzz(d.ok[id] ? "tick" : "tap"); pcSave(p);
+  if (app.settings.pcHide) { rerenderKeepScroll(); return; }
+  const row = document.querySelector(`.pc-row[data-pcrow="${CSS.escape(id)}"]`), on = !!d.ok[id];
+  if (row) { row.classList.toggle("ok", on); row.querySelector(".pc-main")?.setAttribute("aria-checked", String(on)); if (on) replay(row.querySelector(".pc-ck"), "pop"); }
+  const c = pcCount(p), bar = document.querySelector(".pc-prog");
+  if (bar) { bar.setAttribute("aria-valuenow", c.ok); bar.firstElementChild.style.width = (c.n ? Math.round(c.ok / c.n * 100) : 0) + "%"; }
+  const ok = document.getElementById("pcOk"); if (ok) ok.textContent = c.ok;
+  const tabN = document.querySelector('.pc-tabs [data-v="gear"] .num'); if (tabN) tabN.textContent = `${c.ok}/${c.n}`;
+  const rs = document.querySelector('[data-act="pc-reset"]'); if (rs) rs.disabled = !c.ok;
+  const sec = row && row.closest(".pc-sec"), sn = sec && sec.querySelector("[data-pcsec]");
+  if (sn) sn.textContent = `${sec.querySelectorAll(".pc-row.ok").length}/${sec.querySelectorAll(".pc-row").length}`;
+}
+function pcAdd() {
+  const i = document.getElementById("pc-add"), t = i && i.value.trim(); if (!t) { if (i) i.focus(); return; }
+  const p = pcCur(); pcData(p).todo.push({ id: uid("t"), t: t.slice(0, 200), done: false }); pcSave(p); buzz("tap");
+  rerenderKeepScroll(); document.getElementById("pc-add")?.focus();
+}
+/* notes are kept as they are typed: the notepad, and an item's note (the row shows it once its editor closes) */
+let pcT = 0;
+function pcKeep(t) {
+  const p = pcCur(), d = pcData(p);
+  if (t.id === "pc-pad") { if (d.pad === t.value) return; d.pad = t.value; const s = document.getElementById("pcSaved"); if (s) { s.hidden = false; replay(s, "pop"); } }
+  else if (p && t.dataset.pcnote) { const v = t.value.slice(0, 400), k = t.dataset.pcnote; if ((d.note[k] || "") === v) return; if (v.trim()) d.note[k] = v; else delete d.note[k];
+    const row = t.closest(".pc-row"); if (row) { row.classList.toggle("att", !!v.trim()); row.querySelector(".pc-nb")?.classList.toggle("on", !!v.trim()); } }
+  else return;
+  pcSave(p);
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("input", e => { const t = e.target; if (!t || app.view !== "prep" || !(t.id === "pc-pad" || (t.dataset && t.dataset.pcnote))) return; clearTimeout(pcT); pcT = setTimeout(() => pcKeep(t), 500); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState !== "hidden" || app.view !== "prep") return; clearTimeout(pcT); const t = document.querySelector("#pc-pad, .pc-note-in"); if (t) pcKeep(t); });
 }
 /* ---------- Lens Cards: the list's lenses on one small card to print, each with its stop and close focus.
    Two layouts: Compact (a set in two lines: focal lengths over close focus) and One table (a row a lens). The card is as big
@@ -8338,6 +8509,18 @@ document.addEventListener("click", e => {
     }
     case "cams": closeModal(); app.view = "cams"; app.camCmp = false; render(); window.scrollTo(0, 0); break;
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
+    case "prep": closeModal(); app.view = "prep"; app.pcNote = null; render(); window.scrollTo(0, 0); break;
+    case "pc-tab": app.pcTab = b.dataset.v; app.pcNote = null; render(); break;
+    case "pc-ok": pcToggle(b.dataset.id); break;
+    case "pc-note": app.pcNote = app.pcNote === b.dataset.id ? null : b.dataset.id; rerenderKeepScroll(); if (app.pcNote) { const t = document.querySelector(".pc-note-in"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } } break;
+    case "pc-note-done": app.pcNote = null; rerenderKeepScroll(); break;
+    case "pc-hide": app.settings.pcHide = !app.settings.pcHide; touchSettings(); rerenderKeepScroll(); break;
+    case "pc-reset": { const p = pcCur(), d = pcData(p), was = JSON.stringify(d.ok); if (!Object.keys(d.ok).length) break;
+      d.ok = {}; pcSave(p); rerenderKeepScroll(); undoable("Unchecked", "all the gear", () => { pcData(pcCur()).ok = JSON.parse(was); pcSave(pcCur()); rerenderKeepScroll(); }); break; }
+    case "pc-add": pcAdd(); break;
+    case "pc-do": { const p = pcCur(), d = pcData(p), t = d.todo.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(p); rerenderKeepScroll(); break; }
+    case "pc-del": { const p = pcCur(), d = pcData(p), i = d.todo.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
+      const [t] = d.todo.splice(i, 1); pcSave(p); rerenderKeepScroll(); undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const dd = pcData(pcCur()); dd.todo.splice(Math.min(i, dd.todo.length), 0, t); pcSave(pcCur()); rerenderKeepScroll(); }); break; }
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
     case "lc-add": { const i = document.getElementById("lc-add"), c = document.getElementById("lc-addcf"), nm = i && i.value.trim(); if (!nm) { i && i.focus(); break; }
       lcOwn().items[uid("own-")] = { qty: 1, name: nm.slice(0, 120), custom: true, cf: c ? c.value.trim().slice(0, 12) : "" }; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); document.getElementById("lc-add")?.focus(); break; }
@@ -8759,7 +8942,7 @@ document.addEventListener("click", e => {
     }
   }
 });
-document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key === "Enter" && e.target && (e.target.id === "lc-add" || e.target.id === "lc-addcf")) { e.preventDefault(); document.querySelector('[data-act="lc-add"]')?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key === "Enter" && e.target && e.target.id === "pc-add") { e.preventDefault(); pcAdd(); return; } if (e.key === "Enter" && e.target && (e.target.id === "lc-add" || e.target.id === "lc-addcf")) { e.preventDefault(); document.querySelector('[data-act="lc-add"]')?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
 document.addEventListener("toggle", e => {
   const k = e.target && e.target.dataset && e.target.dataset.k;
   if (!k || app.q.trim()) return;
@@ -8800,6 +8983,7 @@ document.addEventListener("change", e => {
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
   if (t.id === "lc-name") { lcOwn().name = t.value.trim(); lcPdfMade = null; touchSettings(); const h = document.querySelector(".lcard .lc-head b"); if (h) h.textContent = lcOwn().name || "Lenses"; return; }
+  if (t.id === "pc-list") { app.settings.pcList = t.value; app.pcNote = null; touchSettings(); render(); return; }   // the checklist's list: kept for next time
   if (t.id === "lc-list") { app.settings.lcList = t.value; touchSettings(); render(); return; }  // the Lens card's list: kept for next time
   if (t.id === "mc-list") { app.settings.mcList = t.value || "none"; touchSettings(); mcOpen = null; render(); return; }  // the Media Calculator's list: kept for next time
   if (t.form && t.form.id === "catItemForm" && ["c", "s", "g"].includes(t.name)) { catDialogSync(t.name); return; }
