@@ -818,12 +818,33 @@ function allSections() {
     const j = c.after ? out.findIndex(s => s.id === c.after) : out.findIndex(s => s.column === sec.column);
     out.splice(j < 0 ? out.length : c.after ? j + 1 : j, 0, sec);
   }
+  // the order the user dragged the sections into on the Camera List (and each one's column on the page): the left column, then the
+  // right, each top to bottom. A section the order doesn't know yet keeps its place after the ones it knows, in its column
+  const ord = app.settings.secOrder;
+  if (Array.isArray(ord) && ord.length) {
+    const at = new Map(ord.map(([id, col], i) => [id, { i, col: col === "R" ? "R" : "L" }]));
+    out.forEach((s, i) => { const o = at.get(s.id); if (o) s.column = o.col; s._r = o ? o.i : 1e4 + i; });
+    out.sort((a, b) => (a.column === b.column ? 0 : a.column === "L" ? -1 : 1) || a._r - b._r);
+    out.forEach(s => delete s._r);
+  }
   return out;
+}
+/* a section dragged before or after another (taking that one's column): the whole order is kept */
+function moveSection(id, ref, after, col) {
+  const AS = allSections(), me = AS.find(s => s.id === id); if (!me || id === ref) return false;
+  const rest = AS.filter(s => s.id !== id), j = rest.findIndex(s => s.id === ref); if (j < 0) return false;
+  me.column = col === "R" ? "R" : "L";
+  rest.splice(after ? j + 1 : j, 0, me);
+  const next = rest.map(s => [s.id, s.column]);
+  if (JSON.stringify(next) === JSON.stringify(AS.map(s => [s.id, s.column]))) return false;
+  app.settings.secOrder = next; touchSettings(); return true;
 }
 function addSection(name, pos) {
   const [column, after] = String(pos || "R|").split("|");
   const id = uid("us-");
   (app.settings.customSections || (app.settings.customSections = [])).push({ id, name: String(name).trim().slice(0, 60), column: column === "L" ? "L" : "R", after: after || "" });
+  const ord = app.settings.secOrder;
+  if (Array.isArray(ord) && ord.length) { const col = column === "L" ? "L" : "R", j = after ? ord.findIndex(([x]) => x === after) : ord.findIndex(([, c]) => c === col); ord.splice(j < 0 ? (col === "L" ? 0 : ord.length) : after ? j + 1 : j, 0, [id, col]); }
   touchSettings();
   return id;
 }
@@ -831,6 +852,7 @@ function deleteSection(id) {
   app.settings.customSections = (app.settings.customSections || []).filter(c => c.id !== id)
     .map(c => c.after === id ? { ...c, after: "" } : c);
   if (app.settings.sections) delete app.settings.sections[id];
+  if (Array.isArray(app.settings.secOrder)) app.settings.secOrder = app.settings.secOrder.filter(([x]) => x !== id);
   touchSettings();
 }
 /* where a new section can go: top of a column, or after any section */
@@ -969,6 +991,7 @@ function meSave(f) {
   const h = document.querySelector(".me-head .me-t b"); if (h) h.textContent = me.name || "Your details";
 }
 if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("input", e => { const t = e.target; if (t && (t.id === "f-ac" || t.id === "f-acphone")) { const h = document.querySelector(".ac-head"); if (h) h.innerHTML = AC_CARD(document.getElementById("f-ac").value, document.getElementById("f-acphone").value) + CHEV; } });
   document.addEventListener("input", e => { const t = e.target; if (t && t.form && t.form.id === "meForm") { clearTimeout(meT); meT = setTimeout(() => meSave(t.form), 600); } });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") { const f = document.getElementById("meForm"); if (f && meT) meSave(f); } });
 }
@@ -2129,6 +2152,26 @@ const findProd = id => id ? app.productions.find(p => p.id === id) || null : nul
 const mainOf = p => (p && p.mainOf && findProd(p.mainOf)) || p;
 const unit2Of = p => { const m = mainOf(p); return m && m.unit2 ? findProd(m.unit2) : null; };
 const otherUnit = p => !p ? null : p.mainOf ? findProd(p.mainOf) : p.unit2 ? findProd(p.unit2) : null;
+/* the 1st AC on a production: the user's own details as one small card (like Settings); a tap opens the two fields to change them */
+const AC_CARD = (n, ph) => `<span class="me-av" aria-hidden="true">${esc(((n || "").trim()[0] || "?").toUpperCase())}</span><span class="me-t"><b>${esc(n || "1st AC")}</b><small>${esc(["1st AC", ph].filter(Boolean).join(" · "))}</small></span>`;
+function acCardHtml(ac, ph) {
+  const open = !(ac || "").trim();
+  return `<div class="field ac-field${open ? " open" : ""}"><span class="lbl" id="ac-lbl">1st AC</span>
+    <button class="me-head ac-head" type="button" data-act="ac-toggle" aria-expanded="${open}" aria-controls="acEdit" aria-describedby="ac-lbl"${open ? " hidden" : ""}>${AC_CARD(ac, ph)}${CHEV}</button>
+    <div class="row2 ac-edit" id="acEdit"${open ? "" : " hidden"}>
+      <div class="field"><label for="f-ac">Name</label><input data-sug="ac" id="f-ac" name="ac" dir="auto" value="${esc(ac)}" enterkeyhint="next"></div>
+      <div class="field"><label for="f-acphone">Phone</label><input data-sug="phone" id="f-acphone" name="acPhone" type="tel" inputmode="tel" value="${esc(ph)}"></div></div></div>`;
+}
+/* the notes: closed until wanted (a line with the first words when there are notes); open, the editor with its toolbar */
+const CHEVS = `<svg class="chevs" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l5 5 5-5M7 13l5 5 5-5"/></svg>`;
+function notesFieldHtml(p) {
+  const m = ntModel(p), open = app.ntOpen === true;
+  return `<div class="field nt-field${open ? " open" : ""}">
+    <button class="nt-head" type="button" data-act="nt-toggle" aria-expanded="${open}" aria-controls="ntBody"><span class="lbl">Notes</span><span class="nt-peek" dir="auto">${esc(ntPlain(m).split("\n")[0] || "")}</span>${CHEVS}</button>
+    <div class="nt-body" id="ntBody"${open ? "" : " hidden"}>${ntBarHtml()}
+      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" data-ph="Anything the rental house should know. Shown at the bottom of the details on the list." spellcheck="true">${ntHtml(m, false)}</div></div>
+    <input type="hidden" name="notes" value="${esc(ntPlain(m))}"><input type="hidden" name="notesRich" value="${esc(JSON.stringify(m))}"></div>`;
+}
 function viewForm() {
   const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
   const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
@@ -2152,11 +2195,8 @@ function viewForm() {
         <span class="err" id="houseErr" hidden>Pick the rental house this list is for.</span>
         ${hasItems ? `<span class="hint">The rental house is locked while the list has items, since each list uses that house's catalog.</span>` : ""}</div>
       ${!editing && !src && savedLists().length ? `<div class="field"><label for="f-start">Start from</label><select id="f-start" name="startList"><option value="">New list</option>${savedLists().map(L => `<option value="${esc(L.id)}">${esc(L.name)} · ${esc((houseById(L.houseId) || {}).name || "")}</option>`).join("")}</select></div>` : ""}
-      <div class="row3">
-        <div class="field"><label for="f-dp">DP</label><input data-sug="dp" id="f-dp" name="dp" value="${esc(p.dp)}"></div>
-        <div class="field"><label for="f-ac">1st AC</label><input data-sug="ac" id="f-ac" name="ac" value="${esc(p.ac)}"></div>
-        <div class="field"><label for="f-acphone">1st AC phone</label><input data-sug="phone" id="f-acphone" name="acPhone" type="tel" inputmode="tel" value="${esc(p.acPhone)}"></div>
-      </div>
+      <div class="field"><label for="f-dp">DP</label><input data-sug="dp" id="f-dp" name="dp" value="${esc(p.dp)}"></div>
+      ${acCardHtml(p.ac, p.acPhone)}
       <div class="row-dates">
         <div class="field"><span class="lbl" id="prep-lbl">Prep day</span>
           <button class="date-btn" type="button" data-act="cal-open" data-mode="prep" id="f-prepbtn" aria-labelledby="prep-lbl f-prepbtn">${prepBtnHtml(p.prep)}</button>
@@ -2188,9 +2228,7 @@ function viewForm() {
           <span class="err" id="u2Err" hidden></span>
         </div>
       </div>
-      <div class="field"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" rows="3" class="nt-${p.notesSize || "m"}${p.notesBold ? " nt-b" : ""}" placeholder="Anything the rental house should know. Shown at the bottom of the details on the list.">${esc(p.notes)}</textarea>
-        <div class="note-tools"><label class="tog-b" title="Bold"><input type="checkbox" name="notesBold" ${p.notesBold ? "checked" : ""}><span aria-hidden="true">B</span><span class="sr">Bold</span></label>
-          <div class="seg sm" role="radiogroup" aria-label="Text size">${[["s", "Small"], ["m", "Normal"], ["l", "Large"]].map(([v, t]) => `<label><input type="radio" name="notesSize" value="${v}" ${(p.notesSize || "m") === v ? "checked" : ""}><span>${t}</span></label>`).join("")}</div></div></div>
+      ${notesFieldHtml(p)}
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
         <button class="btn" type="button" ${back}>Cancel</button></div>
@@ -3339,7 +3377,7 @@ function groupOpts(h, skey, sel, ownMode) {
   if (!sub) return brandOpt + `<option value="__new">New group…</option>`;
   const gs = groupsOf(h, sub);
   if (sel && sel !== "__brand" && sel !== NOFOLDER && !gs.includes(sel)) gs.unshift(sel);
-  return brandOpt + optList(gs.map(g => [g, headLabel(h, skey + "/" + g, g)]), sel) + `<option value="__new">New group…</option>`;
+  return brandOpt + optList(gs.map(g => [g, headLabel(h, skey + "/" + g, g)]), sel) + `<option value="__new">${sub.groupBy ? "+ New folder…" : "New group…"}</option>`;
 }
 const NEW_CAT = `<option value="__new">+ New category…</option>`, NEW_SUB = `<option value="__new">+ New subcategory…</option>`;
 const catOptions = (h, sel) => (sel === "__new" ? NEW_CAT.replace('">', '" selected>') : NEW_CAT) + `<optgroup label="Existing categories">${optList(h.categories.map(c => [c.id, c.name]), sel)}</optgroup>`;
@@ -3390,7 +3428,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
       <div class="field"><label for="ci-s">Subcategory</label><select id="ci-s" name="s">${subOptions(cat, sub.key)}</select>
         <input id="ci-snew" name="snew" maxlength="60" placeholder="New subcategory name" aria-label="New subcategory name" value="General" hidden></div>
     </div>
-    <div class="field" id="ci-gfield" hidden><label for="ci-g">Folder</label><select id="ci-g" name="g">${groupOpts(h, sub.key, gsel, mode !== "base")}</select>
+    <div class="field" id="ci-gfield"${sub.groupBy ? "" : " hidden"}><label for="ci-g">Folder</label><select id="ci-g" name="g">${groupOpts(h, sub.key, gsel, mode !== "base")}</select>
       <input id="ci-gnew" name="gnew" maxlength="60" placeholder="New folder name" aria-label="New folder name" hidden></div>
     <details class="more"><summary>More${CHEV}</summary><div class="more-in">
       ${opts.addTo ? "" : `<div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the Camera List.">${esc(id ? noteOf(id) : "")}</textarea></div>`}
@@ -3448,7 +3486,9 @@ function catDialogSync(changed) {
   }
   f.elements.cnew.hidden = cs.value !== "__new";
   f.elements.snew.hidden = ss.value !== "__new";
-  document.getElementById("ci-gfield").hidden = true;  // the folder isn't chosen here: it stays, or follows the subcategory
+  // a subcategory kept in folders (General Accessories › On-set Tools): its folder is chosen here; one grouped by maker follows the Manufacturer
+  const tg = ss.value === "__new" || ss.value === "__none" ? null : subByKey(h, ss.value);
+  document.getElementById("ci-gfield").hidden = !(tg && tg.groupBy);
   if (changed === "c" && cs.value === "__new") f.elements.cnew.focus();
   else if (changed === "s" && ss.value === "__new") { f.elements.snew.focus(); f.elements.snew.select(); }
   f.elements.gnew.hidden = gs.value !== "__new";
@@ -3748,6 +3788,8 @@ function lineHtml(p, id, l) {
     : stepper("l", id, l.qty, null, false);
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
+  // the short details (format, stop, mount) sit under the name; a set's lens-by-lens line takes the whole width below
+  const cut = specs.indexOf('<span class="lens-line'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
@@ -3760,9 +3802,10 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${specs ? `<span class="l-meta">${specs}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}</span>
-        <span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
-      <div class="l-bottom">${qtys}</div></div>
+      <div class="l-grid${chips || l.custom ? "" : " no-meta"}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span></span>
+        <span class="l-right"><span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">✎</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">×</button></span>
+        <span class="l-bottom">${qtys}</span></span>
+        ${chips ? `<span class="l-meta">${chips}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}${perL ? `<span class="l-per">${perL}</span>` : ""}</div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}
@@ -4414,7 +4457,7 @@ function viewLensCard() {
     <section class="pad cam-out lc-page">
       <div class="field lc-top"><select id="lc-list" aria-label="Which list"${listDir(curL && curL.name)}>${opts}</select></div>
       ${own}
-      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"><div class="lc-frame" style="--lck:${k}">${card.html}</div></div>
+      ${card.n ? `<div class="lc-view"><div class="lc-prev${z > 1 ? " zoom" : ""}"${app.lcRoomH ? ` style="height:${Math.round(app.lcRoomH + 2 * LC_PAD)}px"` : ""}><div class="lc-frame" style="--lck:${k}">${card.html}</div></div>
         <div class="lc-bar">
           <span class="stepper lc-step" role="group" aria-label="Card size">${sb("lc-k", -1, "Smaller card", "−", k <= LC_K[0])}<span id="lc-size" aria-live="polite">…</span>${sb("lc-k", 1, "Bigger card", "+", k >= LC_K[1])}</span>
           <button type="button" class="iconbtn lc-reset" data-act="lc-k1" aria-label="Back to the first size" title="Back to the first size"${k !== 1 ? "" : " hidden"}>${RESET_ICON}</button>
@@ -4456,6 +4499,17 @@ function lcFit() {
   // the window's height: the room left on the screen, the same for every list, layout, size and zoom, so the tools never move;
   app.lcRoomH = Math.round(lcRoomH(prev));
   prev.classList.add("still"); lcShowK(lcK()); void prev.offsetWidth; prev.classList.remove("still");  // drawn at once, no easing on opening
+}
+/* a new layout, design or color: the card is drawn again in its place, in the same window; nothing around it moves */
+function lcUpdate() {
+  const p = lcCur(), fr = document.querySelector(".lc-prev .lc-frame"); if (!fr || !p) return false;
+  const o = lcOpts(), card = lensCardHtml(p, o); if (!card.n) return false;
+  fr.innerHTML = card.html; fr.style.setProperty("--lck", lcK(o));
+  document.querySelectorAll('[data-act="lc-opt"]').forEach(x => x.setAttribute(x.hasAttribute("aria-checked") ? "aria-checked" : "aria-pressed", String(o[x.dataset.k] === x.dataset.v)));
+  lcNat = lcNatural(p);
+  const prev = fr.parentElement; prev.classList.add("still"); lcShowK(lcK()); void prev.offsetWidth; prev.classList.remove("still");
+  lcPdfMade = null; setTimeout(() => lcPdfPrep(p), 400);
+  return true;
 }
 /* the card at size k: fitted on screen, its size in cm, back to the first size when it isn't */
 function lcShowK(k) {
@@ -4546,8 +4600,7 @@ const DEV_FOC = [
   ["Preston", ["FI+Z HU3", "FI+Z HU4", "Microforce"]],
   ["cmotion", ["cPRO", "Compact One", "Compact LCS", "cvolution"]],
   ["DJI", ["Focus Pro", "Wireless Follow Focus"]],
-  ["Movcam", ["Single-Axis Wireless Lens Control"]],
-  ["Cine RT", ["Focus Bug"]]];
+  ["Movcam", ["Single-Axis Wireless Lens Control"]]];   // (the Cine RT Focus Bug measures distance; it isn't a lens control)
 /* other names the catalogs give a maker ("RT Motion MK3.1", a Nucleus without "Tilta") */
 const DEV_MAKER = { teradek: ["teradek", "rtmotion"], tilta: ["tilta", "nucleus"] };
 const CAM_LETTERS = "ABCDEFGH".split("");
@@ -4558,7 +4611,7 @@ function camNew(list, id) { const L = CAM_LETTERS.find(x => !list.some(c => c.L 
 /* what the list holds for the cameras: its wireless video transmitters and focus hand units, one entry a unit, matched to the
    known makers and models (the longest model that fits the item's name: "Nucleus-Nano II" before "Nucleus-Nano") */
 const camKey = s => norm(s).replace(/[^a-z0-9]+/g, "");
-const CAM_SKIP = { vid: /monitor|receiver|\brx\b|antenna|router|\bserv\b|vidiu|\blink\b|cage/i, foc: /motor|cforce|zoom control|pan-bar|adapter|wheel|steady zoom/i };
+const CAM_SKIP = { vid: /monitor|receiver|\brx\b|antenna|router|\bserv\b|vidiu|\blink\b|cage/i, foc: /motor|cforce|zoom control|pan-bar|adapter|wheel|steady zoom|focus ?bug|cine ?rt|range ?finder|lidar|distance/i };
 /* the device a gear name is (its maker and model, the longest model that fits), or null: a monitor, receiver, motor… isn't one */
 const camDevFlat = k => (k === "vid" ? DEV_VID : DEV_FOC).flatMap(([mk, ms]) => ms.map(m => { const a = camKey(mk.split(" ")[0]); return { full: `${mk} ${m}`, mk, m, mks: DEV_MAKER[a] || [a], mm: camKey(m) }; }));
 function camDevOf(name, k) {
@@ -4801,22 +4854,81 @@ function viewCams() {
     panel = `<div class="cam-fp" id="cam-fp"><div class="cf-lists">${rows}${li("none", !id, "None", "a title and a date of its own")}</div>${meta}</div>`;
   }
   // two units: a tab for each (its number of cameras); the letters are the unit shown's
-  const useg = two ? `<div class="seg cam-useg" role="group" aria-label="Unit">${[[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<button type="button" data-act="cam-u" data-v="${w ? "2" : ""}" aria-pressed="${u === w}">${t}<i>${list.filter(x => !!x.u2 === w).length}</i></button>`).join("")}</div>` : "";
+  const useg = two ? `<div class="seg cam-useg" role="group" aria-label="Unit">${[[false, "Main Unit"], [true, "2nd Unit"]].map(([w, t]) => `<button type="button" data-act="cam-u" data-v="${w ? "2" : ""}" aria-pressed="${u === w}">${t}${(n => `<i class="${n ? "" : "zero"}" aria-label="${n} camera${n === 1 ? "" : "s"}">${n}</i>`)(list.filter(x => !!x.u2 === w).length)}</button>`).join("")}</div>` : "";
   const shown = two ? list.filter(x => !!x.u2 === u) : list;
   const chip = x => `<button type="button" class="cam-chip${x === c && !cmp ? " on" : ""}" style="--k:${x.col};--kf:${camInk(x.col)}" data-act="cam-sel" data-k="${esc(x.k)}" aria-pressed="${x === c && !cmp}" aria-label="Camera ${esc(x.L)}">${esc(x.L)}</button>`;
-  const chips = cmp ? "" : `<div class="cam-chips">${shown.map(chip).join("")}${list.length < 8 ? `<button type="button" class="cam-chip add" data-act="cam-add"${u ? ` data-u="2"` : ""} aria-label="Add a camera${two ? (u ? " to the 2nd Unit" : " to the Main Unit") : ""}">+</button>` : ""}</div>`;
+  const chips = `<div class="cam-chips">${shown.map(chip).join("")}${list.length < 8 ? `<button type="button" class="cam-chip add" data-act="cam-add"${u ? ` data-u="2"` : ""} aria-label="Add a camera${two ? (u ? " to the 2nd Unit" : " to the Main Unit") : ""}">+</button>` : ""}</div>`;
   const body = cmp ? camCompareHtml(p, camOrdered(p)) : c ? camFormHtml(p, c)
     : two && list.length ? `<p class="hint cam-none">No ${u ? "2nd" : "Main"} Unit cameras yet. + adds one.</p>`
     : `<div class="empty-state"><h3>No cameras yet</h3><button class="btn primary" type="button" data-act="cam-add">+ Add a camera</button></div>`;
   const make = list.length ? `<button type="button" class="btn primary cam-create" data-act="cam-create" ${camPrintable(p).length ? "" : "disabled"}>Create cards</button>` : "";
-  return `${head}<section class="pad cam-top">${fold}${panel}${cmp ? "" : useg}${chips}</section>
+  return `${head}<section class="pad cam-top">${fold}${panel}${useg}${chips}</section>
     <section class="pad cam-page">${body}${make}</section>`;
+}
+/* ---------- Multicam: a sideways swipe moves from camera to camera (the unit shown, in letter order), then to Compare. The page
+   in front follows the finger; the next one waits under it and comes up as the front one slides away ---------- */
+function camStops(p) {
+  const list = camsOf(p), two = camTwo(p), u = two && camUnitShown(p), shown = two ? list.filter(x => !!x.u2 === u) : list;
+  return [...shown.map(c => ({ k: c.k, c })), ...(list.length > 1 ? [{ cmp: true }] : [])];
+}
+function camStopHere(p) { const st = camStops(p), c = camSel(p); return app.camCmp && camsOf(p).length > 1 ? st.findIndex(x => x.cmp) : st.findIndex(x => x.c === c); }
+function camStopHtml(p, s) { const make = camsOf(p).length ? `<button type="button" class="btn primary cam-create" ${camPrintable(p).length ? "" : "disabled"}>Create cards</button>` : ""; return (s.cmp ? camCompareHtml(p, camOrdered(p)) : camFormHtml(p, s.c)) + make; }
+const cs = { ok: false, dir: 0, side: 0, under: null };
+function csUnder(side) {
+  csDrop();
+  const p = cur(), st = camStops(p), to = st[camStopHere(p) + side], live = document.querySelector(".cam-page:not(.cam-under)"); if (!to || !live) return null;
+  const u = document.createElement("section"); u.className = "pad cam-page cam-under"; u.setAttribute("aria-hidden", "true"); u.inert = true;
+  u.innerHTML = camStopHtml(p, to);
+  // beside the live page, in the same layer, so the live one stays in front
+  Object.assign(u.style, { top: live.offsetTop + "px", left: live.offsetLeft + "px", width: live.offsetWidth + "px" });
+  live.parentElement.insertBefore(u, live); live.classList.add("cam-front");
+  Object.assign(cs, { under: u, side, to }); return u;
+}
+function csDrop() { if (cs.under) { cs.under.remove(); cs.under = null; } cs.side = 0; const live = document.querySelector(".cam-page:not(.cam-under)"); if (live) { live.classList.remove("cam-front"); live.style.transition = live.style.transform = ""; } }
+function csMove(x, how) {
+  const live = document.querySelector(".cam-page:not(.cam-under)"); if (!live) return;
+  live.style.transition = how; live.style.transform = x ? `translateX(${x}px)` : "";
+  if (cs.under) { const k = Math.min(1, Math.abs(x) / innerWidth); cs.under.style.transition = how === "none" ? "none" : how.replace("transform", "transform") + ", opacity .22s"; cs.under.style.transform = `scale(${.94 + .06 * k})`; cs.under.style.opacity = String(.55 + .45 * k); }
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("touchstart", e => {
+    cs.ok = false; cs.dir = 0;
+    if (e.touches.length !== 1 || app.view !== "cams" || document.getElementById("modal") || document.body.classList.contains("kb-up")) return;
+    const t = e.target; if (!t.closest || !t.closest(".cam-page") || t.closest("input, textarea, select, [data-drag], [data-noswipe]")) return;
+    for (let n = t; n && n !== document.body; n = n.parentElement) if (n.scrollWidth > n.clientWidth + 2 && /(auto|scroll)/.test(getComputedStyle(n).overflowX)) return;
+    Object.assign(cs, { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now(), ok: true });
+  }, { passive: true });
+  document.addEventListener("touchmove", e => {
+    if (!cs.ok || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - cs.x, dy = e.touches[0].clientY - cs.y;
+    if (!cs.dir) { if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { cs.ok = false; return; } if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.8) cs.dir = 1; else return; }
+    if (swCalm()) return;
+    const p = cur(), side = dx < 0 ? 1 : -1, edge = !camStops(p)[camStopHere(p) + side];
+    if (!edge && cs.side !== side) csUnder(side);
+    if (edge && cs.under) csDrop();
+    csMove(edge ? dx * .25 : dx, "none");   // at the first or the last it gives a little, then springs back
+  }, { passive: true });
+  const back = () => { csMove(0, `transform .26s ${swEase}`); setTimeout(() => { if (!cs.ok) csDrop(); }, 280); };
+  document.addEventListener("touchend", e => {
+    if (!cs.ok) return; cs.ok = false; if (!cs.dir) return;
+    const c = e.changedTouches[0], dx = c.clientX - cs.x, dy = c.clientY - cs.y, dt = Date.now() - cs.t, p = cur();
+    const side = dx < 0 ? 1 : -1, to = camStops(p)[camStopHere(p) + side];
+    const go = to && Math.abs(dx) >= Math.abs(dy) * 1.8 && (Math.abs(dx) > innerWidth * .3 || (Math.abs(dx) > 50 && dt < 300));
+    if (!go) { back(); return; }
+    buzz("tap");
+    const land = () => { if (to.cmp) app.camCmp = true; else { app.camK = to.k; app.camCmp = false; } app.camU = undefined; rerenderKeepScroll(); csDrop(); };
+    if (swCalm() || (!cs.under && !csUnder(side))) { land(); return; }
+    csMove(-side * innerWidth * 1.05, `transform .24s ${swEase}`); cs.under.style.transition = `transform .24s ${swEase}, opacity .24s`; cs.under.style.transform = "scale(1)"; cs.under.style.opacity = "1";
+    setTimeout(land, 230);
+  }, { passive: true });
+  document.addEventListener("touchcancel", () => { if (cs.ok) { cs.ok = false; back(); } }, { passive: true });
 }
 /* Multicam's field names, each with a small tile: the crew blue, how it records red (the cameras' color), media sky,
    wireless video olive (the monitors'), focus teal, notes slate */
 const CAM_LT = { "Camera operator": ["person", "indigo"], "Focus puller": ["person", "indigo"], Codec: ["film", "red"], "Frame rate": ["clock", "red"],
   "Sensor coverage": ["frame", "red"], "File resolution": ["file", "red"], Media: ["card", "sky"], "Wireless video": ["signal", "olive"], Focus: ["knob", "teal"], Notes: ["tag", "slate"] };
 const camLt = label => CAM_LT[label] ? tile(CAM_LT[label][0], CAM_LT[label][1], "lt") : "";
+const NONE_PV = `<span class="cr-none">None</span>`;   // wireless video or focus set to none on purpose
 function camFormHtml(p, c) {
   const v = camVals(p, c), e = camE(c), k = esc(c.k), has = !!(e || c.name);
   const chev = `<svg class="cr-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
@@ -4843,7 +4955,7 @@ function camFormHtml(p, c) {
       ${size ? row(media, size, "t-gb") : row(media)}</div>`;
     else rec = `<div class="cam-grp">${row(cIn("codecT", "Codec", c.codecT, "e.g. ProRes 422 HQ"), cIn("sensorT", "Sensor coverage", c.sensorT, "e.g. S35 4K"))}${row(cIn("fileT", "File resolution", c.fileT, "e.g. UHD 3840×2160"), media)}</div>`;
   }
-  const notes = (c.notes || []).map((n, i) => `<div class="cam-row in note"><span class="cr-v"><input class="cr-in cr-nt" data-camnote="t" data-i="${i}" data-k="${k}" value="${esc(n.t || "")}" placeholder="Title, e.g. Lens" maxlength="24" autocomplete="off" dir="auto" aria-label="Note title"><input class="cr-in" data-camnote="v" data-i="${i}" data-k="${k}" value="${esc(n.v || "")}" placeholder="Text" maxlength="60" autocomplete="off" dir="auto" aria-label="Note text"></span><button type="button" class="iconbtn cr-x-del" data-act="cam-note-del" data-i="${i}" aria-label="Remove this note">×</button></div>`).join("");
+  const notes = (c.notes || []).map((n, i) => `<div class="cam-row in note"><span class="cr-v"><input class="cr-in cr-nt" data-camnote="t" data-i="${i}" data-k="${k}" value="${esc(n.t || "")}" placeholder="Title, e.g. Lens" maxlength="24" autocomplete="off" dir="auto" enterkeyhint="next" aria-label="Note title"><input class="cr-in" data-camnote="v" data-i="${i}" data-k="${k}" value="${esc(n.v || "")}" placeholder="Text" maxlength="60" autocomplete="off" dir="auto" aria-label="Note text"></span><button type="button" class="iconbtn cr-x-del" data-act="cam-note-del" data-i="${i}" aria-label="Remove this note">×</button></div>`).join("");
   const others = camsOf(p).filter(x => x !== c && (camE(x) || x.name)).length;
   return `<div class="cam-head" style="--c:${c.col}">
       <button type="button" class="cam-ring" data-act="cam-pick" data-k="letter" aria-label="Camera ${esc(c.L)}: letter and color">${esc(c.L)}</button>
@@ -4852,8 +4964,8 @@ function camFormHtml(p, c) {
     </div>
     <div class="cam-grp">${row(cIn("op", "Camera operator", c.op, "Name", 'data-sug="camCrew" enterkeyhint="next"'), cIn("fp", "Focus puller", c.fp, "Name", 'data-sug="camCrew" enterkeyhint="done"'), "t-crew")}</div>
     ${rec}
-    <div class="cam-grp">${row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
-      ${row(cPick("foc", "Focus", c.foc ? esc(c.foc) : ""), cIn("ch", "Ch / freq", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"'), "t-ch")}</div>
+    <div class="cam-grp">${!c.vid && c.vidU ? row(cPick("vid", "Wireless video", NONE_PV)) : row3(cPick("vid", "Wireless video", c.vid ? esc(c.vid) : ""), cIn("sn", "TX SN", c.sn, "Last 4", 'inputmode="numeric" enterkeyhint="next" aria-label="Transmitter: last 4 digits of its serial number"'), cIn("snr", "RX SN", c.snr, "", 'inputmode="numeric" enterkeyhint="done" aria-label="Receiver: last 4 digits of its serial number"'))}
+      ${!c.foc && c.focU ? row(cPick("foc", "Focus", NONE_PV)) : row(cPick("foc", "Focus", c.foc ? esc(c.foc) : ""), cIn("ch", "Ch / freq", c.ch, "e.g. Ch 3", 'enterkeyhint="done" aria-label="Channel or frequency"'), "t-ch")}</div>
     <div class="cam-grp cam-notes">${notes}${(c.notes || []).length < 2 ? `<button type="button" class="cam-row add-note" data-act="cam-note-add"><span class="cr-l">${camLt("Notes")}Notes</span><span class="cr-ph">+ Add a line</span></button>` : ""}</div>`;
 }
 /* all the cameras side by side, one column each; two focus units on the same channel are marked */
@@ -4923,8 +5035,9 @@ function camPicker(k) {
     const one = (d, sub) => opt(d.full, now === d.full, `${esc(d.mk)} <b>${esc(d.m)}</b>`, sub || "", ` data-n="${esc(norm(d.full))}"`);
     const custom = now && !have.some(d => d.full === now) && !onList.some(d => d.full === now) ? grp("Typed") + opt(now, true, esc(now), "", ` data-n="${esc(norm(now))}"`) : "";
     const makers = [...new Set(have.map(d => d.mk))];
+    const none = opt("__none", !now && !!c[k + "U"], "None", k === "vid" ? "No wireless video on this camera" : "No wireless focus on this camera");
     sheet(k === "vid" ? "Wireless video" : "Focus", search(k === "vid" ? "Search wireless video" : "Search focus systems"),
-      custom + (onList.length ? grp("On the list") + onList.map(d => one(d)).join("") : "") + `<div class="cs-all">${makers.map(mk => grp(mk) + have.filter(d => d.mk === mk).map(d => one(d, where(d))).join("")).join("")}</div>`
+      none + custom + (onList.length ? grp("On the list") + onList.map(d => one(d)).join("") : "") + `<div class="cs-all">${makers.map(mk => grp(mk) + have.filter(d => d.mk === mk).map(d => one(d, where(d))).join("")).join("")}</div>`
       + `<form class="cs-other" id="camDevOther" data-k="${k}" autocomplete="off"><input name="n" maxlength="60" placeholder="Not listed? Type it" aria-label="Another device, by name" dir="auto"><button class="btn sm" type="submit">Use</button></form>`);
     return;
   }
@@ -4957,7 +5070,9 @@ function camPicker(k) {
 function camSetVal(p, c, k, v) {
   if (k === "letter") { const o = camsOf(p).find(x => x !== c && x.L === v); if (o) o.L = c.L; c.L = v; return; }  // a letter taken: the two cameras swap
   if (k === "cam") { if (c.id !== v && ITEM.has(v)) { c.id = v; c.name = ""; delete c.from; c.rec = {}; const l = [...camUnitSrcs(p, c), ...camSrcs(p)].map(s => s.items[v]).find(Boolean); if (l && l.rec) c.rec = clone(l.rec); } return; }
-  if (k === "vid" || k === "foc") { c[k] = String(v).slice(0, 60); c[k + "U"] = 1; return; }
+  if (k === "vid" || k === "foc") {
+    if (v === "__none") { c[k] = ""; c[k + "U"] = 1; if (k === "vid") { c.sn = ""; c.snr = ""; } else c.ch = ""; return; }   // none on this camera: its fields go too, and the list's free units stay off it
+    c[k] = String(v).slice(0, 60); c[k + "U"] = 1; return; }
   if (k === "scan") { c.rec = c.rec || {}; c.rec.scan = String(v).slice(0, 60); return; }
   const e = camE(c); if (!e) return;
   const h = camHome(p, c); c.rec = c.rec || {}; recEnsure(c, e, h); recSet(c, e, h, k, v);
@@ -5205,7 +5320,8 @@ function viewList(p, h) {
   const sections = secs.map(s => {
     const rows = by[s.id], shut = closed(s);
     const pcs = rows.reduce((a, [, l]) => a + lineQty(l), 0);
-    return `<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span>${tapeIcon(s.custom ? "custom" : s.id, secName(s.id))}${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
+    const colHead = s.column !== (secs[secs.indexOf(s) - 1] || {}).column ? `<p class="sec-col" aria-hidden="true">${s.column === "R" ? "Right" : "Left"} column of the page</p>` : "";
+    return `${colHead}<div class="section${shut ? " closed" : ""}" data-sec="${s.id}" style="--tape: ${secTape(s)}"><h3 data-act="sec-toggle" data-k="${s.id}"><span><button class="handle sec-grip" type="button" data-drag="sec" data-act="sec-grip" data-id="${s.id}" data-label="${esc(secName(s.id))}" aria-label="Move ${esc(secName(s.id))}: drag, or use the arrow keys. The page follows this order">${GRIP}</button>${tapeIcon(s.custom ? "custom" : s.id, secName(s.id))}${esc(secName(s.id))}${s.custom ? `<button class="iconbtn pen" type="button" data-act="rename-sec" data-k="${s.id}" aria-label="Rename ${esc(secName(s.id))}">✎</button>` : ""}</span><span class="sumr"><span class="cnt">${rows.length ? `${rows.length} · ${pcs} pcs` : ""}</span><button class="iconbtn sec-tog" type="button" data-act="sec-toggle" data-k="${s.id}" aria-expanded="${!shut}" aria-label="${shut ? "Open" : "Close"} ${esc(secName(s.id))}">${CHEV}</button></span></h3>
       <div class="sec-body">${rows.length ? `<ul class="lines">${rows.map(([id, l]) => lineHtml(p, id, l)).join("")}</ul>` : `<p class="section-empty">${["grip", "aks"].includes(s.id) ? "Add items by name below." : s.custom ? "Drag lines here, or add items by name below." : "Nothing here yet."}</p>`}
       <form class="custom-add" data-custom="${s.id}" autocomplete="off"><input data-sug="item" name="name" placeholder="Add to ${esc(secName(s.id))}" aria-label="New item for ${esc(secName(s.id))}"><button type="submit">+ Add</button></form></div>
     </div>`;
@@ -5394,7 +5510,7 @@ function fileBase(p) { return ("Camera list - " + (p.name || "production") + (un
 const layoutOf = () => app.settings.exportLayout === "table" ? "table" : "clean";
 /* the list's version: one more each time a changed list is saved (Word, PDF or Send); saving the same list again keeps its number */
 function docSigOf(p) {
-  const o = otherUnit(p), t = JSON.stringify([listText(p, { noVer: true }), p.notesBold, p.notesSize, o && p.mainOf ? [o.dp, acText(o), o.prep, o.shootStart, o.shootEnd] : 0]);
+  const o = otherUnit(p), t = JSON.stringify([listText(p, { noVer: true }), p.notesBold, p.notesSize, p.notesRich || 0, o && p.mainOf ? [o.dp, acText(o), o.prep, o.shootStart, o.shootEnd] : 0]);
   let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
   return String(h >>> 0);
 }
@@ -5454,7 +5570,7 @@ function exportHtmlClean(p, o = {}) {
   const infoHtml = info.length || cols || p.notes ? `<div class="cl-inf" data-break>${info.slice(0, 1).map(line).join("")}
       ${cols ? `<div class="cl-crew">${cols.map(c => `<div class="cl-col${c.dim ? " cl-dim" : ""}"><div class="cl-ch">${esc(c.name)}</div>${c.rows.map(line).join("")}</div>`).join("")}</div>` : ""}
       ${info.slice(1).map(line).join("")}
-      ${p.notes ? `<div class="cl-i cl-notes" dir="auto" style="font-size:${NOTE_PX[p.notesSize] || 12}px;font-weight:${p.notesBold ? 700 : 400}">${esc(p.notes)}</div>` : ""}</div>` : "";
+      ${p.notes ? `<div class="cl-i cl-notes">${ntHtml(ntModel(p), true, NT_PX.m)}</div>` : ""}</div>` : "";
   return `<div class="cl" style="width:794px;box-sizing:border-box;padding:0 56px;background:#fff">
     <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:11.5px;line-height:1.3}.cl .cl-inf{margin:14px 0 0;text-align:center}.cl .cl-i{font-size:11px;line-height:1.4;color:#111}.cl .cl-i b{font-weight:700}.cl .cl-dim{color:#9a9a9a}.cl .cl-dim b{font-weight:600}.cl .cl-crew{display:grid;grid-template-columns:1fr 1fr;margin:6px auto 4px;max-width:600px}.cl .cl-col{padding:2px 14px}.cl .cl-col+.cl-col{border-left:1px solid #ccc}.cl .cl-ch{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}.cl .cl-dim .cl-i{color:#9a9a9a}.cl .cl-notes{white-space:pre-wrap;margin-top:5px;unicode-bidi:plaintext}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:13px;padding:4px 0 3px;font-weight:700;font-size:11px}.cl .cl-r{display:flex;padding-top:4px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:11.5px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:10.5px;padding-top:0}.cl .cl-x{font-size:10.5px;font-style:italic;color:#555;padding-top:0}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:12px;border-top:1px solid #111;padding-top:6px}</style>
     ${o.pdf ? "" : `<div style="padding-top:4px">${cleanTitleHtml(p)}</div>`}
@@ -5486,7 +5602,7 @@ function docxXmlClean(p) {
   const half = W_TEXT / 2, edge = v => `<w:${v} w:val="nil"/>`;
   const crew = cols ? `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/><w:tblBorders>${["top", "left", "bottom", "right", "insideH"].map(edge).join("")}<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${half}"/><w:gridCol w:w="${half}"/></w:tblGrid><w:tr>${cols.map(c => `<w:tc><w:tcPr><w:tcW w:w="${half}" w:type="dxa"/></w:tcPr>${center(wRun(c.name, { b: true, caps: true, sz: 16, color: c.dim ? "9A9A9A" : "" }))}${c.rows.map(r => line(r, c.dim)).join("") || center("")}</w:tc>`).join("")}</w:tr></w:tbl>` : "";
   let body = info.slice(0, 1).map(r => line(r)).join("") + crew + info.slice(1).map(r => line(r)).join("")
-    + (p.notes ? p.notes.split(/\n/).map(t => `<w:p><w:pPr>${hasHebrew(t) ? "<w:bidi/>" : ""}<w:spacing w:before="0" w:after="0"/><w:jc w:val="center"/></w:pPr>${wRun(t, { sz: NOTE_SZ[p.notesSize] || 22, b: !!p.notesBold })}</w:p>`).join("") : "");
+    + (p.notes ? ntDocx(ntModel(p), { center: true }) : "");
   const S = sku ? 1500 : 0, Q = 640, N = W_TEXT - Q - S;
   for (const s of allSections()) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
@@ -5526,7 +5642,7 @@ function docxXmlTable(p) {
   const head = para(r(docTitle(p) + ":", { b: true }) + r("   Version " + docVer(p), { color: "7F7F7F", sz: 16 }), { after: 0 })
     + headerParts(p).map(ln => { const sz = ln.big ? 32 : 20; return shaded(ln.plain ? r(ln.plain, { sz }) : ln.segs.map(g => r(g.lbl + ": ", { b: true, sz }) + r(g.v, { sz })).join(r(" // ", { sz }))); }).join("")
     + `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="120" w:lineRule="exact"/></w:pPr></w:p>`;
-  const notes = p.notes ? para("", { after: 120 }) + para(r("Notes", { b: true, sz: 22 })) + p.notes.split(/\n/).map(t => para(r(t))).join("") : "";
+  const notes = p.notes ? para("", { after: 120 }) + para(r("Notes", { b: true, sz: 22 })) + ntDocx(ntModel(p), { scale: 1.67 }) : "";
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${head}${table}${notes}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1453" w:bottom="1134" w:left="1453" w:header="567" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 }
 async function buildDocx(p) {
@@ -5559,7 +5675,7 @@ function exportHtmlTable(p) {
     <style>.pdf{color:#000;font-size:12px;font-family:Arial,Helvetica,sans-serif}.pdf td{color:#000;border:1px solid #a6a6a6;padding:4px 6px;vertical-align:top;font-size:12px}.pdf .lb{font-weight:700;width:86px;text-align:center}.pdf .q{font-weight:700;text-align:center;width:24px}.pdf .ex{font-style:italic;color:#595959;font-size:11px}.pdf .kd{font-size:11px}.pdf .sk{color:#7f7f7f;font-size:10px;font-family:'Courier New',monospace;white-space:nowrap}</style>
     <div data-break style="padding-top:8px"><div style="font-size:13px;font-weight:700;line-height:1.3">${esc(docTitle(p))}: <span style="font-weight:400;color:#7f7f7f;font-size:11px">Version ${docVer(p)}</span></div>${(() => { const hp = headerParts(p); return hp.length ? `<div style="background:#${DOC_HEAD_FILL};padding:1px 6px 2px;line-height:1.3">${hp.map(ln => `<div style="font-size:${ln.big ? 21 : 13}px">${ln.plain ? esc(ln.plain) : ln.segs.map(g => `<b>${esc(g.lbl)}:</b> ${esc(g.v)}`).join(" // ")}</div>`).join("")}</div>` : ""; })()}<div style="height:7px"></div></div>
     ${n ? `<table class="pdf" style="width:100%;border-collapse:collapse;table-layout:fixed">${body}</table>` : ""}
-    ${p.notes ? `<div data-break style="margin-top:14px"><b>Notes</b><div style="white-space:pre-wrap">${esc(p.notes)}</div></div>` : ""}
+    ${p.notes ? `<div data-break style="margin-top:14px"><b>Notes</b><div>${ntHtml(ntModel(p), true, 12)}</div></div>` : ""}
   </div>`;
 }
 /* preview: the export document on a page, scaled to the screen, with the export buttons under it */
@@ -6010,7 +6126,7 @@ document.addEventListener("click", e => {
     case "pc-do": { const p = pcCur(), d = pcData(p), t = d.todo.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(p); rerenderKeepScroll(); break; }
     case "pc-del": { const p = pcCur(), d = pcData(p), i = d.todo.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
       const [t] = d.todo.splice(i, 1); pcSave(p); rerenderKeepScroll(); undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const dd = pcData(pcCur()); dd.todo.splice(Math.min(i, dd.todo.length), 0, t); pcSave(pcCur()); rerenderKeepScroll(); }); break; }
-    case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); rerenderKeepScroll(); break; }
+    case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); if (!lcUpdate()) rerenderKeepScroll(); break; }
     case "lc-add": { const i = document.getElementById("lc-add"), c = document.getElementById("lc-addcf"), nm = i && i.value.trim(); if (!nm) { i && i.focus(); break; }
       lcOwn().items[uid("own-")] = { qty: 1, name: nm.slice(0, 120), custom: true, cf: c ? c.value.trim().slice(0, 12) : "" }; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); document.getElementById("lc-add")?.focus(); break; }
     case "lc-del": delete lcOwn().items[b.dataset.id]; lcPdfMade = null; touchSettings(); rerenderKeepScroll(); break;
@@ -6116,6 +6232,7 @@ document.addEventListener("click", e => {
     case "cal-clear": calClear(); calRefresh(); break;
     case "cal-done": calDone(); break;
     /* Cam list sections: close and open */
+    case "sec-grip": toast("Drag to move this section. The page follows the order"); break;
     case "sec-toggle": {
       if (e.target.closest(".pen")) break;
       const k = "secx/" + b.dataset.k;
@@ -6388,6 +6505,8 @@ document.addEventListener("click", e => {
       break;
     }
     case "txrx": if (txPop === id) txClose(); else txOpenFor(p, id, b.closest("[data-row]") ? "c" : "l"); break;
+    case "ac-toggle": { const ed = document.getElementById("acEdit"); if (!ed) break; const on = ed.hidden; ed.hidden = !on; b.setAttribute("aria-expanded", String(on)); b.closest(".ac-field")?.classList.toggle("open", on); if (on) document.getElementById("f-ac")?.focus(); break; }
+    case "nt-toggle": { const bd = document.getElementById("ntBody"); if (!bd) break; const on = bd.hidden; bd.hidden = !on; app.ntOpen = on; b.setAttribute("aria-expanded", String(on)); b.closest(".nt-field")?.classList.toggle("open", on); if (on) { const ed = ntEd(); ed?.focus(); if (ed) { const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); } } else ntPopClose(); break; }
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
@@ -6492,10 +6611,6 @@ document.addEventListener("change", e => {
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
   if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
   if (t.id === "f-u2same") { document.getElementById("u2Dates").hidden = t.checked; return; }
-  if (t.form && t.form.id === "prodForm" && (t.name === "notesBold" || t.name === "notesSize")) {
-    const ta = document.getElementById("f-notes"), f2 = t.form;
-    ta.className = "nt-" + (f2.querySelector('input[name="notesSize"]:checked')?.value || "m") + (f2.elements.notesBold.checked ? " nt-b" : ""); return;
-  }
   if (t.dataset.settitle) { app.settings.docTitle = t.value.trim().slice(0, 60); touchSettings(); toast("Title saved"); return; }
   if (t.dataset.pkq) { dd.q[t.dataset.pkq] = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); return; }
   if (t.dataset.pkmedia) {
@@ -6693,8 +6808,8 @@ document.addEventListener("submit", e => {
     const json = t => { try { return JSON.parse(t || "{}") || {}; } catch (err) { return {}; } };
     const fields = { name: v.name.trim(), company: v.company.trim(), dp: v.dp.trim(), ac: v.ac.trim(), acPhone: v.acPhone.trim(),
       prep: v.prep, shootStart: v.shootStart, shootEnd: v.shootEnd && v.shootEnd >= v.shootStart ? v.shootEnd : v.shootStart,
-      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days: json(v.days), notes: v.notes.trim(),
-      notesBold: !!v.notesBold, notesSize: ["s", "m", "l"].includes(v.notesSize) ? v.notesSize : "m",
+      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days: json(v.days), notes: (v.notes || "").trim(),
+      notesRich: (() => { try { const m = JSON.parse(v.notesRich || "[]"); return Array.isArray(m) ? m : []; } catch (err) { return []; } })(), notesBold: false, notesSize: "m",
       houseId: document.getElementById("housePick").dataset.value };
     if (!fields.name) { document.getElementById("f-name").focus(); return; }
     if (!houseById(fields.houseId)) { const err = document.getElementById("houseErr"); if (err) err.hidden = false; document.querySelector("#housePick .house-opt")?.focus(); return; }
@@ -6720,7 +6835,7 @@ document.addEventListener("submit", e => {
     if (u2on) {
       const same = !!v.u2_same, sd = json(v.u2_days);
       const qf = { name: p.name, company: p.company, houseId: p.houseId, dp: (v.u2_dp || "").trim(), ac: (v.u2_ac || "").trim(), acPhone: (v.u2_acPhone || "").trim(),
-        unit: "2nd Unit", mainOf: p.id, sameDates: same, notes: p.notes, notesBold: p.notesBold, notesSize: p.notesSize,  // the notes are the production's, on both lists
+        unit: "2nd Unit", mainOf: p.id, sameDates: same, notes: p.notes, notesRich: clone(p.notesRich || []), notesBold: p.notesBold, notesSize: p.notesSize,  // the notes are the production's, on both lists
         ...(same ? { prep: p.prep, shootStart: p.shootStart, shootEnd: p.shootEnd, days: clone(p.days), shootDays: p.shootDays }
           : { prep: v.u2_prep || "", shootStart: v.u2_shootStart || "", shootEnd: v.u2_shootEnd && v.u2_shootEnd >= v.u2_shootStart ? v.u2_shootEnd : v.u2_shootStart || "", days: sd, shootDays: "" }) };
       let q = oldQ;
@@ -6876,6 +6991,12 @@ function dragTarget(x, y) {
     const c = el.closest("#tree details.cat");
     return c ? { el: c.querySelector(":scope > summary"), cat: c.dataset.k, ref: null } : null;
   }
+  if (drag.kind === "sec") {
+    const sc = el.closest("#listSecs .section[data-sec]"); if (!sc) return null;
+    if (sc.dataset.sec === drag.id) return { el: sc, self: true };
+    const r = sc.getBoundingClientRect(), col = (allSections().find(x => x.id === sc.dataset.sec) || {}).column || "L";
+    return { el: sc, ref: sc.dataset.sec, after: y > r.top + r.height / 2, col };
+  }
   const line = el.closest("[data-line]");
   if (line) {
     if (line.dataset.line === drag.id) return { el: line, self: true };
@@ -6903,6 +7024,7 @@ function dropLabel(t) {
     return sub ? sub.name + (g ? " › " + headLabel(h, t.list, g) : "") : "";
   }
   if (drag.kind === "line" && t.sec) return secName(t.sec);
+  if (drag.kind === "sec" && t.ref) return `${t.col === "R" ? "right" : "left"} column, ${t.after ? "after" : "before"} ${secName(t.ref)}`;
   return "";
 }
 function paintTarget(t) {
@@ -6962,6 +7084,10 @@ function startDrag() {
   g.className = "drag-ghost"; g.textContent = drag.label0;
   document.body.appendChild(g); drag.ghost = g;
   drag.row?.classList.add("dragging"); document.body.classList.add("is-dragging");
+  if (drag.kind === "sec") {  // the sections fold to their headings while one is moved, with the page's two columns marked; the one held stays under the finger
+    const wrap = document.getElementById("listSecs"), t0 = drag.row ? drag.row.getBoundingClientRect().top : 0;
+    if (wrap) { wrap.classList.add("sec-drag"); if (drag.row) window.scrollBy(0, drag.row.getBoundingClientRect().top - t0); }
+  }
   const loop = () => {
     if (!drag.on) return;
     const bar = document.querySelector(".bar"), top = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
@@ -6980,6 +7106,7 @@ function endDrag(drop) {
   cancelAnimationFrame(drag.raf); clearTimeout(drag.ht); clearTimeout(drag.ct); drag.chip = null; drag.origin = null;
   document.getElementById("dragHold")?.remove();
   drag.ghost?.remove(); drag.row?.classList.remove("dragging"); document.body.classList.remove("is-dragging"); paintTarget(null);
+  document.getElementById("listSecs")?.classList.remove("sec-drag");
   Object.assign(drag, { pending: false, on: false, ghost: null, target: null, hover: null, row: null });
   if (!on) {
     if (drop && kind === "cat" && cur()) catEditDialog(houseById(cur().houseId), id);
@@ -7017,6 +7144,14 @@ function endDrag(drop) {
       rerenderKeepScroll();
       if (splitKey(id)[0] + "/" + splitKey(id)[1] !== t.sub && to) toast(`Moved to ${to.name}`);
     }
+  } else if (kind === "sec") {
+    if (moveSection(id, t.ref, t.after, t.col)) {
+      rerenderKeepScroll();
+      const el = document.querySelector(`#listSecs [data-sec="${CSS.escape(id)}"]`), bar = document.querySelector(".bar");
+      if (el) window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - (bar ? bar.getBoundingClientRect().height : 0) - 12));
+      replay(el, "sec-moved");
+      toast(`${secName(id)}: ${t.col === "R" ? "right" : "left"} column of the page`);
+    } else rerenderKeepScroll();
   } else if (kind === "ccat") {
     if (moveCat(houseById(p.houseId), id, t.ref, t.after)) rerenderKeepScroll();
   } else if (kind === "csub") {
@@ -7049,7 +7184,7 @@ document.addEventListener("pointerdown", e => {
   if (!hd || e.button > 0) return;
   e.preventDefault();
   const k = hd.dataset.drag;
-  Object.assign(drag, { kind: k, id: hd.dataset.id, brand: hd.dataset.b, label: hd.dataset.label || "", origin: hd.closest("li, details") || hd, row: ["ccat", "csub", "cgrp"].includes(k) ? hd.closest("details") : hd.closest("li"), x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, pending: true, on: false, target: null });
+  Object.assign(drag, { kind: k, id: hd.dataset.id, brand: hd.dataset.b, label: hd.dataset.label || "", origin: hd.closest("li, details") || hd, row: ["ccat", "csub", "cgrp"].includes(k) ? hd.closest("details") : k === "sec" ? hd.closest(".section") : hd.closest("li"), x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, pending: true, on: false, target: null });
   try { hd.setPointerCapture(e.pointerId); } catch (err) {}
 });
 document.addEventListener("pointermove", e => {
@@ -7102,6 +7237,15 @@ document.addEventListener("keydown", e => {
   }
   rerenderKeepScroll();
   document.querySelector(`[data-drag="${hd.dataset.drag}"][data-id="${CSS.escape(id)}"]`)?.focus();
+});
+/* keyboard: arrow keys on a section's grip move it up or down (past the last of the left column it goes to the right column) */
+document.addEventListener("keydown", e => {
+  const hd = e.target.closest && e.target.closest('[data-drag="sec"]');
+  if (!hd || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const AS = allSections(), i = AS.findIndex(s => s.id === hd.dataset.id), up = e.key === "ArrowUp", nb = AS[up ? i - 1 : i + 1];
+  if (i < 0 || !nb) return;
+  if (moveSection(hd.dataset.id, nb.id, !up, nb.column)) { rerenderKeepScroll(); document.querySelector(`[data-drag="sec"][data-id="${CSS.escape(hd.dataset.id)}"]`)?.focus(); }
 });
 /* keyboard: arrow keys on a line's handle move it up or down, across sections at the ends */
 document.addEventListener("keydown", e => {
@@ -7290,6 +7434,218 @@ function viewAdmin() {
       <div class="ad-sub">Since ${s.first ? new Date(s.first).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "?"}${s.devs > 1 ? ` · ${s.devs} devices` : ""}${s.ver ? ` · version ${esc(s.ver)}` : ""}</div></div>`).join("") : `<p class="hint">No one has reported yet. Numbers arrive once each user opens the updated app with a connection.</p>`}
     <p class="hint">Counted from the day each user got this version. "Shared the app" counts the app's own Share button only.</p>
     <div class="set-group"><h3>Tools</h3><button class="btn" type="button" data-act="lab-open">Color lab · try colors on the real pages</button></div></section>`;
+}
+/* ---------- production notes, formatted like in a word processor: bold, italic, underline, three sizes, a font, text color, a
+   highlighter marker and bullets. Kept as paragraphs of runs (p.notesRich) beside the plain text (p.notes) that the text exports,
+   the search and older versions use. Every export draws them the same way: the PDF as HTML, Word as its own runs. ---------- */
+const NT_PX = { s: 10.5, m: 12, l: 14.5, xl: 18 };          // on the page (PDF); Word in half points
+const NT_ED = { s: 13, m: 16, l: 20, xl: 24 };              // in the editor
+const NT_FONTS = { sans: ["Sans", "Arial, Helvetica, sans-serif", "Arial"], serif: ["Serif", "Georgia, 'Times New Roman', serif", "Georgia"], mono: ["Mono", "'Courier New', Courier, monospace", "Courier New"] };
+const NT_COLORS = [["#18171d", "Black"], ["#2f7593", "Blue"], ["#c0392b", "Red"], ["#d35400", "Orange"], ["#1e8449", "Green"], ["#7d3c98", "Purple"], ["#7f8c8d", "Grey"]];
+const NT_MARKS = [["#fff176", "Yellow"], ["#b9f6ca", "Green"], ["#ffcdd2", "Pink"], ["#bbdefb", "Blue"], ["#ffe0b2", "Orange"]];
+/* the notes as paragraphs of runs: the formatted ones, or the plain text with the older whole-note size and bold */
+function ntModel(p) {
+  if (p && Array.isArray(p.notesRich) && p.notesRich.length) return p.notesRich;
+  const t = String((p && p.notes) || ""); if (!t.trim()) return [];
+  return t.split(/\n/).map(line => ({ runs: line ? [{ t: line, ...(p.notesBold ? { b: 1 } : {}), ...(p.notesSize && p.notesSize !== "m" ? { s: p.notesSize } : {}) }] : [] }));
+}
+const ntPlain = m => m.map(pg => (pg.li ? "• " : "") + pg.runs.map(r => r.t).join("")).join("\n").replace(/\s+$/, "");
+const ntHex = v => { const m = String(v || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/); if (m) return m[4] !== undefined && +m[4] === 0 ? "" : "#" + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, "0")).join(""); return /^#[0-9a-f]{6}$/i.test(v) ? v.toLowerCase() : /^#[0-9a-f]{3}$/i.test(v) ? "#" + v.slice(1).split("").map(c => c + c).join("").toLowerCase() : ""; };
+const ntSizeOf = v => { v = String(v || "").trim(); const k = { "x-small": "s", small: "s", "xx-small": "s", medium: "m", large: "l", "x-large": "xl", "xx-large": "xl", "xxx-large": "xl" }[v]; if (k) return k; const px = parseFloat(v); if (!px) return ""; return px <= 14 ? "s" : px <= 17.5 ? "m" : px <= 21.5 ? "l" : "xl"; };
+const ntFontOf = v => { v = String(v || "").toLowerCase(); return !v ? "" : /mono|courier|consol/.test(v) ? "mono" : /(^|[^-])serif|georgia|times/.test(v) ? "serif" : /sans|arial|helvetica|rubik|inter|system/.test(v) ? "sans" : ""; };
+/* the editor's content as paragraphs of runs (the browser's own markup, cleaned: only what the toolbar makes is kept) */
+function ntRead(root) {
+  const paras = []; let cur = null;
+  const open = li => { cur = { runs: [] }; if (li) cur.li = 1; paras.push(cur); };
+  const same = (a, b) => ["b", "i", "u", "c", "h", "s", "f"].every(k => (a[k] || "") === (b[k] || ""));
+  const walk = (n, st, li) => {
+    if (n.nodeType === 3) {
+      const t = n.nodeValue.replace(/\u00a0/g, " ").replace(/[\r\n]+/g, " "); if (!t) return;
+      if (!cur) open(li); const last = cur.runs[cur.runs.length - 1];
+      if (last && same(last, st)) last.t += t; else cur.runs.push({ t, ...st });
+      return;
+    }
+    if (n.nodeType !== 1) return;
+    const tag = n.tagName, css = n.style || {}, s2 = { ...st };
+    if (tag === "BR") { if (!cur) open(li); cur = null; return; }   // a line break ends the paragraph; one on its own is an empty line
+    if (/^(B|STRONG)$/.test(tag) || css.fontWeight === "bold" || +css.fontWeight >= 600) s2.b = 1; else if (css.fontWeight === "normal" || (+css.fontWeight && +css.fontWeight < 600)) delete s2.b;
+    if (/^(I|EM)$/.test(tag) || css.fontStyle === "italic") s2.i = 1; else if (css.fontStyle === "normal") delete s2.i;
+    if (tag === "U" || /underline/.test(css.textDecoration || css.textDecorationLine || "")) s2.u = 1;
+    const c = ntHex(css.color || (tag === "FONT" ? n.getAttribute("color") : "") || ""); if (c) { if (c === "#18171d" || c === "#000000") delete s2.c; else s2.c = c; }
+    if (css.backgroundColor) { const h = ntHex(css.backgroundColor); if (h && h !== "#ffffff") s2.h = h; else delete s2.h; }
+    const sz = ntSizeOf(css.fontSize) || (tag === "FONT" && n.getAttribute("size") ? ({ 1: "s", 2: "s", 3: "m", 4: "l", 5: "l", 6: "xl", 7: "xl" })[n.getAttribute("size")] : ""); if (sz) { if (sz === "m") delete s2.s; else s2.s = sz; }
+    const fo = ntFontOf(css.fontFamily || (tag === "FONT" ? n.getAttribute("face") : "") || ""); if (fo) { if (fo === "sans") delete s2.f; else s2.f = fo; }
+    const block = /^(DIV|P|LI|H[1-6]|BLOCKQUOTE|UL|OL)$/.test(tag);
+    if (block) cur = null;
+    if (tag === "LI") open(true);
+    for (const k of n.childNodes) walk(k, s2, tag === "LI" || li);
+    if (block) cur = null;
+  };
+  for (const k of root.childNodes) walk(k, {}, false);
+  while (paras.length && !paras[0].runs.length) paras.shift(); while (paras.length && !paras[paras.length - 1].runs.length) paras.pop();
+  return paras;
+}
+/* runs as HTML: in the editor (px for the screen) or on the page (the PDF's sizes) */
+function ntRunHtml(r, page) {
+  const st = []; if (r.c) st.push(`color:${r.c}`); if (r.h) st.push(`background-color:${r.h}`); if (r.s && r.s !== "m") st.push(`font-size:${(page ? NT_PX : NT_ED)[r.s]}px`); if (r.f && NT_FONTS[r.f]) st.push(`font-family:${NT_FONTS[r.f][1]}`);
+  let h = esc(r.t); if (r.u) h = `<u>${h}</u>`; if (r.i) h = `<i>${h}</i>`; if (r.b) h = `<b>${h}</b>`;
+  return st.length ? `<span style="${st.join(";")}">${h}</span>` : h;
+}
+function ntHtml(m, page, base) {
+  let out = "", inList = false;
+  for (const pg of m) {
+    const body = pg.runs.map(r => ntRunHtml(r, page)).join("") || "<br>";
+    if (pg.li && !inList) { out += `<ul${page ? ` style="margin:2px 0;padding:0 18px;text-align:start;display:inline-block"` : ""}>`; inList = true; }
+    if (!pg.li && inList) { out += "</ul>"; inList = false; }
+    out += pg.li ? `<li dir="auto">${body}</li>` : `<div dir="auto"${page && base ? ` style="font-size:${base}px"` : ""}>${body}</div>`;
+  }
+  return out + (inList ? "</ul>" : "");
+}
+/* Word: each paragraph its runs, each run its own format */
+function ntDocx(m, o = {}) {
+  return m.map(pg => {
+    const txt = pg.runs.map(r => r.t).join(""), rtl = hasHebrew(txt);
+    const runs = (pg.li ? [{ t: "• " }] : []).concat(pg.runs).map(r => `<w:r><w:rPr>${r.f && NT_FONTS[r.f] ? `<w:rFonts w:ascii="${NT_FONTS[r.f][2]}" w:hAnsi="${NT_FONTS[r.f][2]}" w:cs="${NT_FONTS[r.f][2]}"/>` : ""}${r.b ? "<w:b/><w:bCs/>" : ""}${r.i ? "<w:i/><w:iCs/>" : ""}${r.u ? '<w:u w:val="single"/>' : ""}${r.c ? `<w:color w:val="${r.c.slice(1).toUpperCase()}"/>` : ""}<w:sz w:val="${Math.round(NT_PX[r.s || "m"] * 1.5 * (o.scale || 1.22))}"/><w:szCs w:val="${Math.round(NT_PX[r.s || "m"] * 1.5 * (o.scale || 1.22))}"/>${r.h ? `<w:shd w:val="clear" w:color="auto" w:fill="${r.h.slice(1).toUpperCase()}"/>` : ""}${hasHebrew(r.t) ? "<w:rtl/>" : ""}</w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`).join("");
+    return `<w:p><w:pPr>${rtl ? "<w:bidi/>" : ""}<w:spacing w:before="0" w:after="0"/>${o.center ? '<w:jc w:val="center"/>' : ""}</w:pPr>${runs}</w:p>`;
+  }).join("");
+}
+/* the editor: its toolbar, and the box itself (a page: dark text on light, as it prints) */
+const NT_ICONS = {
+  b: `<b class="nt-gl">B</b>`, i: `<i class="nt-gl nt-it">I</i>`, u: `<u class="nt-gl">U</u>`,
+  s: `<span class="nt-a nt-a1">A</span>`, m: `<span class="nt-a nt-a2">A</span>`, l: `<span class="nt-a nt-a3">A</span>`,
+  font: `<span class="nt-gl nt-ff">Aa</span>`,
+  color: `<span class="nt-gl nt-col">A<i class="nt-bar" style="background:var(--nt-c, #c0392b)"></i></span>`,
+  mark: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4.5l5 5-8.5 8.5H6v-5z"/><path d="M12 7l5 5"/></svg><i class="nt-bar" style="background:var(--nt-h, #fff176)"></i>`,
+  list: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>`,
+  clear: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 6h11M10.5 6l-3 12M15 14l5 5M20 14l-5 5"/></svg>` };
+function ntBarHtml() {
+  const b = (k, lab, more) => `<button type="button" class="nt-btn" data-nt="${k}" aria-label="${lab}" title="${lab}"${more || ""}>${NT_ICONS[k]}</button>`;
+  return `<div class="nt-bar-row" role="toolbar" aria-label="Text format">
+    <span class="nt-grp">${b("b", "Bold", ' aria-pressed="false"')}${b("i", "Italic", ' aria-pressed="false"')}${b("u", "Underline", ' aria-pressed="false"')}</span>
+    <span class="nt-grp">${b("s", "Small text", ' aria-pressed="false"')}${b("m", "Normal text", ' aria-pressed="false"')}${b("l", "Large text", ' aria-pressed="false"')}</span>
+    <span class="nt-grp">${b("font", "Font", ' aria-haspopup="true"')}${b("color", "Text color", ' aria-haspopup="true"')}${b("mark", "Highlighter", ' aria-haspopup="true"')}</span>
+    <span class="nt-grp">${b("list", "Bullets", ' aria-pressed="false"')}${b("clear", "Clear the format")}</span></div>`;
+}
+let ntPop = null;
+function ntPopClose() { if (ntPop) { const el = ntPop; ntPop = null; el.classList.remove("open"); setTimeout(() => el.remove(), 260); } }
+function ntPopOpen(btn, k) {
+  if (ntPop && ntPop.dataset.k === k) { ntPopClose(); return; }
+  ntPopClose();
+  const el = document.createElement("div"); el.className = "nt-pop"; el.dataset.k = k; el.setAttribute("role", "menu");
+  el.innerHTML = `<div class="nt-pop-in">${k === "font" ? Object.entries(NT_FONTS).map(([v, f]) => `<button type="button" class="nt-fo" data-ntv="font:${v}" style="font-family:${f[1]}">${f[0]}</button>`).join("")
+    : k === "color" ? NT_COLORS.map(([c, n]) => `<button type="button" class="nt-sw" data-ntv="color:${c}" style="--sw:${c}" aria-label="${n}" title="${n}"></button>`).join("")
+    : NT_MARKS.map(([c, n]) => `<button type="button" class="nt-sw mk" data-ntv="mark:${c}" style="--sw:${c}" aria-label="${n} marker" title="${n}"></button>`).join("") + `<button type="button" class="nt-sw none" data-ntv="mark:none" aria-label="No marker" title="None">×</button>`}</div>`;
+  document.body.appendChild(el); ntPop = el;
+  const r = btn.getBoundingClientRect(), w = el.offsetWidth;
+  el.style.top = (r.bottom + 4) + "px"; el.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+  void el.offsetWidth; el.classList.add("open");
+}
+const ntEd = () => document.getElementById("f-notes");
+function ntSync() {   // the hidden fields the form sends, and the toolbar's pressed buttons
+  const ed = ntEd(); if (!ed) return;
+  ed.querySelectorAll("div, p, li").forEach(x => { if (!x.hasAttribute("dir")) x.setAttribute("dir", "auto"); });   // each line right to left when it's Hebrew (the bullet too)
+  const m = ntRead(ed), f = ed.closest("form");
+  if (f) { f.elements.notesRich.value = JSON.stringify(m); f.elements.notes.value = ntPlain(m); }
+  const pk = document.querySelector(".nt-peek"); if (pk) pk.textContent = ntPlain(m).split("\n")[0] || "";
+  ed.classList.toggle("empty", !m.length);
+  ntState();
+}
+function ntState() {
+  const ed = ntEd(), sel = document.getSelection(); if (!ed || !sel || !sel.anchorNode || !ed.contains(sel.anchorNode)) return;
+  const q = c => { try { return document.queryCommandState(c); } catch (e) { return false; } };
+  const at = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode, cs = at && getComputedStyle(at);
+  const sz = cs ? ntSizeOf(cs.fontSize) || "m" : "m";
+  for (const [k, on] of [["b", q("bold")], ["i", q("italic")], ["u", q("underline")], ["list", q("insertUnorderedList")], ["s", sz === "s"], ["m", sz === "m"], ["l", sz === "l" || sz === "xl"]]) document.querySelector(`.nt-btn[data-nt="${k}"]`)?.setAttribute("aria-pressed", String(!!on));
+}
+function ntDo(k, v) {
+  const ed = ntEd(); if (!ed) return;
+  if (document.activeElement !== ed) ed.focus();
+  const ex = (c, a) => { try { document.execCommand(c, false, a); } catch (e) {} };
+  ex("styleWithCSS", true);
+  if (k === "b") ex("bold"); else if (k === "i") ex("italic"); else if (k === "u") ex("underline");
+  else if (k === "s" || k === "m" || k === "l") {   // the browser's biggest size marks the words, then each mark takes our own size
+    ex("fontSize", "7");
+    ed.querySelectorAll("font[size='7']").forEach(x => { const sp = document.createElement("span"); sp.style.fontSize = NT_ED[k] + "px"; while (x.firstChild) sp.appendChild(x.firstChild); x.replaceWith(sp); });
+    ed.querySelectorAll("[style*='font-size']").forEach(x => { if (/xxx-large|-webkit-xxx-large/.test(x.style.fontSize)) x.style.fontSize = NT_ED[k] + "px"; });
+  }
+  else if (k === "list") ex("insertUnorderedList");
+  else if (k === "clear") { ex("removeFormat"); ex("hiliteColor", "transparent"); }
+  else if (k === "font") ex("fontName", NT_FONTS[v] ? NT_FONTS[v][1] : NT_FONTS.sans[1]);
+  else if (k === "color") { ex("foreColor", v); document.querySelector(".nt-btn[data-nt=color]")?.style.setProperty("--nt-c", v); }
+  else if (k === "mark") { ex("hiliteColor", v === "none" ? "transparent" : v); if (v !== "none") document.querySelector(".nt-btn[data-nt=mark]")?.style.setProperty("--nt-h", v); }
+  buzz("tap"); ntSync();
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  // the toolbar keeps the editor's selection: its buttons act on pointerdown and never take the focus
+  document.addEventListener("pointerdown", e => {
+    const b = e.target.closest && e.target.closest(".nt-btn, .nt-pop button"); if (!b) { if (ntPop && !(e.target.closest && e.target.closest(".nt-pop"))) ntPopClose(); return; }
+    e.preventDefault();
+    if (b.dataset.ntv) { const [k, v] = b.dataset.ntv.split(":"); ntPopClose(); ntDo(k, v); return; }
+    const k = b.dataset.nt; if (k === "font" || k === "color" || k === "mark") { ntPopOpen(b, k); return; }
+    ntDo(k);
+  }, true);
+  document.addEventListener("click", e => { if (e.target.closest && e.target.closest(".nt-btn, .nt-pop")) { e.preventDefault(); e.stopPropagation(); } }, true);
+  document.addEventListener("input", e => { if (e.target && e.target.id === "f-notes") ntSync(); });
+  document.addEventListener("selectionchange", () => { const ed = ntEd(); if (ed && document.activeElement === ed) ntState(); });
+  // pasted text comes in plain (no foreign fonts or colors from another app)
+  document.addEventListener("paste", e => { if (!(e.target && e.target.closest && e.target.closest("#f-notes"))) return; const t = (e.clipboardData || window.clipboardData)?.getData("text/plain"); if (t == null) return; e.preventDefault(); document.execCommand("insertText", false, t); });
+}
+/* ---------- a text line is confirmed with Enter (the keyboard's ✓) or with the small ✓ at the line's end: either one keeps what was
+   typed and closes the keyboard (a field marked "next" goes on to the next one). A line with its own button (Add, Use) keeps it:
+   Enter there still adds. In a form of several fields Enter never sends the whole form by surprise. ---------- */
+const OK_TEXT = /^(text|tel|email|url|number)$/;
+const OK_OWN = "#bq, #pc-add, #lc-add, #lc-addcf, .pc-addrow input, .lc-addrow input";
+const okFields = f => [...f.querySelectorAll("input")].filter(x => OK_TEXT.test(x.type) || x.type === "search");
+/* the form sends itself on Enter only when the line is its only field and it has a button for it (Add, Use) */
+const okFormSends = el => !!(el.form && el.form.querySelector('button[type="submit"], button:not([type])') && okFields(el.form).length === 1);
+function okLine(el) {   // does this field get the ✓?
+  if (!el || el.tagName !== "INPUT" || !OK_TEXT.test(el.type) || el.readOnly || el.disabled) return false;
+  if (el.closest(".stepper, .nsel, .tx-pop") || el.matches(OK_OWN) || okFormSends(el)) return false;
+  return true;
+}
+function okNext(el) {   // the next field to type in, in the same group
+  const box = el.form || el.closest(".cam-grp, .field, .row2, .dialog, section") || document.body;
+  const all = [...box.querySelectorAll("input, textarea")].filter(x => !x.disabled && !x.readOnly && x.offsetParent && (x.tagName === "TEXTAREA" || OK_TEXT.test(x.type)));
+  return all[all.indexOf(el) + 1] || null;
+}
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("keydown", e => {
+    if (e.defaultPrevented || e.isComposing || !(e.key === "Enter" || e.keyCode === 13)) return;
+    const el = e.target; if (!el || el.tagName !== "INPUT" || !(OK_TEXT.test(el.type) || el.type === "search")) return;
+    if (el.matches(OK_OWN) || okFormSends(el)) return;   // Add / Use: its own button's job
+    e.preventDefault();
+    if (el.getAttribute("enterkeyhint") === "next") { const nx = okNext(el); if (nx) { nx.focus(); return; } }
+    el.blur();
+  });
+  // the small ✓: one button that sits at the end of the line being typed in, and goes when the line is left
+  let okEl = null, okFor = null, okRaf = 0;
+  const okPlace = () => {
+    if (!okEl || !okFor) return;
+    const r = okFor.getBoundingClientRect(), rtl = getComputedStyle(okFor).direction === "rtl" || (okFor.dir === "auto" && /[\u0590-\u05FF\u0600-\u06FF]/.test(okFor.value || okFor.placeholder || ""));
+    if (!r.width || r.bottom < 0 || r.top > innerHeight) { okEl.hidden = true; return; }
+    const sz = Math.min(28, Math.max(22, r.height - 10)); okEl.style.width = okEl.style.height = sz + "px";
+    okEl.style.top = (r.top + (r.height - sz) / 2) + "px"; okEl.style.left = (rtl ? r.left + 6 : r.right - sz - 6) + "px"; okEl.hidden = false;
+    okFor.classList.toggle("ok-rtl", rtl);
+  };
+  const okFollow = () => { if (okRaf || !okFor) return; okRaf = requestAnimationFrame(() => { okRaf = 0; okPlace(); }); };
+  // while a line is being typed in, the ✓ keeps to it frame by frame (a sheet still sliding up, the keyboard opening, the page settling)
+  let okLoop = 0, okLast = "";
+  const okWatch = () => { cancelAnimationFrame(okLoop); const step = () => { if (!okFor) return; const r = okFor.getBoundingClientRect(), k = `${r.left},${r.top},${r.width},${r.height}`; if (k !== okLast) { okLast = k; okPlace(); } okLoop = requestAnimationFrame(step); }; okLoop = requestAnimationFrame(step); };
+  document.addEventListener("focusin", e => {
+    const el = e.target; if (!okLine(el)) return;
+    if (!okEl) {
+      okEl = document.createElement("button"); okEl.type = "button"; okEl.className = "ok-tick"; okEl.setAttribute("aria-label", "Done"); okEl.hidden = true;
+      okEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`;
+      okEl.addEventListener("pointerdown", ev => { ev.preventDefault(); const f = okFor; if (f) { buzz("tap"); f.blur(); } });   // the field keeps its focus until this tap closes it
+      document.body.appendChild(okEl);
+    }
+    if (okFor && okFor !== el) okFor.classList.remove("ok-pad", "ok-rtl");
+    okFor = el; if (getComputedStyle(el).boxSizing === "border-box") el.classList.add("ok-pad");
+    okLast = ""; okPlace(); okWatch();
+  });
+  document.addEventListener("focusout", e => { if (e.target !== okFor) return; okFor.classList.remove("ok-pad", "ok-rtl"); okFor = null; cancelAnimationFrame(okLoop); if (okEl) okEl.hidden = true; });
+  if (typeof window !== "undefined" && window.addEventListener) { window.addEventListener("scroll", okFollow, { passive: true, capture: true }); window.addEventListener("resize", okFollow); if (window.visualViewport) window.visualViewport.addEventListener("resize", okFollow); }
+  document.addEventListener("input", e => { if (e.target === okFor && e.target.dir === "auto") okFollow(); });
 }
 render();
 initAccount();
