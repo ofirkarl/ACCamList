@@ -17,7 +17,7 @@ global.localStorage = { getItem: k => store[k] ?? null, setItem: (k, v) => { sto
 global.CSS = { escape: s => s };
 global.setTimeout = () => 0; global.clearTimeout = () => {};
 const A = new Function(js + `
-;return { pcListId, pcData, pcCount, viewPrep, lineQty, histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, viewCamPrint, camListId, camInk, CAM_COLORS, camCompareHtml, savedListsHtml, savedListOpenHtml, camCopy, camLayout, camLayoutSet, camTableHtml, camClash, camDevOnList, camSrcs, camSrcU2, camTwo, camSrcToggle, camWhen, camOrdered, camHome, camSel, camFormHtml, camScanOf, SCANS, camDevOf, camDevAt, qHit, mcFreeCams, mediaSizes, lensMod, specsHtml, lensCardHtml, lcRows, viewLensCard, lcOpts, lcStepK, cfInches, inTxt, CF_STEPS, addCustomLine, modalsSeen: () => 0 };`)();
+;return { upData, SCHEMA, setMerge, setStamp, setPrevReset, stab, errText, pcListId, pcData, pcCount, viewPrep, lineQty, histAdd, histFor, viewRules, getUndo: () => undoFn, helperUrl, useHelper, sendHowText, canShareKind, csOf, recSet, cardLabel, setMcOpen: v => { mcOpen = v; }, REC, recRate, recResult, recProfile, cardBytes, pickCard, mediaCamHtml, viewMedia, recEnsure, pkgMediaHtml, pkgAddsHtml, fileKey, getFile, fileCache, viewWelcome, greetHtml, needsWelcome, uiSave, snapProds, clashIssues, clashSwap, clashDrop, clashPrompt, ruleDialog, docVer, commitVer, docSigOf, fileBase, STARTER, hasEdits, houseLenses, finderMatches, fin, lensSpec, colKey, parseLensQuery, finderResults, finderHtml, catTape, setCatColor, favByCategory, headerParts, app, ITEM, exportHtml, newProduction, shootDays, countShootDays, catalogGuess, lensFormats, groupItems, copyProduction, duplicateCatItem, resolveReader, viewProduction, shootTrim, renameCatItem, syncLineNames, viewSettings, docxHeaderClean, pickerHtml, dd, dupWithUnit, deleteProductions, unit2Of, setQty, applyDefaults, coverageIssues, listText, csvText, docxXml, totals, viewList, viewCatalog, viewFavorites, viewSettings, treeHtml, viewHome, viewForm, houseById, favoritesFor, toggleFav, moveCatItem, saveCatItem, resetCatItem, applyCatalog, moveLine, setHead, secName, linesBySection, grpOf, lineFromCatalog, addCategory, addSubcategory, deleteCustom, addSection, deleteSection, allSections, docxXml, exportHtml, ensureCategory, ensureSub, moveSub, moveCat, createOwnItem, deleteOwnItem, saveCatItem, moveGroup, reorderItem, groupItems, headOrig, setNote, noteOf, rowHtml, exportRows, safeUrl, addFolder, deleteFolder, subGroupNames, splitByBrand, setBrandSplit, setItemBrand, renameBrandInGroup, motorsFor, isFlat, setFlat, moveBrand, brandsIn, removeCatItem, restoreCatItem, hasRec, toCatalog, fromCustomDone, addCustomLine, favKeyCustom, viewLensFind, viewHome, pageKey, viewBrowse, viewMcalc, mcListId, waFmt, savedLists, catEditDialog, viewTools, viewFavsSolo, favSolo, viewCams, camsOf, camCur, camVals, camCardHtml, camSetVal, camField, camNew, camPicker, viewCamPrint, camListId, camInk, CAM_COLORS, camCompareHtml, savedListsHtml, savedListOpenHtml, camCopy, camLayout, camLayoutSet, camTableHtml, camClash, camDevOnList, camSrcs, camSrcU2, camTwo, camSrcToggle, camWhen, camOrdered, camHome, camSel, camFormHtml, camScanOf, SCANS, camDevOf, camDevAt, qHit, mcFreeCams, mediaSizes, lensMod, specsHtml, lensCardHtml, lcRows, viewLensCard, lcOpts, lcStepK, cfInches, inTxt, CF_STEPS, addCustomLine, modalsSeen: () => 0 };`)();
 
 const FRESH = JSON.parse(JSON.stringify(A.app.settings));
 // the earlier ready-made camera rules, as stored for lists made before: they keep working
@@ -167,7 +167,7 @@ ok(A.linesBySection(p).camera[0][0] === camIds[camIds.length - 1], "line dragged
 ok(A.moveLine(p, mbp, "aks", null) && p.items[mbp].section === "aks" && A.linesBySection(p).aks.at(-1)[0] === mbp, "line dragged into another section");
 const txt2 = A.listText(p);
 ok(txt2.indexOf("AKS") < txt2.indexOf("MacBook Pro"), "moved line exported under its new section");
-fs.writeFileSync(DOC.replace("document.xml", "edit_tree.html"), et);
+fs.writeFileSync(process.argv[2].replace("document.xml", "edit_tree.html"), et);
 
 // --- the user's own categories, subcategories and gear list sections
 const [vv, vg] = A.addCategory(U, "Video Village", "Monitors", "display");
@@ -1146,3 +1146,35 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   const c = A.lensCardHtml(m, { lay: "compact", ink: "color" }).html, t1 = A.lensCardHtml(m, { lay: "one", ink: "color" }).html;
   ok(R.units.length === 2 && /class="lc-u">Main Unit</.test(c) && /class="lc-u">2nd Unit</.test(c) && (t1.match(/<tr class="u">/g) || []).length === 2, "both units with lenses: each under its name");
   A.app.productions.splice(A.app.productions.indexOf(q), 1); A.app.productions.splice(A.app.productions.indexOf(m), 1); A.app.view = "home"; }
+
+// --- settings on two phones: each setting's newer change wins, not the newer document
+{ const T = 1000;
+  const L = { favorites: { a: { name: "A" } }, look: { h: 200 }, haptics: true, me: { name: "Ofir", phone: "054" }, updatedAt: 5 * T, _t: { favorites: 5 * T, look: 2 * T, haptics: 1 * T, me: 1 * T } };
+  const R = { favorites: {}, look: { h: 18 }, haptics: true, me: { name: "Ofir", phone: "054" }, updatedAt: 4 * T, _t: { favorites: 1 * T, look: 4 * T, haptics: 1 * T, me: 1 * T } };
+  let m = A.setMerge(L, R);
+  ok(m.s.favorites.a && m.s.look.h === 18 && m.fromL && m.fromR && m.s.updatedAt === 5 * T, "two phones changed different settings: both changes kept (a favorite from this phone, colors from the other)");
+  m = A.setMerge(R, R); ok(!m.fromL && !m.fromR, "the same settings: nothing to take in or send");
+  m = A.setMerge({ ...R, favorites: { b: 1, a: 2 } }, { ...R, favorites: { a: 2, b: 1 } }); ok(!m.fromL && !m.fromR, "the same content in another key order: no change");
+  m = A.setMerge({ me: { name: "Ofir", phone: "054" }, updatedAt: 1 }, { me: {}, look: { h: 1 }, updatedAt: 9 }); ok(m.s.me.name === "Ofir" && m.s.look.h === 1 && m.fromL, "a name typed here is never lost to an account without one, even a newer one");
+  m = A.setMerge({ favorites: { a: 1 }, updatedAt: 3 }, { favorites: { b: 1 }, look: { h: 5 }, updatedAt: 7 }); ok(m.s.favorites.b && !m.s.favorites.a && m.s.look.h === 5 && m.fromR && !m.fromL, "settings never stamped (an older version of the app): the newer document's");
+  m = A.setMerge({ pcHide: undefined, updatedAt: 9, _t: { pcHide: 9 } }, { pcHide: true, updatedAt: 4 }); ok(!("pcHide" in m.s) && m.fromL, "a setting turned off here later than the account's: stays off");
+  const was = JSON.parse(JSON.stringify(A.app.settings)); A.setPrevReset(); A.app.settings._t = { favorites: 7 }; A.app.settings.lcList = "zz"; A.setStamp();
+  ok(A.app.settings._t.lcList > 0 && A.app.settings._t.favorites === 7 && Object.keys(A.app.settings._t).length === 2, "only the setting that changed gets the time"); A.app.settings = was; A.setPrevReset();
+  ok(A.errText(new TypeError("x is undefined")) === "x is undefined" && A.errText({ reason: new Error("boom") }) === "boom", "an error's message, for the Control room");
+}
+
+// --- saved data carries its shape's version
+{ const old = { id: "x", items: { a: { name: "Bolt", tx: 0, rx: 0, sets: 2, qty: 2 } } };
+  A.upData(old, "production"); ok(old.v === A.SCHEMA && old.items.a.tx === 2 && old.items.a.rx === 2, "an older list is brought up to date as it's read (wireless sets as TX and RX), and marked with the version");
+  const newer = { id: "y", v: A.SCHEMA + 1, items: { a: { tx: 0, rx: 0, sets: 2 } } }; A.upData(newer, "production");
+  ok(newer.v === A.SCHEMA + 1 && newer.items.a.tx === 0, "a list from a newer app is left as it is");
+  ok(A.newProduction({}).v === A.SCHEMA, "a new production has the version from the start"); }
+
+// --- a kit of zooms (Laowa Ranger 16-30, 28-75, 75-180): three zooms, not six primes
+{ for (const hid of ["fitussi", "utopia"]) { const m = A.newProduction({ houseId: hid, name: "Ranger" }); A.app.productions.push(m);
+    for (const [id, e] of A.ITEM) if (e.h.id === hid && /Ranger.*(Kit|Set)/.test(e.it.name)) A.setQty(m, id, 1);
+    const R = A.lcRows(m), k = R.sets[0];
+    ok(R.sets.length === 1 && k.name === "Laowa " + (hid === "utopia" ? "Venus Optics Ranger Cine" : "Ranger") && k.lenses.map(x => x.mm + " " + x.cf).join(" | ") === "16–30 1'1\" | 28–75 1'7\" | 75–180 2'11\"", `${hid}'s Laowa Ranger kit: three zooms by their range, each with its close focus`);
+    A.app.productions.splice(A.app.productions.indexOf(m), 1); }
+  const e = [...A.ITEM.values()].find(x => /Ranger FF 3 Lens Kit/.test(x.it.name)), sp = A.lensSpec(e.it, e.s.id);
+  ok(sp.zooms.length === 3 && sp.per.length === 3 && sp.per[1].f === 28 && sp.per[1].z[1] === 75, "the kit's spec: three zooms, each known by its wide end"); }

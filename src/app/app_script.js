@@ -4,6 +4,39 @@ DATA.rental_houses.sort((a, b) => (b.id === "utopia") - (a.id === "utopia"));
 const HOUSES = DATA.rental_houses;
 const SECTIONS = DATA.sections;
 
+/* ---------- when something breaks. The lists are written to this browser at every change, so an error never costs data:
+   the page says so in a small note (with the way back to the start page, or a reload), and the error is kept for the
+   Control room. Noise from the browser itself (a share that was cancelled, a resize warning) is let go. ---------- */
+const LS_ERR = "accam-errors-v1", ERR_SKIP = /ResizeObserver loop|^Script error\.?$|AbortError|NotAllowedError|share (was )?cancel|The user aborted|Load failed|Failed to fetch|NetworkError/i;
+let errLast = 0;
+function errText(e) { try { const x = e && e.reason !== undefined ? e.reason : e; return String((x && (x.message || x.name)) || x || "").replace(/\s+/g, " ").slice(0, 200); } catch (_) { return ""; } }
+function errNote(e, where) {
+  const m = errText(e); if (!m || ERR_SKIP.test(m)) return;
+  let view = ""; try { view = app.view || ""; } catch (_) {}
+  const rec = { t: Date.now(), m, w: String(where || "").slice(0, 120), view, v: (typeof window !== "undefined" && window.AC_BUILD) || "" };
+  try { const list = JSON.parse(localStorage.getItem(LS_ERR) || "[]"); list.push(rec); localStorage.setItem(LS_ERR, JSON.stringify(list.slice(-20))); } catch (_) {}
+  try { stats.errs = (stats.errs || 0) + 1; stats.err = { t: rec.t, m, view }; statsDirty = true; } catch (_) {}   // counted for the Control room (once the counters exist)
+  if (typeof console !== "undefined") console.error("[AC Cam List]", m, where || "");
+  if (rec.t - errLast < 15000 || typeof document === "undefined" || !document.body || !document.createElement) return;   // one note at a time
+  errLast = rec.t; errShow();
+}
+function errShow() {
+  const old = document.getElementById("errNote"); if (old) old.remove();
+  const n = document.createElement("div"); n.id = "errNote"; n.className = "err-note"; n.setAttribute("role", "alert");
+  n.innerHTML = `<p><b>Something went wrong.</b> Your lists are safe.</p><div><button type="button" class="btn sm" data-e="home">Start page</button><button type="button" class="btn sm primary" data-e="reload">Reload</button></div><button type="button" class="x" data-e="close" aria-label="Close">×</button>`;
+  n.addEventListener("click", ev => {
+    const k = ev.target.closest("[data-e]")?.dataset.e; if (!k) return;
+    n.remove();
+    if (k === "reload") { try { lsSave(); } catch (_) {} location.reload(); }
+    else if (k === "home") { try { app.view = "home"; render(); window.scrollTo(0, 0); } catch (_) { location.reload(); } }
+  });
+  document.body.appendChild(n);
+}
+if (typeof window !== "undefined" && window.addEventListener) {
+  window.addEventListener("error", e => errNote(e.error || e.message, e.filename ? `${String(e.filename).split("/").pop()}:${e.lineno}` : ""));
+  window.addEventListener("unhandledrejection", e => errNote(e, "promise"));
+}
+
 /* ---------- catalog index ---------- */
 const ITEM = new Map();
 let LENS_NAMES = null;  // catalog lenses by name, for list lines matched by name (made on first use)
@@ -150,12 +183,14 @@ function nameHtml(text, q) {
   return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u${/^\d+(?:\.\d+)?[-–]\d+(?:\.\d+)?mm$/i.test(w.join(" ")) ? " zr" : ""}">${hl(w.join(" "), q)}</span>`; }).join(" ");
 }
 /* a lens set on one flowing line, each lens with its stop: "18 T2.9 • 25 T2.1 • 35 T2.1 …" (the set name already says how many); hi marks the focal length being searched */
+/* one lens of a set by its focal length; a zoom in a kit of zooms by its range (Laowa Ranger: 16–30, 28–75, 75–180) */
+const perMM = x => x.z ? `${fmtN(x.z[0])}–${fmtN(x.z[1])}` : fmtN(x.f);
 function perHtml(per, hi, around, cf) {
   if (!per || !per.length) return "";
   // around: only the lenses next to the one you looked for (a set of 12 stays on one line)
   let list = per, pre = "", post = "";
   if (around != null) { const i = Math.max(0, per.findIndex(x => x.f === hi)), a = Math.max(0, i - around), b = Math.min(per.length, i + around + 1); list = per.slice(a, b); pre = a > 0 ? "… " : ""; post = b < per.length ? " …" : ""; }
-  return `<span class="lens-line${cf ? " cf" : ""}">${cf ? `<span class="ll-h">CF</span>` : ""}${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(String(x.f))}</b>${x.label ? " " + esc(x.label) : ""}${x.mod ? ` <i class="ll-cf" title="Close focus">${esc(x.mod)}</i>` : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
+  return `<span class="lens-line${cf ? " cf" : ""}">${cf ? `<span class="ll-h">CF</span>` : ""}${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(perMM(x))}</b>${x.label ? " " + esc(x.label) : ""}${x.mod ? ` <i class="ll-cf" title="Close focus">${esc(x.mod)}</i>` : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
 }
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
@@ -823,6 +858,50 @@ const GONE_MS = 90 * 864e5;
 function goneMerge(a, b) { const o = {}, now = Date.now(); for (const g of [a, b]) for (const [k, t] of Object.entries(g || {})) if (now - t < GONE_MS && !(o[k] >= t)) o[k] = t; return o; }
 let prevRemote = new Set();
 const SETTINGS_ID = "settings";
+/* the settings travel as one document, but each setting in it carries the time it last changed (settings._t), so two phones that
+   changed different things both keep their changes: for each setting the newer one wins, not the newer document */
+const SET_META = new Set(["_t", "updatedAt", "gone", "v"]);
+/* saved data carries the version of its shape (v). Older data is brought up to date as it is read (from this phone, the account
+   or a lists file); data saved by a newer version of the app is kept as it is, and the page asks for a reload to get that version */
+const SCHEMA = 1;
+let newerSaid = false;
+function upData(o, kind) {
+  if (!o || typeof o !== "object") return o;
+  if ((o.v || 0) > SCHEMA) { if (!newerSaid && typeof document !== "undefined" && document.getElementById && document.getElementById("toast")) { newerSaid = true; setTimeout(() => toast("Some of your lists were saved by a newer version of the app. Reload to update."), 800); } return o; }
+  if (kind === "production") for (const l of Object.values(o.items || {})) wlFix(l);   // v1: wireless video sets as TX and RX
+  o.v = SCHEMA;
+  return o;
+}
+const stab = v => JSON.stringify(v, (k, x) => x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map(n => [n, x[n]])) : x);  // the same for the same content, whatever the key order
+let setPrev = null;   // each setting as it was last stamped
+function setPrevReset() { setPrev = {}; for (const k of Object.keys(app.settings)) if (!SET_META.has(k)) setPrev[k] = stab(app.settings[k]); }
+function setStamp() {
+  const S = app.settings, t = S._t || (S._t = {}), now = Date.now();
+  if (!setPrev) { setPrevReset(); return; }
+  for (const k of new Set([...Object.keys(S), ...Object.keys(setPrev)])) {
+    if (SET_META.has(k)) continue;
+    const j = S[k] === undefined ? undefined : stab(S[k]);
+    if (j !== setPrev[k]) { t[k] = now; if (j === undefined) delete setPrev[k]; else setPrev[k] = j; }
+  }
+}
+/* this phone's settings (L) and the account's (R), setting by setting. In a document that stamps its settings, one without a stamp
+   hasn't changed since (time 0); a document from an older version of the app, without stamps, counts every setting from its own time.
+   On a tie with different content the account's is taken, so two phones never keep sending their own back and forth.
+   A name and phone typed here are never lost to an account that has none. Says which side brought something the other lacks. */
+function setMerge(L, R) {
+  const o = { ...R }, t = { ...(R._t || {}) }; let fromL = false, fromR = false;
+  const when = (S, k) => S._t ? S._t[k] || 0 : S.updatedAt || 0;
+  for (const k of new Set([...Object.keys(L), ...Object.keys(R), ...Object.keys(L._t || {}), ...Object.keys(R._t || {})])) {
+    if (SET_META.has(k)) continue;
+    const tl = when(L, k), tr = when(R, k), same = stab(L[k]) === stab(R[k]);
+    const meL = k === "me" && L.me && (L.me.name || L.me.phone) && !(R.me && (R.me.name || R.me.phone));
+    if (same) { const m = Math.max(tl, tr); if (m) t[k] = m; continue; }
+    if (tl > tr || meL) { if (L[k] === undefined) delete o[k]; else o[k] = L[k]; t[k] = Math.max(tl, meL ? Date.now() : 0); fromL = true; }
+    else { if (tr) t[k] = tr; fromR = true; }
+  }
+  o._t = t; o.gone = goneMerge(L.gone, R.gone); o.updatedAt = Math.max(L.updatedAt || 0, R.updatedAt || 0);
+  return { s: o, fromL, fromR };
+}
 
 /* where the lists are kept: said in Settings, next to the account. The top bar only speaks up when the account can't be reached */
 const storageText = () => (app.storage === "cloud" ? "Saved to your account" : "Saved in this browser");
@@ -840,7 +919,7 @@ function schedule(id) {
   timers.set(id, setTimeout(() => flush(id), 700));
 }
 function touch(p) { if (p && p.browse) return; p.updatedAt = Date.now(); lsSave(); schedule(p.id); }
-function touchSettings() { app.settings.updatedAt = Date.now(); lsPut(LS_SET, app.settings); schedule(SETTINGS_ID); }
+function touchSettings() { setStamp(); app.settings.updatedAt = Date.now(); lsPut(LS_SET, app.settings); schedule(SETTINGS_ID); }
 function flush(id) {
   timers.delete(id);
   const prev = chains.get(id) || Promise.resolve();
@@ -921,25 +1000,24 @@ async function initAccount() {
         else if (gone[p.id] && gone[p.id] >= (p.updatedAt || 0)) { app.productions.splice(app.productions.indexOf(p), 1); changed = true; }  // deleted on another phone: dropped here too
         else schedule(p.id);
       }
-      if (!rs ? app.settings.updatedAt : (app.settings.updatedAt || 0) > (rs.updatedAt || 0)) schedule(SETTINGS_ID);
+      if (!rs && app.settings.updatedAt) schedule(SETTINGS_ID);   // the account has no settings yet: this phone's go up (with the account's, they are merged below)
       setSaveState("saved");
     }
-    if (rset && !dirty.has(SETTINGS_ID) && !timers.has(SETTINGS_ID)) {
-      const r = rset.data();
-      const gone = goneMerge(app.settings.gone, r.gone);
-      if ((r.updatedAt || 0) > (app.settings.updatedAt || 0)) {
-        // the account's settings are newer, but a name and phone typed on this phone are never lost to an account that has none
-        // (signing in to a Google account that was used before, without them)
-        const mine = app.settings.me || {}, theirs = r.me || {}, keepMe = !!((mine.name || mine.phone) && !(theirs.name || theirs.phone));
-        app.settings = { favorites: {}, rules: [], ...r, gone }; if (keepMe) { app.settings.me = { ...mine }; app.settings.updatedAt = Date.now(); schedule(SETTINGS_ID); }
-        applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); changed = true; }
+    if (rset) {
+      // the account's settings and this phone's, setting by setting: what the account brings is taken in, what this phone has newer
+      // (even a change still on its way up) stays and is sent up
+      setStamp();
+      const m = setMerge(app.settings, rset.data());
+      if (m.fromR) { app.settings = upData({ favorites: {}, rules: [], ...m.s }, "settings"); applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); setPrevReset(); changed = true; }
+      else if (stab(m.s.gone) !== stab(app.settings.gone)) { app.settings.gone = m.s.gone; lsPut(LS_SET, app.settings); changed = true; }
+      if (m.fromL) { if (!m.fromR) app.settings._t = m.s._t; schedule(SETTINGS_ID); }
     }
     const remoteIds = new Set(remote.map(r => r.id));
     for (const r of remote) {
       if (dirty.has(r.id) || timers.has(r.id)) continue;
       const i = app.productions.findIndex(p => p.id === r.id);
-      if (i < 0) { app.productions.push(r); changed = true; }
-      else if ((r.updatedAt || 0) > (app.productions[i].updatedAt || 0)) { app.productions[i] = r; changed = true; }
+      if (i < 0) { app.productions.push(upData(r, "production")); changed = true; }
+      else if ((r.updatedAt || 0) > (app.productions[i].updatedAt || 0)) { app.productions[i] = upData(r, "production"); changed = true; }
     }
     if (!snap.metadata.fromCache) {
       for (const id of prevRemote) if (!remoteIds.has(id) && !dirty.has(id)) {
@@ -961,7 +1039,7 @@ async function initAccount() {
 function newProduction(fields) {
   const now = Date.now();
   return { id: uid("p"), name: "", company: "", houseId: "", dp: "", ac: "", acPhone: "",
-    prep: "", shootStart: "", shootEnd: "", shootDays: "", days: {}, notes: "", items: {}, createdAt: now, updatedAt: now, ...fields };
+    prep: "", shootStart: "", shootEnd: "", shootDays: "", days: {}, notes: "", items: {}, createdAt: now, updatedAt: now, v: SCHEMA, ...fields };
 }
 /* a copy of a production with all its items, under a new id (the caller names it) */
 function copyProduction(p, fields) {
@@ -2879,7 +2957,7 @@ const LENS_MOD = [
   ["dzofilm-vespid", /vespid/i, {"16": "10\"", "25": "1'", "35": "1'", "40": "1'", "50": "1'3\"", "75": "2'", "90": "10\"", "100": "2'4\"", "125": "2'7\"", "21": "11\""}],
   ["dzofilm-catta-ace", /catta ace/i, {"18-35": "1'8\"", "35-80": "2'5\"", "70-135": "2'6\""}],
   ["dzofilm-x-tract", /x-tract|^dzofilm 18-28mm t8/i, {"18-28": "1'7\""}],
-  ["laowa-ranger", /^laowa ranger/i, {"16-30": "1'1\"", "28-75": "1'7\"", "75-180": "2'11\""}],
+  ["laowa-ranger", /^laowa (venus optics )?ranger/i, {"16-30": "1'1\"", "28-75": "1'7\"", "75-180": "2'11\""}],
   ["atlas-orion", /^atlas orion/i, {"18": "1'6\"", "21": "1'6\"", "25": "1'6\"", "28": "1'6\"", "32": "1'9\"", "40": "2'", "50": "2'6\"", "65": "2'9\"", "80": "3'", "100": "3'6\"", "135": "3'6\"", "200": "3'6\""}],
   ["laowa-nanomorph-prime", /^laowa nanomorph s35 anamorphic prime/i, {"27": "1'5\"", "35": "2'", "50": "2'4\"", "65": "2'4\"", "80": "2'4\""}],
   ["viltrox-epic", /^viltrox epic/i, {"25": "1'8\"", "35": "2'7\"", "50": "2'7\"", "65": "1'4\"", "75": "3'3\"", "100": "2'9\"", "135": "3'4\""}],
@@ -2917,8 +2995,11 @@ function lensSpec(it, sub) {
   if (LENS_SPEC.has(it)) return LENS_SPEC.get(it);
   const L = it.lens || {}, name = it.name || "", fs = L.focals || "";
   const nums = (fs.match(/\d+(?:\.\d+)?/g) || []).map(Number);
-  let focals = null, zoom = null;
-  if (L.set && nums.length) focals = nums;
+  let focals = null, zoom = null, zooms = null;
+  // a kit of zooms ("16-30, 28-75, 75-180mm zooms"): each zoom by its range, known by its widest end
+  const rng = L.set ? [...fs.matchAll(/(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)/g)].map(m => [+m[1], +m[2]]) : [];
+  if (rng.length >= 2) { zooms = rng; focals = rng.map(r => r[0]); }
+  else if (L.set && nums.length) focals = nums;
   else if (/[–-]/.test(fs) && nums.length >= 2) zoom = [nums[0], nums[1]];
   else if (nums.length) focals = [nums[0]];
   else if (it.lens) {
@@ -2936,7 +3017,7 @@ function lensSpec(it, sub) {
   label = label.replace(/\bF(?=\d)/g, "f/").replace(/\bf\s*\/\s*(?=\d)/gi, "f/").replace(/^(T|f\/)(\d+(?:\.\d+)?)\s*[-–]\s*(\d)/, "$1$2–$1$3");
   let spec = null;
   if (it.lens && (focals || zoom)) {
-    spec = { focals, zoom, set: !!L.set, stop, label, cov: L.coverage || "", squeeze: L.squeeze || "" };
+    spec = { focals, zoom, zooms, set: !!L.set, stop, label, cov: L.coverage || "", squeeze: L.squeeze || "" };
     spec.ana = !!(spec.squeeze || /anamorph/i.test(name) || sub === "anamorphic");
     spec.probe = /probe|pro2be|x-tract|skater ?scope/i.test(name);
     spec.macro = /macro/i.test(name);
@@ -2945,7 +3026,7 @@ function lensSpec(it, sub) {
     spec.mounts = lensMounts(it, sub, spec);
     if (spec.set && focals) {  // a set lens by lens: its own stop where known, or the set's one stop
       const st = L.stops || {}, one = stop && stop[0] === stop[1] ? label : "";
-      spec.per = focals.map(f => { const lab = st[String(f)] || one; return { f, label: lab, n: lab ? parseFloat(lab.replace(/^[^\d]*/, "")) : null }; });
+      spec.per = focals.map((f, i) => { const lab = st[String(f)] || one; return { f, z: zooms ? zooms[i] : null, label: lab, n: lab ? parseFloat(lab.replace(/^[^\d]*/, "")) : null }; });
     }
   }
   LENS_SPEC.set(it, spec);
@@ -2965,7 +3046,7 @@ function lensMod(it, sp) {
     const at = (f, lab) => t[keyOf(fmtN(f), lab)] || "";
     if (!sp) { const v = Object.values(t); if (v.length === 1) out = { one: v[0] }; }
     else if (sp.zoom) { const k = keyOf(fmtN(sp.zoom[0]) + "-" + fmtN(sp.zoom[1]), sp.label); if (k) out = { one: t[k], macro: mac[k] || "" }; }
-    else if (sp.per) { const per = {}; for (const x of sp.per) { const v = at(x.f, x.label); if (v) per[x.f] = v; } if (Object.keys(per).length) out = { per }; }
+    else if (sp.per) { const per = {}; for (const x of sp.per) { const v = x.z ? t[keyOf(fmtN(x.z[0]) + "-" + fmtN(x.z[1]), x.label)] || "" : at(x.f, x.label); if (v) per[x.f] = v; } if (Object.keys(per).length) out = { per }; }
     else { const k = keyOf(fmtN(sp.focals[0]), sp.label); if (k) out = { one: t[k], macro: mac[k] || "" }; }  // a prime with a macro setting (the Sony 100 STF) gets it too
   }
   LENS_MOD_OF.set(it, out);
@@ -2976,8 +3057,8 @@ const modText = m => m && m.one ? m.one + (m.macro ? ` (macro ${m.macro})` : "")
 const lensType = sp => sp.zoom ? "zoom" : sp.set ? "set" : "prime";
 /* the Lens type menu: spherical and anamorphic, each as primes, sets or zooms, then the specialty lenses */
 const KINDS = [
-  ["Spherical", [["sph", "All spherical", sp => !sp.ana], ["sph-prime", "Spherical primes", sp => !sp.ana && lensType(sp) !== "zoom"], ["sph-zoom", "Spherical zooms", sp => !sp.ana && lensType(sp) === "zoom"]]],
-  ["Anamorphic", [["ana", "All anamorphic", sp => sp.ana], ["ana-prime", "Anamorphic primes", sp => sp.ana && lensType(sp) !== "zoom"], ["ana-zoom", "Anamorphic zooms", sp => sp.ana && lensType(sp) === "zoom"]]],
+  ["Spherical", [["sph", "All spherical", sp => !sp.ana], ["sph-prime", "Spherical primes", sp => !sp.ana && lensType(sp) !== "zoom" && !sp.zooms], ["sph-zoom", "Spherical zooms", sp => !sp.ana && (lensType(sp) === "zoom" || !!sp.zooms)]]],
+  ["Anamorphic", [["ana", "All anamorphic", sp => sp.ana], ["ana-prime", "Anamorphic primes", sp => sp.ana && lensType(sp) !== "zoom" && !sp.zooms], ["ana-zoom", "Anamorphic zooms", sp => sp.ana && (lensType(sp) === "zoom" || !!sp.zooms)]]],
   ["Specialty", [["probe", "Probe lenses", sp => sp.probe], ["macro", "Macro", sp => sp.macro], ["tilt", "Tilt & shift", sp => sp.tilt], ["fisheye", "Fisheye", sp => sp.fisheye]]]];
 /* primes cover single lenses and the lenses in sets alike (an older "sets" choice reads as primes) */
 const finList = v => String(v || "").split("|").filter(Boolean);  // a finder choice: one value, or several joined by |
@@ -2992,6 +3073,7 @@ function stopGap(sp, T) {
 }
 function focalFit(sp, F) {
   if (sp.zoom) { const pos = Math.min(sp.zoom[1], Math.max(sp.zoom[0], F)); return { pos, d: Math.abs(Math.log(pos / F)) }; }
+  if (sp.zooms) { let best = null; for (const [a, b] of sp.zooms) { const at = Math.min(b, Math.max(a, F)), d = Math.abs(Math.log(at / F)); if (!best || d < best.d) best = { pos: a, d }; } return best; }  // a kit of zooms: the zoom that reaches it (known by its wide end)
   let pos = sp.focals[0];
   for (const f of sp.focals) if (Math.abs(Math.log(f / F)) < Math.abs(Math.log(pos / F))) pos = f;
   return { pos, d: Math.abs(Math.log(pos / F)) };
@@ -3037,8 +3119,8 @@ function finderMatches(h) {
     const lens = sp.per ? sp.per.find(x => x.f === pos) : null, one = lens && lens.n ? { stop: [lens.n, lens.n] } : null;
     const g = stopGap(one || sp, T), ranged = !one && !!(sp.stop && stopsBetween(sp.stop[1], sp.stop[0]) > 0.34);
     const hit = T != null && g != null && !ranged && Math.abs(g) < 0.08, exactF = d < 0.006;
-    const score = d * 4 + (T == null ? 0 : g == null ? 1.2 : Math.abs(g) + (ranged ? 0.3 : 0)) + (type === "zoom" ? 0.35 : 0);  // a lens in a set counts like a single prime
-    list.push({ id, e, sp, type, pos, d, g, hit, exact: exactF && (T == null || hit) && type !== "zoom", score, label: one ? lens.label : sp.label, ssp: one || sp });
+    const zm = type === "zoom" || !!sp.zooms, score = d * 4 + (T == null ? 0 : g == null ? 1.2 : Math.abs(g) + (ranged ? 0.3 : 0)) + (zm ? 0.35 : 0);  // a lens in a set counts like a single prime
+    list.push({ id, e, sp, type, pos, d, g, hit, exact: exactF && (T == null || hit) && !zm, score, label: one ? lens.label : sp.label, ssp: one || sp });
   }
   return { F, T, list };
 }
@@ -3049,17 +3131,18 @@ function finderCard(p, m, T) {
   const it = m.e.it, sp = m.sp, on = !!p.items[m.id];
   const sc = T == null || m.g == null ? "" : m.hit ? " hit" : Math.abs(m.g) <= 0.7 ? " near" : "";
   const gap = T != null && m.g != null ? gapText(m.g, m.ssp) : "";
-  const meta = [m.type === "set" ? (m.pos != null ? `${m.pos}mm from a ${sp.focals.length}-lens set` : `${sp.focals.length}-lens set`) : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
+  const pn = f => { const x = sp.per && sp.per.find(y => y.f === f); return x ? perMM(x) + "mm" : f + "mm"; };
+  const meta = [m.type === "set" ? sp.zooms ? (m.pos != null ? `${pn(m.pos)} from a ${sp.zooms.length}-zoom kit` : `${sp.zooms.length}-zoom kit`) : (m.pos != null ? `${m.pos}mm from a ${sp.focals.length}-lens set` : `${sp.focals.length}-lens set`) : "", sp.cov, sp.mounts.filter(x => x !== "Other").join("/"), sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "", sp.probe ? "Probe" : sp.tilt ? "Tilt & shift" : sp.macro ? "Macro" : sp.fisheye ? "Fisheye" : ""].filter(Boolean);
   // a tap anywhere on the line opens it to everything about the lens; the link and Add stay where they are
   const open = !!(fin().rows || {})[m.id];
   const md = lensMod(it, sp), cf = md ? md.one ? modText(md) : m.pos != null && md.per ? md.per[m.pos] || "" : "" : "";
   const per = sp.per && md && md.per ? sp.per.map(x => ({ ...x, mod: md.per[x.f] || "" })) : sp.per;
   if (cf) meta.push("CF\u00a0" + cf);
   const facts = [["Covers", COV_LABEL[sp.cov] || sp.cov], ["Mount", sp.mounts.filter(x => x !== "Other").join(", ")],
-    ["Stop", sp.label ? sp.label + (sp.per && m.type === "set" ? " (the set)" : "") : ""],
-    ["Focal length", sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`],
+    ["Stop", sp.label ? sp.label + (sp.per && m.type === "set" ? sp.zooms ? " (the kit)" : " (the set)" : "") : ""],
+    ["Focal length", sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.zooms ? `${sp.zooms.length} zooms, ${fmtN(sp.zooms[0][0])}–${fmtN(sp.zooms[sp.zooms.length - 1][1])}mm` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`],
     ["Type", [sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", sp.probe ? "probe" : sp.tilt ? "tilt and shift" : sp.macro ? "macro" : sp.fisheye ? "fisheye" : ""].filter(Boolean).join(", ")],
-    ["Close focus", md ? md.one ? modText(md) : m.pos != null && md.per && md.per[m.pos] ? `${md.per[m.pos]} (the ${m.pos}mm)` : md.per ? "Lens by lens, below" : "" : ""]].filter(([, v]) => v);
+    ["Close focus", md ? md.one ? modText(md) : m.pos != null && md.per && md.per[m.pos] ? `${md.per[m.pos]} (the ${pn(m.pos)})` : md.per ? "Lens by lens, below" : "" : ""]].filter(([, v]) => v);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}${open ? " open" : ""}" data-fcard="${esc(m.id)}">
     <button class="fv-tap" type="button" data-act="fv-row" data-id="${esc(m.id)}" aria-expanded="${open}" aria-label="${open ? "Less" : "More"} about ${esc(it.name)}"></button>
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
@@ -3071,7 +3154,7 @@ function finderCard(p, m, T) {
     <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
       <dl>${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-      ${sp.per ? `<span class="f-set"><span class="f-set-h">Lens by lens${md && md.per ? " · stop · close focus" : ""}</span>${perHtml(per, m.pos)}</span>` : ""}
+      ${sp.per ? `<span class="f-set"><span class="f-set-h">${sp.zooms ? "Zoom by zoom" : "Lens by lens"}${md && md.per ? " · stop · close focus" : ""}</span>${perHtml(per, m.pos)}</span>` : ""}
       ${noteOf(m.id) ? `<span class="inote">${esc(noteOf(m.id))}</span>` : ""}
     </span></span></span>
   </li>`;
@@ -4271,8 +4354,8 @@ function lcRowsOf(p) {
     if (!sp && p.browse && !lensMod(it, null)) { ones.push({ name: l.name || it.name, q, mm: "", t: "", cf: l.cf || "", macro: "" }); continue; }
     if (!sp) { const md0 = lensMod(it, null); if (md0) ones.push({ name: it.name.replace(/\s*\([^)]*mount[^)]*\)/i, ""), q, mm: "", t: "", cf: md0.one || "", macro: "" }); continue; }  // Master Macro 100: no "mm" in its name
     const md = lensMod(it, sp), nm = lensShortName(it, sp);
-    if (sp.per) sets.push({ name: nm.replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
-      lenses: sp.per.map(x => ({ mm: fmtN(x.f), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
+    if (sp.per) sets.push({ name: nm.replace(/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm(?:\s*\/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm)+/gi, " ").replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
+      lenses: sp.per.map(x => ({ mm: perMM(x), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
     else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
       ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || (p.browse && sp.focals ? lcStopOf(l.name, sp.focals[0]) : ""), cf: (md ? md.one || "" : "") || l.cf || "", macro: md && md.macro || "" }); }
   }
@@ -5141,6 +5224,28 @@ function viewList(p, h) {
     <div id="listSecs">${sections}</div>
     <div class="section"><button class="add-head big" type="button" data-act="new-section">+ New section</button></div>
   </section>`;
+}
+/* the Camera List after a + or −: only the lines that changed are drawn again, with their section's count and the totals,
+   so the page stays still under the finger. When a line comes or goes, or a warning changes, the whole page is drawn again. */
+const listSig = p => Object.keys(p.items).sort().join("|") + "#" + coverageIssues(p).map(issueText).join("|") + "#" + clashIssues(p).map(clashPair).join("|");
+const lineSnap = p => Object.fromEntries(Object.entries(p.items).map(([k, l]) => [k, JSON.stringify(l)]));
+function listQty(p, fn) {
+  const sig = listSig(p), was = lineSnap(p);
+  fn();
+  const wrap = typeof document !== "undefined" && document.getElementById("listSecs");
+  if (!wrap || app.view !== "production" || app.tab !== "list" || document.getElementById("modal") || listSig(p) !== sig) { rerenderKeepScroll(); return; }
+  const now = lineSnap(p), secs = new Set();
+  for (const id of Object.keys(now)) {
+    if (now[id] === was[id]) continue;
+    const li = wrap.querySelector(`li.line[data-line="${CSS.escape(id)}"]`);
+    if (!li) { rerenderKeepScroll(); return; }
+    const tmp = document.createElement("ul"); tmp.innerHTML = lineHtml(p, id, p.items[id]);
+    const nl = tmp.firstElementChild; nl.className = li.className; nl.hidden = li.hidden;
+    li.replaceWith(nl);
+    const sec = nl.closest(".section[data-sec]"); if (sec) secs.add(sec);
+  }
+  if (secs.size) { const by = linesBySection(p); for (const sec of secs) { const rows = by[sec.dataset.sec] || [], c = sec.querySelector("h3 .cnt"); if (c) c.textContent = rows.length ? `${rows.length} · ${rows.reduce((a, [, l]) => a + lineQty(l), 0)} pcs` : ""; } }
+  refreshRows(p, []); txSync();
 }
 /* the Cam list search: hide lines that don't match, and sections left empty */
 function applyListFilter() {
@@ -6116,8 +6221,8 @@ document.addEventListener("click", e => {
     case "linc": case "ldec": {
       const l = p.items[id]; if (!l) break;
       const cur0 = f ? l[f] : lineQty(l);
-      setQty(p, id, cur0 + (act === "linc" ? 1 : -1), f);
-      rerenderKeepScroll(); if (!f) txOpenFor(p, id, "l"); popQty("l", id, f);
+      listQty(p, () => setQty(p, id, cur0 + (act === "linc" ? 1 : -1), f));
+      if (!f) txOpenFor(p, id, "l"); popQty("l", id, f);
       break;
     }
     case "remove": {
@@ -6278,7 +6383,7 @@ document.addEventListener("click", e => {
         if (i < 0) { app.productions.push(r); add++; schedule(r.id); }
         else if ((r.updatedAt || 0) > (app.productions[i].updatedAt || 0)) { app.productions[i] = r; upd++; schedule(r.id); }
       }
-      for (const r of d.productions) for (const l of Object.values(r.items || {})) wlFix(l);
+      for (const r of d.productions) upData(r, "production");
       lsSave(); render(); toast(add || upd ? `${add} list${add === 1 ? "" : "s"} added${upd ? `, ${upd} updated` : ""}` : "Nothing new in that file: you already have these lists");
       break;
     }
@@ -6439,7 +6544,7 @@ document.addEventListener("change", e => {
   if (!p) return;
   const f = t.dataset.f;
   if (t.dataset.cqty) { const ids = setQty(p, t.dataset.cqty, t.value, p.items[t.dataset.cqty] ? f : undefined); if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids); return; }
-  if (t.dataset.lqty) { setQty(p, t.dataset.lqty, t.value, f); rerenderKeepScroll(); return; }
+  if (t.dataset.lqty) { listQty(p, () => setQty(p, t.dataset.lqty, t.value, f)); return; }
   if (t.dataset.kqty) { const { l, c } = kidRef(p, t.dataset.kqty); if (c) { c.qty = clampQ(t.value); if (!c.qty) l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); } return; }
   if (t.dataset.ename) {  // a line renamed: its catalog item takes the name too, for the next lists
     const id = t.dataset.ename, l = p.items[id], e = ITEM.get(id);
@@ -7018,13 +7123,15 @@ document.addEventListener("keydown", e => {
 
 /* ---------- start ---------- */
 app.productions = lsGet(LS_KEY, []);
-for (const pr of app.productions) for (const l of Object.values(pr.items || {})) wlFix(l);
 if (!Array.isArray(app.productions)) app.productions = [];
+for (const pr of app.productions) upData(pr, "production");
 {
   const s = lsGet(LS_SET, null);
   if (s && typeof s === "object") app.settings = { favorites: {}, rules: [], ...s };
   else Object.assign(app.settings, { catalog: clone(STARTER.catalog), closedBrands: clone(STARTER.closedBrands), catColors: clone(STARTER.catColors) });  // first open: the starting catalog
   if (!app.settings.mediaSeeded) { app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); }
+  upData(app.settings, "settings");
+  setPrevReset();
   applyCatalog();
   const ui = lsGet(LS_UI, {}), recent = ui.at && Date.now() - ui.at < RESUME_MS;
   if (recent && ui.view === "production" && app.productions.some(p => p.id === ui.pid)) { app.view = "production"; app.pid = ui.pid; app.tab = ["add", "fav", "list", "media"].includes(ui.tab) ? ui.tab : "add"; }
@@ -7144,7 +7251,7 @@ function statsSend(force) {
   statsSent = Date.now(); statsDirty = false;
   const u = window.AC_AUTH && window.AC_AUTH.user ? window.AC_AUTH.user() : null;
   S.write({ name: (app.settings.me || {}).name || "", account: u ? u.name || "" : "", signedIn: !!u, lists: app.productions.filter(p => !p.mainOf).length, updated: Date.now(),
-    dev: { [stats.dev]: { mins: stats.mins, exports: stats.exports, shares: stats.shares, made: Object.keys(stats.seen).length, days: Object.keys(stats.days).length, first: stats.first, last: Date.now(), ver: window.AC_BUILD || "" } } });
+    dev: { [stats.dev]: { mins: stats.mins, exports: stats.exports, shares: stats.shares, made: Object.keys(stats.seen).length, days: Object.keys(stats.days).length, first: stats.first, last: Date.now(), ver: window.AC_BUILD || "", errs: stats.errs || 0, err: stats.err || null } } });
 }
 function statsTick() {
   if (document.visibilityState === "visible" && Date.now() - statsAct < 120000) { stats.mins++; stats.days[todayIso()] = 1; }
@@ -7157,8 +7264,8 @@ if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && statsOn) statsSend(true); });
 }
 /* the Control room */
-const adminSum = u => { const o = { mins: 0, exports: 0, shares: 0, made: 0, days: 0, first: 0, last: 0, ver: "", devs: 0 };
-  for (const d of Object.values(u.dev || {})) { o.devs++; for (const k of ["mins", "exports", "shares", "made", "days"]) o[k] += d[k] || 0; if (d.first && (!o.first || d.first < o.first)) o.first = d.first; if ((d.last || 0) > o.last) { o.last = d.last; o.ver = d.ver || ""; } }
+const adminSum = u => { const o = { mins: 0, exports: 0, shares: 0, made: 0, days: 0, errs: 0, err: null, first: 0, last: 0, ver: "", devs: 0 };
+  for (const d of Object.values(u.dev || {})) { o.devs++; for (const k of ["mins", "exports", "shares", "made", "days", "errs"]) o[k] += d[k] || 0; if (d.err && (!o.err || d.err.t > o.err.t)) o.err = d.err; if (d.first && (!o.first || d.first < o.first)) o.first = d.first; if ((d.last || 0) > o.last) { o.last = d.last; o.ver = d.ver || ""; } }
   return o; };
 const fmtMins = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
 const fmtAgo = t => { if (!t) return "never"; const d = Math.floor((Date.now() - t) / 864e5); return d <= 0 ? "today" : d === 1 ? "yesterday" : d < 30 ? `${d} days ago` : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
@@ -7179,6 +7286,7 @@ function viewAdmin() {
     ${us.length ? us.map(({ u, s }) => `<div class="ad-user"><div class="ad-top"><b dir="auto">${esc(u.name || u.account || "No name")}</b>${u.uid === window.AC_STATS.uid ? `<span class="ad-tag">you</span>` : ""}<span class="ad-tag${u.signedIn ? " on" : ""}">${u.signedIn ? "signed in" : "no account"}</span><span class="ad-last">${fmtAgo(s.last)}</span></div>
       ${u.account && u.name && u.account !== u.name ? `<div class="ad-sub" dir="auto">${esc(u.account)}</div>` : ""}
       <div class="ad-grid">${cell("Lists now", u.lists || 0)}${cell("Lists made", s.made)}${cell("Exports", s.exports)}${cell("Shared the app", s.shares ? `${s.shares}×` : "no")}${cell("Time in the app", fmtMins(s.mins))}${cell("Days used", s.days)}</div>
+      ${s.errs ? `<div class="ad-err"><b>${s.errs} error${s.errs === 1 ? "" : "s"}</b> · last ${fmtAgo(s.err && s.err.t)}${s.err && s.err.view ? ` on ${esc(s.err.view)}` : ""}${s.err ? `<code dir="ltr">${esc(s.err.m)}</code>` : ""}</div>` : ""}
       <div class="ad-sub">Since ${s.first ? new Date(s.first).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "?"}${s.devs > 1 ? ` · ${s.devs} devices` : ""}${s.ver ? ` · version ${esc(s.ver)}` : ""}</div></div>`).join("") : `<p class="hint">No one has reported yet. Numbers arrive once each user opens the updated app with a connection.</p>`}
     <p class="hint">Counted from the day each user got this version. "Shared the app" counts the app's own Share button only.</p>
     <div class="set-group"><h3>Tools</h3><button class="btn" type="button" data-act="lab-open">Color lab · try colors on the real pages</button></div></section>`;
