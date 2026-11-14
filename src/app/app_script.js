@@ -4139,14 +4139,14 @@ function viewPrep() {
   if (tab === "gear") {
     if (!c.n) body = `<p class="hint">No gear on this list yet. Add it in the list, and it comes here to be checked.</p>`;
     else {
-      const hide = !!app.settings.pcHide;
+      const hide = !!app.settings.pcHide, att = !!app.pcAtt;
       body = `<div class="pc-bar"><div class="pc-prog" role="progressbar" aria-valuemin="0" aria-valuemax="${c.n}" aria-valuenow="${c.ok}" aria-label="Gear checked"><i style="width:${Math.round(c.ok / c.n * 100)}%"></i></div>
-        <span class="pc-cnt"><b class="num" id="pcOk">${c.ok}</b> of <span class="num">${c.n}</span> checked${c.att ? ` · <span class="pc-attn">${c.att} to look at</span>` : ""}</span>
+        <span class="pc-cnt"><b class="num" id="pcOk">${c.ok}</b> of <span class="num">${c.n}</span> checked${c.att ? ` · <button class="pc-attn" type="button" data-act="pc-att">${c.att} to look at</button>` : ""}</span>
         <button class="iconbtn sm" type="button" data-act="pc-hide" aria-pressed="${hide}" aria-label="${hide ? "Show checked items" : "Hide checked items"}" title="${hide ? "Show checked" : "Hide checked"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${hide ? PC_EYE_OFF : PC_EYE}</svg></button>
-        <button class="iconbtn sm" type="button" data-act="pc-reset" aria-label="Uncheck all" title="Uncheck all"${c.ok ? "" : " disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.5 4v4.5H8"/></svg></button></div>
-        ${pcLines(p).map(([s, rows]) => { const okN = rows.filter(([k]) => d.ok[k]).length, shown = hide ? rows.filter(([k]) => !d.ok[k]) : rows;
+        <button class="iconbtn sm pc-attf" type="button" data-act="pc-att" aria-pressed="${att}" aria-label="${att ? "Show all the gear" : "Only the items with a note"}" title="${att ? "Show all" : "Only items with a note"}"${c.att || att ? "" : " disabled"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 10v4.2"/><circle cx="12" cy="17" r=".6" fill="currentColor"/></svg></button></div>
+        ${pcLines(p).map(([s, rows]) => { const okN = rows.filter(([k]) => d.ok[k]).length, shown = rows.filter(([k]) => (!hide || !d.ok[k]) && (!att || (d.note[k] || "").trim()));
           return shown.length ? `<div class="pc-sec"><h3><span>${esc(secName(s.id))}</span><span class="num" data-pcsec="${esc(s.id)}">${okN}/${rows.length}</span></h3><ul class="pc-rows">${shown.map(([k, l]) => pcRowHtml(p, k, l)).join("")}</ul></div>` : ""; }).join("")}
-        ${hide && c.ok === c.n ? `<p class="hint pc-done">Everything is checked.</p>` : ""}`;
+        ${att && !c.att ? `<p class="hint pc-done">No item has a note.</p>` : hide && c.ok === c.n ? `<p class="hint pc-done">Everything is checked.</p>` : ""}`;
     }
   } else if (tab === "todo") {
     const order = [...td.filter(x => !x.done), ...td.filter(x => x.done)];
@@ -4177,7 +4177,6 @@ function pcToggle(id) {
   if (bar) { bar.setAttribute("aria-valuenow", c.ok); bar.firstElementChild.style.width = (c.n ? Math.round(c.ok / c.n * 100) : 0) + "%"; }
   const ok = document.getElementById("pcOk"); if (ok) ok.textContent = c.ok;
   const tabN = document.querySelector('.pc-tabs [data-v="gear"] .num'); if (tabN) tabN.textContent = `${c.ok}/${c.n}`;
-  const rs = document.querySelector('[data-act="pc-reset"]'); if (rs) rs.disabled = !c.ok;
   const sec = row && row.closest(".pc-sec"), sn = sec && sec.querySelector("[data-pcsec]");
   if (sn) sn.textContent = `${sec.querySelectorAll(".pc-row.ok").length}/${sec.querySelectorAll(".pc-row").length}`;
 }
@@ -5893,14 +5892,13 @@ document.addEventListener("click", e => {
     case "cams": closeModal(); app.view = "cams"; app.camCmp = false; render(); window.scrollTo(0, 0); break;
     case "lenscard": closeModal(); app.view = "lenscard"; render(); window.scrollTo(0, 0); break;
     case "prep": closeModal(); app.view = "prep"; app.pcNote = null; render(); window.scrollTo(0, 0); break;
-    case "pc-tab": app.pcTab = b.dataset.v; app.pcNote = null; render(); break;
+    case "pc-tab": app.pcTab = b.dataset.v; app.pcNote = null; app.pcAtt = false; render(); break;
     case "pc-unit": if (findProd(b.dataset.id)) { app.settings.pcList = b.dataset.id; app.pcNote = null; touchSettings(); rerenderKeepScroll(); } break;
     case "pc-ok": pcToggle(b.dataset.id); break;
     case "pc-note": app.pcNote = app.pcNote === b.dataset.id ? null : b.dataset.id; rerenderKeepScroll(); if (app.pcNote) { const t = document.querySelector(".pc-note-in"); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } } break;
     case "pc-note-done": app.pcNote = null; rerenderKeepScroll(); break;
     case "pc-hide": app.settings.pcHide = !app.settings.pcHide; touchSettings(); rerenderKeepScroll(); break;
-    case "pc-reset": { const p = pcCur(), d = pcData(p), was = JSON.stringify(d.ok); if (!Object.keys(d.ok).length) break;
-      d.ok = {}; pcSave(p); rerenderKeepScroll(); undoable("Unchecked", "all the gear", () => { pcData(pcCur()).ok = JSON.parse(was); pcSave(pcCur()); rerenderKeepScroll(); }); break; }
+    case "pc-att": app.pcAtt = !app.pcAtt; app.pcNote = null; rerenderKeepScroll(); break;
     case "pc-add": pcAdd(); break;
     case "pc-do": { const p = pcCur(), d = pcData(p), t = d.todo.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(p); rerenderKeepScroll(); break; }
     case "pc-del": { const p = pcCur(), d = pcData(p), i = d.todo.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
