@@ -7614,6 +7614,8 @@ const okFormSends = el => !!(el.form && el.form.querySelector('button[type="subm
 function okLine(el) {   // does this field get the ✓?
   if (!el || el.tagName !== "INPUT" || !OK_TEXT.test(el.type) || el.readOnly || el.disabled) return false;
   if (el.closest(".stepper, .nsel, .tx-pop") || el.matches(OK_OWN) || okFormSends(el)) return false;
+  // only a long line gets it: a short field (a serial number, a channel, a name in half a row) needs no ✓ (Enter still closes it)
+  if (el.getBoundingClientRect().width < 200 || (el.maxLength > 0 && el.maxLength <= 12)) return false;
   return true;
 }
 function okNext(el) {   // the next line to type in, below this one (in the same form, dialog or page)
