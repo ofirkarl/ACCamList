@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611140949";
+window.AC_BUILD = "202611140956";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2759,6 +2759,29 @@ button, a, label, summary, [data-act], [data-lp] { -webkit-tap-highlight-color: 
 .pc-saved { min-height: 18px; text-align: end; }
 .pc-done { text-align: center; }
 .pc-unit { justify-self: stretch; display: grid; grid-template-columns: 1fr 1fr; }
+/* making a production (new, or a copy) is the one page that wears the rental house picked: its buttons, fields, the picked
+   house and a tint of the page turn that house's color (Utopia orange, Fitussi purple, and whichever house comes next, by its
+   --house-<id> color), and change as another house is picked */
+html[data-house="utopia"] body.form-on { --hc: var(--house-utopia); }
+html[data-house="fitussi"] body.form-on { --hc: var(--house-fitussi); }
+html[data-house] body.form-on { --accent: var(--hc); --accent-fg: #fff; --accent-soft: color-mix(in srgb, var(--hc) 10%, var(--surface));
+  --sf: var(--hc); --sf-ink: color-mix(in srgb, var(--hc) 72%, #000); --sf-tint: color-mix(in srgb, var(--hc) 7%, var(--surface)); --sf-line: color-mix(in srgb, var(--hc) 30%, var(--line)); --sf-on: color-mix(in srgb, var(--hc) 15%, var(--surface));
+  --bg: color-mix(in srgb, var(--hc) 7%, #f8f7f4); }
+html[data-house][data-theme="dark"] body.form-on { --accent-fg: #160d08; --sf-ink: color-mix(in srgb, var(--hc) 80%, #fff); --bg: color-mix(in srgb, var(--hc) 9%, #0f0f14); }
+@media (prefers-color-scheme: dark) { html[data-house]:not([data-theme="light"]) body.form-on { --accent-fg: #160d08; --sf-ink: color-mix(in srgb, var(--hc) 80%, #fff); --bg: color-mix(in srgb, var(--hc) 9%, #0f0f14); } }
+html[data-house] body.form-on, html[data-house] body.form-on .app { background: var(--bg) !important; }
+body.form-on, body.form-on .app, body.form-on .house-opt, body.form-on .btn, body.form-on .iconbtn, body.form-on input, body.form-on textarea, body.form-on .date-btn, body.form-on .cam-bar h2, body.form-on .check { transition: background-color .45s ease, border-color .45s ease, color .45s ease, box-shadow .45s ease; }
+/* every button that picks a rental house wears that house's color, and answers in it when picked; the page around it stays as it is */
+.house-opt { border-color: color-mix(in srgb, var(--hc) 35%, var(--line)); }
+.house-opt b { color: var(--hc); }
+.house-opt[aria-pressed="true"] { border-color: var(--hc); box-shadow: 0 0 0 1px var(--hc), var(--frame-shadow); background: color-mix(in srgb, var(--hc) 10%, var(--surface)); }
+.house-opt:active { background: color-mix(in srgb, var(--hc) 14%, var(--surface)); }
+.house-seg button { color: var(--fg); }
+.house-seg button[aria-pressed="true"] { color: var(--hc); border-color: var(--hc); box-shadow: inset 0 0 0 1px var(--hc); background: color-mix(in srgb, var(--hc) 9%, var(--surface)); }
+.house-seg button:active { background: color-mix(in srgb, var(--hc) 14%, var(--surface)); }
+.browse-card { border-color: color-mix(in srgb, var(--hc) 30%, var(--line)); }
+.browse-card:active { background: color-mix(in srgb, var(--hc) 10%, var(--surface)); border-color: var(--hc); }
+.browse-card .bc-go { color: var(--hc); }
 </style>
 </head>
 <body>
@@ -4618,6 +4641,7 @@ function render() {
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
+  document.body.classList?.toggle("form-on", app.view === "form" && !app.formFor);   // making a production (new, or a copy): the page wears the rental house picked
   document.body.classList?.toggle("nav-on", app.view === "production");
   document.body.classList?.toggle("browse-on", app.view === "browse" || app.view === "lensfind" || app.view === "favs");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
@@ -4747,7 +4771,7 @@ function viewHome(archPage) {
    (a short line under it only where it says something the page doesn't) */
 const pageHead = (title, sub, end) => `<section class="pad" data-keep="head"><div class="cam-bar"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>${title}</h2>${end || "<span></span>"}</div>${sub ? `<p class="pg-sub">${sub}</p>` : ""}</section>`;
 /* a rental house's catalog, to look through without a production: search, filters and stars work; nothing is added here */
-const houseSeg = (act, hid) => `<div class="seg sm house-seg" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="${act}" data-house="${esc(x.id)}" aria-pressed="${x.id === hid}"><span class="hz-dot" style="background:var(--house-${esc(x.id)}, var(--muted))" aria-hidden="true"></span>${esc(x.name.split(" ")[0])}</button>`).join("")}</div>`;
+const houseSeg = (act, hid) => `<div class="seg sm house-seg" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="${act}" data-house="${esc(x.id)}" aria-pressed="${x.id === hid}" style="--hc:var(--house-${esc(x.id)}, var(--accent))"><span class="hz-dot" style="background:var(--house-${esc(x.id)}, var(--muted))" aria-hidden="true"></span>${esc(x.name.split(" ")[0])}</button>`).join("")}</div>`;
 function viewBrowse() {
   const p = cur(), h = houseById(p.houseId);
   return `${pageHead("Catalogs", `<span>${esc(h.name)} · <span class="num">${houseCount(h)}</span> items · to look through</span>`)}
@@ -4774,7 +4798,7 @@ function viewMcalc() {
 const homeShortcuts = () => { const s = (act, icon, col, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, col, "hs-i")}<span class="hs-t">${t}</span></button>`;
   return `<div class="home-shorts">${s("mcalc", "card", "bar-cyan", "Media calc")}${s("catalogs", "book", "bar-blue", "Catalogs")}${s("favs", "star", "bar-yellow", "Favorites")}${s("tools", "grid", "bar-magenta", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
-    <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
+    <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}" style="--hc:var(--house-${esc(h.id)}, var(--accent))"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
 function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
@@ -4831,7 +4855,7 @@ function viewForm() {
   const me = app.settings.me || {};
   const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "", ...(app.formHouse && houseById(app.formHouse) ? { houseId: app.formHouse } : {}) }));
   const hasItems = (editing || src) && totals(editing || src).lines > 0;
-  const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
+  const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" style="--hc:var(--house-${esc(h.id)}, var(--accent))" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
   // an old list with a typed-in day count keeps it until its dates are picked again
   const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
   const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;

@@ -1841,6 +1841,7 @@ function render() {
   else { app.view = "home"; v.innerHTML = viewHome(); }
   if (app.view !== "home") { app.sel = null; app.justWelcomed = false; }
   document.body.classList?.toggle("welcome-on", app.view === "welcome");
+  document.body.classList?.toggle("form-on", app.view === "form" && !app.formFor);   // making a production (new, or a copy): the page wears the rental house picked
   document.body.classList?.toggle("nav-on", app.view === "production");
   document.body.classList?.toggle("browse-on", app.view === "browse" || app.view === "lensfind" || app.view === "favs");
   // a production wears its rental house's color (Utopia orange, Fitussi purple); home and settings stay indigo
@@ -1970,7 +1971,7 @@ function viewHome(archPage) {
    (a short line under it only where it says something the page doesn't) */
 const pageHead = (title, sub, end) => `<section class="pad" data-keep="head"><div class="cam-bar"><button class="iconbtn cb-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><h2>${title}</h2>${end || "<span></span>"}</div>${sub ? `<p class="pg-sub">${sub}</p>` : ""}</section>`;
 /* a rental house's catalog, to look through without a production: search, filters and stars work; nothing is added here */
-const houseSeg = (act, hid) => `<div class="seg sm house-seg" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="${act}" data-house="${esc(x.id)}" aria-pressed="${x.id === hid}"><span class="hz-dot" style="background:var(--house-${esc(x.id)}, var(--muted))" aria-hidden="true"></span>${esc(x.name.split(" ")[0])}</button>`).join("")}</div>`;
+const houseSeg = (act, hid) => `<div class="seg sm house-seg" role="group" aria-label="Rental house">${HOUSES.map(x => `<button type="button" data-act="${act}" data-house="${esc(x.id)}" aria-pressed="${x.id === hid}" style="--hc:var(--house-${esc(x.id)}, var(--accent))"><span class="hz-dot" style="background:var(--house-${esc(x.id)}, var(--muted))" aria-hidden="true"></span>${esc(x.name.split(" ")[0])}</button>`).join("")}</div>`;
 function viewBrowse() {
   const p = cur(), h = houseById(p.houseId);
   return `${pageHead("Catalogs", `<span>${esc(h.name)} · <span class="num">${houseCount(h)}</span> items · to look through</span>`)}
@@ -1997,7 +1998,7 @@ function viewMcalc() {
 const homeShortcuts = () => { const s = (act, icon, col, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, col, "hs-i")}<span class="hs-t">${t}</span></button>`;
   return `<div class="home-shorts">${s("mcalc", "card", "bar-cyan", "Media calc")}${s("catalogs", "book", "bar-blue", "Catalogs")}${s("favs", "star", "bar-yellow", "Favorites")}${s("tools", "grid", "bar-magenta", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
-    <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
+    <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}" style="--hc:var(--house-${esc(h.id)}, var(--accent))"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
 function prodMenu(id) {
   const p = app.productions.find(x => x.id === id); if (!p) return;
@@ -2054,7 +2055,7 @@ function viewForm() {
   const me = app.settings.me || {};
   const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "", ...(app.formHouse && houseById(app.formHouse) ? { houseId: app.formHouse } : {}) }));
   const hasItems = (editing || src) && totals(editing || src).lines > 0;
-  const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
+  const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" style="--hc:var(--house-${esc(h.id)}, var(--accent))" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
   // an old list with a typed-in day count keeps it until its dates are picked again
   const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
   const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;
