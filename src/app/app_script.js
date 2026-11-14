@@ -2169,7 +2169,7 @@ function notesFieldHtml(p) {
   return `<div class="field nt-field${open ? " open" : ""}">
     <button class="nt-head" type="button" data-act="nt-toggle" aria-expanded="${open}" aria-controls="ntBody"><span class="lbl">Notes</span><span class="nt-peek" dir="auto">${esc(ntPlain(m).split("\n")[0] || "")}</span>${CHEVS}</button>
     <div class="nt-body" id="ntBody"${open ? "" : " hidden"}>${ntBarHtml()}
-      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" data-ph="Anything the rental house should know. Shown at the bottom of the details on the list." spellcheck="true">${ntHtml(m, false)}</div></div>
+      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" spellcheck="true">${ntHtml(m, false)}</div></div>
     <input type="hidden" name="notes" value="${esc(ntPlain(m))}"><input type="hidden" name="notesRich" value="${esc(JSON.stringify(m))}"></div>`;
 }
 function viewForm() {
@@ -7557,11 +7557,23 @@ function ntState() {
   const sz = cs ? ntSizeOf(cs.fontSize) || "m" : "m";
   for (const [k, on] of [["b", q("bold")], ["i", q("italic")], ["u", q("underline")], ["list", q("insertUnorderedList")], ["s", sz === "s"], ["m", sz === "m"], ["l", sz === "l" || sz === "xl"]]) document.querySelector(`.nt-btn[data-nt="${k}"]`)?.setAttribute("aria-pressed", String(!!on));
 }
+/* where the caret is, as a count of characters from the start, and back (the markup changes under it) */
+function ntCaret(ed) { const sl = getSelection(); if (!sl.rangeCount || !ed.contains(sl.anchorNode)) return null; const r = document.createRange(); r.selectNodeContents(ed); r.setEnd(sl.anchorNode, sl.anchorOffset); return r.toString().length; }
+function ntCaretTo(ed, n) {
+  const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT); let t, last = null;
+  while ((t = w.nextNode())) { last = t; if (n <= t.nodeValue.length) break; n -= t.nodeValue.length; }
+  const r = document.createRange(); if (t) r.setStart(t, n); else if (last) r.setStart(last, last.nodeValue.length); else r.setStart(ed, 0); r.collapse(true);
+  const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r);
+}
 function ntDo(k, v) {
   const ed = ntEd(); if (!ed) return;
   if (document.activeElement !== ed) ed.focus();
   const ex = (c, a) => { try { document.execCommand(c, false, a); } catch (e) {} };
   ex("styleWithCSS", true);
+  // nothing selected: the format is for the whole note, at once (bullets stay with the line the caret is on)
+  const sl = getSelection(), none = !sl.rangeCount || sl.isCollapsed || !ed.contains(sl.anchorNode);
+  let back = null;
+  if (none && k !== "list" && ed.textContent.trim()) { back = ntCaret(ed); const r = document.createRange(); r.selectNodeContents(ed); sl.removeAllRanges(); sl.addRange(r); }
   if (k === "b") ex("bold"); else if (k === "i") ex("italic"); else if (k === "u") ex("underline");
   else if (k === "s" || k === "m" || k === "l") {   // the browser's biggest size marks the words, then each mark takes our own size
     ex("fontSize", "7");
@@ -7573,6 +7585,7 @@ function ntDo(k, v) {
   else if (k === "font") ex("fontName", NT_FONTS[v] ? NT_FONTS[v][1] : NT_FONTS.sans[1]);
   else if (k === "color") { ex("foreColor", v); document.querySelector(".nt-btn[data-nt=color]")?.style.setProperty("--nt-c", v); }
   else if (k === "mark") { ex("hiliteColor", v === "none" ? "transparent" : v); if (v !== "none") document.querySelector(".nt-btn[data-nt=mark]")?.style.setProperty("--nt-h", v); }
+  if (back !== null) ntCaretTo(ed, back);   // the caret back where it was
   buzz("tap"); ntSync();
 }
 if (typeof document !== "undefined" && document.addEventListener) {

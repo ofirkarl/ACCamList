@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611141135";
+window.AC_BUILD = "202611141141";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2689,9 +2689,10 @@ input.ok-pad.ok-rtl { padding-inline-start: 38px !important; }
 .nt-field.open .nt-head { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .nt-field.open .nt-head .chevs { transform: rotate(180deg); }
 .nt-body { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 14px 14px; background: var(--surface); padding: 6px 8px 8px; display: grid; gap: 6px; }
-.nt-bar-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.nt-grp { display: inline-flex; gap: 1px; padding: 1px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
-.nt-btn { position: relative; display: grid; place-items: center; width: 28px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.nt-bar-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; min-width: 0; }
+.nt-grp { display: flex; flex: 3 1 0; min-width: 0; gap: 1px; padding: 1px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.nt-grp:last-child { flex-grow: 2; }
+.nt-btn { position: relative; display: grid; place-items: center; flex: 1 1 0; min-width: 0; width: auto; height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nt-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
 .nt-btn:active { transform: scale(.93); }
 .nt-gl { font-size: 16px; line-height: 1; font-style: normal; text-decoration: none; }
@@ -2702,11 +2703,10 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 .nt-a1 { font-size: 11px; } .nt-a2 { font-size: 15px; } .nt-a3 { font-size: 19px; }
 .nt-ff { font-family: Georgia, serif; font-size: 15px; }
 .nt-col { position: relative; font-weight: 700; padding-bottom: 3px; }
-.nt-btn .nt-bar { position: absolute; left: 7px; right: 7px; bottom: 5px; height: 3px; border-radius: 2px; }
+.nt-btn .nt-bar { position: absolute; left: 22%; right: 22%; bottom: 5px; height: 3px; border-radius: 2px; }
 .nt-btn[data-nt="mark"] svg { margin-bottom: 3px; }
 .nt-ed { min-height: 96px; max-height: 50vh; overflow: auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: #18171d; font-family: Arial, Helvetica, sans-serif; font-size: 16px; line-height: 1.45; outline: none; overflow-wrap: anywhere; }
 .nt-ed:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
-.nt-ed.empty::before { content: attr(data-ph); color: #8b8894; pointer-events: none; position: absolute; }
 .nt-ed ul { margin: 2px 0; padding-inline: 22px; }
 .nt-pop { position: fixed; z-index: 80; overflow: hidden; pointer-events: none; }
 .nt-pop-in { pointer-events: auto; display: flex; gap: 6px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--raise-shadow); transform: translateY(-110%); transition: transform .45s cubic-bezier(.2, .8, .2, 1); }
@@ -4908,7 +4908,7 @@ function notesFieldHtml(p) {
   return `<div class="field nt-field${open ? " open" : ""}">
     <button class="nt-head" type="button" data-act="nt-toggle" aria-expanded="${open}" aria-controls="ntBody"><span class="lbl">Notes</span><span class="nt-peek" dir="auto">${esc(ntPlain(m).split("\n")[0] || "")}</span>${CHEVS}</button>
     <div class="nt-body" id="ntBody"${open ? "" : " hidden"}>${ntBarHtml()}
-      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" data-ph="Anything the rental house should know. Shown at the bottom of the details on the list." spellcheck="true">${ntHtml(m, false)}</div></div>
+      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" spellcheck="true">${ntHtml(m, false)}</div></div>
     <input type="hidden" name="notes" value="${esc(ntPlain(m))}"><input type="hidden" name="notesRich" value="${esc(JSON.stringify(m))}"></div>`;
 }
 function viewForm() {
@@ -10296,11 +10296,23 @@ function ntState() {
   const sz = cs ? ntSizeOf(cs.fontSize) || "m" : "m";
   for (const [k, on] of [["b", q("bold")], ["i", q("italic")], ["u", q("underline")], ["list", q("insertUnorderedList")], ["s", sz === "s"], ["m", sz === "m"], ["l", sz === "l" || sz === "xl"]]) document.querySelector(`.nt-btn[data-nt="${k}"]`)?.setAttribute("aria-pressed", String(!!on));
 }
+/* where the caret is, as a count of characters from the start, and back (the markup changes under it) */
+function ntCaret(ed) { const sl = getSelection(); if (!sl.rangeCount || !ed.contains(sl.anchorNode)) return null; const r = document.createRange(); r.selectNodeContents(ed); r.setEnd(sl.anchorNode, sl.anchorOffset); return r.toString().length; }
+function ntCaretTo(ed, n) {
+  const w = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT); let t, last = null;
+  while ((t = w.nextNode())) { last = t; if (n <= t.nodeValue.length) break; n -= t.nodeValue.length; }
+  const r = document.createRange(); if (t) r.setStart(t, n); else if (last) r.setStart(last, last.nodeValue.length); else r.setStart(ed, 0); r.collapse(true);
+  const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r);
+}
 function ntDo(k, v) {
   const ed = ntEd(); if (!ed) return;
   if (document.activeElement !== ed) ed.focus();
   const ex = (c, a) => { try { document.execCommand(c, false, a); } catch (e) {} };
   ex("styleWithCSS", true);
+  // nothing selected: the format is for the whole note, at once (bullets stay with the line the caret is on)
+  const sl = getSelection(), none = !sl.rangeCount || sl.isCollapsed || !ed.contains(sl.anchorNode);
+  let back = null;
+  if (none && k !== "list" && ed.textContent.trim()) { back = ntCaret(ed); const r = document.createRange(); r.selectNodeContents(ed); sl.removeAllRanges(); sl.addRange(r); }
   if (k === "b") ex("bold"); else if (k === "i") ex("italic"); else if (k === "u") ex("underline");
   else if (k === "s" || k === "m" || k === "l") {   // the browser's biggest size marks the words, then each mark takes our own size
     ex("fontSize", "7");
@@ -10312,6 +10324,7 @@ function ntDo(k, v) {
   else if (k === "font") ex("fontName", NT_FONTS[v] ? NT_FONTS[v][1] : NT_FONTS.sans[1]);
   else if (k === "color") { ex("foreColor", v); document.querySelector(".nt-btn[data-nt=color]")?.style.setProperty("--nt-c", v); }
   else if (k === "mark") { ex("hiliteColor", v === "none" ? "transparent" : v); if (v !== "none") document.querySelector(".nt-btn[data-nt=mark]")?.style.setProperty("--nt-h", v); }
+  if (back !== null) ntCaretTo(ed, back);   // the caret back where it was
   buzz("tap"); ntSync();
 }
 if (typeof document !== "undefined" && document.addEventListener) {
