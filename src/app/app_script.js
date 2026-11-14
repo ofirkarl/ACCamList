@@ -323,7 +323,8 @@ Object.assign(TAPE_ICONS, {
   book: '<path d="M5 4.5h9.5a3 3 0 0 1 3 3v12.5H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/>',
   idcard: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><rect x="5.8" y="8.3" width="4.6" height="4.6" rx="1"/><path d="M13 9h5M13 12h3.5M5.8 15.8h12.2"/>'
 });
-const tile = (icon, col, cls) => `<span class="tl-c${cls ? " " + cls : ""}" style="--tape:var(--pal-${col})" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[icon]}</svg></span>`;
+// one color for every icon tile: the app's own (Ofir: no spread of colors that aren't the palette's)
+const tile = (icon, cls) => `<span class="tl-c${cls ? " " + cls : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[icon]}</svg></span>`;
 function catTape(c) {
   const v = (app.settings.catColors || {})[c.id];
   if (isHex(v)) return v;
@@ -2105,8 +2106,8 @@ function viewMcalc() {
     <div class="tabpane">${viewMedia(p, h, !id)}</div>`;
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
-const homeShortcuts = () => { const s = (act, icon, col, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, col, "hs-i")}<span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", "card", "bar-cyan", "Media calc")}${s("catalogs", "book", "bar-blue", "Catalogs")}${s("favs", "star", "bar-yellow", "Favorites")}${s("tools", "grid", "bar-magenta", "More tools")}</div>`; };
+const homeShortcuts = () => { const s = (act, icon, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, "hs-i")}<span class="hs-t">${t}</span></button>`;
+  return `<div class="home-shorts">${s("mcalc", "card", "Media calc")}${s("catalogs", "book", "Catalogs")}${s("favs", "star", "Favorites")}${s("tools", "grid", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}" style="--hc:var(--house-${esc(h.id)}, var(--accent))"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -3742,7 +3743,7 @@ function viewFavorites(p, h) {
       ${keys.length > 1 ? allBtn("fav-all", anyOpen) : ""}</div>
     <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
     <div class="fav-group" data-fg="star">
-      ${starred || typed ? starred + typed : `<p class="hint fav-empty">${tile("star", "amber", "fe-t")}<span>Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</span></p>`}</div>
+      ${starred || typed ? starred + typed : `<p class="hint fav-empty">${tile("star", "fe-t")}<span>Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</span></p>`}</div>
   </section>`;
 }
 /* a category block in Favorites: tap its heading to close or open it, like the Camera List sections */
@@ -4036,7 +4037,7 @@ function mediaCamHtml(p, id) {
   }
   const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
-    ${free ? mcFreeHead(list, id) : `<h3 class="mc-name">${tile("cam", "red", "mc-t")}<span class="mc-nm">${esc(l.name)}</span>${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}${unitTag ? `<span class="mc-unit">${unitTag}</span>` : ""}</h3>`}
+    ${free ? mcFreeHead(list, id) : `<h3 class="mc-name">${tile("cam", "mc-t")}<span class="mc-nm">${esc(l.name)}</span>${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}${unitTag ? `<span class="mc-unit">${unitTag}</span>` : ""}</h3>`}
     <div class="mc-set">${free ? pair(tap("cam", "Camera", esc(e.it.name)), "", "cam") : ""}${set}</div>
     <div class="mc-media">${media}<div class="mc-res" aria-live="polite"><div><span class="t-l">Per card</span><b>${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="t-l">Total</span><b>${total}</b></div></div></div>
   </div>`;
@@ -4203,14 +4204,14 @@ const CAM_COPY_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const TRASH_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
 const COLS_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>`;
 function viewTools() {
-  const row = (act, icon, col, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, col, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
+  const row = (act, icon, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
   return `${pageHead("More tools")}
     <section class="pad tools-list">
-      ${row("cams", "idcard", "bar-red", "Multicam management", "Each camera's setup, and its card")}
-      ${row("lensfind", "lens", "bar-green", "Find a lens", "By focal length, per rental house")}
-      ${row("prep", "list", "bar-blue", "Prep Checklist", "Check the gear, your to-dos, and notes")}
-      ${row("lenscard", "file", "bar-yellow", "Lens Cards", "Your list's lenses and close focus, to print")}
-      ${row("rules-open", "box", "bar-cyan", "Packages", "Items that come in together", ` data-to="pkg"`)}
+      ${row("cams", "idcard", "Multicam management", "Each camera's setup, and its card")}
+      ${row("lensfind", "lens", "Find a lens", "By focal length, per rental house")}
+      ${row("prep", "list", "Prep Checklist", "Check the gear, your to-dos, and notes")}
+      ${row("lenscard", "file", "Lens Cards", "Your list's lenses and close focus, to print")}
+      ${row("rules-open", "box", "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
 }
 
@@ -4846,7 +4847,7 @@ function viewCams() {
   const head = pageHead("Multicam management", "", list.length > 1 ? `<button class="iconbtn cb-cmp" type="button" data-act="cam-cmp" aria-pressed="${cmp}" aria-label="Compare the cameras" title="Compare">${COLS_ICON}</button>` : "");
   // the lists, folded: one row with their names; open, the lists to tick, their dates and what each unit's list holds (no list: a name and a date)
   const fv = id ? named.map(x => `<bdi>${esc(x.name || "Untitled production")}</bdi>`).join(" + ") : `<span class="cf-ph">None</span>${M.name ? ` · <bdi>${esc(M.name)}</bdi>` : ""}`;
-  const fold = `<button type="button" class="cam-fold${open ? " open" : ""}" data-act="cam-fold" aria-expanded="${open}" aria-controls="cam-fp">${tile("list", "indigo", "cf-t")}<span class="cf-l">List${named.length > 1 ? "s" : ""}</span><span class="cf-v">${fv}</span>${caret(open)}</button>`;
+  const fold = `<button type="button" class="cam-fold${open ? " open" : ""}" data-act="cam-fold" aria-expanded="${open}" aria-controls="cam-fp">${tile("list", "cf-t")}<span class="cf-l">List${named.length > 1 ? "s" : ""}</span><span class="cf-v">${fv}</span>${caret(open)}</button>`;
   let panel = "";
   if (open) {
     const at = x => { const i = (app.camFoldOrder || []).indexOf(x.id); return i < 0 ? 1e9 : i; };
@@ -4933,9 +4934,9 @@ if (typeof document !== "undefined" && document.addEventListener) {
 }
 /* Multicam's field names, each with a small tile: the crew blue, how it records red (the cameras' color), media sky,
    wireless video olive (the monitors'), focus teal, notes slate */
-const CAM_LT = { "Camera operator": ["person", "indigo"], "Focus puller": ["person", "indigo"], Codec: ["film", "red"], "Frame rate": ["clock", "red"],
-  "Sensor coverage": ["frame", "red"], "File resolution": ["file", "red"], Media: ["card", "sky"], "Wireless video": ["signal", "olive"], Focus: ["knob", "teal"], Notes: ["tag", "slate"] };
-const camLt = label => CAM_LT[label] ? tile(CAM_LT[label][0], CAM_LT[label][1], "lt") : "";
+const CAM_LT = { "Camera operator": "person", "Focus puller": "person", Codec: "film", "Frame rate": "clock",
+  "Sensor coverage": "frame", "File resolution": "file", Media: "card", "Wireless video": "signal", Focus: "knob", Notes: "tag" };
+const camLt = label => CAM_LT[label] ? tile(CAM_LT[label], "lt") : "";
 const NONE_PV = `<span class="cr-none">None</span>`;   // wireless video or focus set to none on purpose
 function camFormHtml(p, c) {
   const v = camVals(p, c), e = camE(c), k = esc(c.k), has = !!(e || c.name);
@@ -5199,7 +5200,7 @@ function viewCamPrint() {
     </section>`;
   }
   const seg = (k, v, t, sub, ic) => `<button type="button" data-act="cp-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${ic || ""}${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
-  const what = `<div class="seg cp-seg cp-what">${seg("what", "cards", "Cards", "One per camera", tile("idcard", "red", "lt"))}${seg("what", "table", "Table", "All on one page", tile("grid", "indigo", "lt"))}</div>`;
+  const what = `<div class="seg cp-seg cp-what">${seg("what", "cards", "Cards", "One per camera", tile("idcard", "lt"))}${seg("what", "table", "Table", "All on one page", tile("grid", "lt"))}</div>`;
   setTimeout(() => camPdfPrep(p), 400);  // made ahead, so Save and Share are ready at a tap
   if (o.what === "table") return `${head}
     <section class="pad cam-out">${what}

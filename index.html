@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611141159";
+window.AC_BUILD = "202611141212";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2284,13 +2284,10 @@ body { overflow-x: clip; }
 .pg-sub { margin: 0 0 2px; text-align: center; font-size: 12px; line-height: 16px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* r31: the tools' color tiles, as the categories have them: a palette color, a line icon on it */
-.tl-c { flex: none; display: inline-grid; place-items: center; color: #fff; background: var(--tape); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 3px 8px -3px color-mix(in srgb, var(--tape) 70%, transparent); }
+/* every icon tile wears one color, the app's action color (14.11: no spread of colors from outside the palette) */
+.tl-c { flex: none; display: inline-grid; place-items: center; color: var(--accent-fg); background: var(--accent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 3px 8px -3px color-mix(in srgb, var(--accent) 70%, transparent); }
 .tl-c svg { display: block; }
-:root[data-theme="dark"] .tl-c { color: #111015; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tl-c { color: #111015; } }
 .hs-btn .tl-c.hs-i, .tool-row .tl-c.hs-i { width: 36px; height: 36px; border-radius: 10px; }
-:root[data-theme="dark"] .hs-btn .tl-c.hs-i, :root[data-theme="dark"] .tool-row .tl-c.hs-i { color: #111015; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hs-btn .tl-c.hs-i, :root:not([data-theme="light"]) .tool-row .tl-c.hs-i { color: #111015; } }
 .hs-btn .tl-c.hs-i svg, .tool-row .tl-c.hs-i svg { width: 20px; height: 20px; }
 .tl-c.lt { border-radius: 5px; box-shadow: none; }
 .tl-c.lt svg { stroke-width: 2.4; }
@@ -2368,10 +2365,6 @@ body { overflow-x: clip; }
 .mc-tile.info { box-shadow: none; background: none; }
 .nsel-btn { box-shadow: 0 1px 2px rgba(24,23,29,.06), 0 6px 14px -10px rgba(24,23,29,.3); }
 .nsel-btn::after { content: ""; flex: none; width: 16px; height: 16px; background: var(--accent); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272.6%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272.6%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E") center/contain no-repeat; }
-/* the tools' icons: the colors of the bars line, one tone (the same palette as the test pattern, never a color of its own) */
-:root { --pal-bar-yellow: #b9a700; --pal-bar-cyan: #0aa5a5; --pal-bar-green: #0f9d4a; --pal-bar-magenta: #b62fb6; --pal-bar-red: #c4202a; --pal-bar-blue: #2b3fd6; }
-:root[data-theme="dark"] { --pal-bar-yellow: #d6c62a; --pal-bar-cyan: #35cfcf; --pal-bar-green: #3fce78; --pal-bar-magenta: #dc6adc; --pal-bar-red: #ee5a62; --pal-bar-blue: #7385ff; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pal-bar-yellow: #d6c62a; --pal-bar-cyan: #35cfcf; --pal-bar-green: #3fce78; --pal-bar-magenta: #dc6adc; --pal-bar-red: #ee5a62; --pal-bar-blue: #7385ff; } }
 /* a tool's name is always in capitals, in the display face */
 .hs-btn .hs-t, .tool-row .tl-t b { font-family: var(--font-display); font-weight: 800; text-transform: uppercase; letter-spacing: .03em; }
 
@@ -2386,8 +2379,6 @@ body { overflow-x: clip; }
 .mc-tile.on .t-v, .mc-card.on > .mc-tile .t-v, .mc-tile.on .t-x, .mc-card.on .t-x { color: var(--sf-ink); }
 .mc-res { padding: 14px 16px; }
 
-/* one group, one color: every tool icon wears the action color */
-.hs-btn .tl-c.hs-i, .tool-row .tl-c.hs-i { background: var(--accent); color: var(--accent-fg); }
 /* Color lab: a small floating panel over the real pages */
 /* ── THE PALETTE (chosen 13.11): one color and its opposite. Cyan-blue for everything you press or choose, its very light tint for
    the choice fields, and vermilion, the opposite hue, in one place a page (the answer). A rental house keeps its color in its dot
@@ -2411,6 +2402,7 @@ body { overflow-x: clip; }
 .pad > .hint, .pad > p.hint, .section-empty, .pg-sub { text-shadow: 0 0 6px var(--bg), 0 0 2px var(--bg); }
 /* a tool's name is never cut: two words go on two lines, every tile the same height */
 .hs-btn .hs-t { white-space: normal; overflow: visible; text-overflow: clip; text-align: center; font-size: 10px; line-height: 12px; letter-spacing: .02em; min-height: 24px; display: grid; align-content: center; overflow-wrap: normal; word-break: keep-all; }
+.hs-btn .tl-c.hs-i, .tool-row .tl-c.hs-i { background: var(--accent); color: var(--accent-fg); }  /* the tool icons: solid, in the action color */
 .hs-btn .tl-c.hs-i, .tool-row .tl-c.hs-i { box-shadow: 0 4px 10px -4px color-mix(in srgb, var(--accent) 60%, transparent); }  /* the glow in the icon's own color, not an old one */
 @media (max-width: 345px) { .hs-btn .hs-t { font-size: 9px; letter-spacing: 0; } }
 /* a list line: its name never runs under the small tools at its corner, and a wireless set takes one row like any item */
@@ -2721,6 +2713,9 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 /* Multicam's swipe: the page in front over the next one, which waits a little smaller and comes up as the front slides away */
 .cam-page.cam-front { position: relative; z-index: 2; background: var(--bg); box-shadow: 0 0 24px -8px rgba(24, 23, 29, .35); border-radius: 18px; will-change: transform; }
 .cam-under { position: absolute; z-index: 1; margin: 0; box-sizing: border-box; transform-origin: 50% 30%; transform: scale(.94); opacity: .55; pointer-events: none; }
+/* a field's label icon (Multicam and the like): a plain line icon in the action color, no tile, so a label never reads as a button */
+.tl-c.lt { background: none; color: var(--accent); box-shadow: none; border-radius: 0; width: 15px; height: 15px; }
+.tl-c.lt svg { width: 14px; height: 14px; stroke-width: 2.1; }
 </style>
 </head>
 <body>
@@ -3062,7 +3057,8 @@ Object.assign(TAPE_ICONS, {
   book: '<path d="M5 4.5h9.5a3 3 0 0 1 3 3v12.5H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/>',
   idcard: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><rect x="5.8" y="8.3" width="4.6" height="4.6" rx="1"/><path d="M13 9h5M13 12h3.5M5.8 15.8h12.2"/>'
 });
-const tile = (icon, col, cls) => `<span class="tl-c${cls ? " " + cls : ""}" style="--tape:var(--pal-${col})" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[icon]}</svg></span>`;
+// one color for every icon tile: the app's own (Ofir: no spread of colors that aren't the palette's)
+const tile = (icon, cls) => `<span class="tl-c${cls ? " " + cls : ""}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[icon]}</svg></span>`;
 function catTape(c) {
   const v = (app.settings.catColors || {})[c.id];
   if (isHex(v)) return v;
@@ -4844,8 +4840,8 @@ function viewMcalc() {
     <div class="tabpane">${viewMedia(p, h, !id)}</div>`;
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
-const homeShortcuts = () => { const s = (act, icon, col, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, col, "hs-i")}<span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", "card", "bar-cyan", "Media calc")}${s("catalogs", "book", "bar-blue", "Catalogs")}${s("favs", "star", "bar-yellow", "Favorites")}${s("tools", "grid", "bar-magenta", "More tools")}</div>`; };
+const homeShortcuts = () => { const s = (act, icon, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, "hs-i")}<span class="hs-t">${t}</span></button>`;
+  return `<div class="home-shorts">${s("mcalc", "card", "Media calc")}${s("catalogs", "book", "Catalogs")}${s("favs", "star", "Favorites")}${s("tools", "grid", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}" style="--hc:var(--house-${esc(h.id)}, var(--accent))"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -6481,7 +6477,7 @@ function viewFavorites(p, h) {
       ${keys.length > 1 ? allBtn("fav-all", anyOpen) : ""}</div>
     <p class="empty" id="fqNone" hidden>No favorites match. Try another word.</p>
     <div class="fav-group" data-fg="star">
-      ${starred || typed ? starred + typed : `<p class="hint fav-empty">${tile("star", "amber", "fe-t")}<span>Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</span></p>`}</div>
+      ${starred || typed ? starred + typed : `<p class="hint fav-empty">${tile("star", "fe-t")}<span>Tap ☆ next to any item in Add Gear or in the list to keep it here for quick picking.</span></p>`}</div>
   </section>`;
 }
 /* a category block in Favorites: tap its heading to close or open it, like the Camera List sections */
@@ -6775,7 +6771,7 @@ function mediaCamHtml(p, id) {
   }
   const total = onList && r.per ? fmtDur(r.per * onList) : "–";
   return `<div class="media-cam" id="mc-${u}">
-    ${free ? mcFreeHead(list, id) : `<h3 class="mc-name">${tile("cam", "red", "mc-t")}<span class="mc-nm">${esc(l.name)}</span>${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}${unitTag ? `<span class="mc-unit">${unitTag}</span>` : ""}</h3>`}
+    ${free ? mcFreeHead(list, id) : `<h3 class="mc-name">${tile("cam", "mc-t")}<span class="mc-nm">${esc(l.name)}</span>${lineQty(l) > 1 ? ` <small>× ${lineQty(l)}</small>` : ""}${unitTag ? `<span class="mc-unit">${unitTag}</span>` : ""}</h3>`}
     <div class="mc-set">${free ? pair(tap("cam", "Camera", esc(e.it.name)), "", "cam") : ""}${set}</div>
     <div class="mc-media">${media}<div class="mc-res" aria-live="polite"><div><span class="t-l">Per card</span><b>${r.per ? fmtDur(r.per) : "–"}</b></div><div><span class="t-l">Total</span><b>${total}</b></div></div></div>
   </div>`;
@@ -6942,14 +6938,14 @@ const CAM_COPY_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="non
 const TRASH_ICON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
 const COLS_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16"/></svg>`;
 function viewTools() {
-  const row = (act, icon, col, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, col, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
+  const row = (act, icon, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
   return `${pageHead("More tools")}
     <section class="pad tools-list">
-      ${row("cams", "idcard", "bar-red", "Multicam management", "Each camera's setup, and its card")}
-      ${row("lensfind", "lens", "bar-green", "Find a lens", "By focal length, per rental house")}
-      ${row("prep", "list", "bar-blue", "Prep Checklist", "Check the gear, your to-dos, and notes")}
-      ${row("lenscard", "file", "bar-yellow", "Lens Cards", "Your list's lenses and close focus, to print")}
-      ${row("rules-open", "box", "bar-cyan", "Packages", "Items that come in together", ` data-to="pkg"`)}
+      ${row("cams", "idcard", "Multicam management", "Each camera's setup, and its card")}
+      ${row("lensfind", "lens", "Find a lens", "By focal length, per rental house")}
+      ${row("prep", "list", "Prep Checklist", "Check the gear, your to-dos, and notes")}
+      ${row("lenscard", "file", "Lens Cards", "Your list's lenses and close focus, to print")}
+      ${row("rules-open", "box", "Packages", "Items that come in together", ` data-to="pkg"`)}
     </section>`;
 }
 
@@ -7585,7 +7581,7 @@ function viewCams() {
   const head = pageHead("Multicam management", "", list.length > 1 ? `<button class="iconbtn cb-cmp" type="button" data-act="cam-cmp" aria-pressed="${cmp}" aria-label="Compare the cameras" title="Compare">${COLS_ICON}</button>` : "");
   // the lists, folded: one row with their names; open, the lists to tick, their dates and what each unit's list holds (no list: a name and a date)
   const fv = id ? named.map(x => `<bdi>${esc(x.name || "Untitled production")}</bdi>`).join(" + ") : `<span class="cf-ph">None</span>${M.name ? ` · <bdi>${esc(M.name)}</bdi>` : ""}`;
-  const fold = `<button type="button" class="cam-fold${open ? " open" : ""}" data-act="cam-fold" aria-expanded="${open}" aria-controls="cam-fp">${tile("list", "indigo", "cf-t")}<span class="cf-l">List${named.length > 1 ? "s" : ""}</span><span class="cf-v">${fv}</span>${caret(open)}</button>`;
+  const fold = `<button type="button" class="cam-fold${open ? " open" : ""}" data-act="cam-fold" aria-expanded="${open}" aria-controls="cam-fp">${tile("list", "cf-t")}<span class="cf-l">List${named.length > 1 ? "s" : ""}</span><span class="cf-v">${fv}</span>${caret(open)}</button>`;
   let panel = "";
   if (open) {
     const at = x => { const i = (app.camFoldOrder || []).indexOf(x.id); return i < 0 ? 1e9 : i; };
@@ -7672,9 +7668,9 @@ if (typeof document !== "undefined" && document.addEventListener) {
 }
 /* Multicam's field names, each with a small tile: the crew blue, how it records red (the cameras' color), media sky,
    wireless video olive (the monitors'), focus teal, notes slate */
-const CAM_LT = { "Camera operator": ["person", "indigo"], "Focus puller": ["person", "indigo"], Codec: ["film", "red"], "Frame rate": ["clock", "red"],
-  "Sensor coverage": ["frame", "red"], "File resolution": ["file", "red"], Media: ["card", "sky"], "Wireless video": ["signal", "olive"], Focus: ["knob", "teal"], Notes: ["tag", "slate"] };
-const camLt = label => CAM_LT[label] ? tile(CAM_LT[label][0], CAM_LT[label][1], "lt") : "";
+const CAM_LT = { "Camera operator": "person", "Focus puller": "person", Codec: "film", "Frame rate": "clock",
+  "Sensor coverage": "frame", "File resolution": "file", Media: "card", "Wireless video": "signal", Focus: "knob", Notes: "tag" };
+const camLt = label => CAM_LT[label] ? tile(CAM_LT[label], "lt") : "";
 const NONE_PV = `<span class="cr-none">None</span>`;   // wireless video or focus set to none on purpose
 function camFormHtml(p, c) {
   const v = camVals(p, c), e = camE(c), k = esc(c.k), has = !!(e || c.name);
@@ -7938,7 +7934,7 @@ function viewCamPrint() {
     </section>`;
   }
   const seg = (k, v, t, sub, ic) => `<button type="button" data-act="cp-opt" data-k="${k}" data-v="${v}" aria-pressed="${o[k] === v}"><b>${ic || ""}${t}</b>${sub ? `<span>${sub}</span>` : ""}</button>`;
-  const what = `<div class="seg cp-seg cp-what">${seg("what", "cards", "Cards", "One per camera", tile("idcard", "red", "lt"))}${seg("what", "table", "Table", "All on one page", tile("grid", "indigo", "lt"))}</div>`;
+  const what = `<div class="seg cp-seg cp-what">${seg("what", "cards", "Cards", "One per camera", tile("idcard", "lt"))}${seg("what", "table", "Table", "All on one page", tile("grid", "lt"))}</div>`;
   setTimeout(() => camPdfPrep(p), 400);  // made ahead, so Save and Share are ready at a tap
   if (o.what === "table") return `${head}
     <section class="pad cam-out">${what}
