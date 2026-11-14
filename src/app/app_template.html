@@ -2575,7 +2575,8 @@ button, a, label, summary, [data-act], [data-lp] { -webkit-tap-highlight-color: 
 .pc-attn { border: 0; padding: 0; background: none; font: inherit; color: var(--comp); font-weight: 600; cursor: pointer; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
 .pc-bar .iconbtn { width: 34px; height: 34px; }
 .pc-bar .iconbtn svg { width: 18px; height: 18px; }
-.pc-bar .iconbtn[aria-pressed="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.pc-bar .iconbtn { color: var(--comp); }   /* the two filters: the notes' color, both of them */
+.pc-bar .iconbtn[aria-pressed="true"] { color: var(--comp); background: color-mix(in srgb, var(--comp) 14%, var(--surface)); }
 .pc-sec, .pc-todo { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--frame-shadow); overflow: hidden; }
 .pc-sec h3 { display: flex; justify-content: space-between; align-items: center; margin: 0; padding: 9px 12px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
 .pc-sec h3 .num { letter-spacing: 0; }
@@ -2596,10 +2597,7 @@ button, a, label, summary, [data-act], [data-lp] { -webkit-tap-highlight-color: 
 .pc-row.ok .pc-n > span { color: var(--muted); }
 .pc-todo .pc-row.ok .pc-n > span { text-decoration: line-through; }
 .pc-nt { font-style: normal; font-size: 12.5px; color: var(--comp); font-weight: 600; overflow-wrap: anywhere; }
-/* the mark goes where the language puts it: before an English note, at the end of a Hebrew one (so on its left) */
-.pc-nt::before { content: "! "; }
-.pc-nt:dir(rtl)::before { content: none; }
-.pc-nt:dir(rtl)::after { content: " !"; }
+
 .pc-row.att::before { content: ""; position: absolute; inset: 6px auto 6px 0; width: 3px; border-radius: 0 3px 3px 0; background: var(--comp); }
 .pc-nb { display: grid; place-items: center; width: 40px; height: 40px; margin-inline-end: 4px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
 .pc-nb svg { width: 18px; height: 18px; }
@@ -2636,7 +2634,6 @@ body.form-on, body.form-on .app, body.form-on .house-opt, body.form-on .btn, bod
 .browse-card { border-color: color-mix(in srgb, var(--hc) 30%, var(--line)); }
 .browse-card:active { background: color-mix(in srgb, var(--hc) 10%, var(--surface)); border-color: var(--hc); }
 .browse-card .bc-go { color: var(--hc); }
-.pc-bar .pc-attf[aria-pressed="true"] { color: var(--comp); background: color-mix(in srgb, var(--comp) 14%, var(--surface)); }
 .pc-bar .iconbtn[disabled] { opacity: .35; }
 </style>
 
@@ -2654,6 +2651,8 @@ body.form-on, body.form-on .app, body.form-on .house-opt, body.form-on .btn, bod
 
 <script>
 const DATA = __DATA__;
+// Utopia comes first wherever the houses are listed, and is the default wherever one is needed
+DATA.rental_houses.sort((a, b) => (b.id === "utopia") - (a.id === "utopia"));
 const HOUSES = DATA.rental_houses;
 const SECTIONS = DATA.sections;
 

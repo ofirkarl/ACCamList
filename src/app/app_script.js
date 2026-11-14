@@ -1,4 +1,6 @@
 const DATA = __DATA__;
+// Utopia comes first wherever the houses are listed, and is the default wherever one is needed
+DATA.rental_houses.sort((a, b) => (b.id === "utopia") - (a.id === "utopia"));
 const HOUSES = DATA.rental_houses;
 const SECTIONS = DATA.sections;
 
