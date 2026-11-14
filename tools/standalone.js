@@ -72,11 +72,12 @@
         isAdmin: function () { return window.AC_STATS.check().then(function (r) { return r === 'ok'; }); },
         list: function () { return F.getDocs(F.collection(fs, 'stats')).then(function (x) { return x.docs.map(function (d) { return Object.assign({uid: d.id}, dec(d.data())); }); }); }
       };
-      // data/users/<me>: the lists and settings (users/<uid>/docs); data/users/<me>/f/files: the rental forms' files, in pieces (users/<uid>/files)
+      // data/users/<me>: the lists and settings (users/<uid>/docs); data/users/<me>/f/files: the rental forms' files, in pieces
+      // (users/<uid>/files); data/users/<me>/f/inbox: forms that came by mail, waiting to be filed (users/<uid>/inbox, see mail-forms.gs)
       var mapCol = function (path) {
-        var m = /^data\/users\/([^/]+)(\/f\/files)?$/.exec(path);
+        var m = /^data\/users\/([^/]+)(?:\/f\/(files|inbox))?$/.exec(path);
         if (!m || m[1] !== me) throw {code: 'invalid_argument'};
-        return m[2] ? F.collection(fs, 'users/' + me + '/files') : docsOf(me);
+        return m[2] ? F.collection(fs, 'users/' + me + '/' + m[2]) : docsOf(me);
       };
       var db = {
         collection: function (path) {

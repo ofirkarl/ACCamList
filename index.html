@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611141343";
+window.AC_BUILD = "202611142212";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -91,11 +91,12 @@ window.AC_BUILD = "202611141343";
         isAdmin: function () { return window.AC_STATS.check().then(function (r) { return r === 'ok'; }); },
         list: function () { return F.getDocs(F.collection(fs, 'stats')).then(function (x) { return x.docs.map(function (d) { return Object.assign({uid: d.id}, dec(d.data())); }); }); }
       };
-      // data/users/<me>: the lists and settings (users/<uid>/docs); data/users/<me>/f/files: the rental forms' files, in pieces (users/<uid>/files)
+      // data/users/<me>: the lists and settings (users/<uid>/docs); data/users/<me>/f/files: the rental forms' files, in pieces
+      // (users/<uid>/files); data/users/<me>/f/inbox: forms that came by mail, waiting to be filed (users/<uid>/inbox, see mail-forms.gs)
       var mapCol = function (path) {
-        var m = /^data\/users\/([^/]+)(\/f\/files)?$/.exec(path);
+        var m = /^data\/users\/([^/]+)(?:\/f\/(files|inbox))?$/.exec(path);
         if (!m || m[1] !== me) throw {code: 'invalid_argument'};
-        return m[2] ? F.collection(fs, 'users/' + me + '/files') : docsOf(me);
+        return m[2] ? F.collection(fs, 'users/' + me + '/' + m[2]) : docsOf(me);
       };
       var db = {
         collection: function (path) {
@@ -2760,6 +2761,9 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 .rf-it.diff .rf-st, .rf-it.none .rf-st, .rf-sum .diff, .rf-sum .none { color: color-mix(in srgb, var(--comp) 75%, var(--fg)); }
 .rf-it.miss { border-inline-start-color: var(--line); }
 .rf-it.miss .rf-st, .rf-sum .miss { color: var(--muted); }
+.mf-steps { margin: 0; padding-inline-start: 20px; display: grid; gap: 8px; font-size: 14px; line-height: 1.45; }
+.mf-steps .btn.sm { display: inline-flex; margin-inline-start: 4px; vertical-align: middle; }
+.mf-steps li > .btn.sm:first-child { margin-inline-start: 0; }
 </style>
 </head>
 <body>
@@ -3786,7 +3790,7 @@ async function initAccount() {
   const me = await user.id();
   if (!me) return;
   try { COL = db.collection("data/users/" + me); } catch (e) { COL = null; return; }
-  try { FCOL = db.collection("data/users/" + me + "/f/files"); } catch (e) { FCOL = null; }
+  try { FCOL = db.collection("data/users/" + me + "/f/files"); ICOL = db.collection("data/users/" + me + "/f/inbox"); } catch (e) { FCOL = ICOL = null; }
   let settled = false;
   const slow = setTimeout(() => { if (!settled) setSaveState("offline"); }, 10000);
   COL.onSnapshot(snap => {
@@ -3836,7 +3840,7 @@ async function initAccount() {
       if (app.view === "production" && !cur()) app.view = "home";
       if (!typing()) render();
     }
-    if (settled) { meFromAccount(); if (!rfSynced) { rfSynced = true; rfSyncUp(); } }
+    if (settled) { meFromAccount(); if (!rfSynced) { rfSynced = true; rfSyncUp(); rfInboxWatch(); } }
   }, () => { settled = true; clearTimeout(slow); COL = null; app.storage = "local"; setSaveState("saved"); });
 }
 
@@ -4516,7 +4520,10 @@ if (typeof document !== "undefined" && document.addEventListener) {
   document.addEventListener("scroll", sugPlace, true);
   if (window.visualViewport) { window.visualViewport.addEventListener("resize", sugPlace); window.visualViewport.addEventListener("scroll", sugPlace); }
 }
-function closeModal() { const m = document.getElementById("modal"); if (m) { m.remove(); navSync(); } }
+function closeModal() {
+  const m = document.getElementById("modal"); if (m) { m.remove(); navSync(); }
+  if (rfPending) { rfPending = null; setTimeout(rfInboxRun, 0); }   // a form's sheet closed unsaved: the next one from mail, if any
+}
 
 /* the phone's back button steps back through the app (the standalone app only): a dialog, the preview, the lens finder,
    an open line, selecting several, then up a screen. On the productions screen it leaves the app. */
@@ -5226,6 +5233,15 @@ function viewSettings() {
       ${app.isAdmin ? `<div><button class="btn primary" type="button" data-act="admin-open">Control room</button></div>` : ""}
       ${app.isAdmin || app.showIds ? `<div class="acct-id"><span class="hint">Account ID</span><code>${esc(window.AC_STATS.uid)}</code><button class="btn sm" type="button" data-act="copy-uid">Copy</button></div>` : ""}
       ${!app.isAdmin && app.showIds ? `<div class="acct-id"><button class="btn sm" type="button" data-act="admin-check">Check Control room access</button></div>${app.adminSay ? `<p class="hint${app.adminWhy === "ok" ? "" : " warn"}" style="margin:0">${esc(app.adminSay)}</p>` : ""}` : ""}</div>` : ""}
+    ${app.isAdmin ? `<div class="set-group" id="mailForms"><h3>Forms from mail</h3>
+      <p class="hint" style="margin:0">Utopia's rental forms that reach your Gmail come into the app by themselves, each into its production. A small script in your own Google account does it. To set it up, once, on a computer:</p>
+      <ol class="mf-steps">
+        <li><a class="btn sm" href="https://script.new" target="_blank" rel="noopener">Open a new Apps Script</a> and name it AC Cam List.</li>
+        <li>Delete what's there and paste the code. <button class="btn sm" type="button" data-act="mail-copy" data-v="gs">Copy the code</button></li>
+        <li>In Project Settings (⚙), tick "Show appsscript.json". Back in the editor, open appsscript.json, delete what's there and paste the settings. <button class="btn sm" type="button" data-act="mail-copy" data-v="json">Copy the settings</button></li>
+        <li>Pick <b>setup</b> at the top and press ▶ Run. Allow it: Advanced → Go to AC Cam List.</li>
+      </ol>
+      <p class="hint" style="margin:0">${app.settings.mailAt ? `Last form by mail: ${esc(new Date(app.settings.mailAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}.` : "No form has come by mail yet."}</p></div>` : ""}
     ${isAndroid() || helperOn() ? `<div class="set-group" id="sendAppGroup"><h3>Word files on Android</h3>
       <p class="hint" style="margin:0">Android won't attach a Word file from the app by itself. A small helper app does it: tap Send, and the share menu opens with the Word file attached, for WhatsApp, Gmail or any other app.</p>
       ${app.helperMissing ? `<p class="hint warn">The helper app isn't on this phone yet. Get it below, then switch it on.</p>` : ""}
@@ -9272,6 +9288,7 @@ document.addEventListener("click", e => {
     case "lab-open": labShow(); break;
     case "home-auth-off": app.settings.signInHint = "off"; touchSettings(); rerenderKeepScroll(); break;
     case "look": lookPick(b.dataset.v); break;
+    case "mail-copy": { const t = b.dataset.v === "json" ? MAIL_MANIFEST : MAIL_GS; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(b.dataset.v === "json" ? "Settings copied" : "Code copied"), () => toast("Couldn't copy. Open tools/mail-forms.gs in the app's GitHub.")); break; }
     case "copy-uid": { const t = window.AC_STATS ? window.AC_STATS.uid : ""; (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast("Account ID copied"), () => toast(t)); break; }
     case "ids-show": { const t = Date.now(); app.idTaps = (app.idTaps || []).filter(x => t - x < 2500).concat(t); if (app.idTaps.length >= 5) { app.idTaps = []; app.showIds = !app.showIds; rerenderKeepScroll(); } break; }
     case "admin-check": app.adminSay = "Checking…"; rerenderKeepScroll(); adminCheck(true); break;
@@ -9332,6 +9349,7 @@ document.addEventListener("click", e => {
     case "rf-tab": if (rfOpen) { rfOpen.tab = b.dataset.v; b.parentNode.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b))); document.querySelector(".rf-acts [data-act='rf-zoom']").hidden = rfOpen.tab !== "pages"; rfPaint(); } break;
     case "rf-zoom": if (rfOpen) { rfOpen.zoom = !rfOpen.zoom; b.setAttribute("aria-pressed", String(rfOpen.zoom)); rfPaint(); } break;
     case "rf-share": rfShare(); break;
+    case "rf-skip": rfSkip(); break;
     case "rf-del": if (b.classList.contains("armed")) { if (rfOpen) rfDelete(rfOpen.p, rfOpen.f); } else { b.classList.add("armed"); b.querySelector("span").textContent = "Delete the form"; setTimeout(() => { if (b.isConnected) { b.classList.remove("armed"); b.querySelector("span").textContent = "Delete"; } }, 3000); } break;
     case "preview-sku": {
       app.settings.exportSku = !skuOn(); touchSettings();
@@ -10636,7 +10654,7 @@ function rfMatch(f) {
 }
 
 /* a form comes in: read, matched, then a short sheet says what it is and which list it goes to */
-let rfPending = null;
+var rfPending = null;   // var: closeModal (far above) asks about it
 async function rfImport(file, pid) {
   if (!file) return;
   const pdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name || ""), img = /^image\//.test(file.type);
@@ -10650,13 +10668,14 @@ async function rfImport(file, pid) {
     catch (e) { errNote(e, "rf-read"); }
   }
   const m = rfMatch(f), best = pid ? app.productions.find(x => x.id === pid) : m.length && m[0].sc >= 3 ? m[0].p : cur() && !cur().browse ? cur() : m.length ? m[0].p : null;
+  if (rfPending && rfPending.f.mail) rfInboxDone.delete(rfPending.f.id), rfInboxQ.unshift({ id: rfPending.f.id, name: rfPending.f.name, type: rfPending.f.type, size: rfPending.f.size, at: rfPending.f.at, parts: rfPending.f.parts });
   rfPending = { f, bytes };
   const t = document.getElementById("toast"); if (t && /^Reading the form/.test(t.textContent)) { clearTimeout(toast._t); t.hidden = true; }   // read: the sheet says the rest
   rfConfirm(best, m);
 }
 function rfFormLine(f) {
   const t = [f.house ? rfHouseName(f) : "", f.no].filter(Boolean).join(" · ") || f.name;
-  const s = [f.outIso ? "Out " + rfDate(f.outIso) : "", f.pages > 1 ? f.pages + " pages" : "", f.title].filter(Boolean).join(" · ");
+  const s = [f.outIso ? "Out " + rfDate(f.outIso) : "", f.pages > 1 ? f.pages + " pages" : "", f.mail ? "by mail" : "", f.title].filter(Boolean).join(" · ");
   return { t, s };
 }
 function rfConfirm(best, m) {
@@ -10664,27 +10683,154 @@ function rfConfirm(best, m) {
   if (!app.productions.length) { toast("Make a list first; the form goes into it."); rfPending = null; return; }
   const order = [...new Set([...(best ? [best] : []), ...m.map(x => x.p)])];
   const opt = p => `<option value="${esc(p.id)}"${p === best ? " selected" : ""}${listDir(p.name)}>${esc((p.name || "Untitled production") + (p.mainOf ? " · 2nd Unit" : "") + (p.prep || p.shootStart ? " · " + fmtDM(p.prep || p.shootStart) : ""))}</option>`;
-  showModal(`<div class="sheet rf-sheet"><h3 class="plain">Rental form</h3>
+  showModal(`<div class="sheet rf-sheet"><h3 class="plain">${f.mail ? "Rental form from your mail" : "Rental form"}</h3>
     <div class="rf-card"><span class="rf-ic">${RF_ICON}</span><span class="rf-ct"><b>${esc(L.t)}</b><span>${esc(L.s)}</span>${f.project ? `<span>Project <bdi dir="auto">${esc(f.project)}</bdi></span>` : ""}</span></div>
     ${f.type === "application/pdf" && !f.no ? `<p class="hint">The app couldn't read this form's details; it's kept as it is.</p>` : ""}
     <div class="field"><label for="rf-to">Goes into</label><select id="rf-to"${listDir(best && best.name)}>${order.map(opt).join("")}</select></div>
     <p class="hint" id="rf-rep" hidden>It replaces the earlier copy of this form in that list.</p>
-    <div class="modal-actions"><button class="btn" type="button" data-act="modal-close">Cancel</button><span class="grow"></span><button class="btn primary" type="button" data-act="rf-save">Save the form</button></div></div>`);
+    <div class="modal-actions">${f.mail ? `<button class="btn" type="button" data-act="rf-skip">Leave out</button>` : `<button class="btn" type="button" data-act="modal-close">Cancel</button>`}<span class="grow"></span><button class="btn primary" type="button" data-act="rf-save">Save the form</button></div></div>`);
   rfRepHint();
 }
 function rfRepHint() { const s = document.getElementById("rf-to"), h = document.getElementById("rf-rep"); if (!s || !h || !rfPending) return; const p = app.productions.find(x => x.id === s.value); h.hidden = !(p && rfPending.f.no && formsOf(p).some(x => x.no === rfPending.f.no)); }
 async function rfSave(pid) {
   const pend = rfPending, p = app.productions.find(x => x.id === pid); if (!pend || !p) return;
   rfPending = null; closeModal();
-  const { f, bytes } = pend;
+  await rfFile(p, pend.f, pend.bytes);
+  rfInboxRun();
+}
+async function rfFile(p, f, bytes) {
   try { await rfLocal("put", f.id, { bytes, type: f.type }); } catch (e) { errNote(e, "rf-store"); }
-  const old = f.no ? formsOf(p).filter(x => x.no === f.no) : [];   // the same rental again: the newer copy takes its place
-  p.forms = [f, ...formsOf(p).filter(x => !old.includes(x))];
+  const old = formsOf(p).filter(x => x.id !== f.id && f.no && x.no === f.no);   // the same rental again: the newer copy takes its place
+  p.forms = [f, ...formsOf(p).filter(x => x.id !== f.id && !old.includes(x))];
   for (const o of old) rfDropFile(o);
   touch(p);
-  toast(`Form saved in ${p.name || "the list"}.`);
+  toast(f.mail ? `Rental form ${f.no || ""} came by mail: it's in ${p.name || "the list"}.`.replace("  ", " ") : `Form saved in ${p.name || "the list"}.`);
   if (app.view === "production" && app.pid === p.id) rerenderKeepScroll();
-  try { if (await rfUp(f, bytes)) touch(p); } catch (e) { /* the account can't be reached now: it goes up later (rfSyncUp) */ }
+  if (f.mail) { if (ICOL) ICOL.doc(f.id).delete().catch(() => {}); app.settings.mailAt = Date.now(); touchSettings(); }
+  if (!f.up) try { if (await rfUp(f, bytes)) touch(p); } catch (e) { /* the account can't be reached now: it goes up later (rfSyncUp) */ }
+}
+
+const MAIL_GS = String.raw`/* AC Cam List · rental forms from your mail
+   Every 10 minutes this looks in your Gmail for new mail from Utopia with a rental form (a PDF whose name has "טופס") and
+   puts the form in your AC Cam List account. The app files it into its production the next time it opens (or right away,
+   if it's open). It runs in your own Google account and only reads mail; nothing is sent anywhere else.
+   To start it: choose "setup" in the bar above and press ▶ Run, then allow it (Advanced → Go to ...). That's all. */
+
+const PROJECT = "ac-cam-list";
+const FROM = "utopiacam.com";
+const PART = 180000;   // characters of base64 in one database document (the app reads the same pieces)
+const FS = "https://firestore.googleapis.com/v1/projects/" + PROJECT + "/databases/(default)/documents/";
+
+function setup() {
+  ScriptApp.getProjectTriggers().forEach(function (t) { ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger("check").timeBased().everyMinutes(10).create();
+  const P = PropertiesService.getScriptProperties();
+  if (!P.getProperty("since")) P.setProperty("since", String(Math.floor(Date.now() / 1000) - 3 * 86400));   // the last 3 days too
+  P.deleteProperty("uid");
+  const n = check();
+  Logger.log("Ready. Your AC Cam List account: " + uid_() + ". Forms brought in now: " + n + ". From now on every 10 minutes.");
+}
+
+function check() {
+  const P = PropertiesService.getScriptProperties();
+  const since = +(P.getProperty("since") || Math.floor(Date.now() / 1000) - 86400);
+  const seen = JSON.parse(P.getProperty("seen") || "[]");
+  const res = Gmail.Users.Messages.list("me", { q: "from:" + FROM + " has:attachment filename:pdf after:" + since, maxResults: 20 });
+  let n = 0;
+  (res.messages || []).forEach(function (ref) {
+    if (seen.indexOf(ref.id) >= 0) return;
+    const m = Gmail.Users.Messages.get("me", ref.id);
+    const head = {}; (m.payload.headers || []).forEach(function (h) { head[h.name.toLowerCase()] = h.value; });
+    parts_(m.payload).forEach(function (part, k) {
+      const name = part.filename || "";
+      if (!/\.pdf$/i.test(name) || !/טופס/.test(name) || !part.body || !part.body.attachmentId) return;
+      const att = Gmail.Users.Messages.Attachments.get("me", ref.id, part.body.attachmentId);
+      const b64 = typeof att.data === "string" ? att.data.replace(/-/g, "+").replace(/_/g, "/") : Utilities.base64Encode(att.data);
+      put_("mail-" + ref.id + "-" + k, b64, { name: name, size: part.body.size || 0, at: +m.internalDate || Date.now(), subject: head.subject || "" });
+      n++;
+    });
+    seen.push(ref.id);
+  });
+  P.setProperty("seen", JSON.stringify(seen.slice(-300)));
+  return n;
+}
+
+// the form into the account: its pieces (users/<uid>/files/<id>_<i>), then a note that it came (users/<uid>/inbox/<id>)
+function put_(id, b64, meta) {
+  const u = uid_(), n = Math.max(1, Math.ceil(b64.length / PART));
+  for (let i = 0; i < n; i++) fs_("users/" + u + "/files/" + id + "_" + i, { d: { stringValue: b64.slice(i * PART, (i + 1) * PART) }, i: { integerValue: String(i) }, n: { integerValue: String(n) }, type: { stringValue: "application/pdf" } });
+  fs_("users/" + u + "/inbox/" + id, { name: { stringValue: meta.name }, type: { stringValue: "application/pdf" }, size: { integerValue: String(meta.size) }, parts: { integerValue: String(n) }, at: { integerValue: String(meta.at) }, subject: { stringValue: meta.subject }, src: { stringValue: "mail" } });
+}
+
+// your account in the app: the one listed as the app's maker (admins/<uid>)
+function uid_() {
+  const P = PropertiesService.getScriptProperties();
+  let u = P.getProperty("uid");
+  if (u) return u;
+  const r = JSON.parse(UrlFetchApp.fetch(FS + "admins?pageSize=5", { headers: auth_(), muteHttpExceptions: true }).getContentText());
+  if (!r.documents || !r.documents.length) throw new Error("No account found under admins/ in the app's database: " + JSON.stringify(r).slice(0, 300));
+  u = r.documents[0].name.split("/").pop();
+  P.setProperty("uid", u);
+  return u;
+}
+
+function fs_(path, fields) {
+  const r = UrlFetchApp.fetch(FS + path, { method: "patch", contentType: "application/json", headers: auth_(), payload: JSON.stringify({ fields: fields }), muteHttpExceptions: true });
+  if (r.getResponseCode() >= 300) throw new Error("Couldn't save to the app's database (" + r.getResponseCode() + "): " + r.getContentText().slice(0, 300));
+}
+
+function auth_() { return { Authorization: "Bearer " + ScriptApp.getOAuthToken(), "X-Goog-User-Project": PROJECT }; }
+
+function parts_(p) { const out = []; (function walk(x) { if (!x) return; out.push(x); (x.parts || []).forEach(walk); })(p); return out.filter(function (x) { return x.filename; }); }
+`;
+const MAIL_MANIFEST = String.raw`{
+  "timeZone": "Asia/Jerusalem",
+  "runtimeVersion": "V8",
+  "exceptionLogging": "STACKDRIVER",
+  "dependencies": {
+    "enabledAdvancedServices": [{ "userSymbol": "Gmail", "serviceId": "gmail", "version": "v1" }]
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/datastore",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.scriptapp"
+  ]
+}
+`;
+/* forms that come by mail: a small script in the user's own Google account (tools/mail-forms.gs) finds the house's form in Gmail
+   and leaves it in the account (its pieces under files/, a note under inbox/). Each is read here and filed into its production: by
+   itself when the production is clear (the rental number already there, or the project's name), else the sheet asks */
+let ICOL = null, rfInboxQ = [], rfInboxBusy = false, rfInboxOn = false;
+const rfInboxDone = new Set();
+function rfInboxWatch() {
+  if (!ICOL || rfInboxOn) return; rfInboxOn = true;
+  try { ICOL.onSnapshot(s => { rfInboxQ = s.docs.filter(d => !rfInboxDone.has(d.id)).map(d => Object.assign({ id: d.id }, d.data())); rfInboxRun(); }, () => {}); } catch (e) { errNote(e, "rf-inbox"); }
+}
+async function rfInboxRun() {
+  if (rfInboxBusy || rfPending) return; rfInboxBusy = true;
+  try { while (rfInboxQ.length && !rfPending) { const m = rfInboxQ.shift(); if (rfInboxDone.has(m.id)) continue; rfInboxDone.add(m.id); await rfFromMail(m); } }
+  catch (e) { errNote(e, "rf-inbox"); }
+  finally { rfInboxBusy = false; }
+}
+const rfSure = m => !!(m[0] && m[0].sc >= 6 && (!m[1] || m[0].sc - m[1].sc >= 2));
+async function rfFromMail(m) {
+  if (app.productions.some(p => formsOf(p).some(x => x.id === m.id))) { ICOL.doc(m.id).delete().catch(() => {}); return; }   // filed already (another phone)
+  const f = { id: m.id, name: m.name || "form.pdf", type: m.type || "application/pdf", size: +m.size || 0, at: +m.at || Date.now(), parts: +m.parts || 1, up: true, mail: true, house: "", title: "", no: "", project: "", out: "", outIso: "", pages: 1 };
+  const bytes = await rfBytes(f).catch(() => null);
+  if (!bytes) { rfInboxDone.delete(m.id); return; }   // not all of it up yet: next time
+  try { const r = rfParse((await rfRead(bytes)).pages); Object.assign(f, { house: r.house, title: r.title, no: r.no, project: rfClean(r.project), client: rfClean(r.client), out: r.out, outIso: r.outIso, pages: r.pages, read: r.ok }); }
+  catch (e) { errNote(e, "rf-read"); }
+  const mt = rfMatch(f);
+  if (rfSure(mt)) { await rfFile(mt[0].p, f, bytes); return; }
+  rfPending = { f, bytes };
+  rfConfirm(mt.length ? mt[0].p : null, mt);
+}
+// a form from mail the user leaves out: gone from the app (it stays in the mail)
+function rfSkip() {
+  const pend = rfPending; rfPending = null; closeModal();
+  if (pend && pend.f.mail) { if (ICOL) ICOL.doc(pend.f.id).delete().catch(() => {}); rfDropFile(pend.f); toast("Left out. It's still in your mail."); }
+  rfInboxRun();
 }
 
 /* the production's Forms sheet: its forms, newest first, and a way to add one */
