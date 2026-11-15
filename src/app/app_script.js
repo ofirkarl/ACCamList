@@ -217,7 +217,7 @@ function specsHtml(it, extra, o = {}) {
     if (L.note && !perStops) out.push(`<span>${esc(L.note)}</span>`);
     else if (L.note && !/standard speed/i.test(L.note)) out.push(`<span>${esc(L.note)}</span>`);
     if (md && md.one) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
-    { const fd = frontOf(it, sp); if (fd) out.push(`<span class="fd${fd.need ? " adapt" : ""}" title="Front diameter ${esc(fd.words)}${fd.need ? ` · bigger than your ${Math.max(...mbBacks())} mm matte box: needs an adapter` : ""}">${fd.text}${fd.need ? " · adapter" : ""}</span>`); }
+    { const fd = frontOf(it, sp); if (fd) out.push(`<span class="fd${fd.need ? " adapt" : ""}" title="Front diameter ${esc(fd.words)}${fd.need ? ` · bigger than a standard ${MB_STD} mm matte box: ${MB_NEED}` : ""}">${fd.text}${fd.need ? ` · ${MB_SHORT}` : ""}</span>`); }
     if (sp && sp.per) per = perHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per, null, null, !!(md && md.per));
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
@@ -2587,9 +2587,6 @@ function viewSettings() {
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one. <b id="meSaved" class="me-saved" hidden>✓ Saved</b></span></form></div>
     ${lookPickerHtml()}
-    <div class="set-group"><h3>Matte box</h3>
-      <div class="mb-sizes" role="group" aria-label="Back sizes of the matte boxes you work with">${MB_SIZES.map(s => `<button type="button" class="chip mb-s" data-act="mb-size" data-v="${s}" aria-pressed="${mbBacks().includes(s)}">${s}</button>`).join("")}</div>
-      <span class="hint">The back sizes (mm) of the matte boxes you work with. A lens whose front is bigger than all of them is marked "needs an adapter" in Add Gear, Find a lens and Lens Cards.</span></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       const maker = !window.AC_STATS || app.isAdmin;   // the catalog file is the maker's tool; a user keeps only their removed items
       return maker ? `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
@@ -2913,13 +2910,13 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h), wl = on && p.items[it.id].tx !== undefined ? p.items[it.id] : null;
-  /* the name runs the full width with the product page globe at its end; the details (tags, close focus lens by lens) run on under it
-     in full-width lines, and Add / the counter sits at the end of the last of them, on its right (on a line of its own only when that
-     line is full). A row with no details: Add at the end of the name */
-  const ctl = `<span class="ctl">${ctlHtml(p, it.id)}</span>`, specs = specsHtml(it, extra, { q });
-  const name = `<span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q, link)}</span>`;
-  return `<li class="item ${on ? "on" : ""}${link ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${starBtn(it.id, { name: it.name, section: it.section })}
-    <span class="info"><span class="nm-row">${name}${specs ? "" : ctl}</span>${specs ? specs.replace(/<\/span>$/, ctl + "</span>") : ""}${noteHtml(it.id)}</span></li>`;
+  /* the product page globe pinned to the row's top-right corner, Add / the counter to its bottom-right corner; the name and the
+     details (tags, close focus lens by lens) run in full-width lines between them, the last line keeping clear of Add (a spacer) */
+  const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "", specs = specsHtml(it, extra, { q }), note = noteHtml(it.id);
+  const sp = `<span class="ctl-sp" aria-hidden="true"></span>`;
+  const name = `<span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>`;
+  return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
+    <span class="info"><span class="nm-row">${name}${specs || note ? "" : sp}</span>${specs ? (note ? specs : specs.replace(/<\/span>$/, sp + "</span>")) : ""}${note ? note + `<span class="ctl-sp blk" aria-hidden="true"></span>` : ""}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
 }
 
 /* ----- Add Gear: the rental house catalog ----- */
@@ -3325,11 +3322,10 @@ function lensTab(TAB, CACHE, it, sp) {
   CACHE.set(it, out);
   return out;
 }
-/* the matte box: the back sizes you work with (Settings); a lens whose front is bigger than the biggest needs an adapter */
-const MB_SIZES = [80, 87, 95, 104, 110, 114, 125, 134, 136, 138, 143, 150, 156];
-const mbBacks = () => { const b = app.settings.mbBack; return Array.isArray(b) && b.length ? b : [114]; };
-const fdNeeds = mm => +mm > Math.max(...mbBacks());
-// the front written short: Ø114, or a set's range (Ø114–156); and whether any lens of it needs an adapter
+/* the matte box: a lens whose front is bigger than a standard 114 mm back needs a 6x6 matte box or an adapter, and says so */
+const MB_STD = 114, MB_NEED = "needs a 6x6 matte box or an adapter", MB_SHORT = "6x6 matte box / adapter";
+const fdNeeds = mm => +mm > MB_STD;
+// the front written short: Ø114, or a set's range (Ø114–156); and whether any lens of it needs a 6x6 matte box or an adapter
 function frontOf(it, sp) {
   const fr = lensFront(it, sp); if (!fr) return null;
   const vals = fr.one ? [+fr.one] : Object.values(fr.per || {}).map(Number); if (!vals.length) return null;
@@ -3433,14 +3429,14 @@ function finderCard(p, m, T) {
     ["Focal length", sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.zooms ? `${sp.zooms.length} zooms, ${fmtN(sp.zooms[0][0])}–${fmtN(sp.zooms[sp.zooms.length - 1][1])}mm` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`],
     ["Type", [sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", sp.probe ? "probe" : sp.tilt ? "tilt and shift" : sp.macro ? "macro" : sp.fisheye ? "fisheye" : ""].filter(Boolean).join(", ")],
     ["Close focus", md ? md.one ? modText(md) : m.pos != null && md.per && md.per[m.pos] ? `${md.per[m.pos]} (the ${pn(m.pos)})` : md.per ? "Lens by lens, below" : "" : ""],
-    ["Front diameter", fd ? (fdHere != null ? `${fdHere} mm (the ${pn(m.pos)})` : fd.words) + (fdNeed ? ` · needs an adapter for a ${Math.max(...mbBacks())} mm matte box` : "") : ""]].filter(([, v]) => v);
+    ["Front diameter", fd ? (fdHere != null ? `${fdHere} mm (the ${pn(m.pos)})` : fd.words) + (fdNeed ? ` · ${MB_NEED}` : "") : ""]].filter(([, v]) => v);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}${open ? " open" : ""}" data-fcard="${esc(m.id)}">
     <button class="fv-tap" type="button" data-act="fv-row" data-id="${esc(m.id)}" aria-expanded="${open}" aria-label="${open ? "Less" : "More"} about ${esc(it.name)}"></button>
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
     <span class="f-ext">${linkHtml(it, m.e.h)}</span>
     <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}<button type="button" class="f-cmp" data-act="fin-cmp" data-id="${esc(m.id)}" aria-pressed="${finCmp().includes(m.id)}" aria-label="Compare ${esc(it.name)}" title="Compare">${CMP_ICON}<span>Compare</span></button></span>
     <span class="ctl">${ctlHtml(p, m.id)}</span>
-    <span class="f-meta">${meta.map(esc).join(" · ")}${fdNeed ? ` <span class="fd adapt">needs an adapter</span>` : ""}</span>
+    <span class="f-meta">${meta.map(esc).join(" · ")}${fdNeed ? ` <span class="fd adapt">${MB_SHORT}</span>` : ""}</span>
     ${sp.per ? `<span class="f-per">${perHtml(per, m.pos, 2)}</span>` : ""}
     <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
@@ -3536,7 +3532,7 @@ function finCmpSheet() {
     ["Focal length", x => cell(esc(focalTxt(x.sp)))],
     ["Type", x => cell(esc([x.sp.ana ? (x.sp.squeeze ? x.sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", x.sp.probe ? "probe" : x.sp.macro ? "macro" : ""].filter(Boolean).join(", ")))],
     ["Close focus", x => cell(esc(x.md ? x.md.one ? modText(x.md) : "lens by lens below" : ""), "", bC >= 0 && cfMin(x) === bC)],
-    ["Front diameter", x => cell(x.fd ? esc(x.fd.words.replace(/;.*$/, "")) : "", x.fd && x.fd.need ? "needs an adapter" : "", false)]];
+    ["Front diameter", x => cell(x.fd ? esc(x.fd.words.replace(/;.*$/, "")) : "", x.fd && x.fd.need ? MB_SHORT : "", false)]];
   // lens by lens: every focal length any of them has, each on its own line (a set's lens, a prime, a zoom covering it)
   const fs = [...new Set(L.flatMap(x => x.sp.zoom ? [] : x.sp.focals || []))].sort((a, b) => a - b).slice(0, 24);
   const at = (x, f) => { const sp = x.sp; if (sp.zoom) return null;
@@ -4902,10 +4898,10 @@ function lcRowsOf(p) {
     if (!sp && p.browse && !lensMod(it, null)) { ones.push({ name: l.name || it.name, q, mm: "", t: "", cf: l.cf || "", macro: "" }); continue; }
     if (!sp) { const md0 = lensMod(it, null); if (md0) ones.push({ name: it.name.replace(/\s*\([^)]*mount[^)]*\)/i, ""), q, mm: "", t: "", cf: md0.one || "", macro: "" }); continue; }  // Master Macro 100: no "mm" in its name
     const md = lensMod(it, sp), nm = lensShortName(it, sp), fd = frontOf(it, sp);
-    if (sp.per) sets.push({ fd: fd ? fd.text + (fd.need ? " (adapter)" : "") : "", name: nm.replace(/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm(?:\s*\/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm)+/gi, " ").replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
+    if (sp.per) sets.push({ fd: fd ? fd.text + (fd.need ? " (6x6 / adapter)" : "") : "", name: nm.replace(/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm(?:\s*\/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm)+/gi, " ").replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
       lenses: sp.per.map(x => ({ mm: perMM(x), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
     else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
-      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || (p.browse && sp.focals ? lcStopOf(l.name, sp.focals[0]) : ""), cf: (md ? md.one || "" : "") || l.cf || "", macro: md && md.macro || "", fd: fd ? fd.text + (fd.need ? " (adapter)" : "") : "" }); }
+      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || (p.browse && sp.focals ? lcStopOf(l.name, sp.focals[0]) : ""), cf: (md ? md.one || "" : "") || l.cf || "", macro: md && md.macro || "", fd: fd ? fd.text + (fd.need ? " (6x6 / adapter)" : "") : "" }); }
   }
   return { sets, ones };
 }
@@ -6537,7 +6533,6 @@ document.addEventListener("contextmenu", e => {
 document.addEventListener("click", e => {
   if (lp.fired && e.target.closest && e.target.closest("[data-lp]")) { lp.fired = false; e.preventDefault(); return; }
   const b = e.target.closest("[data-act]");
-  if (b && e.target.closest("a.ext") && !e.target.closest("a.ext").dataset.act && b.contains(e.target.closest("a.ext"))) return;   // a product page globe inside a name: the page opens, not the name's note
   if (mcOpen && !(e.target.closest && e.target.closest(".mc-panel, [data-act='mc-open']"))) mcClose();
   if (txPop && !(e.target.closest && e.target.closest("#txPop, .q-sets"))) txClose();   // the wireless set's little drawer: a tap anywhere else closes it
   if (!b || b.disabled) return;
@@ -7022,9 +7017,6 @@ document.addEventListener("click", e => {
       touch(q); buzz(on ? "tick" : "tap"); rerenderKeepScroll();
       if (on) undoable("Checked", "the coverage note", () => { const o2 = q.covOk || (q.covOk = {}); keys.forEach(k => delete o2[k]); touch(q); rerenderKeepScroll(); });
       break; }
-    case "mb-size": { const v = +b.dataset.v, cur0 = mbBacks(), on = cur0.includes(v), nx = on ? cur0.filter(x => x !== v) : [...cur0, v].sort((a, z) => a - z);
-      if (!nx.length) { toast("Keep at least one size."); break; }
-      app.settings.mbBack = nx; touchSettings(); b.setAttribute("aria-pressed", String(!on)); break; }
     case "ln-set": case "ln-ana": case "ln-sq": case "ln-mount": case "ln-row-add": case "ln-row-del": case "ln-fill": case "ln-unname": case "ln-reset": lnAct(act, b); break;
     case "cov-show": { const q = cur(); if (q) { app.covShow = app.covShow === q.id ? null : q.id; rerenderKeepScroll(); } break; }
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
