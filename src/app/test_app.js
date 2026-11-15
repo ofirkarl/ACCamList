@@ -127,6 +127,15 @@ ok(/Coverage warning/.test(A.viewList(p, A.houseById("utopia"))), "warning shown
   const L = A.lnToLens({ ana: true, kind: "set", squeeze: "1.5x", cov: "FF", stop: "", mounts: ["PL"], focal: "", cf: "", fd: "", rows: [{ f: "35", stop: "T2", cf: "0.6m", fd: "95" }, { f: "50", stop: "T2", cf: "", fd: "95" }] });
   ok(L.set && L.count === 2 && L.focals === "35, 50mm" && L.stop === "T2" && L.squeeze === "1.5x" && L.cf["35"] === "2'" && L.fd["50"] === "95", "a set's details lens by lens, as the catalog keeps them"); }
 
+// --- a package for any camera: one set for each camera on the list (a camera's own package adds on top)
+{ const keep = A.app.settings.rules; const cams = [...A.ITEM].filter(([id, e]) => e.h.id === "utopia" && e.it.camera && !e.it.camera.film).slice(0, 2).map(x => x[0]);
+  const addId = [...A.ITEM].find(([id, e]) => e.h.id === "utopia" && !e.it.camera && !e.it.lens)[0];
+  A.app.settings.rules = [{ id: "r-any", kind: "item", house: "utopia", when: "utopia:*camera", add: addId, qty: 1 }];
+  const q = A.newProduction({ name: "Any", houseId: "utopia" }); A.setQty(q, cams[0], 2); A.setQty(q, cams[1], 1); A.applyDefaults(q);
+  ok(q.items[addId] && q.items[addId].auto === 3, "Any camera: one set for each camera on the list (2 + 1 = 3)");
+  A.app.settings.rules.push({ id: "r-own", kind: "item", house: "utopia", when: cams[1], add: addId, qty: 1 }); A.applyDefaults(q);
+  ok(q.items[addId].auto === 4, "a camera's own package adds on top"); A.app.settings.rules = keep; }
+
 // --- favorites
 A.toggleFav(ez2, { name: "x", section: "lens" });
 A.toggleFav("c:applebox20:grip", { name: "Applebox 20", section: "grip" });

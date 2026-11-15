@@ -2734,6 +2734,9 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .fcmp td.best { background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
 .fcmp td.best .cv { color: var(--ok); font-weight: 700; }
 .fcmp .band.sec th { background: color-mix(in srgb, var(--accent) 8%, var(--sunken)); color: var(--accent); }
+
+/* an Any camera package stands out a little among the packages */
+.package.any .pk-t b { color: var(--accent); }
 </style>
 
 <div class="app">
@@ -3872,8 +3875,12 @@ const countShootDays = (a, b, days) => rangeDates(a, b).filter(d => dayOn(days, 
 function shootDays(p) { return p.shootDays ? Number(p.shootDays) : countShootDays(p.shootStart, p.shootEnd, p.days); }
 
 /* camera default batteries */
+/* "Any camera": a package for every camera of a rental house (its id: "<house>:*camera"); one set for each camera on the list */
+const isAnyCam = id => /:\*camera$/.test(id || "");
+const anyCamOf = hid => hid + ":*camera";
+const camCatOf = h => h && h.categories.find(c => [c.direct, ...c.subcategories].some(s => s.items.some(it => it.camera)));
 function ruleMatches(r, e) {
-  if (r.kind === "item") return !!e && e.it.id === r.when && ITEM.has(r.add);
+  if (r.kind === "item") return !!e && (e.it.id === r.when || (isAnyCam(r.when) && e.h.id === r.when.split(":")[0] && !!e.it.camera && !e.it.camera.film)) && ITEM.has(r.add);
   if (!e || !e.it.camera) return false;
   if (r.kind === "media") return (e.it.camera.media || []).length > 0;
   if (e.it.camera.film || e.it.camera.sensor === "fixed") return false;
@@ -5277,7 +5284,7 @@ function calDone() {
 }
 
 function ruleParts(r) {
-  if (r.kind === "item") { const a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: a ? a.it.name : gone, add: b ? b.it.name : gone, house: a ? a.h.name : "" }; }
+  if (r.kind === "item") { const any = isAnyCam(r.when), a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: any ? "Any camera" : a ? a.it.name : gone, add: b ? b.it.name : gone, house: any ? (houseById(r.when.split(":")[0]) || {}).name || "" : a ? a.h.name : "" }; }
   return { when: r.label, add: r.kind === "media" ? "memory cards to match the camera, and a card reader" : r.battery.label, house: "" };
 }
 /* packages and "doesn't work together": their own page, reached from the bottom of Productions */
@@ -5288,9 +5295,9 @@ function rulesGroups(only) {
   const byWhen = new Map();
   for (const r of app.settings.rules) { const k = r.kind === "item" ? r.when : "rule:" + r.id; if (!byWhen.has(k)) byWhen.set(k, []); byWhen.get(k).push(r); }
   const rules = [...byWhen].map(([k, rs]) => { const x = ruleParts(rs[0]), item = rs[0].kind === "item";
-    return `<div class="package"><div class="pk-head"><div class="pk-t"><b>${esc(x.when)}</b><small>${x.house && HOUSES.length > 1 ? `${esc(x.house)} · ` : ""}with each one</small></div>${item && ITEM.has(k) ? `<button class="iconbtn pk-edit" type="button" data-act="pkg-edit" data-id="${esc(k)}" aria-label="Edit this package" title="Edit">${PEN_ICON}</button>` : ""}</div>
+    return `<div class="package${isAnyCam(k) ? " any" : ""}"><div class="pk-head"><div class="pk-t"><b>${esc(x.when)}</b><small>${x.house && HOUSES.length > 1 ? `${esc(x.house)} · ` : ""}${isAnyCam(k) ? "with each camera on the list" : "with each one"}</small></div>${item && (ITEM.has(k) || isAnyCam(k)) ? `<button class="iconbtn pk-edit" type="button" data-act="pkg-edit" data-id="${esc(k)}" aria-label="Edit this package" title="Edit">${PEN_ICON}</button>` : ""}</div>
       ${rs.map(pkRow).join("")}
-      ${item && ITEM.has(k) ? `<button class="btn ghost sm pk-plus" type="button" data-act="pkg-add" data-id="${esc(k)}">+ Add an item</button>` : ""}</div>`; }).join("");
+      ${item && (ITEM.has(k) || isAnyCam(k)) ? `<button class="btn ghost sm pk-plus" type="button" data-act="${isAnyCam(k) ? "pkg-edit" : "pkg-add"}" data-id="${esc(k)}">+ Add an item</button>` : ""}</div>`; }).join("");
   const clashRows = (app.settings.clashes || []).map(r => `<div class="rule clash"><button class="txt" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule">
       <span class="c-a">${esc(r.a.map(itName).join(", "))}${HOUSES.length > 1 && houseById(r.house) ? ` <small>· ${esc(houseById(r.house).name)}</small>` : ""}</span>
       <span class="c-b">doesn't work with <b>${esc(r.b.map(itName).join(", "))}</b></span>
@@ -5376,14 +5383,20 @@ function pickerHtml(key) {
   const h = houseById(dd.house), v = dd[key] || {};
   const c = h.categories.find(x => x.id === v.c), sub = c ? [c.direct, ...c.subcategories].find(x => x.key === v.s) : null;
   const cats = h.categories.filter(x => catCount(x)).map(x => `<option value="${esc(x.id)}" ${x.id === v.c ? "selected" : ""}>${esc(x.name)}</option>`).join("");
-  const subs = c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "";
+  const anyOk = key === "when" && c && c === camCatOf(h), any = anyOk && v.s === "*camera";
+  const subs = (anyOk ? `<option value="*camera" ${any ? "selected" : ""}>Any camera</option>` : "") + (c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "");
   let items = "";
+  if (any) return pickerShell(key, h, cats, subs, c, `<option value="${esc(anyCamOf(h.id))}" selected>Every camera on the list</option>`, true);
   if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${it.id === v.id ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
+  return pickerShell(key, h, cats, subs, c, items, !sub);
+}
+function pickerShell(key, h, cats, subs, c, items, itemOff) {
   return `<div class="pk-find"><label class="search pk-search" for="pk-${key}-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
       <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
     <div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
-    <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${sub ? "" : "disabled"}><option value="">Choose…</option>${items}</select></div>`;
+    <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${itemOff && !/selected>Every camera/.test(items) ? "disabled" : ""}${/selected>Every camera/.test(items) ? " disabled" : ""}>${/selected>Every camera/.test(items) ? "" : `<option value="">Choose…</option>`}${items}</select></div>
+    ${/selected>Every camera/.test(items) ? `<span class="hint">One set for each camera on the list, whatever the camera. A camera's own package adds on top.</span>` : ""}`;
 }
 /* the search over a package picker: a few best matches; tapping one fills the three menus */
 function pkFind(key, q) {
@@ -5436,9 +5449,9 @@ function ruleDialog(whenId, edit) {
 }
 /* a package as it is, opened to change: what you add, and everything that comes with it */
 function pkgEditDialog(whenId) {
-  const e = ITEM.get(whenId); if (!e) return;
+  const any = isAnyCam(whenId), e = ITEM.get(whenId); if (!e && !any) return;
   const rs = app.settings.rules.filter(r => r.kind === "item" && r.when === whenId);
-  dd.house = e.h.id; dd.when = pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.reader = !!(app.settings.pkReaders || {})[whenId];
+  dd.house = any ? whenId.split(":")[0] : e.h.id; dd.when = any ? { c: (camCatOf(houseById(dd.house)) || {}).id || "", s: "*camera", id: whenId } : pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.reader = !!(app.settings.pkReaders || {})[whenId];
   const kinds = pkgKinds();
   rs.forEach((r, i) => {
     const kind = kinds.find(k => k.cards.some(c => c.id === r.add));
@@ -9935,7 +9948,7 @@ document.addEventListener("change", e => {
   if (t.dataset.pkc || t.dataset.pks || t.dataset.pki) {
     const k = t.dataset.pkc || t.dataset.pks || t.dataset.pki, v = dd[k];
     if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
-    else if (t.dataset.pks) { v.s = t.value; v.id = ""; }
+    else if (t.dataset.pks) { v.s = t.value; v.id = k === "when" && t.value === "*camera" ? anyCamOf(dd.house) : ""; }
     else v.id = t.value;
     if (t.dataset.pki && (k === "ca" || k === "cb") && t.value) {  // picked: it joins the list above, and the picker is ready for another
       const list = cx[k[1]]; if (!list.includes(t.value)) list.push(t.value);
@@ -9946,7 +9959,7 @@ document.addEventListener("change", e => {
     if (!t.dataset.pki && t.value) {  // chosen: the next menu opens by itself; a subcategory that's the only one is chosen too
       const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k);
       let next = box.querySelector(t.dataset.pkc ? "[data-pks]" : "[data-pki]");
-      if (next && next.dataset.pks && next.options.length === 2) { v.s = next.options[1].value; box.innerHTML = pickerHtml(k); next = box.querySelector("[data-pki]"); }
+      if (next && next.dataset.pks && next.options.length === 2 && next.options[1].value !== "*camera") { v.s = next.options[1].value; box.innerHTML = pickerHtml(k); next = box.querySelector("[data-pki]"); }
       pkOpen(next);
     } else if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); }
     if (k === "when") {
