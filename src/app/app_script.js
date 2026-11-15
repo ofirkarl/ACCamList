@@ -2200,7 +2200,8 @@ function ntTodoHtml() {
   const { list } = ntTodo(), order = [...list.filter(x => !x.done), ...list.filter(x => x.done)];
   return `<div class="pc-addrow"><input class="lc-in" id="nt-add" type="text" dir="auto" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="Add a line: order 20 cards" aria-label="New checklist line"><button class="btn primary lc-addbtn" type="button" data-act="nt-add" aria-label="Add the line">+</button></div>
     ${order.length ? `<ul class="pc-rows pc-todo">${order.map(t => `<li class="pc-row${t.done ? " ok" : ""}"><div class="pc-main" data-act="nt-do" data-id="${esc(t.id)}" role="checkbox" aria-checked="${!!t.done}" tabindex="0">${PC_CK}<span class="pc-n"><span dir="auto">${esc(t.t)}</span></span></div>
-      <button class="pc-nb" type="button" data-act="nt-del" data-id="${esc(t.id)}" aria-label="Delete this line" title="Delete">×</button></li>`).join("")}</ul>` : `<p class="hint">Lines to tick off later: a reminder now, the proof it's done once it is. It's the same list as the Prep Checklist's To-do.</p>`}`;
+      <button class="pc-nb" type="button" data-act="nt-del" data-id="${esc(t.id)}" aria-label="Delete this line" title="Delete">×</button></li>`).join("")}</ul>
+    <div class="nt-foot"><button class="btn nt-reset" type="button" data-act="nt-reset"${list.some(x => x.done) ? "" : " disabled"} aria-label="Reset: untick every line" title="Untick every line">${RESET_ICON}<span>Reset</span></button></div>` : `<p class="hint">Lines to tick off later: a reminder now, the proof it's done once it is. It's the same list as the Prep Checklist's To-do.</p>`}`;
 }
 function ntTodoPaint(focusAdd) {
   const pane = document.getElementById("ntTodo"); if (pane) pane.innerHTML = ntTodoHtml();
@@ -6604,6 +6605,9 @@ document.addEventListener("click", e => {
       document.getElementById("ntTodo").hidden = v !== "check"; document.getElementById("ntPad").hidden = v !== "pad"; if (v !== "pad") { ntPopClose(); clearTimeout(ntT); ntKeep(); } break; }
     case "nt-add": ntTodoAdd(); break;
     case "nt-do": { const { p: tp, list } = ntTodo(), t = list.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(tp); ntTodoPaint(); break; }
+    case "nt-reset": { const { p: tp, list } = ntTodo(), was = list.filter(x => x.done); if (!was.length) break;   // every line unticked; the lines stay
+      was.forEach(x => { x.done = false; }); pcSave(tp); ntTodoPaint();
+      undoable("Reset", "the checklist", () => { was.forEach(x => { x.done = true; }); pcSave(tp); ntTodoPaint(); }); break; }
     case "nt-del": { const { p: tp, list } = ntTodo(), i = list.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
       const [t] = list.splice(i, 1); pcSave(tp); ntTodoPaint();
       undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const r = ntTodo(); r.list.splice(Math.min(i, r.list.length), 0, t); pcSave(r.p); ntTodoPaint(); }); break; }

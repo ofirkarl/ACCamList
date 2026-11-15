@@ -1261,6 +1261,8 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   A.app.settings.ntList = p.id; A.app.view = "notes"; const h = A.viewNotes();
   ok(/data-v="check"[^>]*>Checklist<span class="num">1\/2<\/span>/.test(h) && /data-v="pad"[^>]*>Notepad/.test(h) && /id="nt-list"/.test(h), "Notes: a production to pick, and two tabs: Checklist (with its count) and Notepad");
   ok(A.ntTodo().list === A.pcData(p).todo && /Call the house[\s\S]*Order 20 cards/.test(h) && /Prep Sunday/.test(h), "the checklist is the production's own to-do (lines still to do first); the notepad its notes");
+  ok(/data-act="nt-reset"(?![^>]*disabled)[^>]*>[\s\S]*?Reset/.test(h), "the checklist's Reset, ready when a line is ticked");
+  { const t = A.pcData(p).todo; t.forEach(x => { x.done = false; }); ok(/data-act="nt-reset"[^>]*disabled/.test(A.viewNotes()), "nothing ticked: Reset waits"); t[0].done = true; }
   A.app.settings.ntList = "none"; ok(A.ntCur() === null && A.ntTodo().list === A.pcData(null).todo, "with no list: the user's own checklist");
   A.app.formFor = p.id; A.app.view = "form"; ok(!/f-notes|nt-tabs/.test(A.viewForm()), "the production's details no longer hold the notes");
   A.app.formFor = null; A.app.view = "home"; delete A.app.settings.ntList; A.app.productions.splice(A.app.productions.indexOf(p), 1); }
