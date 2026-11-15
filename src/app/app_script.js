@@ -2149,7 +2149,7 @@ function unit2StartDialog(p) {
 }
 function startDuplicate(id) {
   if (!app.productions.some(x => x.id === id)) return;
-  app.sel = null; app.dupFrom = id; app.formFor = null; app.view = "form"; render(); window.scrollTo(0, 0);
+  app.sel = null; app.dupFrom = id; app.formFor = null; app.formTodo = []; app.view = "form"; render(); window.scrollTo(0, 0);
   document.getElementById("f-name")?.select();
 }
 /* the standalone app's account line: who is signed in, or why to sign in (inside Claude there is nothing to show) */
@@ -2178,12 +2178,39 @@ function acCardHtml(ac, ph) {
 }
 /* the notes: closed until wanted (a line with the first words when there are notes); open, the editor with its toolbar */
 const CHEVS = `<svg class="chevs" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l5 5 5-5M7 13l5 5 5-5"/></svg>`;
+/* the production's notes, in two tabs: a checklist (lines to tick off later: a reminder now, the proof it's done once it is; the same
+   list as the Prep Checklist's To-do) and the notepad (the free writing). A ticked line saves at once; for a production not made yet
+   the lines wait for Create */
+function ntTodo() { const e = app.formFor ? mainOf(findProd(app.formFor)) : null; return e ? { p: e, list: pcData(e).todo } : { p: null, list: app.formTodo || (app.formTodo = []) }; }
+const ntTodoN = () => { const { list } = ntTodo(); return list.length ? `${list.filter(x => x.done).length}/${list.length}` : ""; };
+function ntTodoHtml() {
+  const { list } = ntTodo(), order = [...list.filter(x => !x.done), ...list.filter(x => x.done)];
+  return `<div class="pc-addrow"><input class="lc-in" id="nt-add" type="text" dir="auto" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="Add a line: order 20 cards" aria-label="New checklist line"><button class="btn primary lc-addbtn" type="button" data-act="nt-add" aria-label="Add the line">+</button></div>
+    ${order.length ? `<ul class="pc-rows pc-todo">${order.map(t => `<li class="pc-row${t.done ? " ok" : ""}"><div class="pc-main" data-act="nt-do" data-id="${esc(t.id)}" role="checkbox" aria-checked="${!!t.done}" tabindex="0">${PC_CK}<span class="pc-n"><span dir="auto">${esc(t.t)}</span></span></div>
+      <button class="pc-nb" type="button" data-act="nt-del" data-id="${esc(t.id)}" aria-label="Delete this line" title="Delete">×</button></li>`).join("")}</ul>` : `<p class="hint">Lines to tick off later: a reminder now, the proof it's done once it is. It's the same list as the Prep Checklist's To-do.</p>`}`;
+}
+function ntTodoPaint(focusAdd) {
+  const pane = document.getElementById("ntTodo"); if (pane) pane.innerHTML = ntTodoHtml();
+  const n = ntTodoN(), tn = document.querySelector('.nt-tabs [data-v="check"] .num'); if (tn) tn.textContent = n;
+  const hn = document.querySelector(".nt-head .nt-cnt"); if (hn) { hn.textContent = n; hn.hidden = !n; }
+  if (focusAdd) document.getElementById("nt-add")?.focus();
+}
+function ntTodoAdd() {
+  const i = document.getElementById("nt-add"), t = i && i.value.trim(); if (!t) { if (i) i.focus(); return; }
+  const { p, list } = ntTodo(); list.push({ id: uid("t"), t: t.slice(0, 200), done: false }); if (p) pcSave(p); buzz("tap");
+  ntTodoPaint(true);
+}
 function notesFieldHtml(p) {
-  const m = ntModel(p), open = app.ntOpen === true;
+  const m = ntModel(p), open = app.ntOpen === true, n = ntTodoN();
+  const tab = app.ntTab || (!n && ntPlain(m).trim() ? "pad" : "check");
+  const tb = (v, t, c) => `<button type="button" role="tab" data-act="nt-tab" data-v="${v}" aria-selected="${tab === v}" aria-controls="${v === "check" ? "ntTodo" : "ntPad"}">${t}${c !== undefined ? `<span class="num">${c}</span>` : ""}</button>`;
   return `<div class="field nt-field${open ? " open" : ""}">
-    <button class="nt-head" type="button" data-act="nt-toggle" aria-expanded="${open}" aria-controls="ntBody"><span class="lbl">Notes</span><span class="nt-peek" dir="auto">${esc(ntPlain(m).split("\n")[0] || "")}</span>${CHEVS}</button>
-    <div class="nt-body" id="ntBody"${open ? "" : " hidden"}>${ntBarHtml()}
-      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" spellcheck="true">${ntHtml(m, false)}</div></div>
+    <button class="nt-head" type="button" data-act="nt-toggle" aria-expanded="${open}" aria-controls="ntBody"><span class="lbl">Notes</span><span class="nt-cnt num"${n ? "" : " hidden"}>${n}</span><span class="nt-peek" dir="auto">${esc(ntPlain(m).split("\n")[0] || "")}</span>${CHEVS}</button>
+    <div class="nt-body" id="ntBody"${open ? "" : " hidden"}>
+      <div class="pc-tabs nt-tabs" role="tablist" aria-label="Notes">${tb("check", "Checklist", n)}${tb("pad", "Notepad")}</div>
+      <div class="nt-pane nt-todo" id="ntTodo" role="tabpanel"${tab === "check" ? "" : " hidden"}>${ntTodoHtml()}</div>
+      <div class="nt-pane" id="ntPad" role="tabpanel"${tab === "pad" ? "" : " hidden"}>${ntBarHtml()}
+      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" spellcheck="true">${ntHtml(m, false)}</div></div></div>
     <input type="hidden" name="notes" value="${esc(ntPlain(m))}"><input type="hidden" name="notesRich" value="${esc(JSON.stringify(m))}"></div>`;
 }
 function viewForm() {
@@ -6071,8 +6098,8 @@ document.addEventListener("click", e => {
     case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break; closeModal(); app.settings.catHouse = hid; touchSettings();
       app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
     case "rules-open": closePreview(); closeModal(); app.rulesTo = b.dataset.to === "clash" ? "clash" : "pkg"; app.view = "rules"; render(); window.scrollTo(0, 0); break;
-    case "browse-new": app.formFor = null; app.dupFrom = null; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
-    case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
+    case "browse-new": app.formFor = null; app.dupFrom = null; app.formTodo = []; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
+    case "new": app.formFor = null; app.dupFrom = null; app.formTodo = []; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "open": {
       const keep = b.dataset.keep === "1" && app.pid === id;
       app.pid = id; app.view = "production"; app.editing = null; app.dupFrom = null; app.setFrom = null;
@@ -6133,7 +6160,7 @@ document.addEventListener("click", e => {
     case "fav-house": if (app.settings.favHouse !== b.dataset.house) { app.settings.favHouse = b.dataset.house; touchSettings(); app.openList = null; render(); } break;
     case "list-start": {  // a saved list, outside a production: a new production of its rental house, started from it
       const L = savedLists().find(x => x.id === id); if (!L) break;
-      closeModal(); app.formFor = null; app.dupFrom = null; app.formHouse = L.houseId; app.view = "form"; render(); app.formHouse = "";
+      closeModal(); app.formFor = null; app.dupFrom = null; app.formTodo = []; app.formHouse = L.houseId; app.view = "form"; render(); app.formHouse = "";
       const st = document.getElementById("f-start"); if (st) st.value = L.id;
       window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     }
@@ -6532,7 +6559,14 @@ document.addEventListener("click", e => {
     }
     case "txrx": if (txPop === id) txClose(); else txOpenFor(p, id, b.closest("[data-row]") ? "c" : "l"); break;
     case "ac-toggle": { const ed = document.getElementById("acEdit"); if (!ed) break; const on = ed.hidden; ed.hidden = !on; b.setAttribute("aria-expanded", String(on)); b.closest(".ac-field")?.classList.toggle("open", on); if (on) document.getElementById("f-ac")?.focus(); break; }
-    case "nt-toggle": { const bd = document.getElementById("ntBody"); if (!bd) break; const on = bd.hidden; bd.hidden = !on; app.ntOpen = on; b.setAttribute("aria-expanded", String(on)); b.closest(".nt-field")?.classList.toggle("open", on); if (on) { const ed = ntEd(); ed?.focus(); if (ed) { const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); } } else ntPopClose(); break; }
+    case "nt-tab": { const v = b.dataset.v; app.ntTab = v; b.parentNode.querySelectorAll("[role=tab]").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+      document.getElementById("ntTodo").hidden = v !== "check"; document.getElementById("ntPad").hidden = v !== "pad"; if (v !== "pad") ntPopClose(); break; }
+    case "nt-add": ntTodoAdd(); break;
+    case "nt-do": { const { p: tp, list } = ntTodo(), t = list.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); if (tp) pcSave(tp); ntTodoPaint(); break; }
+    case "nt-del": { const { p: tp, list } = ntTodo(), i = list.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
+      const [t] = list.splice(i, 1); if (tp) pcSave(tp); ntTodoPaint();
+      undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const r = ntTodo(); r.list.splice(Math.min(i, r.list.length), 0, t); if (r.p) pcSave(r.p); ntTodoPaint(); }); break; }
+    case "nt-toggle": { const bd = document.getElementById("ntBody"); if (!bd) break; const on = bd.hidden; bd.hidden = !on; app.ntOpen = on; b.setAttribute("aria-expanded", String(on)); b.closest(".nt-field")?.classList.toggle("open", on); if (on && !document.getElementById("ntPad")?.hidden) { const ed = ntEd(); ed?.focus(); if (ed) { const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); } } else ntPopClose(); break; }
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
@@ -6582,7 +6616,7 @@ document.addEventListener("click", e => {
     }
   }
 });
-document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key === "Enter" && e.target && e.target.id === "pc-add") { e.preventDefault(); pcAdd(); return; } if (e.key === "Enter" && e.target && (e.target.id === "lc-add" || e.target.id === "lc-addcf")) { e.preventDefault(); document.querySelector('[data-act="lc-add"]')?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target && e.target.id === "bq") { e.preventDefault(); document.querySelector("#bpList li:not([hidden]) button")?.click(); return; } if (e.key === "Enter" && e.target && e.target.id === "pc-add") { e.preventDefault(); pcAdd(); return; } if (e.key === "Enter" && e.target && e.target.id === "nt-add") { e.preventDefault(); ntTodoAdd(); return; } if (e.key === "Enter" && e.target && (e.target.id === "lc-add" || e.target.id === "lc-addcf")) { e.preventDefault(); document.querySelector('[data-act="lc-add"]')?.click(); return; } if (e.key !== "Escape") return; if (document.getElementById("modal")) closeModal(); else closePreview(); });
 document.addEventListener("toggle", e => {
   const k = e.target && e.target.dataset && e.target.dataset.k;
   if (!k || app.q.trim()) return;
@@ -6857,6 +6891,7 @@ document.addEventListener("submit", e => {
       return;
     }
     const was = app.pid;
+    const todo = !p && app.formTodo && app.formTodo.length ? app.formTodo : null; app.formTodo = [];
     if (p) { Object.assign(p, fields); toast("Details saved"); }
     else if (src) { p = copyProduction(src, fields); delete p.unit2; app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
     else {
@@ -6864,6 +6899,7 @@ document.addEventListener("submit", e => {
       const sl = v.startList && savedLists().find(x => x.id === v.startList);
       if (sl) { if (sl.houseId === p.houseId) { const r = applySavedList(p, sl, 1, "add"); app.tab = "list"; toast(`Started from “${sl.name}” · ${r.n} items`); } else toast(`“${sl.name}” is for another rental house, so the list starts empty.`); }
     }
+    if (todo) pcData(p).todo = todo;   // the checklist lines written before Create
     // the 2nd Unit: the same production and house; its own camera crew, and the main dates or its own
     let ask = false;
     if (u2on) {
