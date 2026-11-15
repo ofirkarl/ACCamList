@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151220";
+window.AC_BUILD = "202611151255";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2784,6 +2784,9 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 :root[data-theme="dark"] .mfr-head { border-top-color: var(--line); }
 :root[data-theme="dark"] .mfr-head.closed { background: var(--surface-2); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mfr-head { border-top-color: var(--line); } :root:not([data-theme="light"]) .mfr-head.closed { background: var(--surface-2); } }
+/* a page moving sideways (a swipe) never widens the page: the phone kept the wider page and slid the bottom bar out of view.
+   The body's own clip passes to the window and is lost there, so the app's column clips itself */
+#view { overflow-x: clip; }
 </style>
 </head>
 <body>
@@ -6968,9 +6971,9 @@ function swPageHtml(stop) {
   finally { app.tab = was.tab; app.mcMode = was.mode; mcOpen = was.open; }
   return html;  // a picture of it, drawn after the live page, so the live page's ids stay the ones found first
 }
-function swGhost(side) {
+function swGhost(side, toStop) {
   swDropGhost();
-  const to = swStops()[swHere() + side], pane = swPane(), head = document.querySelector('#view > [data-keep="head"]');
+  const to = toStop || swStops()[swHere() + side], pane = swPane(), head = document.querySelector('#view > [data-keep="head"]');
   if (!to || !pane || !head) return;
   const [segHtml, body] = swPageHtml(to);
   const g = document.createElement("div");
@@ -7038,6 +7041,8 @@ function swGo(to, side) {
     window.scrollTo(0, g ? gS : tabSaved(app.tab, app.mcMode));
     requestAnimationFrame(() => { if (sw.ghost === g) swDropGhost(); else if (g) g.remove(); });
   };
+  // the bottom bar stays where it is; only its pill moves on to the page that's coming
+  document.querySelectorAll(".navbar .nav-tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === to[0])));
   if (calm) { swDropGhost(); show(); return; }
   const d = ".2s";
   swMove(-side * innerWidth, `transform ${d} ${swEase}`, side);
@@ -9167,7 +9172,9 @@ document.addEventListener("click", e => {
     }
     case "dup": startDuplicate(id || app.pid); break;
     case "tab": if (app.tab === b.dataset.tab) { window.scrollTo({ top: 0, behavior: "smooth" }); break; }  // tapping the page you're on goes to its top
-      tabSave(); app.tab = b.dataset.tab; app.editing = null; render(); window.scrollTo(0, tabSaved(app.tab, app.mcMode)); break;
+      { const to = SWIPE_TABS.find(([k]) => k === b.dataset.tab), here = swHere(), there = SWIPE_TABS.indexOf(to);
+        if (to && here >= 0 && !swCalm() && !app.sel) { swGhost(there > here ? 1 : -1, to); if (sw.ghost) { swMove(0, "none", sw.side); requestAnimationFrame(() => swGo(to, there > here ? 1 : -1)); break; } }
+        tabSave(); app.tab = b.dataset.tab; app.editing = null; render(); window.scrollTo(0, tabSaved(app.tab, app.mcMode)); break; }
     case "fin-open": { const s = fin(); s.on = true; s.more = {}; if (b.dataset.mm) { s.f = b.dataset.mm; s.t = b.dataset.t || ""; s.kind = ""; s.mount = ""; s.cov = ""; s.brand = ""; }
       render(); const fe = document.querySelector(".finder"); if (fe) window.scrollTo(0, fe.getBoundingClientRect().top + window.scrollY - 8); break; }
     case "fin-close": fin().on = false; render(); break;
