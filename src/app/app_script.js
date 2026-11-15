@@ -192,6 +192,21 @@ function perHtml(per, hi, around, cf) {
   if (around != null) { const i = Math.max(0, per.findIndex(x => x.f === hi)), a = Math.max(0, i - around), b = Math.min(per.length, i + around + 1); list = per.slice(a, b); pre = a > 0 ? "… " : ""; post = b < per.length ? " …" : ""; }
   return `<span class="lens-line${cf ? " cf" : ""}">${cf ? `<span class="ll-h">CF</span>` : ""}${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(perMM(x))}</b>${x.label ? " " + esc(x.label) : ""}${x.mod ? ` <i class="ll-cf" title="Close focus">${esc(x.mod)}</i>` : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
 }
+/* a set lens by lens as a small table, like the Lens Cards: focal lengths over their stops (only when they differ) and close focus.
+   At most 6 lenses a row; a bigger set in even rows (8: 4 + 4), the columns lined up from row to row */
+function perTableHtml(per, hi) {   // hi: the focal length looked for (Find a lens), its column marked
+  if (!per || !per.length) return "";
+  const n = per.length, rows = Math.ceil(n / 6), k = Math.ceil(n / rows), t = new Set(per.map(x => x.label || "")).size > 1, cf = per.some(x => x.mod);
+  let out = "";
+  for (let r = 0; r < rows; r++) {
+    const part = per.slice(r * k, r * k + k), pad = k - part.length;
+    // a row of the table: its label, a cell a lens (every other one shaded), empty cells where a shorter last row ends; the next rows' first line ruled off
+    const line = (cls, head, val, first) => { const top = first && r ? " top" : "";
+      return `<span class="lt-h${top}">${head}</span>` + part.map((x, i) => `<span class="${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls}${top}"></span>`.repeat(pad); };
+    out += line("mm", "MM", perMM, true) + (t ? line("t", "T", x => (x.label || "").replace(/^T\s*/i, "")) : "") + (cf ? line("cf", "CF", x => x.mod || "") : "");
+  }
+  return `<span class="lt-row"><span class="lt" style="--k:${k}" title="Lens by lens: focal length${t ? ", stop" : ""}${cf ? ", close focus" : ""}">${out}</span></span>`;
+}
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
 const COV_RANK = { "2/3": 0, S16: 1, MFT: 2, "APS-C": 3, S35: 3, FF: 4, LF: 4, MF: 5 };
@@ -218,7 +233,7 @@ function specsHtml(it, extra, o = {}) {
     else if (L.note && !/standard speed/i.test(L.note)) out.push(`<span>${esc(L.note)}</span>`);
     if (md && md.one) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
     { const fd = frontOf(it, sp); if (fd) out.push(`<span class="fd${fd.need ? " adapt" : ""}" title="Front diameter ${esc(fd.words)}${fd.need ? ` · bigger than a standard ${MB_STD} mm matte box: ${MB_NEED}` : ""}">${fd.text}${fd.need ? ` · ${MB_SHORT}` : ""}</span>`); }
-    if (sp && sp.per) per = perHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per, null, null, !!(md && md.per));
+    if (sp && sp.per) per = perTableHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per);
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
   if (o.link && out.length) out.push(o.link);  // the product page globe ends the line
@@ -3441,7 +3456,7 @@ function finderCard(p, m, T) {
     <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
       <dl>${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-      ${sp.per ? `<span class="f-set"><span class="f-set-h">${sp.zooms ? "Zoom by zoom" : "Lens by lens"}${md && md.per ? " · stop · close focus" : ""}</span>${perHtml(per, m.pos)}</span>` : ""}
+      ${sp.per ? `<span class="f-set"><span class="f-set-h">${sp.zooms ? "Zoom by zoom" : "Lens by lens"}</span>${perTableHtml(per, m.pos)}</span>` : ""}
       ${noteOf(m.id) ? `<span class="inote">${esc(noteOf(m.id))}</span>` : ""}
     </span></span></span>
   </li>`;
@@ -4288,7 +4303,7 @@ function lineHtml(p, id, l) {
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   // the short details (format, stop, mount) sit under the name; a set's lens-by-lens line takes the whole width below
-  const cut = specs.indexOf('<span class="lens-line'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
+  const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog

@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151842";
+window.AC_BUILD = "202611151853";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -1174,6 +1174,7 @@ h2.page, .ph-name, .f-title { font-family: var(--font-body); font-weight: 700; f
 .fv .f-per { grid-column: 1 / -1; min-width: 0; display: grid; grid-template-rows: 1fr; transition: grid-template-rows .3s var(--ease), opacity .2s ease, margin .3s var(--ease); }
 .fv .f-per .lens-line { display: block; min-height: 0; overflow: hidden; font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; color: var(--muted); }
 .fv .f-card.open .f-meta { white-space: normal; }
+.fv .f-meta:has(.adapt) { white-space: normal; }   /* the 6x6 matte box note is never cut */
 .fv .f-card.open .f-per { grid-template-rows: 0fr; opacity: 0; margin-top: -6px; }
 /* opening a line: the details grow in height and fade up into place */
 .fv .f-info { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; margin-top: -6px; font-size: 13px; transition: grid-template-rows .34s var(--ease), margin .34s var(--ease); }
@@ -2935,6 +2936,21 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .add { border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
 .add:hover { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
 .item .stepper, .f-card .stepper { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); box-shadow: inset 0 0 0 1px var(--accent); }
+/* a set lens by lens: a small table like the Lens Cards (MM over T and CF), each column its own width, left aligned */
+.lt-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; column-gap: 8px; margin-top: 4px; }
+.lt { display: inline-grid; grid-template-columns: auto repeat(var(--k), auto); max-width: 100%; overflow-x: auto; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 8px; font-size: 12.5px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.lt > span { padding: 2px 4px; text-align: center; white-space: nowrap; color: var(--fg); }
+.lt > .lt-h { padding-inline: 6px 3px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--muted); align-self: stretch; display: flex; align-items: center; }
+.lt > .mm { font-weight: 700; }
+.lt > .cf { color: var(--accent); font-weight: 600; }
+.lt > .z { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.lt > .top { border-top: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.lt > .on { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+.f-set .lt-row { margin-top: 0; }
+.item > .info > .lt-row { margin-top: 3px; column-gap: 6px; }
+.lt-row > .ctl-sp { width: 94px; }   /* Add beside the table when it fits (it sits 4px past the details' edge) */
+.line .l-grid > .l-per { margin-top: 4px; }
+.line .l-per .lt-row { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -3145,6 +3161,21 @@ function perHtml(per, hi, around, cf) {
   if (around != null) { const i = Math.max(0, per.findIndex(x => x.f === hi)), a = Math.max(0, i - around), b = Math.min(per.length, i + around + 1); list = per.slice(a, b); pre = a > 0 ? "… " : ""; post = b < per.length ? " …" : ""; }
   return `<span class="lens-line${cf ? " cf" : ""}">${cf ? `<span class="ll-h">CF</span>` : ""}${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(perMM(x))}</b>${x.label ? " " + esc(x.label) : ""}${x.mod ? ` <i class="ll-cf" title="Close focus">${esc(x.mod)}</i>` : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
 }
+/* a set lens by lens as a small table, like the Lens Cards: focal lengths over their stops (only when they differ) and close focus.
+   At most 6 lenses a row; a bigger set in even rows (8: 4 + 4), the columns lined up from row to row */
+function perTableHtml(per, hi) {   // hi: the focal length looked for (Find a lens), its column marked
+  if (!per || !per.length) return "";
+  const n = per.length, rows = Math.ceil(n / 6), k = Math.ceil(n / rows), t = new Set(per.map(x => x.label || "")).size > 1, cf = per.some(x => x.mod);
+  let out = "";
+  for (let r = 0; r < rows; r++) {
+    const part = per.slice(r * k, r * k + k), pad = k - part.length;
+    // a row of the table: its label, a cell a lens (every other one shaded), empty cells where a shorter last row ends; the next rows' first line ruled off
+    const line = (cls, head, val, first) => { const top = first && r ? " top" : "";
+      return `<span class="lt-h${top}">${head}</span>` + part.map((x, i) => `<span class="${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls}${top}"></span>`.repeat(pad); };
+    out += line("mm", "MM", perMM, true) + (t ? line("t", "T", x => (x.label || "").replace(/^T\s*/i, "")) : "") + (cf ? line("cf", "CF", x => x.mod || "") : "");
+  }
+  return `<span class="lt-row"><span class="lt" style="--k:${k}" title="Lens by lens: focal length${t ? ", stop" : ""}${cf ? ", close focus" : ""}">${out}</span></span>`;
+}
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
 const COV_RANK = { "2/3": 0, S16: 1, MFT: 2, "APS-C": 3, S35: 3, FF: 4, LF: 4, MF: 5 };
@@ -3171,7 +3202,7 @@ function specsHtml(it, extra, o = {}) {
     else if (L.note && !/standard speed/i.test(L.note)) out.push(`<span>${esc(L.note)}</span>`);
     if (md && md.one) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
     { const fd = frontOf(it, sp); if (fd) out.push(`<span class="fd${fd.need ? " adapt" : ""}" title="Front diameter ${esc(fd.words)}${fd.need ? ` · bigger than a standard ${MB_STD} mm matte box: ${MB_NEED}` : ""}">${fd.text}${fd.need ? ` · ${MB_SHORT}` : ""}</span>`); }
-    if (sp && sp.per) per = perHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per, null, null, !!(md && md.per));
+    if (sp && sp.per) per = perTableHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per);
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
   if (o.link && out.length) out.push(o.link);  // the product page globe ends the line
@@ -6394,7 +6425,7 @@ function finderCard(p, m, T) {
     <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
       <dl>${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
-      ${sp.per ? `<span class="f-set"><span class="f-set-h">${sp.zooms ? "Zoom by zoom" : "Lens by lens"}${md && md.per ? " · stop · close focus" : ""}</span>${perHtml(per, m.pos)}</span>` : ""}
+      ${sp.per ? `<span class="f-set"><span class="f-set-h">${sp.zooms ? "Zoom by zoom" : "Lens by lens"}</span>${perTableHtml(per, m.pos)}</span>` : ""}
       ${noteOf(m.id) ? `<span class="inote">${esc(noteOf(m.id))}</span>` : ""}
     </span></span></span>
   </li>`;
@@ -7241,7 +7272,7 @@ function lineHtml(p, id, l) {
   const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   // the short details (format, stop, mount) sit under the name; a set's lens-by-lens line takes the whole width below
-  const cut = specs.indexOf('<span class="lens-line'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
+  const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
