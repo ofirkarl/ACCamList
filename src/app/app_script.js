@@ -192,20 +192,21 @@ function perHtml(per, hi, around, cf) {
   if (around != null) { const i = Math.max(0, per.findIndex(x => x.f === hi)), a = Math.max(0, i - around), b = Math.min(per.length, i + around + 1); list = per.slice(a, b); pre = a > 0 ? "… " : ""; post = b < per.length ? " …" : ""; }
   return `<span class="lens-line${cf ? " cf" : ""}">${cf ? `<span class="ll-h">CF</span>` : ""}${pre}${list.map(x => `<span class="ll${x.f === hi ? " on" : ""}"><b>${esc(perMM(x))}</b>${x.label ? " " + esc(x.label) : ""}${x.mod ? ` <i class="ll-cf" title="Close focus">${esc(x.mod)}</i>` : ""}</span>`).join(`<span class="sep" aria-hidden="true"> • </span>`)}${post}</span>`;
 }
-/* a set lens by lens as a small table, like the Lens Cards: focal lengths over their stops (only when they differ) and close focus.
+/* a set lens by lens as a small table, like the Lens Cards: the same three rows in every set, focal length, stop and close focus
+   (a figure not known: a dash).
    At most 6 lenses a row; a bigger set in even rows (8: 4 + 4), the columns lined up from row to row */
 function perTableHtml(per, hi) {   // hi: the focal length looked for (Find a lens), its column marked
   if (!per || !per.length) return "";
-  const n = per.length, rows = Math.ceil(n / 6), k = Math.ceil(n / rows), t = new Set(per.map(x => x.label || "")).size > 1, cf = per.some(x => x.mod);
+  const n = per.length, rows = Math.ceil(n / 6), k = Math.ceil(n / rows);
   let out = "";
   for (let r = 0; r < rows; r++) {
     const part = per.slice(r * k, r * k + k), pad = k - part.length;
     // a row of the table: its label, a cell a lens (every other one shaded), empty cells where a shorter last row ends; the next rows' first line ruled off
     const line = (cls, head, val, first) => { const top = first && r ? " top" : "";
       return `<span class="lt-h${top}">${head}</span>` + part.map((x, i) => `<span class="${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls}${top}"></span>`.repeat(pad); };
-    out += line("mm", "MM", perMM, true) + (t ? line("t", "T", x => (x.label || "").replace(/^T\s*/i, "")) : "") + (cf ? line("cf", "CF", x => x.mod || "") : "");
+    out += line("mm", "MM", perMM, true) + line("t", "T", x => (x.label || "").replace(/^T\s*/i, "") || "–") + line("cf", "CF", x => x.mod || "–");
   }
-  return `<span class="lt-row"><span class="lt" style="--k:${k}" title="Lens by lens: focal length${t ? ", stop" : ""}${cf ? ", close focus" : ""}">${out}</span></span>`;
+  return `<span class="lt-row"><span class="lt" style="--k:${k}" title="Lens by lens: focal length, stop, close focus">${out}</span></span>`;
 }
 /* ---------- specs: lens coverage, camera sensor ---------- */
 const COV_LABEL = { FF: "Full frame", LF: "Large format", S35: "Super 35", "APS-C": "APS-C / S35", S16: "Super 16", MFT: "MFT", MF: "Medium format", "2/3": '2/3" B4' };
@@ -220,20 +221,17 @@ function specsHtml(it, extra, o = {}) {
   if (it.lens) {
     const L = it.lens, e = ITEM.get(it.id), sp = lensSpec(it, e && e.s.id);
     if (L.coverage) out.push(`<span class="cov">${esc(L.coverage)}</span>`);
-    const md = lensMod(it, sp), perStops = sp && sp.per && sp.per.some(x => x.label);
-    // a set whose lenses share one stop, with each lens's close focus: the stop once, then each lens with its close focus
-    const oneStop = !!(md && md.per && perStops && sp.per.every(x => x.label === sp.per[0].label));
-    if (oneStop) out.push(`<span>${esc(sp.per[0].label)}</span>`);
-    else if (L.stop && !perStops) out.push(`<span>${esc(L.stop)}</span>`);
-    else if (!L.stop && sp && sp.label && !sp.per) out.push(`<span>${esc(sp.label)}</span>`);
+    const md = lensMod(it, sp), set = !!(sp && sp.per), perStops = set && sp.per.some(x => x.label);
+    // a single lens: its stop with the tags. A set: every lens's stop and close focus in its table (the same three rows in every set)
+    if (!set) { if (L.stop) out.push(`<span>${esc(L.stop)}</span>`); else if (sp && sp.label) out.push(`<span>${esc(sp.label)}</span>`); }
     if (sp) { const m = sp.mounts.filter(x => x !== "Other"); if (m.length) out.push(`<span>${esc(m.join("/"))}</span>`); }
     if (L.focals && !(sp && sp.per) && !/\d\s*mm/i.test(lensShortName(it, sp))) out.push(`<span>${esc(L.focals)}</span>`);
     if (L.squeeze) out.push(`<span>${esc(L.squeeze)} anamorphic</span>`);
     if (L.note && !perStops) out.push(`<span>${esc(L.note)}</span>`);
     else if (L.note && !/standard speed/i.test(L.note)) out.push(`<span>${esc(L.note)}</span>`);
-    if (md && md.one) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
+    if (md && md.one && !set) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
     { const fd = frontOf(it, sp); if (fd) out.push(`<span class="fd${fd.need ? " adapt" : ""}" title="Front diameter ${esc(fd.words)}${fd.need ? ` · bigger than a standard ${MB_STD} mm matte box: ${MB_NEED}` : ""}">${fd.text}${fd.need ? ` · ${MB_SHORT}` : ""}</span>`); }
-    if (sp && sp.per) per = perTableHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per);
+    if (set) per = perTableHtml(sp.per.map(x => ({ ...x, label: x.label || L.stop || "", mod: md ? md.per ? md.per[x.f] || "" : md.one ? modText(md) : "" : "" })));
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
   if (o.link && out.length) out.push(o.link);  // the product page globe ends the line
@@ -3434,7 +3432,7 @@ function finderCard(p, m, T) {
   // a tap anywhere on the line opens it to everything about the lens; the link and Add stay where they are
   const open = !!(fin().rows || {})[m.id];
   const md = lensMod(it, sp), cf = md ? md.one ? modText(md) : m.pos != null && md.per ? md.per[m.pos] || "" : "" : "";
-  const per = sp.per && md && md.per ? sp.per.map(x => ({ ...x, mod: md.per[x.f] || "" })) : sp.per;
+  const per = sp.per && md ? sp.per.map(x => ({ ...x, mod: md.per ? md.per[x.f] || "" : md.one ? modText(md) : "" })) : sp.per;
   if (cf) meta.push("CF\u00a0" + cf);
   const fd = frontOf(it, sp), fdHere = fd && m.pos != null && fd.fr.per && fd.fr.per[m.pos] ? +fd.fr.per[m.pos] : null;
   if (fd) meta.push(fdHere != null ? `Ø${fdHere}` : fd.text);

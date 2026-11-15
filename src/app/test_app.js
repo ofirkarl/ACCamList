@@ -1154,7 +1154,9 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   { const d43 = md(L("utopia", /^Dulens APO Mini Prime 43mm/)), dset = L("utopia", /^Dulens APO Mini Prime T2\.4\/T2\.6 Set/); ok(d43 && d43.one === "1'10\"" && (!dset || /1'10/.test(JSON.stringify(md(dset)))), "Dulens APO Mini Prime: the 43 at 1'10\", the set too"); }
   ok(/class="mod"[^>]*>CF 9&quot;</.test(A.specsHtml(L("utopia", /^Cooke S4i T2\/14mm$/).it)), "the lens's line shows CF 9\"");
   const sh = A.specsHtml(L("fitussi", /^ARRI Signature Prime Set$/).it);
-  ok(/<span class="lt-h">CF<\/span><span class="cf">1(&#39;|')2&quot;<\/span>/.test(sh) && /<span class="lt-h">MM<\/span><span class="mm">\d+<\/span>/.test(sh) && !/class="lt-h">T</.test(sh), "a set: a small table, focal lengths over close focus (no stop row when they share one)");
+  ok(/<span class="lt-h">CF<\/span><span class="cf">1(&#39;|')2&quot;<\/span>/.test(sh) && /<span class="lt-h">MM<\/span><span class="mm">\d+<\/span>/.test(sh) && /<span class="lt-h">T<\/span><span class="t">1\.8<\/span>/.test(sh) && !/<span>T1\.8<\/span>/.test(sh), "a set: a small table, the same three rows always (MM, T, CF); its stop in the table, not with the tags");
+  const noCf = [...A.ITEM.values()].find(e => e.it.lens && A.lensSpec(e.it, e.s.id)?.per && !A.lensMod(e.it, A.lensSpec(e.it, e.s.id)));
+  ok(!noCf || /<span class="lt-h">CF<\/span><span class="cf">–<\/span>/.test(A.specsHtml(noCf.it)), "a set with no close focus known still has its CF row, with dashes");
   const big = A.specsHtml(L("utopia", /Signature Prime LPL-Mount Lens Set Of 8/).it);
   ok((big.match(/class="lt-h[^"]*">MM/g) || []).length === 2 && /--k:4/.test(big) && /class="lt-h top">MM/.test(big), "8 lenses: two even rows of 4, the second ruled off"); }
 { const L = (h, re) => { for (const [id, e] of A.ITEM) if (e.h.id === h && re.test(e.it.name)) return e; return null; };
