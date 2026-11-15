@@ -217,6 +217,7 @@ function specsHtml(it, extra, o = {}) {
     if (L.note && !perStops) out.push(`<span>${esc(L.note)}</span>`);
     else if (L.note && !/standard speed/i.test(L.note)) out.push(`<span>${esc(L.note)}</span>`);
     if (md && md.one) out.push(`<span class="mod" title="Close focus">CF ${esc(modText(md))}</span>`);
+    { const fd = frontOf(it, sp); if (fd) out.push(`<span class="fd${fd.need ? " adapt" : ""}" title="Front diameter ${esc(fd.words)}${fd.need ? ` · bigger than your ${Math.max(...mbBacks())} mm matte box: needs an adapter` : ""}">${fd.text}${fd.need ? " · adapter" : ""}</span>`); }
     if (sp && sp.per) per = perHtml(md && md.per ? sp.per.map(x => ({ ...x, label: oneStop ? "" : x.label, mod: md.per[x.f] || "" })) : sp.per, null, null, !!(md && md.per));
   }
   if (it.camera) out.push(`<span class="cov">${esc(it.camera.sensor === "fixed" ? "Fixed lens" : it.camera.sensor)}</span>`);
@@ -2575,6 +2576,9 @@ function viewSettings() {
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one. <b id="meSaved" class="me-saved" hidden>✓ Saved</b></span></form></div>
     ${lookPickerHtml()}
+    <div class="set-group"><h3>Matte box</h3>
+      <div class="mb-sizes" role="group" aria-label="Back sizes of the matte boxes you work with">${MB_SIZES.map(s => `<button type="button" class="chip mb-s" data-act="mb-size" data-v="${s}" aria-pressed="${mbBacks().includes(s)}">${s}</button>`).join("")}</div>
+      <span class="hint">The back sizes (mm) of the matte boxes you work with. A lens whose front is bigger than all of them is marked "needs an adapter" in Add Gear, Find a lens and Lens Cards.</span></div>
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       const maker = !window.AC_STATS || app.isAdmin;   // the catalog file is the maker's tool; a user keeps only their removed items
       return maker ? `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
@@ -3233,12 +3237,54 @@ function lensSpec(it, sub) {
   LENS_SPEC.set(it, spec);
   return spec;
 }
+/* @@LENS_FRONT: front diameter by lens series, in mm, as each maker gives it (generated from src/catalog/front/front_data.json) */
+const LENS_FRONT = [
+  ["zeiss-super-speed-tls", /^zeiss high speed.*\btls\b/i, {"18": "95", "25": "95", "35": "95", "50": "95", "85": "95"}],
+  ["zeiss-standard-speed", /^zeiss standard (speed|prime)/i, {"16": "80", "20": "80", "24": "80", "28": "80", "32": "80", "40": "80", "50": "80", "85": "80", "100": "80", "135": "80", "180": "80", "12": "135", "14": "114", "10": "156"}],
+  ["arri-signature-prime", /signature prime/i, {"18": "114", "21": "114", "25": "114", "29": "114", "35": "114", "40": "114", "47": "114", "58": "114", "75": "114", "95": "114", "125": "114", "150": "114", "200": "114", "12": "134", "15": "156", "280": "134"}],
+  ["arri-signature-zoom", /signature zoom/i, {"16-32": "156", "24-75": "114", "45-135": "114", "65-300": "156"}],
+  ["arri-master-prime", /master prime/i, {"14": "114", "16": "114", "18": "114", "21": "114", "25": "114", "27": "114", "32": "114", "35": "114", "40": "114", "50": "114", "65": "114", "75": "114", "100": "114", "135": "114", "12": "156", "150": "134"}],
+  ["ultra-prime", /^(?!.*super ?16).*ultra prime/i, {"16": "95", "20": "95", "24": "95", "28": "95", "32": "95", "40": "95", "50": "95", "65": "95", "85": "95", "100": "95", "135": "95", "8": "134", "12": "156", "14": "114", "180": "114"}],
+  ["zeiss-supreme-radiance", /supreme (prime )?radiance/i, {"21": "95", "25": "95", "29": "95", "35": "95", "40": "95", "50": "95", "65": "95", "85": "95", "100": "95", "18": "114", "135": "114"}],
+  ["zeiss-cp3", /\bcp\.?3\b/i, {"15": "95", "18": "95", "21": "95", "25": "95", "28": "95", "35": "95", "50": "95", "85": "95", "100": "95", "135": "95"}],
+  ["zeiss-cp2", /\bcp\.?2\b|compact prime/i, {"18": "114", "21": "114", "25": "114", "28": "114", "35": "114", "50": "114", "85": "114", "100": "114", "50 macro": "134"}],
+  ["cooke-s4i", /^cooke s4/i, {"14": "110", "16": "110", "18": "110", "21": "110", "25": "110", "27": "110", "32": "110", "35": "110", "40": "110", "50": "110", "65": "110", "75": "110", "100": "110", "135": "110", "12": "156", "150": "125", "180": "136", "300": "136"}],
+  ["cooke-anamorphic-i", /^cooke (s6i )?anamorphic/i, {"32": "110", "40": "110", "50": "110", "75": "110", "100": "110", "135": "110", "180": "110", "25": "136", "65": "136", "300": "136"}],
+  ["cooke-sp3", /^cooke sp3/i, {"25": "64", "32": "64", "50": "64", "75": "64"}],
+  ["leitz-summilux-c", /summilux[- ]c\b/i, {"16": "95", "18": "95", "21": "95", "25": "95", "29": "95", "35": "95", "40": "95", "50": "95", "65": "95", "75": "95", "100": "95", "135": "114"}],
+  ["leitz-summicron-c", /summicron[- ]c\b/i, {"15": "95", "18": "95", "21": "95", "25": "95", "29": "95", "35": "95", "40": "95", "50": "95", "75": "95", "100": "95", "135": "95"}],
+  ["angenieux-optimo", /^angenieux optimo/i, {"15-40": "114", "28-76": "114", "45-120": "114", "24-290": "162", "28-340": "162", "19.5-94": "136", "56-152": "114", "30-72": "114"}],
+  ["angenieux-ez", /^angenieux\b/i, {"30-90": "114", "45-135": "114", "15-40": "114", "22-60": "114", "45-165": "114", "68-250": "114"}],
+  ["arri-alura", /\balura\b/i, {"15.5-45": "114", "30-80": "114", "18-80": "134", "45-250": "134"}],
+  ["fujinon-mk", /^fujinon mk\d/i, {"18-55": "85", "50-135": "85"}],
+  ["fujinon-zk", /^fujinon (zk|cine zoom cabrio)/i, {"14-35": "114", "19-90": "114", "85-300": "114", "25-300": "136"}],
+  ["fujinon-xk", /^fujinon (xk|cabrio premier)/i, {"20-120": "114"}],
+  ["canon-cine-servo", /^canon cine zoom 17-120/i, {"17-120": "114"}],
+  ["sigma-cine-ff-hs", /^sigma (cine )?ff high[- ]speed/i, {"14": "95", "20": "95", "24": "95", "28": "95", "35": "95", "40": "95", "50": "95", "85": "95", "105": "95", "135": "95"}],
+  ["tokina-vista", /^tokina .*vista/i, {"18": "114", "21": "114", "25": "114", "29": "114", "35": "114", "40": "114", "50": "114", "65": "114", "85": "114", "105": "114", "135": "114"}],
+  ["tokina-cinema-zoom", /^tokina (cinema 11-|vista 16-28)/i, {"16-28": "114", "11-16": "85"}],
+  ["tokina-cinema-macro", /^tokina cinema at-x 100/i, {"100": "85"}],
+  ["nisi-athena", /^nisi athena/i, {"14": "80", "18": "80", "25": "80", "35": "80", "40": "80", "50": "80", "85": "80", "135": "80"}],
+  ["dzofilm-vespid", /vespid/i, {"12": "80", "16": "80", "21": "80", "25": "80", "35": "80", "40": "80", "50": "80", "75": "80", "90": "80", "100": "80", "125": "80"}],
+  ["dzofilm-catta-ace", /catta ace/i, {"18-35": "80", "35-80": "80", "70-135": "80"}],
+  ["laowa-ranger", /^laowa (venus optics )?ranger/i, {"16-30": "80", "28-75": "80", "75-180": "80"}],
+  ["laowa-nanomorph-prime", /^laowa nanomorph s35 anamorphic prime/i, {"27": "58", "35": "58", "50": "58", "65": "67", "80": "67"}],
+  ["viltrox-epic", /^viltrox epic/i, {"25": "95", "35": "95", "50": "95", "65": "95", "75": "95", "100": "95", "135": "95"}],
+  ["atlas-orion", /^atlas orion/i, {"18": "136", "200": "114"}],
+  ["zeiss-lwz3", /\blwz\.?3\b/i, {"21-100": "114"}],
+  ["zeiss-nano-prime", /nano prime/i, {"18": "95", "24": "95", "35": "95", "50": "95", "75": "95", "100": "95"}],
+  ["zeiss-super-speed", /^zeiss high speed/i, {"18": "80", "25": "80", "35": "80", "50": "80", "65": "80", "85": "80"}]];
+/* @@END_FRONT */
 const LENS_MOD_OF = new WeakMap();
 /* a lens's close focus as its maker marks it: one value (a prime or a zoom), or lens by lens for a set; null where it isn't known */
-function lensMod(it, sp) {
+const lensMod = (it, sp) => lensTab(LENS_MOD, LENS_MOD_OF, it, sp);
+/* a lens's front diameter (mm), the same way: one figure, or a set's lens by lens */
+const LENS_FRONT_OF = new WeakMap();
+const lensFront = (it, sp) => lensTab(LENS_FRONT, LENS_FRONT_OF, it, sp);
+function lensTab(TAB, CACHE, it, sp) {
   if (!it || !it.lens) return null;
-  if (LENS_MOD_OF.has(it)) return LENS_MOD_OF.get(it);
-  const row = LENS_MOD.find(r => r[1].test(it.name || "")); let out = null;
+  if (CACHE.has(it)) return CACHE.get(it);
+  const row = TAB.find(r => r[1].test(it.name || "")); let out = null;
   if (row) {
     const t = row[2], mac = row[3] || {};
     // the most particular entry first: focal with stop and version ("85 f/1.4", "24-70 II"), then the focal alone
@@ -3250,8 +3296,22 @@ function lensMod(it, sp) {
     else if (sp.per) { const per = {}; for (const x of sp.per) { const v = x.z ? t[keyOf(fmtN(x.z[0]) + "-" + fmtN(x.z[1]), x.label)] || "" : at(x.f, x.label); if (v) per[x.f] = v; } if (Object.keys(per).length) out = { per }; }
     else { const k = keyOf(fmtN(sp.focals[0]), sp.label); if (k) out = { one: t[k], macro: mac[k] || "" }; }  // a prime with a macro setting (the Sony 100 STF) gets it too
   }
-  LENS_MOD_OF.set(it, out);
+  CACHE.set(it, out);
   return out;
+}
+/* the matte box: the back sizes you work with (Settings); a lens whose front is bigger than the biggest needs an adapter */
+const MB_SIZES = [80, 87, 95, 104, 110, 114, 125, 134, 136, 138, 143, 150, 156];
+const mbBacks = () => { const b = app.settings.mbBack; return Array.isArray(b) && b.length ? b : [114]; };
+const fdNeeds = mm => +mm > Math.max(...mbBacks());
+// the front written short: Ø114, or a set's range (Ø114–156); and whether any lens of it needs an adapter
+function frontOf(it, sp) {
+  const fr = lensFront(it, sp); if (!fr) return null;
+  const vals = fr.one ? [+fr.one] : Object.values(fr.per || {}).map(Number); if (!vals.length) return null;
+  const lo = Math.min(...vals), hi = Math.max(...vals), need = vals.some(fdNeeds);
+  return { fr, lo, hi, need, text: lo === hi ? `Ø${lo}` : `Ø${lo}–${hi}`,
+    // in words, for the lens's facts: one figure; a set's usual one, and the lenses that differ
+    words: (() => { if (fr.one || lo === hi) return `${lo} mm`; const n = new Map(); for (const v of vals) n.set(v, (n.get(v) || 0) + 1); const main = [...n.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return `${main} mm; ${Object.entries(fr.per).filter(([, v]) => +v !== main).map(([f, v]) => `${f}mm: ${v}`).join(", ")}`; })() };
 }
 /* the close focus written short: 1'2" (and the macro setting's, where the lens has one) */
 const modText = m => m && m.one ? m.one + (m.macro ? ` (macro ${m.macro})` : "") : "";
@@ -3339,18 +3399,22 @@ function finderCard(p, m, T) {
   const md = lensMod(it, sp), cf = md ? md.one ? modText(md) : m.pos != null && md.per ? md.per[m.pos] || "" : "" : "";
   const per = sp.per && md && md.per ? sp.per.map(x => ({ ...x, mod: md.per[x.f] || "" })) : sp.per;
   if (cf) meta.push("CF\u00a0" + cf);
+  const fd = frontOf(it, sp), fdHere = fd && m.pos != null && fd.fr.per && fd.fr.per[m.pos] ? +fd.fr.per[m.pos] : null;
+  if (fd) meta.push(fdHere != null ? `Ø${fdHere}` : fd.text);
+  const fdNeed = fd && (fdHere != null ? fdNeeds(fdHere) : fd.need);
   const facts = [["Covers", COV_LABEL[sp.cov] || sp.cov], ["Mount", sp.mounts.filter(x => x !== "Other").join(", ")],
     ["Stop", sp.label ? sp.label + (sp.per && m.type === "set" ? sp.zooms ? " (the kit)" : " (the set)" : "") : ""],
     ["Focal length", sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.zooms ? `${sp.zooms.length} zooms, ${fmtN(sp.zooms[0][0])}–${fmtN(sp.zooms[sp.zooms.length - 1][1])}mm` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`],
     ["Type", [sp.ana ? (sp.squeeze ? sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", sp.probe ? "probe" : sp.tilt ? "tilt and shift" : sp.macro ? "macro" : sp.fisheye ? "fisheye" : ""].filter(Boolean).join(", ")],
-    ["Close focus", md ? md.one ? modText(md) : m.pos != null && md.per && md.per[m.pos] ? `${md.per[m.pos]} (the ${pn(m.pos)})` : md.per ? "Lens by lens, below" : "" : ""]].filter(([, v]) => v);
+    ["Close focus", md ? md.one ? modText(md) : m.pos != null && md.per && md.per[m.pos] ? `${md.per[m.pos]} (the ${pn(m.pos)})` : md.per ? "Lens by lens, below" : "" : ""],
+    ["Front diameter", fd ? (fdHere != null ? `${fdHere} mm (the ${pn(m.pos)})` : fd.words) + (fdNeed ? ` · needs an adapter for a ${Math.max(...mbBacks())} mm matte box` : "") : ""]].filter(([, v]) => v);
   return `<li class="f-card${on ? " on" : ""}${m.exact ? " exact" : ""}${open ? " open" : ""}" data-fcard="${esc(m.id)}">
     <button class="fv-tap" type="button" data-act="fv-row" data-id="${esc(m.id)}" aria-expanded="${open}" aria-label="${open ? "Less" : "More"} about ${esc(it.name)}"></button>
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
     <span class="f-ext">${linkHtml(it, m.e.h)}</span>
     <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
     <span class="ctl">${ctlHtml(p, m.id)}</span>
-    <span class="f-meta">${meta.map(esc).join(" · ")}</span>
+    <span class="f-meta">${meta.map(esc).join(" · ")}${fdNeed ? ` <span class="fd adapt">needs an adapter</span>` : ""}</span>
     ${sp.per ? `<span class="f-per">${perHtml(per, m.pos, 2)}</span>` : ""}
     <span class="f-info"><span class="f-info-in"><span class="f-info-body">
       ${it.name !== lensShortName(it, sp) ? `<span class="f-full">${esc(it.name)}</span>` : ""}
@@ -4561,11 +4625,11 @@ function lcRowsOf(p) {
     const it = x.it, sp = lensSpec(it, x.sub);
     if (!sp && p.browse && !lensMod(it, null)) { ones.push({ name: l.name || it.name, q, mm: "", t: "", cf: l.cf || "", macro: "" }); continue; }
     if (!sp) { const md0 = lensMod(it, null); if (md0) ones.push({ name: it.name.replace(/\s*\([^)]*mount[^)]*\)/i, ""), q, mm: "", t: "", cf: md0.one || "", macro: "" }); continue; }  // Master Macro 100: no "mm" in its name
-    const md = lensMod(it, sp), nm = lensShortName(it, sp);
-    if (sp.per) sets.push({ name: nm.replace(/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm(?:\s*\/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm)+/gi, " ").replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
+    const md = lensMod(it, sp), nm = lensShortName(it, sp), fd = frontOf(it, sp);
+    if (sp.per) sets.push({ fd: fd ? fd.text + (fd.need ? " (adapter)" : "") : "", name: nm.replace(/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm(?:\s*\/\s*\d+(?:\.\d+)?\s*[-–]\s*\d+(?:\.\d+)?\s*mm)+/gi, " ").replace(/\s*\b\d+-Lens\s+(Set|Kit)\b|\s+(Lens\s+)?(Set|Kit)(\s+Of\s+\d+)?\b/gi, " ").replace(/\s+\d+(-Lens)?\s*$/i, "").replace(/\s{2,}/g, " ").trim() || nm, q, cov: sp.cov, mount: (sp.mounts || []).filter(x => x !== "Other").join("/"),
       lenses: sp.per.map(x => ({ mm: perMM(x), t: x.label || sp.label || "", cf: md && md.per ? md.per[x.f] || "" : "" })) });
     else { const mm = sp.zoom ? fmtN(sp.zoom[0]) + "–" + fmtN(sp.zoom[1]) : sp.focals && sp.focals.length ? fmtN(sp.focals[0]) : "";
-      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || (p.browse && sp.focals ? lcStopOf(l.name, sp.focals[0]) : ""), cf: (md ? md.one || "" : "") || l.cf || "", macro: md && md.macro || "" }); }
+      ones.push({ name: (nm.replace(/\s*\d+(?:\.\d+)?(?:\s*[–-]\s*\d+(?:\.\d+)?)?\s*mm\b/i, "").replace(/\s+Zoom$/i, "").replace(/\s{2,}/g, " ").trim() || nm), q, mm, t: sp.label || (p.browse && sp.focals ? lcStopOf(l.name, sp.focals[0]) : ""), cf: (md ? md.one || "" : "") || l.cf || "", macro: md && md.macro || "", fd: fd ? fd.text + (fd.need ? " (adapter)" : "") : "" }); }
   }
   return { sets, ones };
 }
@@ -4584,11 +4648,11 @@ function lensCardHtml(p, o) {
   if (o.lay === "compact") {
     // a set: its name, then its lenses side by side, a column a lens (focal length over stop and close focus), every other one tinted
     const setB = r => { const one = r.lenses.every(l => l.t === r.lenses[0].t), tr = (k, lab, f) => `<tr class="${k}"><th>${lab}</th>${r.lenses.map(f).join("")}</tr>`;
-      return `<div class="lcc-g"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${sub([r.cov, r.mount, one ? r.lenses[0].t : ""])}</span></div>
+      return `<div class="lcc-g"><div class="lcc-n">${esc(r.name)}${x(r.q)}<span>${sub([r.cov, r.mount, one ? r.lenses[0].t : "", r.fd])}</span></div>
         <table class="lcc-m">${tr("mm", "MM", l => `<td>${esc(l.mm)}</td>`)}${one ? "" : tr("t", "T", l => `<td>${esc(l.t)}</td>`)}${tr("cf", "CF", l => `<td>${cf(l.cf)}</td>`)}</table></div>`; };
     // the single lenses: a block of their own, under their own name; a row a lens under the same labels as the sets (MM, T, CF), each in its own column
     const oneB = list => { if (!list.length) return ""; const mac = list.some(r => r.macro);
-      return `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o"><thead><tr><th>Lens</th><th class="n">MM</th><th class="n">T</th><th class="n">CF</th>${mac ? `<th class="mac">Macro</th>` : ""}</tr></thead><tbody>${list.map(r => `<tr><td class="nm">${esc(r.name)}${x(r.q)}</td><td class="n mm">${esc(r.mm)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}</td>${mac ? `<td class="mac">${r.macro ? esc(r.macro) : ""}</td>` : ""}</tr>`).join("")}</tbody></table></div>`; };
+      return `<div class="lcc-g lcc-ones"><div class="lcc-n">${ONES}</div><table class="lcc-o"><thead><tr><th>Lens</th><th class="n">MM</th><th class="n">T</th><th class="n">CF</th>${mac ? `<th class="mac">Macro</th>` : ""}</tr></thead><tbody>${list.map(r => `<tr><td class="nm">${esc(r.name)}${x(r.q)}${r.fd ? ` <span class="lc-fd">${esc(r.fd)}</span>` : ""}</td><td class="n mm">${esc(r.mm)}</td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}</td>${mac ? `<td class="mac">${r.macro ? esc(r.macro) : ""}</td>` : ""}</tr>`).join("")}</tbody></table></div>`; };
     const unitB = u => `${two ? `<div class="lc-u">${u.label}</div>` : ""}${u.sets.map(setB).join("")}${oneB(u.ones)}`;
     return { n, html: `<div class="${cls} lcc" style="${sty}">${head}${units.map(unitB).join("")}</div>` };
   }
@@ -4596,8 +4660,8 @@ function lensCardHtml(p, o) {
   // four columns: a set's mm takes the first two; the single lenses the lens's name, then its mm in a column of its own
   const block = (cls, name, meta, labs, rows) => `<tbody class="grp${cls}"><tr class="g"><td colspan="4"><div class="lc-gn">${name}${meta ? `<span>${meta}</span>` : ""}</div></td></tr>
     <tr class="h">${labs}<th class="n">Stop</th><th class="n">Close focus</th></tr>${rows}</tbody>`;
-  const setT = r => block("", esc(r.name) + x(r.q), sub([r.cov, r.mount]), `<th colspan="2">mm</th>`, r.lenses.map(l => `<tr class="in"><td colspan="2"><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
-  const oneT = list => list.length ? block(" ones", ONES, "", `<th>Lens</th><th class="n">mm</th>`, list.map(r => `<tr class="in"><td class="nm">${esc(r.name)}${x(r.q)}</td><td class="n mm"><span class="lc-mm">${esc(r.mm)}</span></td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) : "";
+  const setT = r => block("", esc(r.name) + x(r.q), sub([r.cov, r.mount, r.fd]), `<th colspan="2">mm</th>`, r.lenses.map(l => `<tr class="in"><td colspan="2"><span class="lc-mm">${esc(l.mm)}</span></td><td class="n">${esc(l.t)}</td><td class="n cf">${cf(l.cf)}</td></tr>`).join(""));
+  const oneT = list => list.length ? block(" ones", ONES, "", `<th>Lens</th><th class="n">mm</th>`, list.map(r => `<tr class="in"><td class="nm">${esc(r.name)}${x(r.q)}${r.fd ? ` <span class="lc-fd">${esc(r.fd)}</span>` : ""}</td><td class="n mm"><span class="lc-mm">${esc(r.mm)}</span></td><td class="n">${esc(r.t)}</td><td class="n cf">${cf(r.cf)}${r.macro ? `<small>macro ${esc(r.macro)}</small>` : ""}</td></tr>`).join("")) : "";
   const uRow = u => two ? `<tbody class="ut"><tr class="u"><td colspan="4">${u.label}</td></tr></tbody>` : "";
   const table = units.length ? `<table class="lc-t">${units.map(u => uRow(u) + u.sets.map(setT).join("") + oneT(u.ones)).join("")}</table>` : "";
   const foot = `<div class="lc-foot">Close focus as each maker marks it. – : no figure from the maker yet.</div>`;
@@ -6674,6 +6738,9 @@ document.addEventListener("click", e => {
       touch(q); buzz(on ? "tick" : "tap"); rerenderKeepScroll();
       if (on) undoable("Checked", "the coverage note", () => { const o2 = q.covOk || (q.covOk = {}); keys.forEach(k => delete o2[k]); touch(q); rerenderKeepScroll(); });
       break; }
+    case "mb-size": { const v = +b.dataset.v, cur0 = mbBacks(), on = cur0.includes(v), nx = on ? cur0.filter(x => x !== v) : [...cur0, v].sort((a, z) => a - z);
+      if (!nx.length) { toast("Keep at least one size."); break; }
+      app.settings.mbBack = nx; touchSettings(); b.setAttribute("aria-pressed", String(!on)); break; }
     case "cov-show": { const q = cur(); if (q) { app.covShow = app.covShow === q.id ? null : q.id; rerenderKeepScroll(); } break; }
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
     case "ad-sel": { const sel = new Set(adSel()), k = b.dataset.id; if (!k) break; if (sel.has(k)) sel.delete(k); else sel.add(k); app.settings.adminSel = [...sel]; touchSettings(); buzz(sel.has(k) ? "tick" : "tap"); rerenderKeepScroll(); break; }
