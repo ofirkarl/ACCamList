@@ -173,14 +173,14 @@ function lensShortName(it, sp) {
 /* the name in pieces that stay whole; a line may break only before a size ("50mm", '7"'), a bracket,
    a joiner ("&", "/", "with") or a generic word (Lens, Set, Kit), never inside a two-word name */
 const BREAK_BEFORE = /^(?:\d+(?:\.\d+)?(?:[-–]\d+(?:\.\d+)?)?(?:mm|"|''|”|in|inch|wh|gb|tb)|\(|&|\+|\/|[-–]|with|w\/|for|lens|lenses|set|kit)$/i;
-function nameHtml(text, q) {
+function nameHtml(text, q, tail = "") {   // tail: something kept to the last word (the product page globe)
   const t = String(text || "").split(/\s+/).filter(Boolean), units = [];
   for (let i = 0; i < t.length; i++) {
     const brk = i > 0 && BREAK_BEFORE.test(t[i].replace(/[,.;:]$/, "")) && !/^(?:&|\+|\/|[-–]|with|w\/|for)$/i.test(t[i - 1])
       && !(i === t.length - 1 && /^(?:set|kit|lens|lenses)$/i.test(t[i]));  // never leave "Set" alone on a line
     if (!units.length || brk) units.push([t[i]]); else units[units.length - 1].push(t[i]);
   }
-  return units.map(u => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u${/^\d+(?:\.\d+)?[-–]\d+(?:\.\d+)?mm$/i.test(w.join(" ")) ? " zr" : ""}">${hl(w.join(" "), q)}</span>`; }).join(" ");
+  return units.map((u, i) => { const w = u.slice(); if (w.length > 1 && w[w.length - 1].length <= 4) w.splice(-2, 2, w[w.length - 2] + "\u00a0" + w[w.length - 1]); return `<span class="u${/^\d+(?:\.\d+)?[-–]\d+(?:\.\d+)?mm$/i.test(w.join(" ")) ? " zr" : ""}">${hl(w.join(" "), q)}${i === units.length - 1 ? tail : ""}</span>`; }).join(" ");
 }
 /* a lens set on one flowing line, each lens with its stop: "18 T2.9 • 25 T2.1 • 35 T2.1 …" (the set name already says how many); hi marks the focal length being searched */
 /* one lens of a set by its focal length; a zoom in a kit of zooms by its range (Laowa Ranger: 16–30, 28–75, 75–180) */
@@ -2913,10 +2913,13 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h), wl = on && p.items[it.id].tx !== undefined ? p.items[it.id] : null;
-  const specs = specsHtml(it, extra, { q }), nameLink = "";
-  const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "";  // the product page globe sits in the row's top-right corner
-  return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
-    <span class="info"><span class="nm-row flow"><span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>${nameLink}</span>${specs}${noteHtml(it.id)}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
+  /* the name runs the full width with the product page globe at its end; the details (tags, close focus lens by lens) run on under it
+     in full-width lines, and Add / the counter sits at the end of the last of them, on its right (on a line of its own only when that
+     line is full). A row with no details: Add at the end of the name */
+  const ctl = `<span class="ctl">${ctlHtml(p, it.id)}</span>`, specs = specsHtml(it, extra, { q });
+  const name = `<span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q, link)}</span>`;
+  return `<li class="item ${on ? "on" : ""}${link ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${starBtn(it.id, { name: it.name, section: it.section })}
+    <span class="info"><span class="nm-row">${name}${specs ? "" : ctl}</span>${specs ? specs.replace(/<\/span>$/, ctl + "</span>") : ""}${noteHtml(it.id)}</span></li>`;
 }
 
 /* ----- Add Gear: the rental house catalog ----- */
@@ -3863,12 +3866,17 @@ function lnHtml() {
   const d = lnDraft; if (!d) return "";
   const fl = k => d._filled.includes(k) ? " ln-filled" : "";
   const seg = (k, v, t) => `<button type="button" data-act="ln-set" data-k="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${t}</button>`;
-  const inp = (k, lab, ph, extra = "") => `<div class="field${fl(k)}"><label for="ln-${k}">${lab}</label><input id="ln-${k}" data-ln="${k}" type="text" autocomplete="off" maxlength="16" value="${esc(d[k] || "")}" placeholder="${esc(ph)}"${extra}></div>`;
-  const rows = d.kind === "set" ? `<div class="ln-rows${fl("rows")}" role="group" aria-label="The set lens by lens"><div class="ln-rh"><span>mm</span><span>Stop</span><span>Close focus</span><span>Front Ø</span><span></span></div>
-      ${d.rows.map((r, i) => `<div class="ln-r">${["f", "stop", "cf", "fd"].map(k => `<input data-lnr="${k}" data-i="${i}" type="text" autocomplete="off" maxlength="12" value="${esc(r[k] || "")}" aria-label="${({ f: "Focal length", stop: "Stop", cf: "Close focus", fd: "Front diameter" })[k]} of lens ${i + 1}"${k === "f" || k === "fd" ? ' inputmode="decimal"' : ""}>`).join("")}<button type="button" class="iconbtn sm" data-act="ln-row-del" data-i="${i}" aria-label="Remove this lens">×</button></div>`).join("")}
-      <button type="button" class="btn ghost sm ln-add" data-act="ln-row-add">+ Add a lens</button></div>`
-    : `<div class="row2">${inp("focal", d.kind === "zoom" ? "Focal length (zoom)" : "Focal length", d.kind === "zoom" ? "24-70" : "35", ' inputmode="decimal"')}${inp("stop", "Stop", "T2.1")}</div>
-      <div class="row2">${inp("cf", "Close focus", "1'2\" or 0.35 m")}${inp("fd", "Front diameter (mm)", "95", ' inputmode="numeric"')}</div>`;
+  /* the numbers: one grid for a prime, a zoom and a set (a row per lens), short fields sized to what goes in them, left aligned */
+  const LN_COL = [["f", "focal", "Focal", "Focal length", "35", "decimal"], ["stop", "stop", "Stop", "Stop", "T2.1", ""], ["cf", "cf", "Close focus", "Close focus", "1'2\"", ""], ["fd", "fd", "Front Ø", "Front diameter", "95", "numeric"]];
+  const cell = (c, v, attrs, ph, extra = "") => `<input ${attrs} type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="12" dir="ltr" value="${esc(v || "")}"${ph ? ` placeholder="${esc(ph)}"` : ""}${c[5] ? ` inputmode="${c[5]}"` : ""}${extra}>`;
+  const set = d.kind === "set";
+  const head = `<div class="ln-rh" aria-hidden="true">${LN_COL.map(c => `<span>${c[2]}</span>`).join("")}${set ? "<span></span>" : ""}</div>`;
+  const rows = set
+    ? d.rows.map((r, i) => `<div class="ln-r">${LN_COL.map(c => cell(c, r[c[0]], `data-lnr="${c[0]}" data-i="${i}"`, i ? "" : c[4], ` aria-label="${c[3]} of lens ${i + 1}"`)).join("")}<button type="button" class="iconbtn sm" data-act="ln-row-del" data-i="${i}" aria-label="Remove this lens">×</button></div>`).join("")
+      + `<button type="button" class="btn ghost sm ln-add" data-act="ln-row-add">+ Add a lens</button>`
+    : `<div class="ln-r">${LN_COL.map(c => cell(c, d[c[1]], `id="ln-${c[1]}" data-ln="${c[1]}"${fl(c[1]) ? ' class="ln-filled"' : ""}`, c[1] === "focal" && d.kind === "zoom" ? "24-70" : c[4], ` aria-label="${c[1] === "focal" && d.kind === "zoom" ? "Focal length (zoom)" : c[3]}"`)).join("")}</div>`;
+  const nums = `<div class="ln-grid ${d.kind || "prime"}${set ? fl("rows") : ""}" role="group" aria-label="${set ? "The set lens by lens" : "Focal length, stop, close focus, front diameter"}">${head}${rows}</div>
+    <p class="hint ln-units">Focal and front Ø in mm · close focus in feet (1'2") or meters (0.35 m)</p>`;
   return `<div class="ln-fill"><button type="button" class="btn sm" data-act="ln-fill">Fill from the name</button>${d._was != null ? `<button type="button" class="btn ghost sm" data-act="ln-unname">Put the name back</button>` : ""}</div>
     ${d._msg ? `<p class="hint ln-msg">${esc(d._msg)}</p>` : ""}
     <div class="ln-segs"><div class="seg sm${fl("ana")}" role="group" aria-label="Spherical or anamorphic">${[["0", "Spherical"], ["1", "Anamorphic"]].map(([v, t]) => `<button type="button" data-act="ln-ana" data-v="${v}" aria-pressed="${!!d.ana === (v === "1")}">${t}</button>`).join("")}</div>
@@ -3876,7 +3884,7 @@ function lnHtml() {
     ${d.ana ? `<div class="field${fl("squeeze")}"><span class="lbl">Squeeze</span><div class="ln-chips">${LN_SQ.map(v => `<button type="button" class="chip" data-act="ln-sq" data-v="${v}" aria-pressed="${d.squeeze === v}">${v}</button>`).join("")}<input class="ln-sqin" data-ln="squeeze" type="text" inputmode="decimal" maxlength="6" value="${LN_SQ.includes(d.squeeze) ? "" : esc(d.squeeze || "")}" placeholder="other" aria-label="Another squeeze"></div></div>` : ""}
     <div class="row2"><div class="field${fl("cov")}"><label for="ln-cov">Covers</label><select id="ln-cov" data-ln="cov">${LN_COVS.map(([v, t]) => `<option value="${v}"${d.cov === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
       <div class="field${fl("mounts")}"><span class="lbl">Mount</span><div class="ln-chips">${LN_MOUNTS.map(v => `<button type="button" class="chip" data-act="ln-mount" data-v="${v}" aria-pressed="${d.mounts.includes(v)}">${v}</button>`).join("")}</div></div></div>
-    ${rows}
+    ${nums}
     ${d._base ? `<div class="more-acts"><button class="btn ghost sm" type="button" data-act="ln-reset">Use the catalog's details</button></div>` : ""}`;
 }
 /* @@LENS_ADD: lenses users made by hand, completed by the maker (with Claude, from the makers' specs); by name, any user's copy of it
@@ -3911,10 +3919,12 @@ function lnMigrate() {
   touchSettings();
   return n;
 }
+let lnPress = 0;   // when a press inside the lens details began (see the name's fill)
+if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("pointerdown", e => { lnPress = e.target && e.target.closest && e.target.closest("#lnIn") ? Date.now() : 0; }, true);
 const lnPaint = () => { const el = document.getElementById("lnIn"); if (el) el.innerHTML = lnHtml(); };
 function lnInput(t) {
   if (!lnDraft) return false;
-  if (t.dataset.ln) { const k = t.dataset.ln; lnDraft[k] = t.value; lnDraft._filled = lnDraft._filled.filter(x => x !== k); t.closest(".field")?.classList.remove("ln-filled"); if (k === "squeeze") document.querySelectorAll('[data-act="ln-sq"]').forEach(b => b.setAttribute("aria-pressed", "false")); return true; }
+  if (t.dataset.ln) { const k = t.dataset.ln; lnDraft[k] = t.value; lnDraft._filled = lnDraft._filled.filter(x => x !== k); t.classList.remove("ln-filled"); t.closest(".field")?.classList.remove("ln-filled"); if (k === "squeeze") document.querySelectorAll('[data-act="ln-sq"]').forEach(b => b.setAttribute("aria-pressed", "false")); return true; }
   if (t.dataset.lnr) { const r = lnDraft.rows[+t.dataset.i]; if (r) r[t.dataset.lnr] = t.value; return true; }
   return false;
 }
@@ -6527,6 +6537,7 @@ document.addEventListener("contextmenu", e => {
 document.addEventListener("click", e => {
   if (lp.fired && e.target.closest && e.target.closest("[data-lp]")) { lp.fired = false; e.preventDefault(); return; }
   const b = e.target.closest("[data-act]");
+  if (b && e.target.closest("a.ext") && !e.target.closest("a.ext").dataset.act && b.contains(e.target.closest("a.ext"))) return;   // a product page globe inside a name: the page opens, not the name's note
   if (mcOpen && !(e.target.closest && e.target.closest(".mc-panel, [data-act='mc-open']"))) mcClose();
   if (txPop && !(e.target.closest && e.target.closest("#txPop, .q-sets"))) txClose();   // the wireless set's little drawer: a tap anywhere else closes it
   if (!b || b.disabled) return;
@@ -7158,7 +7169,15 @@ document.addEventListener("change", e => {
     return; }
   if (t.dataset && (t.dataset.ln || t.dataset.lnr)) { lnInput(t); return; }
   if (t.id === "ci-name" && t.form && t.form.dataset.mode === "new" && lnDraft && !document.getElementById("lnBox")?.hidden && t.value.trim()) {   // a new lens: filled from its name, shown
-    lnAct("ln-fill", null); const box = document.getElementById("lnBox"); if (box && lnDraft._filled.length) box.open = true; return; }
+    const v = t.value.trim(), go = () => { if (!lnDraft || lnDraft._nm === v) return;
+      const ae = document.activeElement, sel = ae && ae.dataset && (ae.dataset.ln ? `[data-ln="${ae.dataset.ln}"]` : ae.dataset.lnr ? `[data-lnr="${ae.dataset.lnr}"][data-i="${ae.dataset.i}"]` : "");
+      lnAct("ln-fill", null); lnDraft._nm = t.value.trim();
+      const back = sel && document.querySelector("#lnIn " + sel); if (back && back !== ae) { back.focus(); try { back.setSelectionRange(back.value.length, back.value.length); } catch (_) { } }   // the field tapped keeps the typing
+      const box = document.getElementById("lnBox"); if (box && lnDraft._filled.length) box.open = true; };
+    // the name was left by a tap on the details (Anamorphic, a field): that tap first, then the fill (else the redraw swallows the tap)
+    if (Date.now() - lnPress < 500) { let done = false; const fin = () => { if (done) return; done = true; document.removeEventListener("click", fin); setTimeout(go, 0); }; document.addEventListener("click", fin); setTimeout(fin, 700); }
+    else go();
+    return; }
   if (t.id === "nh-cat") {
     const f = t.form, isNew = t.value === "__new";
     f.elements.name.hidden = !isNew;
@@ -8218,7 +8237,7 @@ const okFields = f => [...f.querySelectorAll("input")].filter(x => OK_TEXT.test(
 const okFormSends = el => !!(el.form && el.form.querySelector('button[type="submit"], button:not([type])') && okFields(el.form).length === 1);
 function okLine(el) {   // does this field get the ✓?
   if (!el || el.tagName !== "INPUT" || !OK_TEXT.test(el.type) || el.readOnly || el.disabled) return false;
-  if (el.closest(".stepper, .nsel, .tx-pop") || el.matches(OK_OWN) || okFormSends(el)) return false;
+  if (el.closest(".stepper, .nsel, .tx-pop, .ln-grid, .ln-chips") || el.matches(OK_OWN) || okFormSends(el)) return false;
   // only a long line gets it: a short field (a serial number, a channel, a name in half a row) needs no ✓ (Enter still closes it)
   if (el.getBoundingClientRect().width < 200 || (el.maxLength > 0 && el.maxLength <= 12)) return false;
   return true;
