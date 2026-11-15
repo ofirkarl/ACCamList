@@ -24,7 +24,7 @@ RX = [
  ('tokina-cinema-macro', r'^tokina cinema at-x 100'), ('tokina-cinema-zoom', r'^tokina (cinema 11-|vista 16-28)'), ('tokina-vista', r'^tokina .*vista'),
  ('nisi-athena', r'^nisi athena'),
  ('dzofilm-vespid', r'vespid'), ('dzofilm-catta-ace', r'catta ace'), ('dzofilm-x-tract', r'x-tract|^dzofilm 18-28mm t8'),
- ('laowa-ranger', r'^laowa ranger'),
+ ('laowa-ranger', r'^laowa (venus optics )?ranger'),
 ]
 known = {k for k, _ in RX}
 extra = [k for k in d if k not in known]

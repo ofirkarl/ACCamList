@@ -22,7 +22,7 @@ Values as each maker marks them, in feet and inches (metric figures converted to
 | leitz-summilux-c | 16 1'4", 18 1'6", 21 1'3", 25 1'3", 29 1'6", 35 1'6", 40 1'6", 50 2', 65 1'6", 75 2'6", 100 3'3", 135 4'1" | maker | https://leitz-cine.com/product/summilux-c |
 | leitz-summicron-c | 15 1', 18 1', 21 1', 25 1', 29 1', 35 1'2", 40 1'6", 50 2', 75 2'7", 100 3'3", 135 4'6" | maker | https://www.leitz-cine.com/product/summicron-c |
 | leica-m08 | 21 2'3", 24 2'3", 28 2'3", 35 2'3", 50 2'3", 50 f/0.95 3'3", 75 2'3", 90 3'3" | maker | https://www.afcinema.com/IMG/pdf/a/7/5/m-0.8-data-sheet.pdf (Leitz M 0.8 data sheet) |
-| zeiss-super-speed | 18 10", 25 10", 35 1'2", 85 3' | 3 rental houses | https://www.keslowcamera.com/gear/zeiss-super-speed-primes/ + https://lemac.com.au/Rentals/ZeissMKIIIT13SuperSpeeds.aspx + https://www.rule.com/product/zeiss-super-speed/ (No ZEISS source (discontinued); three rental houses agree on these. 50mm: they differ (2'4" / 2'6"), left out. Standard Speeds: houses differ by close-focus mods, left out.) |
+| zeiss-super-speed | 18 10", 25 10", 35 1'2", 50 2'4", 85 3' | MK III rental houses | https://lemac.com.au/Rentals/ZeissMKIIIT13SuperSpeeds.aspx + https://www.camaleonrental.com/gb/zeiss-lenses-hire/zeiss-super-speed-t13-mkiii + https://metrofilm.co.nz/equipment/13/primes-zeiss-high-speed-lens-set/ + https://www.keslowcamera.com/gear/zeiss-super-speed-primes/ + https://www.abelcine.com/rent/lenses-accessories/cine-lenses/zeiss-super-speed-lenses (No ZEISS source (discontinued). By the MK III: 50mm 0.70 m / 2'4" (Lemac MK III, Camaleon MK III 0.71 m, Metrofilm MK III 0.70 m, AbelCine 2'4"; CineLensWiki's 2'6" and Aimimage's 2'5" left aside). 18, 25, 35, 85: rental houses agree. Standard Speeds: houses differ by close-focus mods, left out.) |
 | angenieux-ez | 30-90 2', 45-135 2', 15-40 2', 22-60 2', 45-165 4', 68-250 4' | maker | https://www.lensrentals.com/product-assets/1c61a311-6449-4001-8572-a39efadb07d9/User_Manual_EZ1_EZ2_EZ3_66073806AA-fr_eng-1.pdf (Angenieux EZ user manual, MOD) |
 | angenieux-optimo | 15-40 2', 28-76 2', 45-120 3'1", 24-290 4', 28-340 4'1", 19.5-94 2'1", 56-152 2'1", 30-72 2'2" | maker | https://www.mediatec.de/media/9a/b2/80/1699430730/ANGENIEUX-BROSCHUERE.PDF.PDF (Angenieux brochure, MOD (28-340 4'0.5", 19.5-94 2'0.5" rounded up)) |
 | arri-alura | 15.5-45 2', 30-80 2', 18-80 2'4", 45-250 3'11" | maker | https://utopiacam.com/wp-content/uploads/2016/05/New_Alura_Zooms_-_Data_Sheet_-_DIN_A4.pdf + arri.com legacy technical data (ARRI Alura data sheet) |
@@ -79,9 +79,14 @@ Utopia's "Cooke Panchro Prime Lens Set" is the vintage Speed Panchro (P+S rehous
 Added: Vespid 21, Ultra Prime 10, Canon 16-35 f/2.8L (every version 0.28 m), 24-105 f/4L (both 0.45 m), 70-200 IS II, TS-E 90, EF-S 17-55,
 Panasonic 35-100 / S 24 / S 35, ZE 15/18/21/35, Tokina 11-16 DX II, Samyang AF 35 f/2.8, Viltrox AF 13, DZOFilm Catta (E-mount) 35-80 / 70-135.
 
+## Checked 2026-11-15
+
+Added: Zeiss Super Speed / High Speed 50mm T1.3, by the MK III: 2'4" (0.70 m).
+Catalog notes fixed: Utopia's High Speed set: "a 135mm Standard Speed (T2.1) can be added" (Utopia offers a 135mm; there is no 135mm High Speed); Compact Prime Super Speed set: "a 15mm CP.2 (T2.9) can be added" (Utopia's page).
+
 ## Left out on purpose
 
-Zeiss Standard Speed (houses differ by close-focus mods), Super Speed 50mm (sources differ),
+Zeiss Standard Speed (houses differ by close-focus mods),
 vintage/rehoused sets (Cooke Speed Panchro, Canon FD/V35, Iron Glass, Elite Optar, Cinescope Leica R, Zeiss S16, Century, Optex, Canon super-tele PL, Cooke 25-250),
 Sony 16-35 f/2.8, 18-200, unnamed 70-200 f/2.8 (version not named); Canon 300 f/2.8L (version not named);
 Pictor zooms (DZOFilm lists 3 values for 4 lenses; rentals disagree); NiSi Athena 18/40 (one brochure, which swaps the 14 and 25);

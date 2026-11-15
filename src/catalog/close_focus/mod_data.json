@@ -293,15 +293,16 @@
   "check": "maker"
  },
  "zeiss-super-speed": {
-  "src": "https://www.keslowcamera.com/gear/zeiss-super-speed-primes/ + https://lemac.com.au/Rentals/ZeissMKIIIT13SuperSpeeds.aspx + https://www.rule.com/product/zeiss-super-speed/",
+  "src": "https://lemac.com.au/Rentals/ZeissMKIIIT13SuperSpeeds.aspx + https://www.camaleonrental.com/gb/zeiss-lenses-hire/zeiss-super-speed-t13-mkiii + https://metrofilm.co.nz/equipment/13/primes-zeiss-high-speed-lens-set/ + https://www.keslowcamera.com/gear/zeiss-super-speed-primes/ + https://www.abelcine.com/rent/lenses-accessories/cine-lenses/zeiss-super-speed-lenses",
   "mod": {
    "18": "10\"",
    "25": "10\"",
    "35": "1'2\"",
+   "50": "2'4\"",
    "85": "3'"
   },
-  "note": "No ZEISS source (discontinued); three rental houses agree on these. 50mm: they differ (2'4\" / 2'6\"), left out. Standard Speeds: houses differ by close-focus mods, left out.",
-  "check": "3 rental houses"
+  "note": "No ZEISS source (discontinued). By the MK III: 50mm 0.70 m / 2'4\" (Lemac MK III, Camaleon MK III 0.71 m, Metrofilm MK III 0.70 m, AbelCine 2'4\"; CineLensWiki's 2'6\" and Aimimage's 2'5\" left aside). 18, 25, 35, 85: rental houses agree. Standard Speeds: houses differ by close-focus mods, left out.",
+  "check": "MK III rental houses"
  },
  "angenieux-ez": {
   "src": "https://www.lensrentals.com/product-assets/1c61a311-6449-4001-8572-a39efadb07d9/User_Manual_EZ1_EZ2_EZ3_66073806AA-fr_eng-1.pdf",

@@ -1230,6 +1230,54 @@ const POCKET4K = [["4K DCI", 4096, 2160, 60], ["4K 2.4:1", 4096, 1720, 75], ["UH
 const POCKET6K = [["6K", 6144, 3456, 50], ["6K 2.4:1", 6144, 2560, 60], ["5.7K 17:9", 5744, 3024, 60], ["4K DCI", 4096, 2160, 60], ["3.7K 6:5 anamorphic", 3728, 3104, 60], ["2.8K 17:9", 2880, 1512, 120], ["HD", 1920, 1080, 120]];
 /* DJI Ronin 4D 6K: ProRes RAW at the middle of DJI's range */
 const R4D = [["6K", 6008, 3168, 60], ["C4K", 4096, 2160, 120], ["2K", 2048, 1080, 120]];
+/* Fujifilm (the makers' spec pages). ProRes at Fujifilm's own rates: the HD rate per pixel at every size (GFX100 II's table:
+   8K 16:9 29.97p HQ 3520 Mbps). H.265: the bit rates the camera offers; it shows only those its mode allows */
+const FUJI_PR = names => names.map(n => ({ n, t: "bpp", v: PR[n][0] }));
+const fixM = mbps => [[999, mbps]];
+const fujiH = (modes, list) => list.map(([n, mbps]) => ({ n, t: "Mfix", m: modes.map(x => [...x, fixM(mbps)]) }));
+const ETERNA = [["8K 17:9", 8192, 4320, 24], ["8K 16:9", 7680, 4320, 30], ["8K 2.76:1", 8192, 2968, 24], ["6.3K 16:9", 6382, 3590, 30], ["5.8K 2.39:1", 5824, 2436, 30], ["5.4K 17:9", 5440, 2868, 30],
+  ["4.8K 3:2", 4776, 3184, 24], ["4.8K 16:9", 4776, 2688, 30], ["4.6K 1.38:1", 4664, 3380, 24], ["4K 1.195:1", 4040, 3380, 24], ["4K DCI 17:9", 4096, 2160, 60], ["4K UHD 16:9", 3840, 2160, 60], ["4K 4:3", 3840, 2880, 48],
+  ["2K 17:9", 2048, 1080, 60], ["HD 16:9", 1920, 1080, 60]];
+const GFX100II = [["8K 16:9", 7680, 4320, 30], ["8K DCI 17:9", 8192, 4320, 24], ["8K 2.76:1 anamorphic", 8192, 2968, 24], ["5.8K 2.35:1", 5824, 2476, 30], ["5.4K 17:9", 5440, 2868, 30], ["4.8K 3:2", 4776, 3184, 24],
+  ["4.8K 16:9", 4776, 2688, 30], ["4.6K 1.38:1 anamorphic", 4664, 3380, 24], ["4K DCI 17:9", 4096, 2160, 60], ["4K UHD 16:9", 3840, 2160, 60], ["2K 17:9", 2048, 1080, 120], ["HD 16:9", 1920, 1080, 120]];
+const FUJI_H265 = cs => [["H.265 All-Intra 720 Mbps", 720], ["H.265 All-Intra 360 Mbps", 360], ["H.265 Long GOP 720 Mbps", 720], ["H.265 Long GOP 360 Mbps", 360], ["H.265 Long GOP 200 Mbps", 200], ["H.265 Long GOP 100 Mbps", 100], ["H.265 Long GOP 50 Mbps", 50]]
+  .map(([n, v]) => [`${n} (${cs(n)})`, v]);
+/* Panasonic. Each mode names its sensor area and the file it makes ("Super 35 → 4K DCI") */
+const LX = (sn, out, w, h, fps) => [`${sn} → ${out}`, w, h, fps];
+const at = (sn, list) => list.map(([out, w, h, fps]) => LX(sn, out, w, h, fps));
+const K4 = sn => at(sn, [["4K DCI", 4096, 2160, 60], ["UHD", 3840, 2160, 60]]), K2 = (sn, f = 60) => at(sn, [["2K", 2048, 1080, f], ["HD", 1920, 1080, f]]);
+const cap = (modes, f) => modes.map(x => [x[0], x[1], x[2], Math.min(x[3], f)]);
+// VariCam: AVC-Intra 4K at Panasonic's recording-time table (256 GB expressP2: 4K422 90 min at 23.98, 73 min at 30; 4K-LT 64 min at 60; AVC-Intra422 130 min at 60)
+const varicam = lt => [{ n: "AVC-Intra 4K422", t: "B", m: withV(K4("Super 35"), 1845000) }, { n: "AVC-Intra 4K-LT", t: "B", m: withV(K4("Super 35"), 1044000) }, { n: "AVC-Intra422 (2K / HD)", t: "B", m: withV(K2("Super 35"), 514000) },
+  ...pr(["ProRes 4444", "ProRes 422 HQ"], at("Super 35", [["HD", 1920, 1080, 60]])), ...(lt ? [{ n: "AVC-LongG50", t: "Mfix", m: withV(at("Super 35", [["HD", 1920, 1080, 60]]), fixM(50)) }, { n: "AVC-LongG25", t: "Mfix", m: withV(at("Super 35", [["HD", 1920, 1080, 60]]), fixM(25)) }] : [])];
+// EVA1 (Panasonic's EVA1 recording formats paper, ALL-I by the 2018 firmware): the 5.7K Super 35 sensor, scaled
+const EVA1 = [{ n: "ALL-I 4K 400 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(cap(K4("Super 35 5.7K"), 30), fixM(400)) }, { n: "LongGOP 4K 150 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(cap(K4("Super 35 5.7K"), 30), fixM(150)) },
+  { n: "LongGOP 4K (4:2:0 8-bit)", t: "Mfix", m: withV(K4("Super 35 5.7K"), [[30, 100], [60, 150]]) },
+  { n: "ALL-I 2K / HD (4:2:2 10-bit)", t: "Mfix", m: withV(K2("Super 35 5.7K"), [[30, 100], [60, 200]]) }, { n: "LongGOP 2K / HD (4:2:2 10-bit)", t: "Mfix", m: withV(K2("Super 35 5.7K"), [[30, 50], [60, 100]]) }];
+// LUMIX (Panasonic's spec sheets)
+const S1H_4K = (f, ff = true) => [...(ff ? [LX("Full frame", "C4K", 4096, 2160, Math.min(f, 30)), LX("Full frame", "UHD", 3840, 2160, Math.min(f, 30))] : []), LX("Super 35", "C4K", 4096, 2160, f), LX("Super 35", "UHD", 3840, 2160, f), LX("Super 35 anamorphic 4:3", "4K-A", 3328, 2496, Math.min(f, 50))];
+const S1H = [{ n: "H.265 6K 200 Mbps (4:2:0 10-bit)", t: "Mfix", m: [[...LX("Full frame 3:2", "6K", 5952, 3968, 24), fixM(200)]] },
+  { n: "H.265 5.9K / 5.4K 200 Mbps (4:2:0 10-bit)", t: "Mfix", m: [[...LX("Full frame 16:9", "5.9K", 5888, 3312, 30), fixM(200)], [...LX("Full frame 3:2", "5.4K", 5376, 3584, 30), fixM(200)]] },
+  { n: "H.264 ALL-I 4K 400 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(S1H_4K(30), fixM(400)) },
+  { n: "H.264 LongGOP 4K 150 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(S1H_4K(30), fixM(150)) },
+  { n: "H.265 4K 200 Mbps (4:2:0 10-bit)", t: "Mfix", m: withV(S1H_4K(60, false), fixM(200)) },
+  { n: "H.264 LongGOP 4K (4:2:0 8-bit)", t: "Mfix", m: withV(S1H_4K(60).slice(0, 4), [[30, 100], [60, 150]]) },
+  { n: "H.264 ALL-I HD 200 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(at("Full frame", [["HD", 1920, 1080, 60]]), fixM(200)) }, { n: "H.264 LongGOP HD 100 Mbps", t: "Mfix", m: withV(at("Full frame", [["HD", 1920, 1080, 60]]), fixM(100)) },
+  { n: "H.265 HD high speed 150 Mbps (4:2:0 10-bit)", t: "Mfix", m: withV(at("Super 35", [["HD", 1920, 1080, 120]]), fixM(150)) }];
+const MFT4K = (f, fd = f) => [LX("Four Thirds", "C4K", 4096, 2160, fd), LX("Four Thirds", "UHD", 3840, 2160, f), LX("Four Thirds anamorphic 4:3", "4K-A", 3328, 2496, f)];
+const GH5S = [{ n: "ALL-I 4K 400 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(MFT4K(30, 24), fixM(400)) },
+  { n: "LongGOP 4K 150 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(MFT4K(30), fixM(150)) },
+  { n: "LongGOP 4K (4:2:0 8-bit)", t: "Mfix", m: withV(MFT4K(60), [[30, 100], [60, 150]]) },
+  { n: "ALL-I HD 200 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(at("Four Thirds", [["HD", 1920, 1080, 60]]), fixM(200)) }, { n: "LongGOP HD 100 Mbps (4:2:2 10-bit)", t: "Mfix", m: withV(at("Four Thirds", [["HD", 1920, 1080, 60]]), fixM(100)) }];
+const BGH1 = [...GH5S.slice(0, 2), { n: "H.265 4K 200 Mbps (4:2:0 10-bit)", t: "Mfix", m: withV(MFT4K(60), fixM(200)) }, ...GH5S.slice(2)];
+/* Sony, older (Sony's brochures): F55 / F5 XAVC as the FX9's (class 300 4K, class 100 HD), MPEG HD422, the F55's SR codec; F3 and FS700 their HD files */
+const S35 = "Super 35", F5X = [{ n: "XAVC-I 4K", t: "M24", m: withV(K4(S35), 297) }, { n: "XAVC-I HD", t: "M24", m: withV(at(S35, [["HD", 1920, 1080, 180]]), 123) }, { n: "MPEG HD422 50 Mbps", t: "Mfix", m: withV(at(S35, [["HD", 1920, 1080, 30]]), fixM(50)) }];
+const F55 = [...F5X, { n: "SR-Lite 220 Mbps (4:2:2 10-bit)", t: "M24", m: withV(at(S35, [["HD", 1920, 1080, 30]]), 176) }, { n: "SR-SQ 440 Mbps (4:4:4 10-bit)", t: "M24", m: withV(at(S35, [["HD", 1920, 1080, 30]]), 352) }];
+const F5 = F5X;
+const F3 = [{ n: "XDCAM EX HQ 35 Mbps", t: "Mfix", m: withV(at(S35, [["HD", 1920, 1080, 30], ["720p", 1280, 720, 60]]), fixM(35)) }, { n: "XDCAM EX SP 25 Mbps", t: "Mfix", m: withV(at(S35, [["HD", 1920, 1080, 30]]), fixM(25)) }];
+const FS700 = [{ n: "AVCHD PS 28 Mbps", t: "Mfix", m: withV(at(S35, [["HD", 1920, 1080, 60]]), fixM(28)) }, { n: "AVCHD FX 24 Mbps", t: "Mfix", m: withV(at(S35, [["HD", 1920, 1080, 30]]), fixM(24)) }, { n: "AVCHD FH 17 Mbps", t: "Mfix", m: withV(at(S35, [["HD", 1920, 1080, 30]]), fixM(17)) }];
+/* Blackmagic Micro Cinema Camera: HD to SD; ProRes, and CinemaDNG RAW 3:1 (12-bit over 3: calculated) */
+const MICRO = [{ n: "CinemaDNG RAW 3:1", t: "bpp", v: 4, m: at("Super 16", [["HD", 1920, 1080, 30]]) }, ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT", "ProRes 422 Proxy"], at("Super 16", [["HD", 1920, 1080, 60]]))];
 const REC = {
   ...REC_ARRI,
   venice: [...xocn(["X-OCN XT", "X-OCN ST", "X-OCN LT"], VENICE6K), ...pr(["ProRes 4444", "ProRes 422 HQ", "ProRes 422"], [HD]), { n: "XAVC-I Class 480 4K", t: "M24", m: [m(DCI, 60, 476), m(UHD, 60, 476)] }, ...XAVC_I(60, 120).slice(0, 1)],
@@ -1252,16 +1300,24 @@ const REC = {
   ursa46: [...brawOf([3, 5, 8, 12, ...BRAW_Q], URSA46), ...pr(["ProRes 4444 XQ", "ProRes 4444", "ProRes 422 HQ", "ProRes 422"], [m(DCI, 60), m(UHD, 60), m(HD, 120)])],
   pocket4k: [...brawOf([3, 5, 8, 12, ...BRAW_Q], POCKET4K), ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"], [m(DCI, 60), m(UHD, 60), m(HD, 120)])],
   pocket6k: [...brawOf([3, 5, 8, 12, ...BRAW_Q], POCKET6K), ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"], [m(DCI, 60), m(UHD, 60), m(HD, 120)])],
+  eterna: [...FUJI_PR(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"]).map(x => ({ ...x, m: ETERNA })), ...fujiH(ETERNA, FUJI_H265(() => "4:2:2 10-bit"))],
+  gfx100ii: [...FUJI_PR(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"]).map(x => ({ ...x, m: GFX100II })), ...fujiH(GFX100II, FUJI_H265(n => /Intra/.test(n) ? "4:2:0 10-bit" : "4:2:2 10-bit"))],
+  varicam35: varicam(false), varicamlt: varicam(true), eva1: EVA1, s1h: S1H, gh5s: GH5S, bgh1: BGH1,
+  f55: F55, f5: F5, f3: F3, fs700: FS700, microcinema: MICRO,
   ronin4d: [{ n: "ProRes RAW HQ", t: "bpp", v: 4.0, m: R4D }, { n: "ProRes RAW", t: "bpp", v: 2.5, m: R4D }, ...pr(["ProRes 422 HQ", "ProRes 422", "ProRes 422 LT"], R4D)]
 };
 /* sizes the maker gives only as a ratio (calculated here from its full format), or doesn't publish */
 const REC_NOTE = { komodo: { "6K 2:1": "calculated", "6K 16:9": "calculated", "4K 16:9": "calculated" },
   helium: { "8K 16:9": "calculated", "8K 6:5": "calculated", "6K 16:9": "calculated", "4K 16:9": "calculated" },
   dragon: { "6K 2.4:1": "calculated", "6K 16:9": "calculated", "6K 6:5": "calculated", "5K 2.4:1": "calculated", "4K 16:9": "calculated" },
-  ronin4d: { "6K": "size not published" } };
+  ronin4d: { "6K": "size not published" },
+  microcinema: { "Super 16 → HD": "RAW: calculated" } };
 /* which recording profile a camera from the catalog uses, by its name */
 const REC_OF = [[/alexa 35 (xtreme|extreme)/i, "alexa35xtreme"], [/alexa 35/i, "alexa35"], [/alexa mini lf/i, "miniLF"], [/alexa mini/i, "mini"], [/amira/i, "amira"], [/alexa (plus|ev|classic|xt\b)/i, "alexaClassic"],
-  [/venice 2/i, "venice2"], [/venice/i, "venice"], [/burano/i, "burano"], [/fx9/i, "fx9"], [/fx6/i, "fx6"], [/fs7/i, "fs7"], [/fs5/i, "fs5"],
+  [/venice 2/i, "venice2"], [/venice/i, "venice"], [/burano/i, "burano"], [/fx9/i, "fx9"], [/fx6|\bfr7\b/i, "fx6"], [/fs700/i, "fs700"], [/fs7(?!\d)/i, "fs7"], [/fs5/i, "fs5"],
+  [/pmw-f55/i, "f55"], [/pmw-f5\b/i, "f5"], [/pmw-f3\b/i, "f3"],
+  [/gfx eterna/i, "eterna"], [/gfx ?100 ?ii/i, "gfx100ii"], [/varicam lt/i, "varicamlt"], [/varicam 35/i, "varicam35"], [/\beva1\b/i, "eva1"],
+  [/\bb?s1h\b/i, "s1h"], [/\bbgh1\b/i, "bgh1"], [/gh5s/i, "gh5s"], [/micro cinema camera/i, "microcinema"],
   [/a7 iv|a7iv/i, "sonySI4K"], [/fx3|fx30|fx2\b|a7s (mark )?iii|a7s3/i, "sonySI"], [/a7s (mark )?ii\b|alpha a7s$|a7 (mark )?iii|alpha a7 mark iii/i, "sonyS"],
   [/komodo/i, "komodo"], [/helium/i, "helium"], [/dragon/i, "dragon"],
   [/c400/i, "c400"], [/c500 mark ii/i, "c500"], [/c80\b/i, "c80"], [/c70\b/i, "c70"], [/c300 mark ii/i, "c300ii"], [/c300\b/i, "c300"],
@@ -1299,6 +1355,9 @@ function csOf(codec, cam) {
   if (/ProRes 4444/.test(n)) return "4:4:4 · 12-bit";
   if (/ProRes/.test(n)) return "4:2:2 · 10-bit";
   if (/XAVC-L 4K|XAVC-L HD (35|25)|XAVC S 4K$|XAVC S HD/.test(n)) return "4:2:0 · 8-bit";
+  { const cs = /\((4:[024]:[024]) (\d+)-bit\)/.exec(n); if (cs) return `${cs[1]} · ${cs[2]}-bit`; }   // a codec that says it in its name
+  if (/AVCHD|XDCAM EX|MPEG HD422/.test(n)) return /HD422/.test(n) ? "4:2:2 · 8-bit" : "4:2:0 · 8-bit";
+  if (/H\.26[45]|LongGOP|Long GOP|ALL-I|All-Intra/.test(n) && !/ProRes/.test(n)) return "4:2:0 · 10-bit";
   if (/MPEG-2|MPEG HD422/.test(n)) return "4:2:2 · 8-bit";
   return "4:2:2 · 10-bit";
 }
@@ -3076,7 +3135,7 @@ const LENS_MOD = [
   ["zeiss-nano-prime", /nano prime/i, {"18": "10\"", "24": "1'2\"", "35": "1'6\"", "50": "1'8\"", "75": "2'6\"", "100": "3'3\""}],
   ["zeiss-lwz3", /\blwz\.?3\b/i, {"21-100": "2'8\""}],
   ["zeiss-cz2", /\bcz\.?2\b|compact zoom/i, {"15-30": "1'10\"", "28-80": "2'8\"", "70-200": "5'"}],
-  ["zeiss-super-speed", /^zeiss high speed/i, {"18": "10\"", "25": "10\"", "35": "1'2\"", "85": "3'"}],
+  ["zeiss-super-speed", /^zeiss high speed/i, {"18": "10\"", "25": "10\"", "35": "1'2\"", "50": "2'4\"", "85": "3'"}],
   ["cooke-anamorphic-i", /^cooke (s6i )?anamorphic/i, {"25": "2'9\"", "32": "2'9\"", "40": "2'9\"", "50": "2'9\"", "65": "1'6\"", "75": "3'3\"", "100": "3'8\"", "135": "4'8\"", "180": "6'6\"", "300": "10'"}],
   ["cooke-sp3", /^cooke sp3/i, {"25": "10\"", "32": "1'1\"", "50": "1'8\"", "75": "3'", "100": "3'", "18": "10\""}],
   ["cooke-panchro-ff", /^cooke panchro ?\/ ?i\b|panchro\/i classic/i, {"18": "11\"", "21": "11\"", "25": "1'1\"", "27": "1'1\"", "32": "1'1\"", "40": "1'1\"", "50": "1'4\"", "65": "1'1\"", "75": "2'6\"", "100": "2'", "135": "2'9\"", "152": "3'6\""}],
@@ -3957,7 +4016,7 @@ function sensorText(sn) { return sn.replace(/\bOG\b/, "Open Gate"); }
    From the makers' specs and help guides; "≈" marks an area worked out from the pixel's size × the pixels read.
    A row: [scan, the files (| between), area, top frame rate (0: any), lowest frame rate (0: any), a word on it] */
 const SCANS = [
-  [/\bFX6\b/i, [["Full Frame", "4K DCI|UHD", "35.7 × 18.8", 60, 0, "the whole width, scaled"], ["Full Frame, 10% crop", "4K DCI|UHD", "≈32.1 × 18.1", 0, 61, "above 60 fps"],
+  [/\bFX6\b|\bFR7\b/i, [["Full Frame", "4K DCI|UHD", "35.7 × 18.8", 60, 0, "the whole width, scaled"], ["Full Frame, 10% crop", "4K DCI|UHD", "≈32.1 × 18.1", 0, 61, "above 60 fps"],
     ["Full Frame", "HD", "35.7 × 18.8", 0, 0, "the whole width, scaled"], ["Super 35", "HD", "≈23.8 × 13.4", 0, 0, "1.5x crop"]]],
   [/\bFX30\b/i, [["Super 35", "4K DCI|UHD", "≈22.5 × 12.6", 60, 0, "6K read, scaled"], ["Super 35, 1.6x crop", "4K DCI|UHD", "≈14.4 × 8.1", 0, 61, "above 60 fps"],
     ["Super 35", "HD", "≈22.5 × 12.6", 0, 0, "scaled"]]],
