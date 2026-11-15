@@ -1,6 +1,6 @@
 # Front diameter: sources
 
-Front diameter (mm) by lens series, as each maker gives it (or rental houses / a retailer, where noted). Used by the app for the matte box: a lens whose front is bigger than the user's matte box back is marked "needs an adapter". Lenses not listed have no figure: left empty, never guessed.
+Front diameter (mm) by lens series, as each maker gives it (or rental houses / a retailer, where noted). Used by the app for the matte box: a lens whose front is bigger than a standard 114 mm matte box back is marked "6x6 matte box / adapter". Lenses not listed have no figure: left empty, never guessed.
 
 | Series | Values (focal: mm) | Check | Source |
 |---|---|---|---|
