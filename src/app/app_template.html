@@ -2526,7 +2526,7 @@ input.ok-pad.ok-rtl { padding-inline-start: 30px !important; }
 .ac-field.open .me-head .chev { transform: rotate(180deg); }
 .nt-bar-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; min-width: 0; }
 .nt-grp { display: flex; flex: 3 1 0; min-width: 0; gap: 1px; padding: 1px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
-.nt-grp:last-child { flex-grow: 2; }
+.nt-grp:last-child { flex-grow: 3; }   /* align, bullets, clear: three like the others */
 .nt-btn { position: relative; display: grid; place-items: center; flex: 1 1 0; min-width: 0; width: auto; height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--fg); font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .nt-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); }
 .nt-btn:active { transform: scale(.93); }
@@ -2602,8 +2602,16 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 .prod-head.ph-extra { padding-block: 16px 0; gap: 16px; }
 .prod-head.ph-extra .unit-sw { margin: 0; }
 .tabpane .list-tools.lt-one { padding-top: 16px; }
-/* the home screen's five tools in one row */
-.home-shorts { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+/* the notepad's align button and its drawer: left, center, right */
+.nt-al { display: grid; place-items: center; }
+.nt-pop .nt-alb { display: grid; place-items: center; width: 40px; height: 36px; border: 0; border-radius: 8px; background: none; color: var(--fg); cursor: pointer; }
+.nt-pop .nt-alb:active, .nt-pop .nt-alb:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+/* the checklist's lines read from the right (Ofir: the box on the right, the line's text after it, the × at the far left); English
+   lines too, so every box sits in one column */
+.pc-todo .pc-row { direction: rtl; }
+.pc-todo .pc-main { padding: 6px 12px 6px 4px; }
+.pc-todo .pc-n > span { text-align: right; }
+.pc-todo .pc-nb { margin-inline-end: 0; margin-inline-start: 4px; }
 </style>
 
 <div class="app">
@@ -4735,7 +4743,7 @@ function viewMcalc() {
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
 const homeShortcuts = () => { const s = (act, icon, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, "hs-i")}<span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", "card", "Media calc")}${s("notes", "note", "Notes")}${s("catalogs", "book", "Catalogs")}${s("favs", "star", "Favorites")}${s("tools", "grid", "More tools")}</div>`; };
+  return `<div class="home-shorts">${s("notes", "note", "Notes")}${s("catalogs", "book", "Catalogs")}${s("favs", "star", "Favorites")}${s("tools", "grid", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}" style="--hc:var(--house-${esc(h.id)}, var(--accent))"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -6894,6 +6902,7 @@ function viewTools() {
   const row = (act, icon, t, s, extra) => `<button class="tool-row" type="button" data-act="${act}"${extra || ""}>${tile(icon, "hs-i")}<span class="tl-t"><b>${t}</b><span>${s}</span></span>${CHEV_R}</button>`;
   return `${pageHead("More tools")}
     <section class="pad tools-list">
+      ${row("mcalc", "card", "Media calculator", "Recording time on a card, per camera")}
       ${row("cams", "idcard", "Multicam management", "Each camera's setup, and its card")}
       ${row("lensfind", "lens", "Find a lens", "By focal length, per rental house")}
       ${row("prep", "list", "Prep Checklist", "Check the gear, your to-dos, and notes")}
@@ -10155,6 +10164,9 @@ const NT_PX = { s: 10.5, m: 12, l: 14.5, xl: 18 };          // on the page (PDF)
 const NT_ED = { s: 13, m: 16, l: 20, xl: 24 };              // in the editor
 const NT_FONTS = { sans: ["Sans", "Arial, Helvetica, sans-serif", "Arial"], serif: ["Serif", "Georgia, 'Times New Roman', serif", "Georgia"], mono: ["Mono", "'Courier New', Courier, monospace", "Courier New"] };
 const NT_COLORS = [["#18171d", "Black"], ["#2f7593", "Blue"], ["#c0392b", "Red"], ["#d35400", "Orange"], ["#1e8449", "Green"], ["#7d3c98", "Purple"], ["#7f8c8d", "Grey"]];
+const NT_AL = { l: "left", c: "center", r: "right" };
+const NT_AL_ICON = { l: '<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>', c: '<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>', r: '<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>' };
+const ntAlSvg = k => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">${NT_AL_ICON[k]}</svg>`;
 const NT_MARKS = [["#fff176", "Yellow"], ["#b9f6ca", "Green"], ["#ffcdd2", "Pink"], ["#bbdefb", "Blue"], ["#ffe0b2", "Orange"]];
 /* the notes as paragraphs of runs: the formatted ones, or the plain text with the older whole-note size and bold */
 function ntModel(p) {
@@ -10169,18 +10181,19 @@ const ntFontOf = v => { v = String(v || "").toLowerCase(); return !v ? "" : /mon
 /* the editor's content as paragraphs of runs (the browser's own markup, cleaned: only what the toolbar makes is kept) */
 function ntRead(root) {
   const paras = []; let cur = null;
-  const open = li => { cur = { runs: [] }; if (li) cur.li = 1; paras.push(cur); };
+  const open = (li, al) => { cur = { runs: [] }; if (li) cur.li = 1; if (al) cur.al = al; paras.push(cur); };
+  const alOf = v => ({ left: "l", center: "c", right: "r" })[String(v || "").trim()] || "";
   const same = (a, b) => ["b", "i", "u", "c", "h", "s", "f"].every(k => (a[k] || "") === (b[k] || ""));
-  const walk = (n, st, li) => {
+  const walk = (n, st, li, al) => {
     if (n.nodeType === 3) {
       const t = n.nodeValue.replace(/\u00a0/g, " ").replace(/[\r\n]+/g, " "); if (!t) return;
-      if (!cur) open(li); const last = cur.runs[cur.runs.length - 1];
+      if (!cur) open(li, al); const last = cur.runs[cur.runs.length - 1];
       if (last && same(last, st)) last.t += t; else cur.runs.push({ t, ...st });
       return;
     }
     if (n.nodeType !== 1) return;
     const tag = n.tagName, css = n.style || {}, s2 = { ...st };
-    if (tag === "BR") { if (!cur) open(li); cur = null; return; }   // a line break ends the paragraph; one on its own is an empty line
+    if (tag === "BR") { if (!cur) open(li, al); cur = null; return; }   // a line break ends the paragraph; one on its own is an empty line
     if (/^(B|STRONG)$/.test(tag) || css.fontWeight === "bold" || +css.fontWeight >= 600) s2.b = 1; else if (css.fontWeight === "normal" || (+css.fontWeight && +css.fontWeight < 600)) delete s2.b;
     if (/^(I|EM)$/.test(tag) || css.fontStyle === "italic") s2.i = 1; else if (css.fontStyle === "normal") delete s2.i;
     if (tag === "U" || /underline/.test(css.textDecoration || css.textDecorationLine || "")) s2.u = 1;
@@ -10188,13 +10201,13 @@ function ntRead(root) {
     if (css.backgroundColor) { const h = ntHex(css.backgroundColor); if (h && h !== "#ffffff") s2.h = h; else delete s2.h; }
     const sz = ntSizeOf(css.fontSize) || (tag === "FONT" && n.getAttribute("size") ? ({ 1: "s", 2: "s", 3: "m", 4: "l", 5: "l", 6: "xl", 7: "xl" })[n.getAttribute("size")] : ""); if (sz) { if (sz === "m") delete s2.s; else s2.s = sz; }
     const fo = ntFontOf(css.fontFamily || (tag === "FONT" ? n.getAttribute("face") : "") || ""); if (fo) { if (fo === "sans") delete s2.f; else s2.f = fo; }
-    const block = /^(DIV|P|LI|H[1-6]|BLOCKQUOTE|UL|OL)$/.test(tag);
+    const block = /^(DIV|P|LI|H[1-6]|BLOCKQUOTE|UL|OL)$/.test(tag), al2 = block ? alOf(css.textAlign || n.getAttribute("align")) || al : al;   // a block's alignment, else its parent's
     if (block) cur = null;
-    if (tag === "LI") open(true);
-    for (const k of n.childNodes) walk(k, s2, tag === "LI" || li);
+    if (tag === "LI") open(true, al2);
+    for (const k of n.childNodes) walk(k, s2, tag === "LI" || li, al2);
     if (block) cur = null;
   };
-  for (const k of root.childNodes) walk(k, {}, false);
+  for (const k of root.childNodes) walk(k, {}, false, "");
   while (paras.length && !paras[0].runs.length) paras.shift(); while (paras.length && !paras[paras.length - 1].runs.length) paras.pop();
   return paras;
 }
@@ -10210,7 +10223,8 @@ function ntHtml(m, page, base) {
     const body = pg.runs.map(r => ntRunHtml(r, page)).join("") || "<br>";
     if (pg.li && !inList) { out += `<ul${page ? ` style="margin:2px 0;padding:0 18px;text-align:start;display:inline-block"` : ""}>`; inList = true; }
     if (!pg.li && inList) { out += "</ul>"; inList = false; }
-    out += pg.li ? `<li dir="auto">${body}</li>` : `<div dir="auto"${page && base ? ` style="font-size:${base}px"` : ""}>${body}</div>`;
+    const ta = pg.al && NT_AL[pg.al] ? `text-align:${NT_AL[pg.al]}` : "", st = [ta, page && base ? `font-size:${base}px` : ""].filter(Boolean).join(";");
+    out += pg.li ? `<li dir="auto"${ta ? ` style="${ta}"` : ""}>${body}</li>` : `<div dir="auto"${st ? ` style="${st}"` : ""}>${body}</div>`;
   }
   return out + (inList ? "</ul>" : "");
 }
@@ -10219,7 +10233,8 @@ function ntDocx(m, o = {}) {
   return m.map(pg => {
     const txt = pg.runs.map(r => r.t).join(""), rtl = hasHebrew(txt);
     const runs = (pg.li ? [{ t: "• " }] : []).concat(pg.runs).map(r => `<w:r><w:rPr>${r.f && NT_FONTS[r.f] ? `<w:rFonts w:ascii="${NT_FONTS[r.f][2]}" w:hAnsi="${NT_FONTS[r.f][2]}" w:cs="${NT_FONTS[r.f][2]}"/>` : ""}${r.b ? "<w:b/><w:bCs/>" : ""}${r.i ? "<w:i/><w:iCs/>" : ""}${r.u ? '<w:u w:val="single"/>' : ""}${r.c ? `<w:color w:val="${r.c.slice(1).toUpperCase()}"/>` : ""}<w:sz w:val="${Math.round(NT_PX[r.s || "m"] * 1.5 * (o.scale || 1.22))}"/><w:szCs w:val="${Math.round(NT_PX[r.s || "m"] * 1.5 * (o.scale || 1.22))}"/>${r.h ? `<w:shd w:val="clear" w:color="auto" w:fill="${r.h.slice(1).toUpperCase()}"/>` : ""}${hasHebrew(r.t) ? "<w:rtl/>" : ""}</w:rPr><w:t xml:space="preserve">${xmlEsc(r.t)}</w:t></w:r>`).join("");
-    return `<w:p><w:pPr>${rtl ? "<w:bidi/>" : ""}<w:spacing w:before="0" w:after="0"/>${o.center ? '<w:jc w:val="center"/>' : ""}</w:pPr>${runs}</w:p>`;
+    const jc = pg.al === "c" ? "center" : pg.al === "l" ? (rtl ? "right" : "left") : pg.al === "r" ? (rtl ? "left" : "right") : o.center ? "center" : "";
+    return `<w:p><w:pPr>${rtl ? "<w:bidi/>" : ""}<w:spacing w:before="0" w:after="0"/>${jc ? `<w:jc w:val="${jc}"/>` : ""}</w:pPr>${runs}</w:p>`;
   }).join("");
 }
 /* the editor: its toolbar, and the box itself (a page: dark text on light, as it prints) */
@@ -10230,6 +10245,7 @@ const NT_ICONS = {
   color: `<span class="nt-gl nt-col">A<i class="nt-bar" style="background:var(--nt-c, #c0392b)"></i></span>`,
   mark: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4.5l5 5-8.5 8.5H6v-5z"/><path d="M12 7l5 5"/></svg><i class="nt-bar" style="background:var(--nt-h, #fff176)"></i>`,
   list: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>`,
+  align: `<span class="nt-al">${ntAlSvg("r")}</span>`,
   clear: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 6h11M10.5 6l-3 12M15 14l5 5M20 14l-5 5"/></svg>` };
 function ntBarHtml() {
   const b = (k, lab, more) => `<button type="button" class="nt-btn" data-nt="${k}" aria-label="${lab}" title="${lab}"${more || ""}>${NT_ICONS[k]}</button>`;
@@ -10237,7 +10253,7 @@ function ntBarHtml() {
     <span class="nt-grp">${b("b", "Bold", ' aria-pressed="false"')}${b("i", "Italic", ' aria-pressed="false"')}${b("u", "Underline", ' aria-pressed="false"')}</span>
     <span class="nt-grp">${b("s", "Small text", ' aria-pressed="false"')}${b("m", "Normal text", ' aria-pressed="false"')}${b("l", "Large text", ' aria-pressed="false"')}</span>
     <span class="nt-grp">${b("font", "Font", ' aria-haspopup="true"')}${b("color", "Text color", ' aria-haspopup="true"')}${b("mark", "Highlighter", ' aria-haspopup="true"')}</span>
-    <span class="nt-grp">${b("list", "Bullets", ' aria-pressed="false"')}${b("clear", "Clear the format")}</span></div>`;
+    <span class="nt-grp">${b("align", "Align", ' aria-haspopup="true"')}${b("list", "Bullets", ' aria-pressed="false"')}${b("clear", "Clear the format")}</span></div>`;
 }
 let ntPop = null;
 function ntPopClose() { if (ntPop) { const el = ntPop; ntPop = null; el.classList.remove("open"); setTimeout(() => el.remove(), 260); } }
@@ -10245,7 +10261,8 @@ function ntPopOpen(btn, k) {
   if (ntPop && ntPop.dataset.k === k) { ntPopClose(); return; }
   ntPopClose();
   const el = document.createElement("div"); el.className = "nt-pop"; el.dataset.k = k; el.setAttribute("role", "menu");
-  el.innerHTML = `<div class="nt-pop-in">${k === "font" ? Object.entries(NT_FONTS).map(([v, f]) => `<button type="button" class="nt-fo" data-ntv="font:${v}" style="font-family:${f[1]}">${f[0]}</button>`).join("")
+  el.innerHTML = `<div class="nt-pop-in">${k === "align" ? [["l", "Align left"], ["c", "Center"], ["r", "Align right"]].map(([v, n]) => `<button type="button" class="nt-alb" data-ntv="align:${v}" aria-label="${n}" title="${n}">${ntAlSvg(v)}</button>`).join("")
+    : k === "font" ? Object.entries(NT_FONTS).map(([v, f]) => `<button type="button" class="nt-fo" data-ntv="font:${v}" style="font-family:${f[1]}">${f[0]}</button>`).join("")
     : k === "color" ? NT_COLORS.map(([c, n]) => `<button type="button" class="nt-sw" data-ntv="color:${c}" style="--sw:${c}" aria-label="${n}" title="${n}"></button>`).join("")
     : NT_MARKS.map(([c, n]) => `<button type="button" class="nt-sw mk" data-ntv="mark:${c}" style="--sw:${c}" aria-label="${n} marker" title="${n}"></button>`).join("") + `<button type="button" class="nt-sw none" data-ntv="mark:none" aria-label="No marker" title="None">×</button>`}</div>`;
   document.body.appendChild(el); ntPop = el;
@@ -10267,6 +10284,9 @@ function ntState() {
   const q = c => { try { return document.queryCommandState(c); } catch (e) { return false; } };
   const at = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode, cs = at && getComputedStyle(at);
   const sz = cs ? ntSizeOf(cs.fontSize) || "m" : "m";
+  const blk = at && at.closest && at.closest("div, p, li"), al = blk && blk !== ed ? getComputedStyle(blk).textAlign : "", rtl = blk && getComputedStyle(blk).direction === "rtl";
+  const alK = al === "center" ? "c" : al === "left" ? "l" : al === "right" ? "r" : al === "end" ? (rtl ? "l" : "r") : rtl ? "r" : "l";
+  const alb = document.querySelector('.nt-btn[data-nt="align"] .nt-al'); if (alb && alb.dataset.k !== alK) { alb.dataset.k = alK; alb.innerHTML = ntAlSvg(alK); }
   for (const [k, on] of [["b", q("bold")], ["i", q("italic")], ["u", q("underline")], ["list", q("insertUnorderedList")], ["s", sz === "s"], ["m", sz === "m"], ["l", sz === "l" || sz === "xl"]]) document.querySelector(`.nt-btn[data-nt="${k}"]`)?.setAttribute("aria-pressed", String(!!on));
 }
 /* where the caret is, as a count of characters from the start, and back (the markup changes under it) */
@@ -10294,6 +10314,7 @@ function ntDo(k, v) {
   }
   else if (k === "list") ex("insertUnorderedList");
   else if (k === "clear") { ex("removeFormat"); ex("hiliteColor", "transparent"); }
+  else if (k === "align" && NT_AL[v]) ex({ l: "justifyLeft", c: "justifyCenter", r: "justifyRight" }[v]);
   else if (k === "font") ex("fontName", NT_FONTS[v] ? NT_FONTS[v][1] : NT_FONTS.sans[1]);
   else if (k === "color") { ex("foreColor", v); document.querySelector(".nt-btn[data-nt=color]")?.style.setProperty("--nt-c", v); }
   else if (k === "mark") { ex("hiliteColor", v === "none" ? "transparent" : v); if (v !== "none") document.querySelector(".nt-btn[data-nt=mark]")?.style.setProperty("--nt-h", v); }
@@ -10306,7 +10327,7 @@ if (typeof document !== "undefined" && document.addEventListener) {
     const b = e.target.closest && e.target.closest(".nt-btn, .nt-pop button"); if (!b) { if (ntPop && !(e.target.closest && e.target.closest(".nt-pop"))) ntPopClose(); return; }
     e.preventDefault();
     if (b.dataset.ntv) { const [k, v] = b.dataset.ntv.split(":"); ntPopClose(); ntDo(k, v); return; }
-    const k = b.dataset.nt; if (k === "font" || k === "color" || k === "mark") { ntPopOpen(b, k); return; }
+    const k = b.dataset.nt; if (k === "font" || k === "color" || k === "mark" || k === "align") { ntPopOpen(b, k); return; }
     ntDo(k);
   }, true);
   document.addEventListener("click", e => { if (e.target.closest && e.target.closest(".nt-btn, .nt-pop")) { e.preventDefault(); e.stopPropagation(); } }, true);

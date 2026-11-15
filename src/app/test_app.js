@@ -807,7 +807,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.app.tab = "media"; A.viewProduction(); ok(A.app.tab === "list", "a production never opens on the old Media tab");
   ok(A.pageKey() === "p:" + q.id, "a production is one page whatever its tab");
   A.app.view = "home"; const hm = A.viewHome();
-  ok(/class="home-shorts"/.test(hm) && (hm.match(/class="hs-btn"/g) || []).length === 5 && /data-act="mcalc"[\s\S]*data-act="notes"[\s\S]*data-act="catalogs"[\s\S]*data-act="favs"[\s\S]*data-act="tools"/.test(hm) && !/data-act="rules-open"|data-act="lensfind"|tool-favs|browse-head/.test(hm), "the start page: five tools, Media calc, Notes, Catalogs, Favorites and More tools, above the productions");
+  ok(/class="home-shorts"/.test(hm) && (hm.match(/class="hs-btn"/g) || []).length === 4 && !/data-act="mcalc"/.test(hm) && /data-act="notes"[\s\S]*data-act="catalogs"[\s\S]*data-act="favs"[\s\S]*data-act="tools"/.test(hm) && !/data-act="rules-open"|data-act="lensfind"|tool-favs|browse-head/.test(hm), "the start page: four tools, Notes, Catalogs, Favorites and More tools, above the productions");
   A.app.settings.mcList = undefined; A.app.view = "mcalc";
   ok(A.mcListId() === q.id, "the Media Calculator starts on the production worked on most recently");
   let mc = A.viewMcalc(); ok(/<select id="mc-list"/.test(mc) && /<option value="none">No list · any camera<\/option>/.test(mc) && new RegExp(`<option value="${q.id}" selected>Linked`).test(mc) && /media-cam/.test(mc), "one choice: which list, or none");
@@ -820,8 +820,8 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- Find a lens from the start page: a rental house switch, nothing added
 { A.app.settings.lensHouse = "fitussi"; A.app.lensP = null; A.app.view = "lensfind"; const v = A.viewLensFind();
   ok(/data-act="lens-house" data-house="fitussi" aria-pressed="true"/.test(v) && /class="tabpane lens-solo"/.test(v) && /data-fin="f"/.test(v) && /Find a lens/.test(v), "Find a lens on its own: the rental house switch, then the finder");
-  A.app.view = "home"; const hm = A.viewHome(); ok(!/data-act="lensfind"/.test(hm) && /data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm), "the start page: Find a lens moved to More tools");
-  A.app.view = "tools"; const tl = A.viewTools(); ok((tl.match(/class="tool-row"/g) || []).length === 5 && /data-act="cams"/.test(tl) && /data-act="lensfind"/.test(tl) && /data-act="prep"/.test(tl) && /data-act="lenscard"/.test(tl) && /data-act="rules-open" data-to="pkg"/.test(tl), "More tools: Camera cards, Find a lens, Prep Checklist, Lens card and Packages, one row each"); A.app.view = "home"; }
+  A.app.view = "home"; const hm = A.viewHome(); ok(!/data-act="lensfind"/.test(hm) && !/data-act="mcalc"/.test(hm) && /data-act="catalogs"/.test(hm), "the start page: Find a lens and Media calc moved to More tools");
+  A.app.view = "tools"; const tl = A.viewTools(); ok((tl.match(/class="tool-row"/g) || []).length === 6 && /data-act="mcalc"[\s\S]*data-act="cams"/.test(tl) && /data-act="lensfind"/.test(tl) && /data-act="prep"/.test(tl) && /data-act="lenscard"/.test(tl) && /data-act="rules-open" data-to="pkg"/.test(tl), "More tools: Media calculator, Camera cards, Find a lens, Prep Checklist, Lens card and Packages, one row each"); A.app.view = "home"; }
 // Prep Checklist: opens on the production whose prep is today (never asks for a list), keeps checks and notes with the production, a copy starts fresh
 { const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   const keep = A.app.productions.slice(), ks = A.app.settings.pcList; delete A.app.settings.pcList;
@@ -1263,3 +1263,10 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   A.app.settings.ntList = "none"; ok(A.ntCur() === null && A.ntTodo().list === A.pcData(null).todo, "with no list: the user's own checklist");
   A.app.formFor = p.id; A.app.view = "form"; ok(!/f-notes|nt-tabs/.test(A.viewForm()), "the production's details no longer hold the notes");
   A.app.formFor = null; A.app.view = "home"; delete A.app.settings.ntList; A.app.productions.splice(A.app.productions.indexOf(p), 1); }
+
+// --- the notepad's alignment: left, center or right a paragraph, kept, shown, and in Word (a Hebrew paragraph's sides are its own)
+{ const m = [{ runs: [{ t: "שלום" }], al: "l" }, { runs: [{ t: "Hello" }], al: "r" }, { runs: [{ t: "Mid" }], al: "c" }, { runs: [{ t: "plain" }] }];
+  const h = A.ntHtml(m, false); ok(/text-align:left[^>]*>שלום/.test(h) && /text-align:right[^>]*>Hello/.test(h) && /text-align:center[^>]*>Mid/.test(h) && /<div dir="auto">plain/.test(h), "the editor and the page draw each paragraph where it was aligned");
+  const d = A.ntDocx(m); const ps = d.split("</w:p>");
+  ok(/<w:bidi\/>[\s\S]*<w:jc w:val="right"\/>/.test(ps[0]) && /<w:jc w:val="right"\/>/.test(ps[1]) && !/<w:bidi\/>/.test(ps[1]) && /<w:jc w:val="center"\/>/.test(ps[2]) && !/<w:jc/.test(ps[3]), "Word: Hebrew aligned left is its far side (right in Word's terms); English as it is; none stays the language's own");
+  ok(/<w:jc w:val="center"\/>/.test(A.ntDocx([{ runs: [{ t: "x" }] }], { center: true })) && /<w:jc w:val="left"\/>/.test(A.ntDocx([{ runs: [{ t: "x" }], al: "l" }], { center: true })), "a paragraph's own alignment wins over the page's centered notes"); }
