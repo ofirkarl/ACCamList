@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151255";
+window.AC_BUILD = "202611151326";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -6983,6 +6983,8 @@ function swGhost(side, toStop) {
   const col = pane.closest(".app"), cr = col && col.getBoundingClientRect(), ga = g.firstChild;
   if (cr) Object.assign(ga.style, { width: cr.width + "px", maxWidth: "none", marginLeft: cr.left + "px", marginRight: "0", paddingTop: "0" });
   g.style.transform = `translateX(${side * innerWidth}px)`;
+  // the picture stops at the bottom bar: the bar stays on top, all the way (the app's column is a layer of its own, under the picture)
+  const nb = document.querySelector(".navbar:not([hidden])"); g.style.bottom = nb ? nb.getBoundingClientRect().height + "px" : "0px";
   g.style.top = "0px"; document.body.appendChild(g);
   // the next page drawn where you left it: its own scroll, as far as it can go
   const headDoc = head.getBoundingClientRect().top + window.scrollY, appPad = parseFloat(getComputedStyle(col).paddingBottom) || 0;

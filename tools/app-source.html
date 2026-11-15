@@ -6830,6 +6830,8 @@ function swGhost(side, toStop) {
   const col = pane.closest(".app"), cr = col && col.getBoundingClientRect(), ga = g.firstChild;
   if (cr) Object.assign(ga.style, { width: cr.width + "px", maxWidth: "none", marginLeft: cr.left + "px", marginRight: "0", paddingTop: "0" });
   g.style.transform = `translateX(${side * innerWidth}px)`;
+  // the picture stops at the bottom bar: the bar stays on top, all the way (the app's column is a layer of its own, under the picture)
+  const nb = document.querySelector(".navbar:not([hidden])"); g.style.bottom = nb ? nb.getBoundingClientRect().height + "px" : "0px";
   g.style.top = "0px"; document.body.appendChild(g);
   // the next page drawn where you left it: its own scroll, as far as it can go
   const headDoc = head.getBoundingClientRect().top + window.scrollY, appPad = parseFloat(getComputedStyle(col).paddingBottom) || 0;
