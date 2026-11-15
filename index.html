@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151326";
+window.AC_BUILD = "202611151355";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -1488,6 +1488,7 @@ body.kb-room.kb-room-top .app { padding-bottom: 70vh; }
 .swghost { position: fixed; left: 0; right: 0; bottom: 0; z-index: 15; overflow-x: visible; overflow-y: clip; background: none; pointer-events: none; will-change: transform; }
 .swghost [data-keep] { will-change: transform, opacity; }
 .swghost .app { padding-bottom: 0; }
+.swghost .app::before { content: none; }   /* the next page's picture draws no color bars of its own: the page's one background stays as it is under both */
 /* a line: the name and its tools on top; under it the details on the left and how many on the right, so the card has no hole */
 .l-row { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; min-width: 0; }
 .l-row > .l-meta { flex: 1 1 auto; }
