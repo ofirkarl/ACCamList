@@ -832,6 +832,12 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   pr.items.x1 = { qty: 2, name: "Gear one" }; pr.items.x2 = { qty: 1, name: "Gear two" }; const d = A.pcData(pr); d.ok.x1 = 1; d.note.x2 = "Battery plate loose";
   delete pr.items.x0; const c = A.pcCount(pr); ok(c.n === 2 && c.ok === 1 && c.att === 1, "gear counted: 2 items, 1 checked, 1 to look at");
   A.app.view = "prep"; const h = A.viewPrep(); ok(/Prep Checklist/.test(h) && /aria-checked="true"/.test(h) && /Battery plate loose/.test(h) && />To-do</.test(h) && />Notes</.test(h), "the page shows the gear with its check and its note, and the To-do and Notes tabs");
+  { d.todo.push({ id: "q1", t: "Call the house", done: true }); d.pad = "שורה ראשונה\nSecond line"; A.app.settings.pcList = pr.id;
+    A.app.pcTab = "todo"; const ht = A.viewPrep(); ok(/data-act="pc-reset"[^>]*>[\s\S]*?Reset/.test(ht) && /placeholder="Add a line: order 20 cards"/.test(ht), "the Prep Checklist's To-do: the Notes checklist's own rules (the same line to add, Reset under it)");
+    d.todo[0].done = false; ok(/data-act="pc-clear"[^>]*>[\s\S]*?Delete list/.test(A.viewPrep()), "nothing ticked: the same button deletes the list");
+    A.app.pcTab = "notes"; const hn = A.viewPrep(); ok(/class="nt-bar-row"/.test(hn) && /id="f-notes" contenteditable="true"/.test(hn) && /<div dir="auto">שורה ראשונה<\/div><div dir="auto">Second line<\/div>/.test(hn) && !/pc-pad/.test(hn), "its Notes: the Notes page's notepad (toolbar, each line its own direction), its text as it was");
+    d.padRich = [{ runs: [{ t: "Bold", b: 1 }], al: "c" }]; ok(/<div dir="auto" style="text-align:center"><b>Bold<\/b><\/div>/.test(A.viewPrep()), "its formatted notes kept as written");
+    d.todo.length = 0; delete d.pad; delete d.padRich; A.app.pcTab = null; delete A.app.settings.pcList; }
   ok(!A.copyProduction(pr).check, "a copy of a production starts with a fresh checklist");
   const e = A.newProduction({ name: "Empty", houseId: "utopia", prep: iso, updatedAt: Date.now() + 9000 }); A.app.productions.push(e);
   ok(A.pcListId() === pr.id && !/>Empty</.test(A.viewPrep()), "empty lists stay out of the tools' pickers: the checklist skips an empty production, even with its prep today");

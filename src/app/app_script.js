@@ -1939,6 +1939,7 @@ function houseTheme(id) {
 }
 function render() {
   sugHide();
+  if (ntPending) ntFlush();   // the notepad's last words, kept before the page is drawn again
   if (hist.last && !hist.popping) hist.last.scroll = window.scrollY;  // where this page was, before it's drawn again
   const v = document.getElementById("view");
   if (app.view === "welcome" && !needsWelcome()) app.view = "home";
@@ -2196,14 +2197,18 @@ function ntCur() {
 }
 function ntTodo() { const p = ntCur(); return { p, list: pcData(p).todo }; }
 const ntTodoN = () => { const { list } = ntTodo(); return list.length ? `${list.filter(x => x.done).length}/${list.length}` : ""; };
-function ntTodoHtml() {
-  const { list } = ntTodo(), order = [...list.filter(x => !x.done), ...list.filter(x => x.done)];
-  return `<div class="pc-addrow"><input class="lc-in" id="nt-add" type="text" dir="auto" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="Add a line: order 20 cards" aria-label="New checklist line"><button class="btn primary lc-addbtn" type="button" data-act="nt-add" aria-label="Add the line">+</button></div>
-    ${order.length ? `<ul class="pc-rows pc-todo">${order.map(t => `<li class="pc-row${t.done ? " ok" : ""}"><div class="pc-main" data-act="nt-do" data-id="${esc(t.id)}" role="checkbox" aria-checked="${!!t.done}" tabindex="0">${PC_CK}<span class="pc-n"><span dir="auto">${esc(t.t)}</span></span></div>
-      <button class="pc-nb" type="button" data-act="nt-del" data-id="${esc(t.id)}" aria-label="Delete this line" title="Delete">×</button></li>`).join("")}</ul>
-    <div class="nt-foot">${list.some(x => x.done) ? `<button class="btn nt-reset" type="button" data-act="nt-reset" aria-label="Reset: untick every line" title="Untick every line">${RESET_ICON}<span>Reset</span></button>`
-      : `<button class="btn danger nt-reset" type="button" data-act="nt-clear" aria-label="Delete the list: every line" title="Delete every line">${TRASH_ICON}<span>Delete list</span></button>`}</div>` : `<p class="hint">Lines to tick off later: a reminder now, the proof it's done once it is. It's the same list as the Prep Checklist's To-do.</p>`}`;
+/* a checklist (the Notes page's, the Prep Checklist's To-do: the same lines), drawn the same on both: a line to add, the lines
+   still to do first, and one button under them: Reset unticks every line; with nothing ticked it's Delete list. Undo brings either back */
+const CK_PH = "Add a line: order 20 cards";
+function ckListHtml(list, pre, hint) {
+  const order = [...list.filter(x => !x.done), ...list.filter(x => x.done)];
+  return `<div class="pc-addrow"><input class="lc-in" id="${pre}-add" type="text" dir="auto" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="${CK_PH}" aria-label="New checklist line"><button class="btn primary lc-addbtn" type="button" data-act="${pre}-add" aria-label="Add the line">+</button></div>
+    ${order.length ? `<ul class="pc-rows pc-todo">${order.map(t => `<li class="pc-row${t.done ? " ok" : ""}"><div class="pc-main" data-act="${pre}-do" data-id="${esc(t.id)}" role="checkbox" aria-checked="${!!t.done}" tabindex="0">${PC_CK}<span class="pc-n"><span dir="auto">${esc(t.t)}</span></span></div>
+      <button class="pc-nb" type="button" data-act="${pre}-del" data-id="${esc(t.id)}" aria-label="Delete this line" title="Delete">×</button></li>`).join("")}</ul>
+    <div class="nt-foot">${list.some(x => x.done) ? `<button class="btn nt-reset" type="button" data-act="${pre}-reset" aria-label="Reset: untick every line" title="Untick every line">${RESET_ICON}<span>Reset</span></button>`
+      : `<button class="btn danger nt-reset" type="button" data-act="${pre}-clear" aria-label="Delete the list: every line" title="Delete every line">${TRASH_ICON}<span>Delete list</span></button>`}</div>` : `<p class="hint">${hint}</p>`}`;
 }
+const ntTodoHtml = () => ckListHtml(ntTodo().list, "nt", "Lines to tick off later: a reminder now, the proof it's done once it is. It's the same list as the Prep Checklist's To-do.");
 function ntTodoPaint(focusAdd) {
   const pane = document.getElementById("ntTodo"); if (pane) pane.innerHTML = ntTodoHtml();
   const tn = document.querySelector('.nt-tabs [data-v="check"] .num'); if (tn) tn.textContent = ntTodoN();
@@ -2216,13 +2221,19 @@ function ntTodoAdd() {
 }
 // the notepad's text: the production's notes (both its units carry them), or the user's own with no list
 const ntSrc = p => p || { notesRich: app.settings.ntFree || [] };
-function ntKeep() {
-  const ed = ntEd(); if (!ed || app.view !== "notes") return;
-  const m = ntRead(ed), p = ntCur();
-  if (p) { if (JSON.stringify(p.notesRich || []) === JSON.stringify(m)) return; for (const x of [p, unit2Of(p)].filter(Boolean)) { x.notesRich = clone(m); x.notes = ntPlain(m); touch(x); } }
+// where the notepad on screen keeps its text: on the Notes page the production's notes (or your own), on the Prep Checklist its own notes
+function ntTarget() { return app.view === "prep" ? { kind: "prep", p: pcCur() } : app.view === "notes" ? { kind: "notes", p: ntCur() } : null; }
+function ntKeep(ed = ntEd(), to = ntTarget()) {
+  if (!ed || !to) return;
+  const m = ntRead(ed), p = to.p;
+  if (to.kind === "prep") { const d = pcData(p); if (JSON.stringify(d.padRich || []) === JSON.stringify(m) && d.pad === ntPlain(m)) return; d.padRich = m; d.pad = ntPlain(m); pcSave(p); }
+  else if (p) { if (JSON.stringify(p.notesRich || []) === JSON.stringify(m)) return; for (const x of [p, unit2Of(p)].filter(Boolean)) { x.notesRich = clone(m); x.notes = ntPlain(m); touch(x); } }
   else { if (JSON.stringify(app.settings.ntFree || []) === JSON.stringify(m)) return; app.settings.ntFree = m; touchSettings(); }
-  const sv = document.getElementById("ntSaved"); if (sv) { sv.hidden = false; replay(sv, "pop"); }
+  const sv = document.getElementById(to.kind === "prep" ? "pcSaved" : "ntSaved"); if (sv) { sv.hidden = false; replay(sv, "pop"); }
 }
+// what's typed is kept a moment later; anything that redraws the page (a tab, another list, another page) keeps it first
+let ntPending = null;
+function ntFlush() { clearTimeout(ntT); const f = ntPending; ntPending = null; if (f) f(); }
 function viewNotes() {
   const p = ntCur(), n = ntTodoN(), m = ntModel(ntSrc(p));
   const tab = app.ntTab || (!n && ntPlain(m).trim() ? "pad" : "check");
@@ -2238,10 +2249,11 @@ function viewNotes() {
         <span class="hint pc-saved">${p ? "Printed on the camera list. " : ""}<b id="ntSaved" class="me-saved" hidden>✓ Saved</b></span></div>
     </section>`;
 }
-let ntT = 0;
+var ntT = 0;
 if (typeof document !== "undefined" && document.addEventListener) {
-  document.addEventListener("input", e => { if (app.view === "notes" && e.target && e.target.id === "f-notes") { clearTimeout(ntT); ntT = setTimeout(ntKeep, 600); } });
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && app.view === "notes") { clearTimeout(ntT); ntKeep(); } });
+  document.addEventListener("input", e => { if (!e.target || e.target.id !== "f-notes") return; const ed = e.target, to = ntTarget(); if (!to) return;
+    clearTimeout(ntT); ntPending = () => ntKeep(ed, to); ntT = setTimeout(ntFlush, 600); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") ntFlush(); });
 }
 function viewForm() {
   const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
@@ -4361,14 +4373,12 @@ function viewPrep() {
           return shown.length ? `<div class="pc-sec"><h3><span>${esc(secName(s.id))}</span><span class="num" data-pcsec="${esc(s.id)}">${okN}/${rows.length}</span></h3><ul class="pc-rows">${shown.map(([k, l]) => pcRowHtml(p, k, l)).join("")}</ul></div>` : ""; }).join("")}
         ${att && !c.att ? `<p class="hint pc-done">No item has a note.</p>` : hide && c.ok === c.n ? `<p class="hint pc-done">Everything is checked.</p>` : ""}`;
     }
-  } else if (tab === "todo") {
-    const order = [...td.filter(x => !x.done), ...td.filter(x => x.done)];
-    body = `<div class="pc-addrow"><input class="lc-in" id="pc-add" type="text" dir="auto" maxlength="200" autocomplete="off" enterkeyhint="done" placeholder="Add a to-do: call the rental house" aria-label="New to-do"><button class="btn primary lc-addbtn" type="button" data-act="pc-add" aria-label="Add the to-do">+</button></div>
-      ${order.length ? `<ul class="pc-rows pc-todo">${order.map(t => `<li class="pc-row${t.done ? " ok" : ""}"><div class="pc-main" data-act="pc-do" data-id="${esc(t.id)}" role="checkbox" aria-checked="${!!t.done}" tabindex="0">${PC_CK}<span class="pc-n"><span dir="auto">${esc(t.t)}</span></span></div>
-        <button class="pc-nb" type="button" data-act="pc-del" data-id="${esc(t.id)}" aria-label="Delete this to-do" title="Delete">×</button></li>`).join("")}</ul>` : `<p class="hint">Your own checklist for the prep: what to call, buy, bring or ask. Tick each line once it's done.</p>`}`;
-  } else {
-    body = `<textarea class="pc-pad" id="pc-pad" dir="auto" placeholder="Anything to remember: what's missing, what to ask the rental house, who to call…" aria-label="Notes">${esc(d.pad)}</textarea>
-      <span class="hint pc-saved"><b id="pcSaved" class="me-saved" hidden>✓ Saved</b></span>`;
+  } else if (tab === "todo") body = `<div class="nt-pane nt-todo">${ckListHtml(td, "pc", "Lines to tick off later: a reminder now, the proof it's done once it is. It's the same list as the Notes page's Checklist.")}</div>`;
+  else {   // the notepad: the same editor as the Notes page's (its toolbar, sizes, colors, alignment, each line right to left when it's Hebrew)
+    const m = ntModel({ notesRich: d.padRich, notes: d.pad });
+    body = `<div class="nt-pane nt-padpane">${ntBarHtml()}
+      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" spellcheck="true">${ntHtml(m, false)}</div>
+      <span class="hint pc-saved"><b id="pcSaved" class="me-saved" hidden>✓ Saved</b></span></div>`;
   }
   return `${pageHead("Prep Checklist")}
     <section class="pad pc-page">
@@ -4402,15 +4412,14 @@ function pcAdd() {
 let pcT = 0;
 function pcKeep(t) {
   const p = pcCur(), d = pcData(p);
-  if (t.id === "pc-pad") { if (d.pad === t.value) return; d.pad = t.value; const s = document.getElementById("pcSaved"); if (s) { s.hidden = false; replay(s, "pop"); } }
-  else if (p && t.dataset.pcnote) { const v = t.value.slice(0, 400), k = t.dataset.pcnote; if ((d.note[k] || "") === v) return; if (v.trim()) d.note[k] = v; else delete d.note[k];
+  if (p && t.dataset.pcnote) { const v = t.value.slice(0, 400), k = t.dataset.pcnote; if ((d.note[k] || "") === v) return; if (v.trim()) d.note[k] = v; else delete d.note[k];
     const row = t.closest(".pc-row"); if (row) { row.classList.toggle("att", !!v.trim()); row.querySelector(".pc-nb")?.classList.toggle("on", !!v.trim()); } }
   else return;
   pcSave(p);
 }
 if (typeof document !== "undefined" && document.addEventListener) {
-  document.addEventListener("input", e => { const t = e.target; if (!t || app.view !== "prep" || !(t.id === "pc-pad" || (t.dataset && t.dataset.pcnote))) return; clearTimeout(pcT); pcT = setTimeout(() => pcKeep(t), 500); });
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState !== "hidden" || app.view !== "prep") return; clearTimeout(pcT); const t = document.querySelector("#pc-pad, .pc-note-in"); if (t) pcKeep(t); });
+  document.addEventListener("input", e => { const t = e.target; if (!t || app.view !== "prep" || !(t.dataset && t.dataset.pcnote)) return; clearTimeout(pcT); pcT = setTimeout(() => pcKeep(t), 500); });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState !== "hidden" || app.view !== "prep") return; clearTimeout(pcT); const t = document.querySelector(".pc-note-in"); if (t) pcKeep(t); });
 }
 /* ---------- Lens Cards: the list's lenses on one small card to print, each with its stop and close focus.
    Two layouts: Compact (a set in two lines: focal lengths over close focus) and One table (a row a lens). The card is as big
@@ -6217,6 +6226,12 @@ document.addEventListener("click", e => {
     case "pc-att": app.pcAtt = !app.pcAtt; app.pcNote = null; rerenderKeepScroll(); break;
     case "pc-add": pcAdd(); break;
     case "pc-do": { const p = pcCur(), d = pcData(p), t = d.todo.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(p); rerenderKeepScroll(); break; }
+    case "pc-reset": { const p = pcCur(), list = pcData(p).todo, was = list.filter(x => x.done); if (!was.length) break;
+      was.forEach(x => { x.done = false; }); pcSave(p); rerenderKeepScroll();
+      undoable("Reset", "the checklist", () => { was.forEach(x => { x.done = true; }); pcSave(p); rerenderKeepScroll(); }); break; }
+    case "pc-clear": { const p = pcCur(), list = pcData(p).todo, was = list.splice(0); if (!was.length) break;
+      pcSave(p); rerenderKeepScroll();
+      undoable("Deleted", "the list", () => { list.unshift(...was); pcSave(p); rerenderKeepScroll(); }); break; }
     case "pc-del": { const p = pcCur(), d = pcData(p), i = d.todo.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
       const [t] = d.todo.splice(i, 1); pcSave(p); rerenderKeepScroll(); undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const dd = pcData(pcCur()); dd.todo.splice(Math.min(i, dd.todo.length), 0, t); pcSave(pcCur()); rerenderKeepScroll(); }); break; }
     case "lc-opt": { const o = lcOpts(); o[b.dataset.k] = b.dataset.v; touchSettings(); if (!lcUpdate()) rerenderKeepScroll(); break; }
@@ -6603,7 +6618,7 @@ document.addEventListener("click", e => {
     case "txrx": if (txPop === id) txClose(); else txOpenFor(p, id, b.closest("[data-row]") ? "c" : "l"); break;
     case "ac-toggle": { const ed = document.getElementById("acEdit"); if (!ed) break; const on = ed.hidden; ed.hidden = !on; b.setAttribute("aria-expanded", String(on)); b.closest(".ac-field")?.classList.toggle("open", on); if (on) document.getElementById("f-ac")?.focus(); break; }
     case "nt-tab": { const v = b.dataset.v; app.ntTab = v; b.parentNode.querySelectorAll("[role=tab]").forEach(x => x.setAttribute("aria-selected", String(x === b)));
-      document.getElementById("ntTodo").hidden = v !== "check"; document.getElementById("ntPad").hidden = v !== "pad"; if (v !== "pad") { ntPopClose(); clearTimeout(ntT); ntKeep(); } break; }
+      document.getElementById("ntTodo").hidden = v !== "check"; document.getElementById("ntPad").hidden = v !== "pad"; if (v !== "pad") { ntPopClose(); ntFlush(); } break; }
     case "nt-add": ntTodoAdd(); break;
     case "nt-do": { const { p: tp, list } = ntTodo(), t = list.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(tp); ntTodoPaint(); break; }
     case "nt-clear": { const { p: tp, list } = ntTodo(), was = list.splice(0); if (!was.length) break;   // the same button, once nothing is ticked: the whole list goes
@@ -6709,7 +6724,7 @@ document.addEventListener("change", e => {
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
   if (t.id === "lc-name") { lcOwn().name = t.value.trim(); lcPdfMade = null; touchSettings(); const h = document.querySelector(".lcard .lc-head b"); if (h) h.textContent = lcOwn().name || "Lenses"; return; }
-  if (t.id === "nt-list") { clearTimeout(ntT); ntKeep(); app.settings.ntList = t.value; touchSettings(); render(); return; }
+  if (t.id === "nt-list") { ntFlush(); app.settings.ntList = t.value; touchSettings(); render(); return; }
   if (t.id === "pc-list") { app.settings.pcList = t.value; app.pcNote = null; touchSettings(); render(); return; }   // the checklist's list: kept for next time
   if (t.id === "lc-list") { app.settings.lcList = t.value; touchSettings(); render(); return; }  // the Lens card's list: kept for next time
   if (t.id === "mc-list") { app.settings.mcList = t.value || "none"; touchSettings(); mcOpen = null; render(); return; }  // the Media Calculator's list: kept for next time
