@@ -798,11 +798,12 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- the lens finder opens with the focal length empty
 { const keep = A.app.finder; A.app.finder = null; ok(A.fin().f === "" && A.fin().t === "", "Find a lens: focal length starts empty, not 50mm"); A.app.finder = keep; }
 
-// --- round 16: each tool in one place. The work bar: Add Gear, Favorites, Camera List. The start page: Media Calculator, Catalogs, Packages
+// --- round 16: each tool in one place. The work bar: Add Gear, Camera List, Favorites. The start page: Media Calculator, Catalogs, Packages
 { const q = A.newProduction({ name: "Linked", company: "Keshet", houseId: "utopia", shootStart: "2099-11-20", shootEnd: "2099-11-21" }); A.app.productions.push(q); q.updatedAt = Date.now() + 1e6;
   for (const [id, e] of A.ITEM) if (e.h.id === "utopia" && A.hasRec(e)) { A.setQty(q, id, 1); break; }
   A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list"; const v = A.viewProduction();
-  ok((v.match(/class="nav-tab" role="tab"/g) || []).length === 3 && !/data-act="tools"/.test(v), "the work bar: Add Gear, Favorites, Camera List, nothing else");
+  ok((v.match(/class="nav-tab" role="tab"/g) || []).length === 3 && !/data-act="tools"/.test(v), "the work bar: Add Gear, Camera List, Favorites, nothing else");
+  ok([...v.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]).join(",") === "add,list,fav", "the work bar's order, left to right: Add Gear, Camera List, Favorites (the swipe goes the same way)");
   ok(/class="prod-head ph-stack"/.test(v) && /class="ph-nav"><button class="iconbtn ph-back"[^]*?Preview &amp; export<\/button><\/div>\s*<h2 class="ph-name"/.test(v) && /ph-co" dir="auto">Keshet/.test(v), "the production's top: back and Preview & export, the name on its own line, the company under it");
   A.app.tab = "media"; A.viewProduction(); ok(A.app.tab === "list", "a production never opens on the old Media tab");
   ok(A.pageKey() === "p:" + q.id, "a production is one page whatever its tab");

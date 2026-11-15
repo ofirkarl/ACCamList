@@ -2724,7 +2724,7 @@ function viewProduction() {
   </section>
   ${app.tab === "media" ? mcSegHtml(true) : ""}<div class="tabpane" id="tabpane">${app.tab === "media" || app.tab === "fav" ? "" : extra}${app.tab === "add" ? viewCatalog(p, h) : app.tab === "fav" ? viewFavorites(p, h) : app.tab === "media" ? viewMedia(p, h) : viewList(p, h)}</div>
   <nav class="navbar" role="tablist" aria-label="Production"${finder ? " hidden" : ""}><div class="navbar-in">
-    ${[["add", "Add Gear", ""], ["fav", "Favorites", nFav || ""], ["list", "Camera List", t.lines || ""]].map(([k, label, n]) =>
+    ${[["add", "Add Gear", ""], ["list", "Camera List", t.lines || ""], ["fav", "Favorites", nFav || ""]].map(([k, label, n]) =>
       `<button class="nav-tab" role="tab" type="button" data-act="tab" data-tab="${k}" aria-selected="${app.tab === k}"><span class="nt-i">${NAV_ICON[k]}${k === "list" || k === "fav" ? `<span class="num"${k === "list" ? ` id="tabCount"` : ""}>${n}</span>` : ""}</span><span class="nt-l">${label}</span></button>`).join("")}
   </div></nav>`;
 }
@@ -4131,7 +4131,7 @@ document.addEventListener("input", e => {
 const tabKey = (tab, mode) => (app.pid || "") + ":" + tab + (tab === "media" ? ":" + (mode || "list") : "");
 function tabSave() { if (app.view === "production") (app.scrolls || (app.scrolls = {}))[tabKey(app.tab, app.mcMode)] = window.scrollY; }
 const tabSaved = (tab, mode) => (app.scrolls || {})[tabKey(tab, mode)] || 0;
-const SWIPE_TABS = [["add"], ["fav"], ["list"]], SWIPE_MEDIA = [["media", "list"], ["media", "free"]];
+const SWIPE_TABS = [["add"], ["list"], ["fav"]]   /* the order of the bottom bar, left to right: Favorites at the right end */, SWIPE_MEDIA = [["media", "list"], ["media", "free"]];
 const swStops = () => app.tab === "media" ? SWIPE_MEDIA : SWIPE_TABS;
 const sw = { x: 0, y: 0, t: 0, ok: false, dir: 0, ghost: null, side: 0, gTop: 0 };
 const swHere = () => swStops().findIndex(([tab, mode]) => tab === app.tab && (!mode || mode === (app.mcMode || "list")));
