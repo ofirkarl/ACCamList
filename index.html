@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151144";
+window.AC_BUILD = "202611151150";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -204,7 +204,7 @@ window.AC_BUILD = "202611151144";
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f0f14; --surface: #18181f; --sunken: #131318; --fg: #edebf2; --muted: #a09dad; --line: #4b4b5a; --frame-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .05); --raise-shadow: 0 14px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35);
+    --bg: #0f0f14; --surface: color-mix(in srgb, var(--accent) 10%, #1f1f28); --sunken: #131318; --fg: #edebf2; --muted: #a09dad; --line: color-mix(in srgb, var(--accent) 16%, #34343f); --frame-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .05); --raise-shadow: 0 14px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35);
     --accent: #8b87ff; --accent-fg: #0f0f14; --danger: #ff6b6f; --ok: #4ade80; --mark: #5b4a10;
     --tape-camera: #f2696d; --tape-lenses: #f7ba4d; --tape-camera_accessories: #4cc2f1; --tape-filters: #a78bfa; --tape-custom: #94a3b8; --warn: #fbbf5c; --warn-bg: #2b2110; --star: #f7ba4d; --desk: #24242c; --paper: #ffffff;
     --pal-red: #f2696d; --pal-orange: #fb923c; --pal-amber: #f7ba4d; --pal-olive: #b5cf4a; --pal-green: #4ade80; --pal-teal: #2dd4bf; --pal-sky: #67e8f9; --pal-blue: #4cc2f1; --pal-indigo: #8b8df8; --pal-violet: #a78bfa; --pal-pink: #e879f9; --pal-slate: #94a3b8;
@@ -215,7 +215,7 @@ window.AC_BUILD = "202611151144";
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f0f14; --surface: #18181f; --sunken: #131318; --fg: #edebf2; --muted: #a09dad; --line: #4b4b5a; --frame-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .05); --raise-shadow: 0 14px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35);
+  --bg: #0f0f14; --surface: color-mix(in srgb, var(--accent) 10%, #1f1f28); --sunken: #131318; --fg: #edebf2; --muted: #a09dad; --line: color-mix(in srgb, var(--accent) 16%, #34343f); --frame-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 0 0 1px rgba(255, 255, 255, .05); --raise-shadow: 0 14px 36px rgba(0, 0, 0, .5), 0 2px 6px rgba(0, 0, 0, .35);
   --accent: #8b87ff; --accent-fg: #0f0f14; --danger: #ff6b6f; --ok: #4ade80; --mark: #5b4a10;
   --tape-camera: #f2696d; --tape-lenses: #f7ba4d; --tape-camera_accessories: #4cc2f1; --tape-filters: #a78bfa; --tape-custom: #94a3b8; --warn: #fbbf5c; --warn-bg: #2b2110; --star: #f7ba4d; --desk: #24242c; --paper: #ffffff;
   --pal-red: #f2696d; --pal-orange: #fb923c; --pal-amber: #f7ba4d; --pal-olive: #b5cf4a; --pal-green: #4ade80; --pal-teal: #2dd4bf; --pal-sky: #67e8f9; --pal-blue: #4cc2f1; --pal-indigo: #8b8df8; --pal-violet: #a78bfa; --pal-pink: #e879f9; --pal-slate: #94a3b8;
