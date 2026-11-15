@@ -3425,7 +3425,7 @@ function finderCard(p, m, T) {
     <button class="fv-tap" type="button" data-act="fv-row" data-id="${esc(m.id)}" aria-expanded="${open}" aria-label="${open ? "Less" : "More"} about ${esc(it.name)}"></button>
     <span class="f-nm" title="${esc(it.name)}">${nameHtml(lensShortName(it, sp), "")}</span>
     <span class="f-ext">${linkHtml(it, m.e.h)}</span>
-    <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}</span>
+    <span class="f-stopline"><span class="f-stop${sc}">${m.label ? esc(m.label) : "Stop ?"}</span>${gap ? `<span class="f-gap${m.hit ? " hit" : ""}">${gap}</span>` : ""}<button type="button" class="f-cmp" data-act="fin-cmp" data-id="${esc(m.id)}" aria-pressed="${finCmp().includes(m.id)}" aria-label="Compare ${esc(it.name)}" title="Compare">${CMP_ICON}<span>Compare</span></button></span>
     <span class="ctl">${ctlHtml(p, m.id)}</span>
     <span class="f-meta">${meta.map(esc).join(" · ")}${fdNeed ? ` <span class="fd adapt">needs an adapter</span>` : ""}</span>
     ${sp.per ? `<span class="f-per">${perHtml(per, m.pos, 2)}</span>` : ""}
@@ -3502,6 +3502,44 @@ function finderResults(p, h) {
   return `<div class="f-sum"><span><b>${nExact}</b> exact · <b>${shown.length - nExact}</b> close</span>${fold}${unfold}</div>
     <div class="fv" id="fRuler" role="region" aria-label="Lenses by focal length: shorter at the top, longer further down">${cols}</div>`;
 }
+/* Compare: lenses ticked in the results, side by side, row by row (house, covers, mount, stop, focal length, type, close focus, front),
+   the best of each row marked; a set's lenses and the singles at the same focal lengths on one line each. Add one to the list from there */
+const CMP_ICON = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="16" rx="1.5"/></svg>`;
+const finCmp = () => { const s = fin(); return Array.isArray(s.cmp) ? s.cmp : (s.cmp = []); };
+const cmpBarHtml = () => { const n = finCmp().length; return n ? `<div class="f-cmpbar" id="fCmpBar"><span>${CMP_ICON}<b class="num">${n}</b> to compare${n < 2 ? " · tick one more" : ""}</span><button type="button" class="btn sm" data-act="fin-cmp-clear">Clear</button><button type="button" class="btn primary sm" data-act="fin-cmp-open"${n < 2 ? " disabled" : ""}>Compare</button></div>` : ""; };
+function finCmpSheet() {
+  const p = cur(), ids = finCmp().filter(id => ITEM.has(id)); if (ids.length < 2) { closeModal(); return; }
+  const L = ids.map(id => { const e = ITEM.get(id), sp = lensSpec(e.it, e.s.id); return { id, e, sp, md: sp ? lensMod(e.it, sp) : null, fd: sp ? frontOf(e.it, sp) : null }; }).filter(x => x.sp), n = L.length;
+  const best = (vals, low) => { const nums = vals.map(v => v == null ? null : +v); const ok = nums.filter(v => v != null && !isNaN(v)); if (ok.length < 2) return -1; const b = low ? Math.min(...ok) : Math.max(...ok); return nums.filter(v => v === b).length === ok.length ? -1 : b; };
+  const cell = (a, s, on) => `<td${on ? ' class="best"' : ""}>${a ? `<span class="cv">${a}</span>` : `<span class="na">—</span>`}${s ? `<span class="s">${s}</span>` : ""}</td>`;
+  const stopN = x => x.sp.stop ? x.sp.stop[0] : null, cfMin = x => { const v = x.md ? (x.md.one ? [cfInches(x.md.one)] : Object.values(x.md.per || {}).map(cfInches)) : []; const k = v.filter(y => y != null); return k.length ? Math.min(...k) : null; };
+  const bS = best(L.map(stopN), true), bC = best(L.map(cfMin), true), bV = best(L.map(x => COVER[x.sp.cov] ?? null), false);
+  const focalTxt = sp => sp.zoom ? `${fmtN(sp.zoom[0])}–${fmtN(sp.zoom[1])}mm zoom` : sp.zooms ? `${sp.zooms.length} zooms` : sp.per ? `${sp.focals.length} lenses, ${fmtN(sp.focals[0])}–${fmtN(sp.focals[sp.focals.length - 1])}mm` : `${fmtN(sp.focals[0])}mm`;
+  const rows = [
+    ["Rental house", x => cell(esc(x.e.h.name))],
+    ["Covers", x => cell(esc(COV_LABEL[x.sp.cov] || x.sp.cov || ""), "", bV >= 0 && COVER[x.sp.cov] === bV)],
+    ["Mount", x => cell(esc(x.sp.mounts.filter(y => y !== "Other").join(", ")))],
+    ["Stop", x => cell(esc(x.sp.label || ""), x.sp.per && x.sp.stop && x.sp.stop[0] !== x.sp.stop[1] ? "lens by lens below" : "", bS >= 0 && stopN(x) === bS)],
+    ["Focal length", x => cell(esc(focalTxt(x.sp)))],
+    ["Type", x => cell(esc([x.sp.ana ? (x.sp.squeeze ? x.sp.squeeze + " anamorphic" : "Anamorphic") : "Spherical", x.sp.probe ? "probe" : x.sp.macro ? "macro" : ""].filter(Boolean).join(", ")))],
+    ["Close focus", x => cell(esc(x.md ? x.md.one ? modText(x.md) : "lens by lens below" : ""), "", bC >= 0 && cfMin(x) === bC)],
+    ["Front diameter", x => cell(x.fd ? esc(x.fd.words.replace(/;.*$/, "")) : "", x.fd && x.fd.need ? "needs an adapter" : "", false)]];
+  // lens by lens: every focal length any of them has, each on its own line (a set's lens, a prime, a zoom covering it)
+  const fs = [...new Set(L.flatMap(x => x.sp.zoom ? [] : x.sp.focals || []))].sort((a, b) => a - b).slice(0, 24);
+  const at = (x, f) => { const sp = x.sp; if (sp.zoom) return null;
+    if (sp.per) { const q = sp.per.find(y => y.f === f); if (!q) return null; return { t: q.label || sp.label || "", cf: x.md && x.md.per ? x.md.per[f] || "" : "", fd: x.fd && x.fd.fr.per ? x.fd.fr.per[f] || "" : "" }; }
+    return sp.focals && sp.focals[0] === f ? { t: sp.label || "", cf: x.md && x.md.one || "", fd: x.fd && x.fd.fr.one || "" } : null; };
+  const perRows = fs.length && L.some(x => x.sp.per) ? fs.map(f => { const v = L.map(x => at(x, f)), bt = best(v.map(y => y && y.t ? parseFloat(y.t.replace(/^[^\d]*/, "")) : null), true);
+    return `<tr class="band"><th colspan="${n}" scope="colgroup">${fmtN(f)}mm</th></tr><tr>${v.map(y => y ? cell(esc(y.t || "–"), esc([y.cf && "CF " + y.cf, y.fd && "Ø" + y.fd].filter(Boolean).join(" · ")), bt >= 0 && parseFloat((y.t || "").replace(/^[^\d]*/, "")) === bt) : cell("")).join("")}</tr>`; }).join("") : "";
+  const head = x => { const on = p && p.items[x.id] ? lineQty(p.items[x.id]) : 0;
+    return `<th scope="col"><div class="fc-h"><span class="md">${esc(lensShortName(x.e.it, x.sp))}</span><button type="button" class="iconbtn sm fc-x" data-act="fin-cmp-del" data-id="${esc(x.id)}" aria-label="Take ${esc(x.e.it.name)} out of the comparison">×</button></div>
+      ${p && !p.browse ? `<button type="button" class="btn sm fc-add${on ? " on" : ""}" data-act="fin-cmp-add" data-id="${esc(x.id)}">${on ? `On the list · ${on}` : "+ Add"}</button>` : ""}</th>`; };
+  showModal(`<div class="sheet fc-sheet"><div class="cs-head"><h3 class="plain">Compare ${n} lenses</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
+    <div class="cmp-wrap"><table class="cmp fcmp" style="--n:${n}"><thead><tr>${L.map(head).join("")}</tr></thead>
+      <tbody>${rows.map(([label, f]) => `<tr class="band"><th colspan="${n}" scope="colgroup">${label}</th></tr><tr>${L.map(f).join("")}</tr>`).join("")}
+      ${perRows ? `<tr class="band sec"><th colspan="${n}" scope="colgroup">Lens by lens · stop · close focus · front</th></tr>${perRows}` : ""}</tbody></table></div>
+    <p class="hint">${n > 2 ? "Swipe sideways for the others. " : ""}Marked: the best of the row (fastest stop, closest focus, biggest coverage).</p></div>`);
+}
 function finderHtml(p, h) {
   const s = fin(), lens = h.categories.find(c => c.id === "lenses"), all = houseLenses(h);
   const count = fn => all.filter(([, , sp]) => fn(sp)).length;
@@ -3532,6 +3570,7 @@ function finderHtml(p, h) {
       ${cfRowHtml(s)}
     </div>
     <div id="fRes" class="f-res">${finderResults(p, h)}</div>
+    ${cmpBarHtml()}
   </div>`;
 }
 /* the close focus row: a switch; on, a slider of "up to" distances with a few marks under it */
@@ -6757,6 +6796,13 @@ document.addEventListener("click", e => {
     case "fin-short": { const mo = fin().more || (fin().more = {}); mo.short = !mo.short; refreshFinder(); break; }
     case "fin-recenter": { fin().f = b.dataset.mm; fin().more = {}; const inp = document.querySelector('[data-fin="f"]'); if (inp) inp.value = b.dataset.mm; refreshFinder(); break; }
     case "fin-narrow": { const s3 = fin(); s3.brand = b.dataset.b || ""; s3.more = {}; const v = document.getElementById("fb-val"); if (v) { v.textContent = s3.brand; v.closest(".f-field")?.classList.add("set"); } refreshFinder(); document.querySelector(".f-sum")?.scrollIntoView({ block: "start", behavior: "smooth" }); break; }
+    case "fin-cmp": { const a = finCmp(), i = a.indexOf(id); if (i >= 0) a.splice(i, 1); else { if (a.length >= 6) { toast("Six at a time: take one out first."); break; } a.push(id); }
+      document.querySelectorAll(`.f-cmp[data-id="${CSS.escape(id)}"]`).forEach(x => x.setAttribute("aria-pressed", String(a.includes(id))));
+      const bar = document.getElementById("fCmpBar"), html = cmpBarHtml(); if (bar) { if (html) bar.outerHTML = html; else bar.remove(); } else if (html) document.getElementById("fRes")?.insertAdjacentHTML("afterend", html); break; }
+    case "fin-cmp-clear": fin().cmp = []; document.querySelectorAll('.f-cmp[aria-pressed="true"]').forEach(x => x.setAttribute("aria-pressed", "false")); document.getElementById("fCmpBar")?.remove(); break;
+    case "fin-cmp-open": finCmpSheet(); break;
+    case "fin-cmp-del": { const a = finCmp(), i = a.indexOf(id); if (i >= 0) a.splice(i, 1); finCmpSheet(); rerenderKeepScroll(); break; }
+    case "fin-cmp-add": { const q = cur(); if (!q || !ITEM.has(id)) break; setQty(q, id, (q.items[id] ? lineQty(q.items[id]) : 0) + 1); touch(q); const m2 = document.getElementById("modal"); if (m2 && !m2.querySelector(".fc-sheet")) break; finCmpSheet(); rerenderKeepScroll(); toast("Added to the list"); break; }
     case "fv-row": {
       const rows = fin().rows || (fin().rows = {}), on = rows[id] = !rows[id], li = b.closest(".f-card");
       if (li) { li.classList.toggle("open", on); b.setAttribute("aria-expanded", String(on)); b.setAttribute("aria-label", b.getAttribute("aria-label").replace(/^(More|Less)/, on ? "Less" : "More")); }
