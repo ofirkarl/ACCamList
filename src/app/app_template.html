@@ -2693,6 +2693,23 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .lc-fd { font-weight: 400; opacity: .7; font-size: .85em; }
 .mb-sizes { display: flex; flex-wrap: wrap; gap: 8px; }
 .mb-sizes .mb-s { min-width: 56px; min-height: 40px; justify-content: center; font-variant-numeric: tabular-nums; }
+
+/* a lens's technical details in its Edit item sheet (folded): type, squeeze, covers, mount, focal length, stop, close focus, front; a set lens by lens */
+.ln-box .more-in { display: grid; gap: 12px; }
+.ln-fill { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ln-msg { margin: -4px 0 0; }
+.ln-segs { display: flex; flex-wrap: wrap; gap: 8px; }
+.ln-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ln-chips .chip { min-height: 34px; padding: 0 10px; font-size: 13px; }
+.ln-chips .chip[aria-pressed="true"], .mb-sizes .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); font-weight: 600; }
+.ln-sqin { width: 70px; min-height: 34px; }
+.field .lbl { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.ln-filled input, .ln-filled select, .ln-filled .nsel-btn, input.ln-filled, .ln-filled.seg, .ln-rows.ln-filled input { border-color: var(--sf, var(--accent)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--sf, var(--accent)) 16%, transparent); }
+.ln-rows { display: grid; gap: 6px; }
+.ln-rh, .ln-r { display: grid; grid-template-columns: 1.1fr 1fr 1.2fr 1fr 32px; gap: 6px; align-items: center; }
+.ln-rh span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ln-r input { min-width: 0; min-height: 40px; padding: 6px 8px; font-variant-numeric: tabular-nums; }
+.ln-add { justify-self: start; }
 </style>
 
 <div class="app">
@@ -3140,6 +3157,7 @@ function applyCatalog() {
         if (o.sku) it.sku = o.sku === "-" ? "" : o.sku;
         if (o.c && o.s && subs.get(o.c + "/" + o.s)) dest = subs.get(o.c + "/" + o.s);
         if (o.g) it.grp = o.g;
+        if (o.lens) it.lens = o.lens;
         if (o.g && !o.brand && !dest.groupBy && (makers.get(dest.key) || new Set()).has(o.g)) it.brand = o.g;
       }
       // a subcategory now grouped by what things are for: an item still filed under a manufacturer, or brought in from
@@ -3156,6 +3174,7 @@ function applyCatalog() {
       const it = { id: d.id, name: d.name, brand: d.brand || "Generic", section: d.section || "accessories", own: true };
       if (d.url) it.url = d.url;
       if (d.sku) it.sku = d.sku;
+      if (d.lens) it.lens = d.lens;
       BITEM.set(d.id, it); BLOC.set(d.id, { c: d.c, s: d.s, ord: 1e6 + n });
       if (!dest) return;
       if (d.g) { if (dest.groupBy) it.group = d.g; else if (d.g !== it.brand) it.grp = d.g; }
@@ -3242,6 +3261,7 @@ function saveCatItem(h, id, v) {
   if (own) {
     Object.assign(own, { name: name || own.name, brand: String(v.brand || "").trim().slice(0, 60), sku: String(v.sku || "").trim().slice(0, 40), url: safeUrl(String(v.url || "").trim()),
       c: kc, s: ks, g: pickedGroup(v), section: v.section || own.section });
+    if (v.lens === null) delete own.lens; else if (v.lens) own.lens = v.lens;
     clean(own); applyCatalog(); touchSettings();
     return;
   }
@@ -3257,6 +3277,7 @@ function saveCatItem(h, id, v) {
     g: g !== naturalGroup(now, tgt) ? g : undefined,
     section: v.section && v.section !== base.section ? v.section : undefined,
     sku: v.sku !== undefined && String(v.sku).trim() !== (base.sku || "") ? String(v.sku).trim().slice(0, 40) || "-" : undefined,
+    lens: v.lens === undefined ? (catEdits(h.id).items[id] || {}).lens : v.lens || undefined,   // the user's own technical details over the catalog's
   });
 }
 /* a catalog item renamed (here or from a list): the catalog keeps the name, and lists that still use the old name follow */
@@ -3278,6 +3299,7 @@ function createOwnItem(h, v) {
   if (!subOf(h, kc, ks)) return null;
   const d = clean({ id: uid("ui-"), name: String(v.name || "").trim().slice(0, 160), brand: String(v.brand || "").trim().slice(0, 60), sku: String(v.sku || "").trim().slice(0, 40), url: safeUrl(String(v.url || "").trim()),
     c: kc, s: ks, g: pickedGroup(v), section: v.section || typicalSection(h, kc, ks, "accessories") });
+  if (v.lens) d.lens = v.lens;
   if (!d.name) return null;
   catEdits(h.id).newItems.push(d);
   applyCatalog(); touchSettings();
@@ -4721,6 +4743,7 @@ function houseTheme(id) {
 }
 function render() {
   sugHide();
+  if (!app.settings.lnFill1 && HOUSES.length && ITEM.size) lnMigrate();
   if (ntPending) ntFlush();   // the notepad's last words, kept before the page is drawn again
   if (hist.last && !hist.popping) hist.last.scroll = window.scrollY;  // where this page was, before it's drawn again
   const v = document.getElementById("view");
@@ -5810,6 +5833,7 @@ const MOUNTS = [["PL", "PL"], ["LPL", "LPL"], ["EF", "Canon EF"], ["E", "Sony E"
 const CINE_SUBS = ["cine_sets", "cine_primes", "cine_zooms", "anamorphic", "specialty", "pl"];
 /* which mounts a lens comes in: from its name ("PL/EF/E Mount", "LPL-Mount", "For Sony E"), else from where the rental house lists it */
 function lensMounts(it, sub, sp) {
+  if (it.lens && Array.isArray(it.lens.mounts) && it.lens.mounts.length) return [...it.lens.mounts];   // set in its technical details
   const n = it.name || "", m = new Set();
   if (/\bLPL\b/.test(n)) m.add("LPL");
   if (/\bPL\b/.test(n)) m.add("PL");
@@ -5933,7 +5957,7 @@ function lensSpec(it, sub) {
   let spec = null;
   if (it.lens && (focals || zoom)) {
     spec = { focals, zoom, zooms, set: !!L.set, stop, label, cov: L.coverage || "", squeeze: L.squeeze || "" };
-    spec.ana = !!(spec.squeeze || /anamorph/i.test(name) || sub === "anamorphic");
+    spec.ana = !!(spec.squeeze || L.ana || /anamorph/i.test(name) || sub === "anamorphic");
     spec.probe = /probe|pro2be|x-tract|skater ?scope/i.test(name);
     spec.macro = /macro/i.test(name);
     spec.tilt = /tilt|shift|swing/i.test(name);
@@ -5994,6 +6018,11 @@ const lensFront = (it, sp) => lensTab(LENS_FRONT, LENS_FRONT_OF, it, sp);
 function lensTab(TAB, CACHE, it, sp) {
   if (!it || !it.lens) return null;
   if (CACHE.has(it)) return CACHE.get(it);
+  const ov = TAB === LENS_MOD ? it.lens.cf : TAB === LENS_FRONT ? it.lens.fd : null;   // the lens's own figure (its technical details) first
+  if (ov) { let out = null;
+    if (typeof ov === "string") out = { one: ov };
+    else if (sp && sp.per) { const per = {}; for (const x of sp.per) { const v = ov[String(x.f)]; if (v) per[x.f] = String(v); } if (Object.keys(per).length) out = { per }; }
+    if (out) { CACHE.set(it, out); return out; } }
   const row = TAB.find(r => r[1].test(it.name || "")); let out = null;
   if (row) {
     const t = row[2], mac = row[3] || {};
@@ -6354,6 +6383,11 @@ function catEditDialog(h, id, presetKey, opts = {}) {
     : opts.addTo ? `<button class="btn ghost" type="button" data-act="ci-listonly" data-to="${esc(opts.addTo)}">Only on this list</button>` : "";
   const resetBtn = mode === "base" && e.it.edited ? `<div class="more-acts"><button class="btn ghost" type="button" data-act="cat-item-reset" data-id="${esc(id)}">Undo edits</button></div>` : "";
   const brands = [...new Set([...ITEM.values()].filter(x => x.h === h).map(x => x.it.brand).filter(Boolean))].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+  // a lens (or anything going into a lens category): its technical details, folded
+  const lensy = !!(e && e.it.lens) || lnIsLensCat(h, cat.id);
+  lnDraft = lnFromItem(e ? e.it : null, e ? e.s.id : sub.id);
+  if (mode === "base") { const ov = (peekEdits(h.id).items || {})[id]; lnDraft._base = !!(ov && ov.lens); lnDraft._orig = base; lnDraft._sub = e.s.id; }
+  const lnBox = `<details class="more ln-box" id="lnBox"${lensy ? "" : " hidden"}><summary>Technical details${CHEV}</summary><div class="more-in" id="lnIn">${lnHtml()}</div></details>`;
   showModal(`<datalist id="ci-brands">${brands.map(b => `<option value="${esc(b)}"></option>`).join("")}</datalist><form class="form dialog" id="catItemForm" data-id="${esc(id || "")}" data-mode="${mode}"${opts.addTo ? ` data-addto="${esc(opts.addTo)}"` : ""}${opts.fromFav ? ` data-fromfav="${esc(opts.fromFav)}"` : ""}${opts.fromLine ? ` data-fromline="${esc(opts.fromLine)}"` : ""}${opts.fromName ? ` data-fromname="${esc(opts.fromName)}" data-fromsec="${esc(opts.fromSec || "")}"` : ""} autocomplete="off">
     <h3 class="plain">${mode === "new" ? opts.addTo ? "Add to the list and the catalog" : "New item" : "Edit item"}</h3>
     <div class="field"><label for="ci-name">Name</label><input id="ci-name" name="name" maxlength="160" value="${esc(e ? e.it.name : opts.name || "")}" required>
@@ -6367,6 +6401,7 @@ function catEditDialog(h, id, presetKey, opts = {}) {
     </div>
     <div class="field" id="ci-gfield"${sub.groupBy ? "" : " hidden"}><label for="ci-g">Folder</label><select id="ci-g" name="g">${groupOpts(h, sub.key, gsel, mode !== "base")}</select>
       <input id="ci-gnew" name="gnew" maxlength="60" placeholder="New folder name" aria-label="New folder name" hidden></div>
+    ${lnBox}
     <details class="more"><summary>More${CHEV}</summary><div class="more-in">
       ${opts.addTo ? "" : `<div class="field"><label for="ci-note">Note</label><textarea id="ci-note" name="note" rows="2" maxlength="300" placeholder="Only you see it, in the catalog. Not added to the Camera List.">${esc(id ? noteOf(id) : "")}</textarea></div>`}
       ${opts.addTo ? "" : `<div class="field"><label for="ci-sku">SKU</label><input id="ci-sku" name="sku" maxlength="40" value="${esc(mode === "base" ? e.it.sku || "" : own && own.sku || "")}" placeholder="Optional"></div>`}
@@ -6380,6 +6415,184 @@ function catEditDialog(h, id, presetKey, opts = {}) {
   </form>`);
   if (opts.addTo) { document.getElementById("ci-s")?.focus({ preventScroll: true }); const card = document.querySelector("#modal .modal-card"); if (card) card.scrollTop = 0; }
   else document.getElementById("ci-name")?.focus();
+}
+/* ---------- a lens's technical details: what the app knows of it (covers, mount, type, squeeze, stop, focal length, close focus,
+   front diameter), shown and corrected in its Edit item sheet; a set lens by lens. A catalog lens keeps the change as the user's own
+   over the catalog's (with a way back); a lens made by hand keeps it as its own. "Fill from the name" reads the name: the details typed
+   into it go to their fields, the name is left as the lens and its focal length; what the name doesn't say comes from its series in
+   either catalog. What can't be known stays empty ---------- */
+const LN_COVS = [["", "Not set"], ["S16", "Super 16"], ["MFT", "MFT"], ["APS-C", "APS-C"], ["S35", "Super 35"], ["FF", "Full frame"], ["LF", "Large format"], ["MF", "Medium format"], ["2/3", "2/3\" B4"]];
+const LN_MOUNTS = ["PL", "LPL", "EF", "RF", "E", "L", "M", "MFT", "G", "DL", "B4"];
+const LN_SQ = ["1.25x", "1.3x", "1.33x", "1.5x", "1.6x", "1.65x", "1.8x", "2x"];
+let lnDraft = null;
+if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("input", e => { const t = e.target; if (t && t.dataset && (t.dataset.ln || t.dataset.lnr) && t.tagName === "INPUT") lnInput(t); });
+const lnIsLensCat = (h, cid) => cid === "lenses" || !!(h && (h.categories.find(c => c.id === cid) || {}).name && /lens/i.test(h.categories.find(c => c.id === cid).name));
+// a close focus as typed (1.5m, 35 cm, 4', 1'2", 14") → feet and inches, as the makers mark them
+function cfNorm(v) {
+  v = String(v || "").trim().replace(/,/g, "."); if (!v) return "";
+  let m = /^(\d+(?:\.\d+)?)\s*(m|cm|mm)$/i.exec(v);
+  if (m) { const inch = Math.round(+m[1] * ({ m: 1, cm: .01, mm: .001 })[m[2].toLowerCase()] / 0.0254); return inch >= 12 ? `${Math.floor(inch / 12)}'${inch % 12 ? inch % 12 + '"' : ""}` : `${inch}"`; }
+  m = /^(\d+)\s*'\s*(?:(\d+(?:\.\d+)?)\s*"?)?$/.exec(v); if (m) return `${m[1]}'${m[2] && +m[2] ? m[2] + '"' : ""}`;
+  m = /^(\d+(?:\.\d+)?)\s*(?:"|in|inch)$/i.exec(v); if (m) { const inch = Math.round(+m[1]); return inch >= 12 ? `${Math.floor(inch / 12)}'${inch % 12 ? inch % 12 + '"' : ""}` : `${inch}"`; }
+  return v.slice(0, 12);
+}
+const stopNorm = v => { v = String(v || "").trim(); if (!v) return ""; const m = /^(?:(t)|f\s*\/?)?\s*(\d{1,2}(?:\.\d{1,2})?)(?:\s*[-–]\s*(?:t|f\s*\/?)?\s*(\d{1,2}(?:\.\d{1,2})?))?$/i.exec(v); if (!m) return v.slice(0, 16);
+  const pre = /^f/i.test(v) ? "f/" : "T"; return pre + m[2] + (m[3] ? "–" + pre + m[3] : ""); };
+const sqNorm = v => { const n = parseFloat(String(v || "").replace(/^x/i, "")); return n >= 1.1 && n <= 2.2 ? String(Math.round(n * 100) / 100) + "x" : ""; };
+const fdNorm = v => { const n = parseInt(String(v || "").replace(/[^\d]/g, ""), 10); return n >= 30 && n <= 300 ? String(n) : ""; };
+/* the name, read: { name (without the details), focal, zoom, set, stop, cov, mounts, cf, fd, squeeze, ana } */
+const LN_COV_WORDS = [[/^(s35|super ?35)$/i, "S35"], [/^(s16|super ?16)$/i, "S16"], [/^(ff|full[- ]?frame|vv|vistavision)$/i, "FF"], [/^(lf|large[- ]?format)$/i, "LF"], [/^aps-?c$/i, "APS-C"], [/^(mf|medium[- ]?format)$/i, "MF"], [/^2\/3"?$/i, "2/3"]];
+const LN_MOUNT_WORDS = { pl: "PL", lpl: "LPL", ef: "EF", rf: "RF", e: "E", "e-mount": "E", fe: "E", l: "L", "l-mount": "L", m: "M", "m-mount": "M", mft: "MFT", "m4/3": "MFT", g: "G", "g-mount": "G", gfx: "G", dl: "DL", b4: "B4" };
+function lensParse(name) {
+  let s = " " + String(name || "").replace(/\s+/g, " ") + " "; const got = { mounts: [] };
+  const cut = re => { const m = re.exec(s); if (m) s = s.slice(0, m.index) + " " + s.slice(m.index + m[0].length); return m; };
+  let m;
+  if ((m = cut(/\s(?:front(?:\s+diameter)?|ø|Ø|fd)\s*:?\s*(\d{2,3})\s*(?:mm)?(?=\s)/i))) got.fd = fdNorm(m[1]);
+  if ((m = cut(/\s(?:cf|mod|close\s+focus|min(?:imum)?\s+focus)\s*:?\s*(\d+(?:[.,]\d+)?\s*(?:m|cm)|\d+\s*'\s*(?:\d+(?:\.\d+)?\s*")?|\d+(?:\.\d+)?\s*")(?=\s)/i))) got.cf = cfNorm(m[1]);
+  const anaWord = /\s(anamorphic|ana)(?=\s)/i.test(s);
+  if ((m = /\s(?:x\s?(\d(?:\.\d{1,2})?)|(\d(?:\.\d{1,2})?)\s?x)(?:\s+squeeze)?(?=\s)/i.exec(s))) { const raw = m[1] || m[2], v = sqNorm(raw); if (v && (anaWord || /\./.test(raw) || /squeeze/i.test(m[0]))) { cut(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))); got.squeeze = v; got.ana = true; } }
+  if ((m = cut(/\s(\d(?:\.\d{1,2})?)\s+squeeze(?=\s)/i))) { const v = sqNorm(m[1]); if (v) { got.squeeze = v; got.ana = true; } }
+  if (cut(/\sana(?=\s)/i) || anaWord) got.ana = true;
+  if ((m = cut(/\s(?:(T)|f\s*\/?)\s?(\d{1,2}(?:\.\d{1,2})?)(?:\s*[-–]\s*(?:T|f\s*\/?)?\s?(\d{1,2}(?:\.\d{1,2})?))?(?=\s)/i))) got.stop = stopNorm(m[0].trim());
+  // a format and the mounts: whole words (a mount list may come as PL/EF/E)
+  s = " " + s.trim().split(" ").filter(w => {
+    const cv = LN_COV_WORDS.find(([re]) => re.test(w)); if (cv) { got.cov = cv[1]; if (cv[1] === "MFT") got.mounts.push("MFT"); return false; }
+    if (/^(mft|micro four thirds)$/i.test(w)) { got.cov = got.cov || "MFT"; got.mounts.push("MFT"); return false; }
+    const parts = w.replace(/[(),]/g, "").split("/").filter(Boolean); if (parts.length && parts.every(x => LN_MOUNT_WORDS[x.toLowerCase()] || /^(mount)$/i.test(x))) { for (const x of parts) if (LN_MOUNT_WORDS[x.toLowerCase()]) got.mounts.push(LN_MOUNT_WORDS[x.toLowerCase()]); return false; }
+    if (/^mount$/i.test(w)) return false;
+    return true; }).join(" ") + " ";
+  got.mounts = [...new Set(got.mounts)];
+  if ((m = /\s(\d+(?:\.\d+)?(?:\s*[\/,]\s*\d+(?:\.\d+)?)+)\s*mm(?=\s)/i.exec(s))) got.set = m[1].split(/\s*[\/,]\s*/).map(Number);
+  else if ((m = /(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s*mm/i.exec(s))) got.zoom = [+m[1], +m[2]];
+  else if ((m = /(\d+(?:\.\d+)?)\s*mm/i.exec(s))) got.focal = +m[1];
+  got.name = s.replace(/\s+[-–·,|]+\s*$/, "").replace(/\s{2,}/g, " ").trim();
+  return got;
+}
+// the series a lens belongs to, in either catalog: the lenses whose names share its words (two at least)
+function lensSeries(name) {
+  lensByName("x", ""); if (!LENS_NAMES) return [];
+  const toks = lensToks(name).filter(t => !/\d/.test(t)); if (toks.length < 2) return [];
+  return LENS_NAMES.filter(x => toks.every(t => x.toks.has(t)));
+}
+const lnMode = arr => { const n = new Map(); for (const v of arr.filter(Boolean)) n.set(v, (n.get(v) || 0) + 1); return [...n.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || ""; };
+// the series at one focal length: its stop, close focus and front diameter
+function lnSeriesAt(series, f) {
+  for (const x of series) {
+    const sp = lensSpec(x.e.it, x.e.s.id); if (!sp) continue;
+    const md = lensMod(x.e.it, sp), fr = lensFront(x.e.it, sp);
+    if (sp.per) { const p = sp.per.find(y => y.f === f); if (p) return { stop: p.label || sp.label || "", cf: md && md.per ? md.per[f] || "" : "", fd: fr && fr.per ? fr.per[f] || "" : "" }; }
+    else if (sp.focals && sp.focals[0] === f && !sp.zoom) return { stop: sp.label || "", cf: md && md.one || "", fd: fr && fr.one || "" };
+  }
+  return null;
+}
+/* the draft the sheet shows: from the lens's data as the app reads it now */
+function lnFromItem(it, sub) {
+  const L = (it && it.lens) || {}, sp = it && it.lens ? lensSpec(it, sub) : null, md = sp ? lensMod(it, sp) : null, fr = sp ? lensFront(it, sp) : null;
+  const d = { ana: !!(sp ? sp.ana : L.ana), kind: sp ? (sp.per ? "set" : sp.zoom ? "zoom" : "prime") : "prime", squeeze: L.squeeze || "", cov: L.coverage || "", stop: (sp && !sp.per ? sp.label : L.stop) || "",
+    mounts: L.mounts ? [...L.mounts] : sp ? sp.mounts.filter(x => x !== "Other") : [], focal: sp ? (sp.zoom ? `${fmtN(sp.zoom[0])}-${fmtN(sp.zoom[1])}` : sp.focals && !sp.per ? fmtN(sp.focals[0]) : "") : "",
+    cf: md && md.one || "", fd: fr && fr.one || "", rows: [] };
+  if (sp && sp.per) d.rows = sp.per.map(x => ({ f: perMM(x).replace("–", "-"), stop: x.label || "", cf: md && md.per ? md.per[x.f] || "" : "", fd: fr && fr.per ? fr.per[x.f] || "" : "" }));
+  d._init = lnSig(d); d._filled = []; return d;
+}
+const lnSig = d => JSON.stringify([d.ana, d.kind, d.squeeze, d.cov, d.stop, [...(d.mounts || [])].sort(), d.focal, d.cf, d.fd, (d.rows || []).map(r => [r.f, r.stop, r.cf, r.fd])]);
+/* the draft → the lens's data, as the catalog keeps it */
+function lnToLens(d, keepNote) {
+  const L = {};
+  if (d.cov) L.coverage = d.cov;
+  if (d.ana) { L.ana = true; if (d.squeeze) L.squeeze = d.squeeze; }
+  if (d.mounts && d.mounts.length) L.mounts = [...d.mounts];
+  if (d.kind === "set") {
+    const rows = (d.rows || []).filter(r => String(r.f).trim());
+    if (rows.length) { L.set = true; L.count = rows.length; L.focals = rows.map(r => String(r.f).trim()).join(", ") + "mm";
+      const st = rows.map(r => stopNorm(r.stop)), one = st.every(x => x === st[0]) ? st[0] : "";
+      if (one) L.stop = one; else { const nums = st.filter(Boolean); if (nums.length) { const v = nums.map(x => parseFloat(x.replace(/^[^\d]*/, ""))); L.stop = `T${fmtN(Math.min(...v))}–T${fmtN(Math.max(...v))}`; } L.stops = Object.fromEntries(rows.map((r, i) => [String(parseFloat(r.f)), st[i]]).filter(([, v]) => v)); }
+      const cf = Object.fromEntries(rows.map(r => [String(parseFloat(r.f)), cfNorm(r.cf)]).filter(([, v]) => v)); if (Object.keys(cf).length) L.cf = cf;
+      const fd = Object.fromEntries(rows.map(r => [String(parseFloat(r.f)), fdNorm(r.fd)]).filter(([, v]) => v)); if (Object.keys(fd).length) L.fd = fd; }
+  } else {
+    const f = String(d.focal || "").trim().replace(/\s*mm$/i, "").replace(/\s*[–-]\s*/, "-"); if (f) L.focals = f + "mm";
+    if (d.stop) L.stop = stopNorm(d.stop); if (d.cf) L.cf = cfNorm(d.cf); if (d.fd) L.fd = fdNorm(d.fd);
+  }
+  if (keepNote) L.note = keepNote;
+  return L;
+}
+/* Fill from the name: the name's details into the fields (and out of the name); the rest from the series */
+function lnFill(d, name) {
+  const g = lensParse(name), series = lensSeries(g.name), filled = new Set(), put = (k, v) => { if (v && v !== d[k]) { d[k] = v; filled.add(k); } };
+  if (g.ana) { if (!d.ana) filled.add("ana"); d.ana = true; }
+  put("squeeze", g.squeeze); put("cov", g.cov); if (g.mounts.length) { d.mounts = g.mounts; filled.add("mounts"); }
+  if (g.set) { d.kind = "set"; d.rows = g.set.map(f => ({ f: fmtN(f), stop: "", cf: "", fd: "" })); filled.add("rows"); }
+  else if (g.zoom) { if (d.kind !== "zoom") filled.add("kind"); d.kind = "zoom"; put("focal", `${fmtN(g.zoom[0])}-${fmtN(g.zoom[1])}`); }
+  else if (g.focal) { if (d.kind === "set") d.kind = "prime"; put("focal", fmtN(g.focal)); }
+  put("stop", g.stop); put("cf", g.cf); put("fd", g.fd);
+  if (series.length) {   // what the name didn't say: from the series
+    const sps = series.map(x => lensSpec(x.e.it, x.e.s.id)).filter(Boolean);
+    if (!d.cov) put("cov", lnMode(series.map(x => x.e.it.lens.coverage)));
+    if (!d.mounts.length) { const mm = lnMode(sps.map(sp => sp.mounts.filter(x => x !== "Other").join("/"))); if (mm) { d.mounts = mm.split("/"); filled.add("mounts"); } }
+    if (!d.ana && sps.length && sps.every(sp => sp.ana)) { d.ana = true; filled.add("ana"); }
+    if (d.ana && !d.squeeze) put("squeeze", lnMode(series.map(x => x.e.it.lens.squeeze)));
+    if (d.kind === "set") for (const r of d.rows) { const at = lnSeriesAt(series, parseFloat(r.f)); if (!at) continue; if (!r.stop && at.stop) { r.stop = at.stop; filled.add("rows"); } if (!r.cf && at.cf) { r.cf = at.cf; filled.add("rows"); } if (!r.fd && at.fd) { r.fd = at.fd; filled.add("rows"); } }
+    else if (d.focal && !/-/.test(d.focal)) { const at = lnSeriesAt(series, parseFloat(d.focal)); if (at) { if (!d.stop) put("stop", at.stop); if (!d.cf) put("cf", at.cf); if (!d.fd) put("fd", at.fd); } }
+  }
+  d._filled = [...filled];
+  return { name: g.name, series: series.length, brand: lnMode(series.map(x => x.e.it.brand)) };
+}
+function lnHtml() {
+  const d = lnDraft; if (!d) return "";
+  const fl = k => d._filled.includes(k) ? " ln-filled" : "";
+  const seg = (k, v, t) => `<button type="button" data-act="ln-set" data-k="${k}" data-v="${v}" aria-pressed="${d[k] === v}">${t}</button>`;
+  const inp = (k, lab, ph, extra = "") => `<div class="field${fl(k)}"><label for="ln-${k}">${lab}</label><input id="ln-${k}" data-ln="${k}" type="text" autocomplete="off" maxlength="16" value="${esc(d[k] || "")}" placeholder="${esc(ph)}"${extra}></div>`;
+  const rows = d.kind === "set" ? `<div class="ln-rows${fl("rows")}" role="group" aria-label="The set lens by lens"><div class="ln-rh"><span>mm</span><span>Stop</span><span>Close focus</span><span>Front Ø</span><span></span></div>
+      ${d.rows.map((r, i) => `<div class="ln-r">${["f", "stop", "cf", "fd"].map(k => `<input data-lnr="${k}" data-i="${i}" type="text" autocomplete="off" maxlength="12" value="${esc(r[k] || "")}" aria-label="${({ f: "Focal length", stop: "Stop", cf: "Close focus", fd: "Front diameter" })[k]} of lens ${i + 1}"${k === "f" || k === "fd" ? ' inputmode="decimal"' : ""}>`).join("")}<button type="button" class="iconbtn sm" data-act="ln-row-del" data-i="${i}" aria-label="Remove this lens">×</button></div>`).join("")}
+      <button type="button" class="btn ghost sm ln-add" data-act="ln-row-add">+ Add a lens</button></div>`
+    : `<div class="row2">${inp("focal", d.kind === "zoom" ? "Focal length (zoom)" : "Focal length", d.kind === "zoom" ? "24-70" : "35", ' inputmode="decimal"')}${inp("stop", "Stop", "T2.1")}</div>
+      <div class="row2">${inp("cf", "Close focus", "1'2\" or 0.35 m")}${inp("fd", "Front diameter (mm)", "95", ' inputmode="numeric"')}</div>`;
+  return `<div class="ln-fill"><button type="button" class="btn sm" data-act="ln-fill">Fill from the name</button>${d._was != null ? `<button type="button" class="btn ghost sm" data-act="ln-unname">Put the name back</button>` : ""}</div>
+    ${d._msg ? `<p class="hint ln-msg">${esc(d._msg)}</p>` : ""}
+    <div class="ln-segs"><div class="seg sm${fl("ana")}" role="group" aria-label="Spherical or anamorphic">${[["0", "Spherical"], ["1", "Anamorphic"]].map(([v, t]) => `<button type="button" data-act="ln-ana" data-v="${v}" aria-pressed="${!!d.ana === (v === "1")}">${t}</button>`).join("")}</div>
+      <div class="seg sm${fl("kind")}" role="group" aria-label="Prime, zoom or set">${seg("kind", "prime", "Prime")}${seg("kind", "zoom", "Zoom")}${seg("kind", "set", "Set")}</div></div>
+    ${d.ana ? `<div class="field${fl("squeeze")}"><span class="lbl">Squeeze</span><div class="ln-chips">${LN_SQ.map(v => `<button type="button" class="chip" data-act="ln-sq" data-v="${v}" aria-pressed="${d.squeeze === v}">${v}</button>`).join("")}<input class="ln-sqin" data-ln="squeeze" type="text" inputmode="decimal" maxlength="6" value="${LN_SQ.includes(d.squeeze) ? "" : esc(d.squeeze || "")}" placeholder="other" aria-label="Another squeeze"></div></div>` : ""}
+    <div class="row2"><div class="field${fl("cov")}"><label for="ln-cov">Covers</label><select id="ln-cov" data-ln="cov">${LN_COVS.map(([v, t]) => `<option value="${v}"${d.cov === v ? " selected" : ""}>${t}</option>`).join("")}</select></div>
+      <div class="field${fl("mounts")}"><span class="lbl">Mount</span><div class="ln-chips">${LN_MOUNTS.map(v => `<button type="button" class="chip" data-act="ln-mount" data-v="${v}" aria-pressed="${d.mounts.includes(v)}">${v}</button>`).join("")}</div></div></div>
+    ${rows}
+    ${d._base ? `<div class="more-acts"><button class="btn ghost sm" type="button" data-act="ln-reset">Use the catalog's details</button></div>` : ""}`;
+}
+/* once: the lenses already made by hand get their details from their names and series (the names stay as they are) */
+function lnMigrate() {
+  app.settings.lnFill1 = 1; let n = 0;
+  for (const h of HOUSES) for (const d of peekEdits(h.id).newItems || []) {
+    if (d.lens || !lnIsLensCat(h, d.c)) continue;
+    const dr = lnFromItem(null); lnFill(dr, d.name); const L = lnToLens(dr);
+    if (L.coverage || L.focals) { d.lens = L; n++; }
+  }
+  if (n) applyCatalog();
+  touchSettings();
+  return n;
+}
+const lnPaint = () => { const el = document.getElementById("lnIn"); if (el) el.innerHTML = lnHtml(); };
+function lnInput(t) {
+  if (!lnDraft) return false;
+  if (t.dataset.ln) { const k = t.dataset.ln; lnDraft[k] = t.value; lnDraft._filled = lnDraft._filled.filter(x => x !== k); t.closest(".field")?.classList.remove("ln-filled"); if (k === "squeeze") document.querySelectorAll('[data-act="ln-sq"]').forEach(b => b.setAttribute("aria-pressed", "false")); return true; }
+  if (t.dataset.lnr) { const r = lnDraft.rows[+t.dataset.i]; if (r) r[t.dataset.lnr] = t.value; return true; }
+  return false;
+}
+function lnAct(act, b) {
+  const d = lnDraft; if (!d) return;
+  const f = document.getElementById("catItemForm");
+  if (act === "ln-set") { d[b.dataset.k] = b.dataset.v; if (b.dataset.k === "kind" && d.kind === "set" && !d.rows.length) d.rows = d.focal && !/-/.test(d.focal) ? [{ f: d.focal, stop: d.stop, cf: d.cf, fd: d.fd }] : [{ f: "", stop: "", cf: "", fd: "" }]; }
+  else if (act === "ln-ana") { d.ana = b.dataset.v === "1"; if (!d.ana) d.squeeze = ""; }
+  else if (act === "ln-sq") d.squeeze = d.squeeze === b.dataset.v ? "" : b.dataset.v;
+  else if (act === "ln-mount") { const v = b.dataset.v; d.mounts = d.mounts.includes(v) ? d.mounts.filter(x => x !== v) : [...d.mounts, v]; }
+  else if (act === "ln-row-add") d.rows.push({ f: "", stop: d.rows[0] ? d.rows[0].stop : "", cf: "", fd: d.rows[0] ? d.rows[0].fd : "" });
+  else if (act === "ln-row-del") d.rows.splice(+b.dataset.i, 1);
+  else if (act === "ln-fill" && f) {
+    const was = f.elements.name.value, r = lnFill(d, was);
+    if (r.name && r.name !== was.trim()) { d._was = was; f.elements.name.value = r.name; }
+    if (r.brand && f.elements.brand && !f.elements.brand.value.trim()) { f.elements.brand.value = r.brand; d._filled.push("brand"); }
+    d._msg = d._filled.length ? `Filled: ${[...new Set(d._filled.map(k => ({ ana: "type", kind: "type", brand: "manufacturer", squeeze: "squeeze", cov: "covers", mounts: "mount", focal: "focal length", stop: "stop", cf: "close focus", fd: "front diameter", rows: "the lenses" })[k]))].join(", ")}${r.series ? " (from the name and its series)" : " (from the name)"}. Check them before Save.` : "Nothing new found in the name or its series.";
+  }
+  else if (act === "ln-unname" && f && d._was != null) { f.elements.name.value = d._was; d._was = null; d._msg = ""; }
+  else if (act === "ln-reset") { const keep = { _base: d._base, _orig: d._orig }; lnDraft = Object.assign(lnFromItem(d._orig, d._sub), keep, { _reset: true }); }
+  lnPaint();
 }
 /* a copy of a catalog item, as one of the user's own, right under it; then its dialog opens to rename it */
 function duplicateCatItem(h, id) {
@@ -9451,6 +9664,7 @@ document.addEventListener("click", e => {
     case "mb-size": { const v = +b.dataset.v, cur0 = mbBacks(), on = cur0.includes(v), nx = on ? cur0.filter(x => x !== v) : [...cur0, v].sort((a, z) => a - z);
       if (!nx.length) { toast("Keep at least one size."); break; }
       app.settings.mbBack = nx; touchSettings(); b.setAttribute("aria-pressed", String(!on)); break; }
+    case "ln-set": case "ln-ana": case "ln-sq": case "ln-mount": case "ln-row-add": case "ln-row-del": case "ln-fill": case "ln-unname": case "ln-reset": lnAct(act, b); break;
     case "cov-show": { const q = cur(); if (q) { app.covShow = app.covShow === q.id ? null : q.id; rerenderKeepScroll(); } break; }
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
     case "ad-sel": { const sel = new Set(adSel()), k = b.dataset.id; if (!k) break; if (sel.has(k)) sel.delete(k); else sel.add(k); app.settings.adminSel = [...sel]; touchSettings(); buzz(sel.has(k) ? "tick" : "tap"); rerenderKeepScroll(); break; }
@@ -9586,7 +9800,12 @@ document.addEventListener("change", e => {
   if (t.id === "pc-list") { app.settings.pcList = t.value; app.pcNote = null; touchSettings(); render(); return; }   // the checklist's list: kept for next time
   if (t.id === "lc-list") { app.settings.lcList = t.value; touchSettings(); render(); return; }  // the Lens card's list: kept for next time
   if (t.id === "mc-list") { app.settings.mcList = t.value || "none"; touchSettings(); mcOpen = null; render(); return; }  // the Media Calculator's list: kept for next time
-  if (t.form && t.form.id === "catItemForm" && ["c", "s", "g"].includes(t.name)) { catDialogSync(t.name); return; }
+  if (t.form && t.form.id === "catItemForm" && ["c", "s", "g"].includes(t.name)) { catDialogSync(t.name);
+    if (t.name === "c") { const box = document.getElementById("lnBox"), h0 = cur() && houseById(cur().houseId); if (box) box.hidden = !(lnIsLensCat(h0, t.value) || (t.form.dataset.id && ITEM.get(t.form.dataset.id)?.it.lens)); }
+    return; }
+  if (t.dataset && (t.dataset.ln || t.dataset.lnr)) { lnInput(t); return; }
+  if (t.id === "ci-name" && t.form && t.form.dataset.mode === "new" && lnDraft && !document.getElementById("lnBox")?.hidden && t.value.trim()) {   // a new lens: filled from its name, shown
+    lnAct("ln-fill", null); const box = document.getElementById("lnBox"); if (box && lnDraft._filled.length) box.open = true; return; }
   if (t.id === "nh-cat") {
     const f = t.form, isNew = t.value === "__new";
     f.elements.name.hidden = !isNew;
@@ -9689,6 +9908,12 @@ document.addEventListener("submit", e => {
     } else if (v.s === "__new") v.s = ensureSub(h, v.c, (v.snew || "").trim() || "General", v.section);
     let id = f.dataset.id;
     const was = id ? ITEM.get(id)?.it.name : "";
+    // the lens's technical details: kept when the sheet showed them and they changed (or were put back to the catalog's)
+    const lnOn = lnDraft && !document.getElementById("lnBox")?.hidden;
+    if (lnOn) { const d = lnDraft, changed = lnSig(d) !== d._init;
+      if (f.dataset.mode === "base") v.lens = d._reset && !changed ? null : changed ? lnToLens(d, (BITEM.get(id)?.lens || {}).note) : undefined;
+      else if (changed || f.dataset.mode === "new") { const L = lnToLens(d); v.lens = Object.keys(L).length ? L : (f.dataset.mode === "own" ? null : undefined); } }
+    lnDraft = null;
     if (f.dataset.mode === "new") id = createOwnItem(h, v); else { saveCatItem(h, id, v); syncLineNames(id, was, ITEM.get(id)?.it.name); }
     if (id) setNote(id, v.note);
     const e2 = id && ITEM.get(id);
