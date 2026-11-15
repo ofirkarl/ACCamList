@@ -2524,14 +2524,6 @@ input.ok-pad.ok-rtl { padding-inline-start: 30px !important; }
 .ac-field .me-av { width: 32px; height: 32px; font-size: 14px; background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
 .ac-field .me-t b { font-size: 15px; }
 .ac-field.open .me-head .chev { transform: rotate(180deg); }
-.nt-field { display: grid; gap: 0; }
-.nt-head { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--fg); font: inherit; text-align: start; cursor: pointer; box-shadow: var(--frame-shadow); }
-.nt-head .lbl { flex: none; margin: 0; }
-.nt-peek { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--muted); }
-.nt-head .chevs { flex: none; color: var(--accent); transition: transform .3s var(--ease); }
-.nt-field.open .nt-head { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-.nt-field.open .nt-head .chevs { transform: rotate(180deg); }
-.nt-body { border: 1px solid var(--line); border-top: 0; border-radius: 0 0 14px 14px; background: var(--surface); padding: 6px 8px 8px; display: grid; gap: 6px; }
 .nt-bar-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; min-width: 0; }
 .nt-grp { display: flex; flex: 3 1 0; min-width: 0; gap: 1px; padding: 1px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
 .nt-grp:last-child { flex-grow: 2; }
@@ -2572,8 +2564,6 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 .tl-c.cam-lt svg { width: 11px; height: 11px; stroke-width: 2.3; }
 /* ── Rental forms: the button on a production's top row (a count on it once there are forms), and its sheets ── */
 .ph-stack .ph-nav .grow { flex: 1; }
-.ph-forms { position: relative; width: 40px; height: 40px; margin-inline-end: 8px; display: grid; place-items: center; color: var(--accent); }
-.ph-forms i { position: absolute; top: 2px; right: 0; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: var(--accent); color: var(--accent-fg); font-style: normal; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
 .rf-card, .rf-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: start; }
 .rf-row { gap: 4px; padding: 6px 4px 6px 6px; }
 .rf-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 6px; border: 0; background: none; font: inherit; color: var(--fg); text-align: start; cursor: pointer; border-radius: 10px; }
@@ -2596,8 +2586,24 @@ u.nt-gl { text-decoration: underline; text-underline-offset: 2px; }
 .nt-pane[hidden] { display: none; }
 .nt-todo .pc-todo { box-shadow: none; }
 .nt-todo .hint { margin: 2px 4px; }
-.nt-head .nt-cnt { flex: none; padding: 1px 7px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.nt-head .nt-cnt[hidden] { display: none; }
+.nt-page { display: grid; gap: 12px; }
+.nt-page .nt-ed { min-height: 42vh; max-height: none; }
+.nt-padpane .pc-saved { min-height: 18px; }
+/* the production's head, one rhythm (Ofir: exact, even spacing): the top row's buttons 44 high and 8 apart, as the search row's;
+   12 from the top row to the name, 4 to the line under it, then 16 between blocks: the unit switch, the dates, the search row */
+.ph-stack .ph-nav { gap: 8px; }
+.ph-stack .ph-export { min-height: 44px; }
+.ph-forms { position: relative; color: var(--accent); }
+.ph-forms svg { width: 20px; height: 20px; }
+.ph-forms i { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font-style: normal; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--bg); }
+.prod-head.ph-stack { padding-bottom: 0; }
+.prod-head.ph-stack .ph-name { margin-top: 4px; }
+.prod-head.ph-stack .ph-sub { margin-top: -4px; }
+.prod-head.ph-extra { padding-block: 16px 0; gap: 16px; }
+.prod-head.ph-extra .unit-sw { margin: 0; }
+.tabpane .list-tools.lt-one { padding-top: 16px; }
+/* the home screen's five tools in one row */
+.home-shorts { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 </style>
 
 <div class="app">
@@ -2855,7 +2861,7 @@ const app = {
   editCat: false,         // Add Gear in edit mode: rename and move catalog items
   storage: "local",
 };
-const cur = () => app.view === "prep" ? pcCur() : app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.view === "lenscard" ? lcCur() : app.productions.find(p => p.id === app.pid);
+const cur = () => app.view === "prep" ? pcCur() : app.view === "notes" ? ntCur() : app.view === "browse" ? app.browseP : app.view === "mcalc" ? mcCur() : app.view === "lensfind" ? lensSolo() : app.view === "favs" ? favSolo() : app.view === "cams" || app.view === "camprint" ? camCur() : app.view === "lenscard" ? lcCur() : app.productions.find(p => p.id === app.pid);
 // the Media Calculator on its own works on a list that is never kept, in the rental house picked last
 /* the Media Calculator works on one list, or on none (any camera, from every catalog). The choice is kept: the list picked last,
    or at first the production worked on most recently */
@@ -2936,6 +2942,7 @@ Object.assign(TAPE_ICONS, {
   star: '<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/>',
   grid: '<rect x="4" y="4" width="6.8" height="6.8" rx="1.6"/><rect x="13.2" y="4" width="6.8" height="6.8" rx="1.6"/><rect x="4" y="13.2" width="6.8" height="6.8" rx="1.6"/><rect x="13.2" y="13.2" width="6.8" height="6.8" rx="1.6"/>',
   book: '<path d="M5 4.5h9.5a3 3 0 0 1 3 3v12.5H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h9.5"/>',
+  note: '<path d="M14 3.5H7A2.5 2.5 0 0 0 4.5 6v12A2.5 2.5 0 0 0 7 20.5h10a2.5 2.5 0 0 0 2.5-2.5V9z"/><path d="M14 3.5V9h5.5M8.5 13h7M8.5 16.5h4.5"/>',
   idcard: '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><rect x="5.8" y="8.3" width="4.6" height="4.6" rx="1"/><path d="M13 9h5M13 12h3.5M5.8 15.8h12.2"/>'
 });
 // one color for every icon tile: the app's own (Ofir: no spread of colors that aren't the palette's)
@@ -4564,6 +4571,7 @@ function render() {
   else if (app.view === "lensfind" && cur()) v.innerHTML = viewLensFind();
   else if (app.view === "tools") v.innerHTML = viewTools();
   else if (app.view === "prep") v.innerHTML = viewPrep();
+  else if (app.view === "notes") v.innerHTML = viewNotes();
   else if (app.view === "admin" && app.isAdmin) v.innerHTML = viewAdmin();
   else if (app.view === "favs" && cur()) v.innerHTML = viewFavsSolo();
   else if (app.view === "cams" && cur()) v.innerHTML = viewCams();
@@ -4727,7 +4735,7 @@ function viewMcalc() {
 }
 /* the start page's tools, four at most: the Media Calculator, the catalogs, Favorites and More tools (the rest, each in one place) */
 const homeShortcuts = () => { const s = (act, icon, t) => `<button class="hs-btn" type="button" data-act="${act}">${tile(icon, "hs-i")}<span class="hs-t">${t}</span></button>`;
-  return `<div class="home-shorts">${s("mcalc", "card", "Media calc")}${s("catalogs", "book", "Catalogs")}${s("favs", "star", "Favorites")}${s("tools", "grid", "More tools")}</div>`; };
+  return `<div class="home-shorts">${s("mcalc", "card", "Media calc")}${s("notes", "note", "Notes")}${s("catalogs", "book", "Catalogs")}${s("favs", "star", "Favorites")}${s("tools", "grid", "More tools")}</div>`; };
 const browseHtml = () => `<div class="home-head browse-head"><h3 class="home-sec">Rental house catalogs</h3></div>
     <div class="browse-list">${HOUSES.map(h => `<button class="browse-card" type="button" data-act="browse" data-house="${esc(h.id)}" data-house-c="${esc(h.id)}" style="--hc:var(--house-${esc(h.id)}, var(--accent))"><span class="pc-house" data-house="${esc(h.id)}">${esc(h.name)}</span><span class="bc-n"><b class="num">${houseCount(h)}</b> items</span><span class="bc-go" aria-hidden="true">›</span></button>`).join("")}</div>`;
 /* press and hold a production: duplicate, delete, or start selecting several */
@@ -4764,7 +4772,7 @@ function unit2StartDialog(p) {
 }
 function startDuplicate(id) {
   if (!app.productions.some(x => x.id === id)) return;
-  app.sel = null; app.dupFrom = id; app.formFor = null; app.formTodo = []; app.view = "form"; render(); window.scrollTo(0, 0);
+  app.sel = null; app.dupFrom = id; app.formFor = null; app.view = "form"; render(); window.scrollTo(0, 0);
   document.getElementById("f-name")?.select();
 }
 /* the standalone app's account line: who is signed in, or why to sign in (inside Claude there is nothing to show) */
@@ -4793,10 +4801,18 @@ function acCardHtml(ac, ph) {
 }
 /* the notes: closed until wanted (a line with the first words when there are notes); open, the editor with its toolbar */
 const CHEVS = `<svg class="chevs" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 6l5 5 5-5M7 13l5 5 5-5"/></svg>`;
-/* the production's notes, in two tabs: a checklist (lines to tick off later: a reminder now, the proof it's done once it is; the same
-   list as the Prep Checklist's To-do) and the notepad (the free writing). A ticked line saves at once; for a production not made yet
-   the lines wait for Create */
-function ntTodo() { const e = app.formFor ? mainOf(findProd(app.formFor)) : null; return e ? { p: e, list: pcData(e).todo } : { p: null, list: app.formTodo || (app.formTodo = []) }; }
+/* ---------- Notes: its own page, from the home screen (Ofir: not in the production's details). Two tabs for a production: Checklist
+   (lines to tick off later: a reminder now, the proof it's done once it is; the same list as the Prep Checklist's To-do) and Notepad
+   (the production's notes, the free writing with its formatting, printed on the camera list). With no list: the user's own checklist
+   and notepad. Everything saves as it's done or typed. ---------- */
+const ntMains = () => pcLists().filter(x => !(x.mainOf && findProd(x.mainOf)));   // one row a production; its 2nd Unit shares its notes
+function ntCur() {
+  const k = app.settings.ntList; if (k === "none") return null;
+  const kp = k && findProd(k); if (kp && !isArchived(kp)) return mainOf(kp);
+  const c = app.pid && findProd(app.pid); if (c && !isArchived(c)) return mainOf(c);
+  return ntMains()[0] || null;
+}
+function ntTodo() { const p = ntCur(); return { p, list: pcData(p).todo }; }
 const ntTodoN = () => { const { list } = ntTodo(); return list.length ? `${list.filter(x => x.done).length}/${list.length}` : ""; };
 function ntTodoHtml() {
   const { list } = ntTodo(), order = [...list.filter(x => !x.done), ...list.filter(x => x.done)];
@@ -4806,27 +4822,42 @@ function ntTodoHtml() {
 }
 function ntTodoPaint(focusAdd) {
   const pane = document.getElementById("ntTodo"); if (pane) pane.innerHTML = ntTodoHtml();
-  const n = ntTodoN(), tn = document.querySelector('.nt-tabs [data-v="check"] .num'); if (tn) tn.textContent = n;
-  const hn = document.querySelector(".nt-head .nt-cnt"); if (hn) { hn.textContent = n; hn.hidden = !n; }
+  const tn = document.querySelector('.nt-tabs [data-v="check"] .num'); if (tn) tn.textContent = ntTodoN();
   if (focusAdd) document.getElementById("nt-add")?.focus();
 }
 function ntTodoAdd() {
   const i = document.getElementById("nt-add"), t = i && i.value.trim(); if (!t) { if (i) i.focus(); return; }
-  const { p, list } = ntTodo(); list.push({ id: uid("t"), t: t.slice(0, 200), done: false }); if (p) pcSave(p); buzz("tap");
+  const { p, list } = ntTodo(); list.push({ id: uid("t"), t: t.slice(0, 200), done: false }); pcSave(p); buzz("tap");
   ntTodoPaint(true);
 }
-function notesFieldHtml(p) {
-  const m = ntModel(p), open = app.ntOpen === true, n = ntTodoN();
+// the notepad's text: the production's notes (both its units carry them), or the user's own with no list
+const ntSrc = p => p || { notesRich: app.settings.ntFree || [] };
+function ntKeep() {
+  const ed = ntEd(); if (!ed || app.view !== "notes") return;
+  const m = ntRead(ed), p = ntCur();
+  if (p) { if (JSON.stringify(p.notesRich || []) === JSON.stringify(m)) return; for (const x of [p, unit2Of(p)].filter(Boolean)) { x.notesRich = clone(m); x.notes = ntPlain(m); touch(x); } }
+  else { if (JSON.stringify(app.settings.ntFree || []) === JSON.stringify(m)) return; app.settings.ntFree = m; touchSettings(); }
+  const sv = document.getElementById("ntSaved"); if (sv) { sv.hidden = false; replay(sv, "pop"); }
+}
+function viewNotes() {
+  const p = ntCur(), n = ntTodoN(), m = ntModel(ntSrc(p));
   const tab = app.ntTab || (!n && ntPlain(m).trim() ? "pad" : "check");
-  const tb = (v, t, c) => `<button type="button" role="tab" data-act="nt-tab" data-v="${v}" aria-selected="${tab === v}" aria-controls="${v === "check" ? "ntTodo" : "ntPad"}">${t}${c !== undefined ? `<span class="num">${c}</span>` : ""}</button>`;
-  return `<div class="field nt-field${open ? " open" : ""}">
-    <button class="nt-head" type="button" data-act="nt-toggle" aria-expanded="${open}" aria-controls="ntBody"><span class="lbl">Notes</span><span class="nt-cnt num"${n ? "" : " hidden"}>${n}</span><span class="nt-peek" dir="auto">${esc(ntPlain(m).split("\n")[0] || "")}</span>${CHEVS}</button>
-    <div class="nt-body" id="ntBody"${open ? "" : " hidden"}>
+  const opts = ntMains().map(x => `<option value="${esc(x.id)}"${p && x.id === p.id ? " selected" : ""}${listDir(x.name)}>${esc(x.name || "Untitled production")}</option>`).join("") + `<option value="none"${p ? "" : " selected"}>No list · your own notes</option>`;
+  const tb = (v, t, c) => `<button type="button" role="tab" data-act="nt-tab" data-v="${v}" aria-selected="${tab === v}" aria-controls="${v === "check" ? "ntTodo" : "ntPad"}">${t}${c ? `<span class="num">${c}</span>` : `<span class="num"></span>`}</button>`;
+  return `${pageHead("Notes")}
+    <section class="pad pc-page nt-page">
+      <div class="field lc-top"><select id="nt-list" aria-label="Which production"${listDir(p && p.name)}>${opts}</select></div>
       <div class="pc-tabs nt-tabs" role="tablist" aria-label="Notes">${tb("check", "Checklist", n)}${tb("pad", "Notepad")}</div>
       <div class="nt-pane nt-todo" id="ntTodo" role="tabpanel"${tab === "check" ? "" : " hidden"}>${ntTodoHtml()}</div>
-      <div class="nt-pane" id="ntPad" role="tabpanel"${tab === "pad" ? "" : " hidden"}>${ntBarHtml()}
-      <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notes" spellcheck="true">${ntHtml(m, false)}</div></div></div>
-    <input type="hidden" name="notes" value="${esc(ntPlain(m))}"><input type="hidden" name="notesRich" value="${esc(JSON.stringify(m))}"></div>`;
+      <div class="nt-pane nt-padpane" id="ntPad" role="tabpanel"${tab === "pad" ? "" : " hidden"}>${ntBarHtml()}
+        <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notepad" spellcheck="true">${ntHtml(m, false)}</div>
+        <span class="hint pc-saved">${p ? "Printed on the camera list. " : ""}<b id="ntSaved" class="me-saved" hidden>✓ Saved</b></span></div>
+    </section>`;
+}
+let ntT = 0;
+if (typeof document !== "undefined" && document.addEventListener) {
+  document.addEventListener("input", e => { if (app.view === "notes" && e.target && e.target.id === "f-notes") { clearTimeout(ntT); ntT = setTimeout(ntKeep, 600); } });
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && app.view === "notes") { clearTimeout(ntT); ntKeep(); } });
 }
 function viewForm() {
   const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
@@ -4884,7 +4915,6 @@ function viewForm() {
           <span class="err" id="u2Err" hidden></span>
         </div>
       </div>
-      ${notesFieldHtml(p)}
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
         <button class="btn" type="button" ${back}>Cancel</button></div>
@@ -5294,7 +5324,7 @@ function viewProduction() {
   const ou2 = otherUnit(p), ost = ou2 ? prodStatus(ou2) : null;
   const sub = (p.company ? `<span class="ph-co" dir="auto">${esc(p.company)}</span>` : "") + (st ? `<span class="ph-st ${st.k}">${esc(st.t)}</span>` : "");
   const head = finder ? "" : `<div class="prod-head ph-stack">
-      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><span class="grow"></span><button class="iconbtn ph-forms" type="button" data-act="rf-list" aria-label="Rental forms${formsOf(p).length ? ": " + formsOf(p).length : ""}" title="Rental forms">${RF_ICON}${formsOf(p).length ? `<i class="num">${formsOf(p).length}</i>` : ""}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
+      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><span class="grow"></span><button class="btn icon-btn lt-ico ph-forms" type="button" data-act="rf-list" aria-label="Rental forms${formsOf(p).length ? ": " + formsOf(p).length : ""}" title="Rental forms">${RF_ICON}${formsOf(p).length ? `<i class="num">${formsOf(p).length}</i>` : ""}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
       <h2 class="ph-name" dir="auto">${esc(p.name || "Untitled production")}</h2>
       ${sub ? `<p class="ph-sub">${sub}</p>` : ou2 && (ou2.company || ost) ? `<p class="ph-sub" aria-hidden="true">&nbsp;</p>` : ""}
     </div>`;
@@ -8713,8 +8743,8 @@ document.addEventListener("click", e => {
     case "browse": { const hid = b.dataset.house; if (!houseById(hid)) break; closeModal(); app.settings.catHouse = hid; touchSettings();
       app.browseP = { id: "browse", browse: true, name: "", houseId: hid, items: {} }; app.view = "browse"; app.tab = "add"; app.q = ""; app.cat = "all"; render(); window.scrollTo(0, 0); break; }
     case "rules-open": closePreview(); closeModal(); app.rulesTo = b.dataset.to === "clash" ? "clash" : "pkg"; app.view = "rules"; render(); window.scrollTo(0, 0); break;
-    case "browse-new": app.formFor = null; app.dupFrom = null; app.formTodo = []; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
-    case "new": app.formFor = null; app.dupFrom = null; app.formTodo = []; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
+    case "browse-new": app.formFor = null; app.dupFrom = null; app.formHouse = b.dataset.house; app.view = "form"; render(); app.formHouse = ""; window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
+    case "new": app.formFor = null; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     case "open": {
       const keep = b.dataset.keep === "1" && app.pid === id;
       app.pid = id; app.view = "production"; app.editing = null; app.dupFrom = null; app.setFrom = null;
@@ -8775,7 +8805,7 @@ document.addEventListener("click", e => {
     case "fav-house": if (app.settings.favHouse !== b.dataset.house) { app.settings.favHouse = b.dataset.house; touchSettings(); app.openList = null; render(); } break;
     case "list-start": {  // a saved list, outside a production: a new production of its rental house, started from it
       const L = savedLists().find(x => x.id === id); if (!L) break;
-      closeModal(); app.formFor = null; app.dupFrom = null; app.formTodo = []; app.formHouse = L.houseId; app.view = "form"; render(); app.formHouse = "";
+      closeModal(); app.formFor = null; app.dupFrom = null; app.formHouse = L.houseId; app.view = "form"; render(); app.formHouse = "";
       const st = document.getElementById("f-start"); if (st) st.value = L.id;
       window.scrollTo(0, 0); document.getElementById("f-name")?.focus(); break;
     }
@@ -9175,13 +9205,13 @@ document.addEventListener("click", e => {
     case "txrx": if (txPop === id) txClose(); else txOpenFor(p, id, b.closest("[data-row]") ? "c" : "l"); break;
     case "ac-toggle": { const ed = document.getElementById("acEdit"); if (!ed) break; const on = ed.hidden; ed.hidden = !on; b.setAttribute("aria-expanded", String(on)); b.closest(".ac-field")?.classList.toggle("open", on); if (on) document.getElementById("f-ac")?.focus(); break; }
     case "nt-tab": { const v = b.dataset.v; app.ntTab = v; b.parentNode.querySelectorAll("[role=tab]").forEach(x => x.setAttribute("aria-selected", String(x === b)));
-      document.getElementById("ntTodo").hidden = v !== "check"; document.getElementById("ntPad").hidden = v !== "pad"; if (v !== "pad") ntPopClose(); break; }
+      document.getElementById("ntTodo").hidden = v !== "check"; document.getElementById("ntPad").hidden = v !== "pad"; if (v !== "pad") { ntPopClose(); clearTimeout(ntT); ntKeep(); } break; }
     case "nt-add": ntTodoAdd(); break;
-    case "nt-do": { const { p: tp, list } = ntTodo(), t = list.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); if (tp) pcSave(tp); ntTodoPaint(); break; }
+    case "nt-do": { const { p: tp, list } = ntTodo(), t = list.find(x => x.id === b.dataset.id); if (!t) break; t.done = !t.done; buzz(t.done ? "tick" : "tap"); pcSave(tp); ntTodoPaint(); break; }
     case "nt-del": { const { p: tp, list } = ntTodo(), i = list.findIndex(x => x.id === b.dataset.id); if (i < 0) break;
-      const [t] = list.splice(i, 1); if (tp) pcSave(tp); ntTodoPaint();
-      undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const r = ntTodo(); r.list.splice(Math.min(i, r.list.length), 0, t); if (r.p) pcSave(r.p); ntTodoPaint(); }); break; }
-    case "nt-toggle": { const bd = document.getElementById("ntBody"); if (!bd) break; const on = bd.hidden; bd.hidden = !on; app.ntOpen = on; b.setAttribute("aria-expanded", String(on)); b.closest(".nt-field")?.classList.toggle("open", on); if (on && !document.getElementById("ntPad")?.hidden) { const ed = ntEd(); ed?.focus(); if (ed) { const r = document.createRange(); r.selectNodeContents(ed); r.collapse(false); const sl = getSelection(); sl.removeAllRanges(); sl.addRange(r); } } else ntPopClose(); break; }
+      const [t] = list.splice(i, 1); pcSave(tp); ntTodoPaint();
+      undoable("Deleted", `"${t.t.slice(0, 24)}"`, () => { const r = ntTodo(); r.list.splice(Math.min(i, r.list.length), 0, t); pcSave(r.p); ntTodoPaint(); }); break; }
+    case "notes": closeModal(); app.view = "notes"; render(); window.scrollTo(0, 0); break;
     case "me-toggle": { const on = !b.getAttribute("aria-expanded") || b.getAttribute("aria-expanded") === "false"; if (on) app.open.add("me"); else app.open.delete("me");
       b.setAttribute("aria-expanded", String(on)); b.closest(".me-group").classList.toggle("open", on); const f = document.getElementById("meForm"); if (f) f.hidden = !on; break; }
     case "cat-import-go": {
@@ -9274,6 +9304,7 @@ document.addEventListener("change", e => {
   if (e.target && e.target.dataset && e.target.dataset.catimport) { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) importCatalog(f); return; }
   const t = e.target, p = cur();
   if (t.id === "lc-name") { lcOwn().name = t.value.trim(); lcPdfMade = null; touchSettings(); const h = document.querySelector(".lcard .lc-head b"); if (h) h.textContent = lcOwn().name || "Lenses"; return; }
+  if (t.id === "nt-list") { clearTimeout(ntT); ntKeep(); app.settings.ntList = t.value; touchSettings(); render(); return; }
   if (t.id === "pc-list") { app.settings.pcList = t.value; app.pcNote = null; touchSettings(); render(); return; }   // the checklist's list: kept for next time
   if (t.id === "lc-list") { app.settings.lcList = t.value; touchSettings(); render(); return; }  // the Lens card's list: kept for next time
   if (t.id === "mc-list") { app.settings.mcList = t.value || "none"; touchSettings(); mcOpen = null; render(); return; }  // the Media Calculator's list: kept for next time
@@ -9491,8 +9522,7 @@ document.addEventListener("submit", e => {
     const json = t => { try { return JSON.parse(t || "{}") || {}; } catch (err) { return {}; } };
     const fields = { name: v.name.trim(), company: v.company.trim(), dp: v.dp.trim(), ac: v.ac.trim(), acPhone: v.acPhone.trim(),
       prep: v.prep, shootStart: v.shootStart, shootEnd: v.shootEnd && v.shootEnd >= v.shootStart ? v.shootEnd : v.shootStart,
-      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days: json(v.days), notes: (v.notes || "").trim(),
-      notesRich: (() => { try { const m = JSON.parse(v.notesRich || "[]"); return Array.isArray(m) ? m : []; } catch (err) { return []; } })(), notesBold: false, notesSize: "m",
+      shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days: json(v.days),
       houseId: document.getElementById("housePick").dataset.value };
     if (!fields.name) { document.getElementById("f-name").focus(); return; }
     if (!houseById(fields.houseId)) { const err = document.getElementById("houseErr"); if (err) err.hidden = false; document.querySelector("#housePick .house-opt")?.focus(); return; }
@@ -9506,7 +9536,6 @@ document.addEventListener("submit", e => {
       return;
     }
     const was = app.pid;
-    const todo = !p && app.formTodo && app.formTodo.length ? app.formTodo : null; app.formTodo = [];
     if (p) { Object.assign(p, fields); toast("Details saved"); }
     else if (src) { p = copyProduction(src, fields); delete p.unit2; app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
     else {
@@ -9514,7 +9543,6 @@ document.addEventListener("submit", e => {
       const sl = v.startList && savedLists().find(x => x.id === v.startList);
       if (sl) { if (sl.houseId === p.houseId) { const r = applySavedList(p, sl, 1, "add"); app.tab = "list"; toast(`Started from “${sl.name}” · ${r.n} items`); } else toast(`“${sl.name}” is for another rental house, so the list starts empty.`); }
     }
-    if (todo) pcData(p).todo = todo;   // the checklist lines written before Create
     // the 2nd Unit: the same production and house; its own camera crew, and the main dates or its own
     let ask = false;
     if (u2on) {
@@ -10231,7 +10259,6 @@ function ntSync() {   // the hidden fields the form sends, and the toolbar's pre
   ed.querySelectorAll("div, p, li").forEach(x => { if (!x.hasAttribute("dir")) x.setAttribute("dir", "auto"); });   // each line right to left when it's Hebrew (the bullet too)
   const m = ntRead(ed), f = ed.closest("form");
   if (f) { f.elements.notesRich.value = JSON.stringify(m); f.elements.notes.value = ntPlain(m); }
-  const pk = document.querySelector(".nt-peek"); if (pk) pk.textContent = ntPlain(m).split("\n")[0] || "";
   ed.classList.toggle("empty", !m.length);
   ntState();
 }
