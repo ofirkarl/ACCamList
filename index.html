@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151752";
+window.AC_BUILD = "202611151754";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2862,6 +2862,11 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .ln-rh span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .ln-r input { min-width: 0; min-height: 40px; padding: 6px 8px; font-variant-numeric: tabular-nums; }
 .ln-add { justify-self: start; }
+
+/* the Control room's lenses to complete */
+.ad-ll { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.ad-ll li { display: grid; gap: 2px; padding: 10px 12px; background: var(--surface); }
+.ad-ll li span { font-size: 12.5px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -3328,6 +3333,7 @@ function applyCatalog() {
       if (d.url) it.url = d.url;
       if (d.sku) it.sku = d.sku;
       if (d.lens) it.lens = d.lens;
+      { const add = LENS_ADD[qKey(d.name)]; if (add) { it.lens = { ...add, ...(d.lens || {}) }; it.lensAdded = true; } }   // completed by the maker: what it lacked
       BITEM.set(d.id, it); BLOC.set(d.id, { c: d.c, s: d.s, ord: 1e6 + n });
       if (!dest) return;
       if (d.g) { if (dest.groupBy) it.group = d.g; else if (d.g !== it.brand) it.grp = d.g; }
@@ -6709,6 +6715,26 @@ function lnHtml() {
     ${rows}
     ${d._base ? `<div class="more-acts"><button class="btn ghost sm" type="button" data-act="ln-reset">Use the catalog's details</button></div>` : ""}`;
 }
+/* @@LENS_ADD: lenses users made by hand, completed by the maker (with Claude, from the makers' specs); by name, any user's copy of it
+   takes the details it doesn't have yet (its own stay). Generated from src/catalog/lens_add/lens_add.json */
+const LENS_ADD = {};
+/* @@END_ADD */
+// what a lens still lacks (for the maker's list): covers, mount, stop, close focus, front
+function lnMissing(it, sub) {
+  const sp = lensSpec(it, sub); if (!sp) return ["focal length"];
+  const m = []; if (!sp.cov) m.push("covers"); if (!sp.mounts.some(x => x !== "Other")) m.push("mount");
+  if (!sp.label && !(sp.per || []).some(x => x.label)) m.push("stop"); if (!lensMod(it, sp)) m.push("close focus"); if (!lensFront(it, sp)) m.push("front");
+  return m;
+}
+// this user's lenses made by hand that still lack something: name, house, what's missing (sent with the usage numbers; nothing else of the lists)
+function ownLensesReport() {
+  const out = [];
+  for (const h of HOUSES) for (const d of peekEdits(h.id).newItems || []) {
+    if (!lnIsLensCat(h, d.c) || !/\d/.test(d.name || "")) continue; const e = ITEM.get(d.id); if (!e) continue;   // a lens has a focal length in its name ("Prime", "Zoom": a generic line)
+    const miss = lnMissing(e.it, e.s.id); if (miss.length) out.push({ n: String(d.name).slice(0, 80), h: h.id, m: miss.join(", ") });
+  }
+  return out.slice(0, 40);
+}
 /* once: the lenses already made by hand get their details from their names and series (the names stay as they are) */
 function lnMigrate() {
   app.settings.lnFill1 = 1; let n = 0;
@@ -9821,6 +9847,8 @@ document.addEventListener("click", e => {
     case "cov-show": { const q = cur(); if (q) { app.covShow = app.covShow === q.id ? null : q.id; rerenderKeepScroll(); } break; }
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
     case "ad-sel": { const sel = new Set(adSel()), k = b.dataset.id; if (!k) break; if (sel.has(k)) sel.delete(k); else sel.add(k); app.settings.adminSel = [...sel]; touchSettings(); buzz(sel.has(k) ? "tick" : "tap"); rerenderKeepScroll(); break; }
+    case "ad-lens-copy": { const L = adLenses(app.adminData), t = "Lenses to complete (AC Cam List):\n" + L.map(x => `- ${(houseById(x.h) || {}).name || x.h} · ${x.n} · missing: ${x.m}`).join("\n");
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(`${L.length} lens${L.length === 1 ? "" : "es"} copied: paste them into a chat with Claude`), () => toast("Copying didn't work here")); break; }
     case "ad-clear": app.settings.adminSel = []; touchSettings(); rerenderKeepScroll(); break;
     case "lists-export": {
       const d = new Date(), two = n => String(n).padStart(2, "0");
@@ -10764,6 +10792,7 @@ function statsSend(force) {
   statsSent = Date.now(); statsDirty = false;
   const u = window.AC_AUTH && window.AC_AUTH.user ? window.AC_AUTH.user() : null;
   S.write({ name: (app.settings.me || {}).name || "", account: u ? u.name || "" : "", signedIn: !!u, lists: app.productions.filter(p => !p.mainOf).length, updated: Date.now(),
+    lenses: (() => { try { return ownLensesReport(); } catch (e) { return []; } })(),
     dev: { [stats.dev]: { mins: stats.mins, exports: stats.exports, shares: stats.shares, made: Object.keys(stats.seen).length, days: Object.keys(stats.days).length, first: stats.first, last: Date.now(), ver: window.AC_BUILD || "", errs: stats.errs || 0, err: stats.err || null } } });
 }
 function statsTick() {
@@ -10792,6 +10821,12 @@ function fmtSeen(t) {
   return days <= 0 ? `today ${hm}` : days === 1 ? `yesterday ${hm}` : `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== t0.getFullYear() ? { year: "numeric" } : {}) })} ${hm}`;
 }
 const adSel = () => Array.isArray(app.settings.adminSel) ? app.settings.adminSel : [];
+// every user's lenses to complete, once each (by house and name), with how many have it
+function adLenses(rows) {
+  const by = new Map();
+  for (const u of Array.isArray(rows) ? rows : []) for (const x of u.lenses || []) { const k = x.h + "|" + qKey(x.n); const o = by.get(k) || { ...x, u: 0 }; o.u++; by.set(k, o); }
+  return [...by.values()].sort((a, b) => b.u - a.u || a.n.localeCompare(b.n));
+}
 function adminLoad() {
   const S = window.AC_STATS; if (!S) return;
   S.list().then(rows => { app.adminData = rows; }, () => { app.adminData = "error"; }).then(() => { if (app.view === "admin") rerenderKeepScroll(); });
@@ -10814,6 +10849,9 @@ function viewAdmin() {
       <div class="ad-grid">${cell("Lists now", u.lists || 0)}${cell("Lists made", s.made)}${cell("Exports", s.exports)}${cell("Shared the app", s.shares ? `${s.shares}×` : "no")}${cell("Time in the app", fmtMins(s.mins))}${cell("Days used", s.days)}</div>
       ${s.errs ? `<div class="ad-err"><b>${s.errs} error${s.errs === 1 ? "" : "s"}</b> · last ${fmtAgo(s.err && s.err.t)}${s.err && s.err.view ? ` on ${esc(s.err.view)}` : ""}${s.err ? `<code dir="ltr">${esc(s.err.m)}</code>` : ""}</div>` : ""}
       <div class="ad-sub">Since ${s.first ? new Date(s.first).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "?"}${s.devs > 1 ? ` · ${s.devs} devices` : ""}${s.ver ? ` · version ${esc(s.ver)}` : ""}</div></div>`).join("") : `<p class="hint">No one has reported yet. Numbers arrive once each user opens the updated app with a connection.</p>`}
+    ${(() => { const L = adLenses(d); return L.length ? `<div class="set-group ad-lens"><h3 class="look-h"><span>Lenses to complete</span><button class="btn sm" type="button" data-act="ad-lens-copy">${COPY_ICON}<span>Copy</span></button></h3>
+      <ul class="ad-ll">${L.map(x => `<li><b dir="auto">${esc(x.n)}</b><span>${esc((houseById(x.h) || {}).name || x.h)} · missing ${esc(x.m)}${x.u > 1 ? ` · ${x.u} users` : ""}</span></li>`).join("")}</ul>
+      <span class="hint">Lenses users added by hand that the app can't fill in. Copy the list into a chat with Claude: the details are looked up from the makers' specs and come to everyone's copy of the lens with the next update.</span></div>` : ""; })()}
     <p class="hint">Counted from the day each user got this version. "Shared the app" counts the app's own Share button only.</p>
     <div class="set-group"><h3>Tools</h3><button class="btn" type="button" data-act="lab-open">Color lab · try colors on the real pages</button></div></section>`;
 }
