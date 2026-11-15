@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151758";
+window.AC_BUILD = "202611151818";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2889,6 +2889,19 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 
 /* an Any camera package stands out a little among the packages */
 .package.any .pk-t b { color: var(--accent); }
+
+/* the Control room's user card: the tick and the name on a line of their own (the name in full); the tags and last time under it */
+.ad-top { display: flex; align-items: flex-start; gap: 6px; }
+.ad-who { flex: 1; min-width: 0; display: grid; gap: 2px; padding-top: 5px; }
+.ad-top .ad-nm { font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; white-space: normal; overflow: visible; text-overflow: clip; }
+.ad-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-inline-start: 36px; margin-top: -2px; }
+.ad-meta .ad-last { margin-inline-start: auto; }
+.ad-selrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 8px 8px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); font-size: 13px; color: var(--muted); }
+.ad-selrow.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); color: var(--fg); }
+.ad-selrow > span:first-child { flex: 1 1 100%; min-width: 0; }
+.ad-selbtns { display: flex; gap: 8px; flex: 1 1 100%; }
+.ad-selbtns .btn { flex: 1; }
+.ad-selrow .btn { min-height: 36px; }
 </style>
 </head>
 <body>
@@ -9927,6 +9940,7 @@ document.addEventListener("click", e => {
     case "ad-sel": { const sel = new Set(adSel()), k = b.dataset.id; if (!k) break; if (sel.has(k)) sel.delete(k); else sel.add(k); app.settings.adminSel = [...sel]; touchSettings(); buzz(sel.has(k) ? "tick" : "tap"); rerenderKeepScroll(); break; }
     case "ad-lens-copy": { const L = adLenses(app.adminData), t = "Lenses to complete (AC Cam List):\n" + L.map(x => `- ${(houseById(x.h) || {}).name || x.h} · ${x.n} · missing: ${x.m}`).join("\n");
       (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast(`${L.length} lens${L.length === 1 ? "" : "es"} copied: paste them into a chat with Claude`), () => toast("Copying didn't work here")); break; }
+    case "ad-all": { const all = (Array.isArray(app.adminData) ? app.adminData : []).map(u => u.uid).filter(Boolean); app.settings.adminSel = all; touchSettings(); buzz("tick"); rerenderKeepScroll(); break; }
     case "ad-clear": app.settings.adminSel = []; touchSettings(); rerenderKeepScroll(); break;
     case "lists-export": {
       const d = new Date(), two = n => String(n).padStart(2, "0");
@@ -10920,10 +10934,12 @@ function viewAdmin() {
   const stat = (v, l) => `<div class="ad-stat"><b class="num">${v}</b><span>${l}</span></div>`;
   const cell = (l, v) => `<div><span>${l}</span><b class="num">${v}</b></div>`;
   return `${head}<section class="pad ad">
-    ${picked.size ? `<div class="ad-selbar"><span><b class="num">${picked.size}</b> of ${us.length} selected · the summary counts them only</span><button class="btn sm" type="button" data-act="ad-clear">Clear</button></div>` : ""}
     <div class="ad-stats">${stat(inSum.length, "users")}${stat(inSum.filter(x => x.s.last > wk).length, "active this week")}${stat(tot.lists, "lists now")}${stat(tot.exports, "exports")}${stat(fmtMins(tot.mins), "in the app")}</div>
-    ${us.length ? us.map(({ u, s }) => `<div class="ad-user${picked.has(u.uid) ? " on" : ""}"><div class="ad-top"><button class="ad-ck" type="button" data-act="ad-sel" data-id="${esc(u.uid || "")}" role="checkbox" aria-checked="${picked.has(u.uid)}" aria-label="Count ${esc(u.name || u.account || "this user")} in the summary">${PC_CK}</button><b dir="auto">${esc(u.name || u.account || "No name")}</b>${u.uid === window.AC_STATS.uid ? `<span class="ad-tag">you</span>` : ""}<span class="ad-tag${u.signedIn ? " on" : ""}">${u.signedIn ? "signed in" : "no account"}</span><span class="ad-last${Date.now() - s.last < AD_NOW ? " now" : ""}">${fmtSeen(s.last)}</span></div>
-      ${u.account && u.name && u.account !== u.name ? `<div class="ad-sub" dir="auto">${esc(u.account)}</div>` : ""}
+    ${us.length ? `<div class="ad-selrow${picked.size ? " on" : ""}"><span>${picked.size ? `<b class="num">${picked.size}</b> of ${us.length} selected · the summary counts them only` : "Tick users to count only them in the summary"}</span>
+      <span class="ad-selbtns"><button class="btn sm" type="button" data-act="ad-all"${picked.size === us.length ? " disabled" : ""}>Select all</button><button class="btn sm" type="button" data-act="ad-clear"${picked.size ? "" : " disabled"}>Unselect all</button></span></div>` : ""}
+    ${us.length ? us.map(({ u, s }) => `<div class="ad-user${picked.has(u.uid) ? " on" : ""}"><div class="ad-top"><button class="ad-ck" type="button" data-act="ad-sel" data-id="${esc(u.uid || "")}" role="checkbox" aria-checked="${picked.has(u.uid)}" aria-label="Count ${esc(u.name || u.account || "this user")} in the summary">${PC_CK}</button>
+        <span class="ad-who"><b class="ad-nm" dir="auto">${esc(u.name || u.account || "No name")}</b>${u.account && u.name && u.account !== u.name ? `<span class="ad-sub" dir="auto">${esc(u.account)}</span>` : ""}</span></div>
+      <div class="ad-meta">${u.uid === window.AC_STATS.uid ? `<span class="ad-tag">you</span>` : ""}<span class="ad-tag${u.signedIn ? " on" : ""}">${u.signedIn ? "signed in" : "no account"}</span><span class="ad-last${Date.now() - s.last < AD_NOW ? " now" : ""}">${fmtSeen(s.last)}</span></div>
       <div class="ad-grid">${cell("Lists now", u.lists || 0)}${cell("Lists made", s.made)}${cell("Exports", s.exports)}${cell("Shared the app", s.shares ? `${s.shares}×` : "no")}${cell("Time in the app", fmtMins(s.mins))}${cell("Days used", s.days)}</div>
       ${s.errs ? `<div class="ad-err"><b>${s.errs} error${s.errs === 1 ? "" : "s"}</b> · last ${fmtAgo(s.err && s.err.t)}${s.err && s.err.view ? ` on ${esc(s.err.view)}` : ""}${s.err ? `<code dir="ltr">${esc(s.err.m)}</code>` : ""}</div>` : ""}
       <div class="ad-sub">Since ${s.first ? new Date(s.first).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "?"}${s.devs > 1 ? ` · ${s.devs} devices` : ""}${s.ver ? ` · version ${esc(s.ver)}` : ""}</div></div>`).join("") : `<p class="hint">No one has reported yet. Numbers arrive once each user opens the updated app with a connection.</p>`}
