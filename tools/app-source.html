@@ -2657,6 +2657,34 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .nt-foot { display: flex; justify-content: flex-end; padding-top: 6px; }
 .nt-reset { min-height: 44px; gap: 8px; padding-inline: 16px; }
 .nt-reset svg { width: 16px; height: 16px; }
+
+/* Find a lens: the chosen value sits plain in its tile, open or not (the tile's own frame shows it's set), and always in full: a long one takes a second line */
+.finder .f-field .nsel.open .nsel-btn, .finder .f-field .nsel-btn:focus-visible { border-color: transparent; box-shadow: none; }
+.finder .f-field .nsel-btn .ns-a { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.25; text-wrap: balance; }
+
+/* the Control room: a tick on each user (the summary counts the ticked ones only), and when each was last in the app */
+.ad-ck { flex: none; display: grid; place-items: center; width: 36px; height: 36px; margin: -6px 0 -6px -6px; padding: 0; border: 0; background: none; cursor: pointer; }
+.ad-user.on .pc-ck { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.ad-user.on { border-color: var(--accent); }
+.ad-selbar { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border: 1px solid var(--accent); border-radius: 12px; background: color-mix(in srgb, var(--accent) 8%, var(--surface)); font-size: 13px; }
+.ad-selbar span { flex: 1; min-width: 0; }
+.ad-selbar .btn { min-height: 36px; }
+.ad-last.now { color: var(--sf-ink, var(--accent)); font-weight: 600; }
+.ad-last.now::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-inline-end: 5px; border-radius: 50%; background: currentColor; vertical-align: 1px; }
+
+/* the coverage warning: a ✓ at each line's start; the checked ones fold into one quiet line */
+.cov-line { display: flex; align-items: flex-start; gap: 10px; }
+.cov-line > span { flex: 1; min-width: 0; padding-top: 2px; }
+.cov-ok { flex: none; display: grid; place-items: center; width: 36px; height: 36px; margin: -5px -4px -5px -6px; padding: 0; border: 0; background: none; cursor: pointer; }
+.cov-box .pc-ck { border-color: color-mix(in srgb, var(--warn) 60%, transparent); }
+.cov-done { display: grid; gap: 2px; margin-top: 10px; padding: 0 0 4px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.cov-done:not(:has(.cov-line)) { padding-bottom: 0; }
+.cov-quiet { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 12px 4px 10px; border: 0; border-radius: 12px; background: none; color: var(--muted); font: inherit; font-size: 13.5px; cursor: pointer; text-align: start; }
+.cov-quiet .pc-ck, .cov-line.ok .pc-ck { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); width: 22px; height: 22px; }
+.cov-quiet > span:nth-child(2) { flex: 1; }
+.cov-sh { color: var(--accent); font-weight: 600; }
+.cov-done .cov-line { margin: 0; padding: 4px 12px 4px 10px; font-size: 13.5px; color: var(--muted); }
+.cov-done .cov-line .pc-ck { width: 22px; height: 22px; }
 </style>
 
 <div class="app">
@@ -4080,7 +4108,8 @@ function nselSync(w) {
   const o = sel.options[sel.selectedIndex];
   if (sel.multiple) {  // several chosen: their names, or how many
     const on = [...sel.selectedOptions].filter(x => x.value), nm = x => (x.dataset.full || x.text).replace(/\s*\(\d+\)$/, "");
-    btn.innerHTML = nselText(on.length ? (on.length <= 2 ? on.map(nm).join(", ") : `${on.length} selected`) : (sel.options[0] ? sel.options[0].text.replace(/\s*\(\d+\)$/, "") : ""));
+    const two = on.map(nm).join(", ");   // two short names side by side; longer ones (or more) by how many
+    btn.innerHTML = nselText(on.length ? (on.length === 1 || (on.length === 2 && two.length <= 24) ? two : `${on.length} selected`) : (sel.options[0] ? sel.options[0].text.replace(/\s*\(\d+\)$/, "") : ""));
     btn.disabled = sel.disabled; btn.classList.toggle("ph", !on.length); return;
   }
   const txt = o ? (o.dataset.full ? o.dataset.full + o.text.replace(/^.*?(\s*\(\d+\))?$/, "$1") : o.text) : "", cut = sel.dataset.short ? txt.lastIndexOf(" · ") : -1;
@@ -4216,8 +4245,11 @@ function clashDrop(p, rid) {
 }
 
 /* coverage check */
-function coverageIssues(p) {
-  const cams = [], lenses = [];
+/* a camera + lens pair marked as checked ("known, it's fine": a crop mode, a lens for one camera only) stays out of the warning;
+   a new pair that doesn't fit shows as usual. all: the checked ones too */
+const covKey = (c, l) => c + ">" + l;
+function coverageIssues(p, all) {
+  const cams = [], lenses = [], ok = p.covOk || {};
   for (const [id, l] of Object.entries(p.items)) {
     const e = ITEM.get(id);
     if (!e) continue;
@@ -4226,7 +4258,7 @@ function coverageIssues(p) {
   }
   const out = [];
   for (const c of cams) {
-    const small = lenses.filter(x => COV_RANK[x.e.it.lens.coverage] < COV_RANK[c.e.it.camera.sensor]);
+    const small = lenses.filter(x => COV_RANK[x.e.it.lens.coverage] < COV_RANK[c.e.it.camera.sensor] && (all || !ok[covKey(c.id, x.id)]));
     if (small.length) out.push({ cam: c, lenses: small });
   }
   return out;
@@ -4234,6 +4266,14 @@ function coverageIssues(p) {
 function issueText(i) {
   const cs = i.cam.e.it.camera;
   return `${i.cam.e.it.name} is ${COV_LABEL[cs.sensor] || cs.sensor}, but ${i.lenses.map(x => `${x.e.it.name} (${COV_LABEL[x.e.it.lens.coverage] || x.e.it.lens.coverage})`).join(", ")} ${i.lenses.length === 1 ? "covers" : "cover"} a smaller image circle.`;
+}
+// the Camera List's warning: each line with a ✓ to mark it checked; the checked ones fold into one quiet line that opens them again
+function covBoxHtml(p, issues) {
+  const ok = p.covOk || {}, done = coverageIssues(p, true).map(i => ({ ...i, lenses: i.lenses.filter(x => ok[covKey(i.cam.id, x.id)]) })).filter(i => i.lenses.length);
+  const nDone = done.reduce((n, i) => n + i.lenses.length, 0), open = app.covShow === p.id;
+  const line = (i, on) => `<p class="cov-line${on ? " ok" : ""}"><button class="cov-ok" type="button" data-act="${on ? "cov-un" : "cov-ok"}" data-id="${esc(i.cam.id)}" role="checkbox" aria-checked="${on}" aria-label="${on ? "Show this warning again" : "Checked: it's fine"}" title="${on ? "Show it again" : "Checked: it's fine"}">${PC_CK}</button><span>${esc(issueText(i))}</span></p>`;
+  return (issues.length ? `<div class="warnbox cov-box" role="alert"><b>Coverage warning</b>${issues.map(i => line(i, false)).join("")}</div>` : "")
+    + (nDone ? `<div class="cov-done"><button class="cov-quiet" type="button" data-act="cov-show" aria-expanded="${open}">${PC_CK}<span>${nDone} coverage note${nDone === 1 ? "" : "s"} checked</span><span class="cov-sh">${open ? "hide" : "show"}</span></button>${open ? done.map(i => line(i, true)).join("") : ""}</div>` : "");
 }
 function coverageAlert(p, id) {
   const e = ITEM.get(id);
@@ -8102,7 +8142,7 @@ function viewList(p, h) {
       ${t.lines ? allBtn("sec-all", anyOpen) + `<button class="btn icon-btn lt-ico" type="button" data-act="list-save" aria-label="Save as a list in Favorites" title="Save as a list">${LIST_ICON}</button><button class="btn icon-btn lt-ico clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button>` : ""}</div>
     ${mainSrc && Object.keys(mainSrc.items || {}).length ? `<button class="btn ghost sm u2-pull" type="button" data-act="u2-pull" data-id="${esc(p.id)}">${COPY_ICON}<span>Copy from Main Unit</span></button>` : ""}
     <div id="copyFallback"></div>
-    ${issues.length ? `<div class="warnbox" role="alert"><b>Coverage warning</b>${issues.map(i => `<p>${esc(issueText(i))}</p>`).join("")}</div>` : ""}
+    ${covBoxHtml(p, issues)}
     ${clashes.map(i => `<div class="warnbox" role="alert"><b>Doesn't work together</b><p>${clashPair(i)}${i.r.why ? ` · ${esc(i.r.why)}` : ""}</p>${clashActs(i, false)}</div>`).join("")}
     ${t.lines ? "" : `<div class="empty-state"><h3>The list is empty</h3><p>Open Add Gear to pick items from ${esc(h.name)}'s catalog, or type items into any section below.</p><button class="btn primary" type="button" data-act="tab" data-tab="add">Add Gear</button></div>`}
     <p class="empty" id="lqNone" hidden>Nothing on the list matches. Try another word.</p>
@@ -9270,7 +9310,17 @@ document.addEventListener("click", e => {
     case "ids-show": { const t = Date.now(); app.idTaps = (app.idTaps || []).filter(x => t - x < 2500).concat(t); if (app.idTaps.length >= 5) { app.idTaps = []; app.showIds = !app.showIds; rerenderKeepScroll(); } break; }
     case "admin-check": app.adminSay = "Checking…"; rerenderKeepScroll(); adminCheck(true); break;
     case "admin-open": app.view = "admin"; app.adminData = null; render(); window.scrollTo(0, 0); adminLoad(); break;
+    case "cov-ok": case "cov-un": { const q = cur(); if (!q) break; const on = act === "cov-ok", ok = q.covOk || (q.covOk = {});
+      const line = coverageIssues(q, true).find(i => i.cam.id === id); if (!line) break;
+      const keys = line.lenses.map(x => covKey(id, x.id)).filter(k => on ? !ok[k] : ok[k]); keys.forEach(k => { if (on) ok[k] = 1; else delete ok[k]; });
+      if (!Object.keys(ok).length) delete q.covOk;
+      touch(q); buzz(on ? "tick" : "tap"); rerenderKeepScroll();
+      if (on) undoable("Checked", "the coverage note", () => { const o2 = q.covOk || (q.covOk = {}); keys.forEach(k => delete o2[k]); touch(q); rerenderKeepScroll(); });
+      break; }
+    case "cov-show": { const q = cur(); if (q) { app.covShow = app.covShow === q.id ? null : q.id; rerenderKeepScroll(); } break; }
     case "admin-reload": app.adminData = null; render(); adminLoad(); break;
+    case "ad-sel": { const sel = new Set(adSel()), k = b.dataset.id; if (!k) break; if (sel.has(k)) sel.delete(k); else sel.add(k); app.settings.adminSel = [...sel]; touchSettings(); buzz(sel.has(k) ? "tick" : "tap"); rerenderKeepScroll(); break; }
+    case "ad-clear": app.settings.adminSel = []; touchSettings(); rerenderKeepScroll(); break;
     case "lists-export": {
       const d = new Date(), two = n => String(n).padStart(2, "0");
       const data = { app: "AC Cam List", kind: "lists", savedAt: d.toISOString(), productions: JSON.parse(JSON.stringify(app.productions, (k, v) => k === "_w" ? undefined : v)) };
@@ -10220,6 +10270,16 @@ const adminSum = u => { const o = { mins: 0, exports: 0, shares: 0, made: 0, day
   return o; };
 const fmtMins = m => m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
 const fmtAgo = t => { if (!t) return "never"; const d = Math.floor((Date.now() - t) / 864e5); return d <= 0 ? "today" : d === 1 ? "yesterday" : d < 30 ? `${d} days ago` : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+// when a user was last in the app, with the hour (the phone's own time); a report in the last few minutes: in the app now
+const AD_NOW = 6 * 60000;
+function fmtSeen(t) {
+  if (!t) return "never";
+  if (Date.now() - t < AD_NOW) return "in the app now";
+  const d = new Date(t), hm = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const days = Math.round((t0 - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  return days <= 0 ? `today ${hm}` : days === 1 ? `yesterday ${hm}` : `${d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== t0.getFullYear() ? { year: "numeric" } : {}) })} ${hm}`;
+}
+const adSel = () => Array.isArray(app.settings.adminSel) ? app.settings.adminSel : [];
 function adminLoad() {
   const S = window.AC_STATS; if (!S) return;
   S.list().then(rows => { app.adminData = rows; }, () => { app.adminData = "error"; }).then(() => { if (app.view === "admin") rerenderKeepScroll(); });
@@ -10229,12 +10289,15 @@ function viewAdmin() {
   if (!d) return `${head}<section class="pad"><p class="hint">Loading…</p></section>`;
   if (d === "error") return `${head}<section class="pad"><p class="hint warn">The usage numbers couldn't be read. Check the connection, and that the database rules are published.</p></section>`;
   const us = d.map(u => ({ u, s: adminSum(u) })).sort((a, b) => b.s.last - a.s.last), wk = Date.now() - 7 * 864e5;
-  const tot = us.reduce((t, x) => ({ lists: t.lists + (x.u.lists || 0), mins: t.mins + x.s.mins, exports: t.exports + x.s.exports }), { lists: 0, mins: 0, exports: 0 });
+  // ticked users: the summary counts only them (none ticked: everyone)
+  const picked = new Set(adSel().filter(id => us.some(x => x.u.uid === id))), inSum = picked.size ? us.filter(x => picked.has(x.u.uid)) : us;
+  const tot = inSum.reduce((t, x) => ({ lists: t.lists + (x.u.lists || 0), mins: t.mins + x.s.mins, exports: t.exports + x.s.exports }), { lists: 0, mins: 0, exports: 0 });
   const stat = (v, l) => `<div class="ad-stat"><b class="num">${v}</b><span>${l}</span></div>`;
   const cell = (l, v) => `<div><span>${l}</span><b class="num">${v}</b></div>`;
   return `${head}<section class="pad ad">
-    <div class="ad-stats">${stat(us.length, "users")}${stat(us.filter(x => x.s.last > wk).length, "active this week")}${stat(tot.lists, "lists now")}${stat(tot.exports, "exports")}${stat(fmtMins(tot.mins), "in the app")}</div>
-    ${us.length ? us.map(({ u, s }) => `<div class="ad-user"><div class="ad-top"><b dir="auto">${esc(u.name || u.account || "No name")}</b>${u.uid === window.AC_STATS.uid ? `<span class="ad-tag">you</span>` : ""}<span class="ad-tag${u.signedIn ? " on" : ""}">${u.signedIn ? "signed in" : "no account"}</span><span class="ad-last">${fmtAgo(s.last)}</span></div>
+    ${picked.size ? `<div class="ad-selbar"><span><b class="num">${picked.size}</b> of ${us.length} selected · the summary counts them only</span><button class="btn sm" type="button" data-act="ad-clear">Clear</button></div>` : ""}
+    <div class="ad-stats">${stat(inSum.length, "users")}${stat(inSum.filter(x => x.s.last > wk).length, "active this week")}${stat(tot.lists, "lists now")}${stat(tot.exports, "exports")}${stat(fmtMins(tot.mins), "in the app")}</div>
+    ${us.length ? us.map(({ u, s }) => `<div class="ad-user${picked.has(u.uid) ? " on" : ""}"><div class="ad-top"><button class="ad-ck" type="button" data-act="ad-sel" data-id="${esc(u.uid || "")}" role="checkbox" aria-checked="${picked.has(u.uid)}" aria-label="Count ${esc(u.name || u.account || "this user")} in the summary">${PC_CK}</button><b dir="auto">${esc(u.name || u.account || "No name")}</b>${u.uid === window.AC_STATS.uid ? `<span class="ad-tag">you</span>` : ""}<span class="ad-tag${u.signedIn ? " on" : ""}">${u.signedIn ? "signed in" : "no account"}</span><span class="ad-last${Date.now() - s.last < AD_NOW ? " now" : ""}">${fmtSeen(s.last)}</span></div>
       ${u.account && u.name && u.account !== u.name ? `<div class="ad-sub" dir="auto">${esc(u.account)}</div>` : ""}
       <div class="ad-grid">${cell("Lists now", u.lists || 0)}${cell("Lists made", s.made)}${cell("Exports", s.exports)}${cell("Shared the app", s.shares ? `${s.shares}×` : "no")}${cell("Time in the app", fmtMins(s.mins))}${cell("Days used", s.days)}</div>
       ${s.errs ? `<div class="ad-err"><b>${s.errs} error${s.errs === 1 ? "" : "s"}</b> · last ${fmtAgo(s.err && s.err.t)}${s.err && s.err.view ? ` on ${esc(s.err.view)}` : ""}${s.err ? `<code dir="ltr">${esc(s.err.m)}</code>` : ""}</div>` : ""}
