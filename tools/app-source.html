@@ -2636,6 +2636,22 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* a page moving sideways (a swipe) never widens the page: the phone kept the wider page and slid the bottom bar out of view.
    The body's own clip passes to the window and is lost there, so the app's column clips itself */
 #view { overflow-x: clip; }
+
+/* a rental form open in the app: its pages on the desk, white, one under the other; it zooms (pinch, double-tap) inside its own scroll */
+.rfv .pv-bar { gap: 8px; }
+.rfv-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.rfv-t b, .rfv-t .hint { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rfv-t .hint { display: block !important; font-size: 12px; }
+.rfv .pv-bar .iconbtn, .rfv .pv-bar .x { width: 44px; height: 44px; flex: none; display: inline-grid; place-items: center; }
+.rfv .pv-bar .x { font-size: 22px; }
+.rfv-scroll { position: relative; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; padding: 12px; -webkit-user-select: none; user-select: none; }
+.rfv-pages { margin: 0 auto; display: grid; gap: 12px; padding-bottom: env(safe-area-inset-bottom, 0px); transform-origin: 0 0; will-change: transform; }
+.rfv-page { position: relative; display: block; width: 100%; background: #fff; border-radius: 2px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, .12), 0 10px 28px -12px rgba(0, 0, 0, .35); }
+.rfv-page canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.rfv-img { height: auto; }
+.rfv-wait { text-align: center; padding: 40px 0; }
+.rfv-fail { display: grid; justify-items: center; gap: 16px; padding: 40px 16px; text-align: center; }
+.rfv-fail .btn { min-height: 44px; gap: 8px; }
 </style>
 
 <div class="app">
@@ -8417,7 +8433,7 @@ function exportHtmlTable(p) {
 }
 /* preview: the export document on a page, scaled to the screen, with the export buttons under it */
 function openPreview(p) {
-  closePreview();
+  closePreview(true);
   const o = document.createElement("div");
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
@@ -8441,6 +8457,7 @@ function openPreview(p) {
 function fitPreview() {
   const o = document.getElementById("preview");
   if (!o) return;
+  if (o.classList.contains("rfv")) { rfvFit(); return; }
   const sc = o.querySelector(".pv-scroll"), fit = o.querySelector(".pv-fit"), paper = o.querySelector(".pv-paper");
   const k = Math.min(1, (sc.clientWidth - 24) / 794);
   paper.style.transform = `scale(${k})`;
@@ -8494,7 +8511,13 @@ async function shareApp() { statCount("shares");
   try { if (navigator.share) { await navigator.share(data); return; } } catch (e) { if (e && e.name === "AbortError") return; }
   try { await navigator.clipboard.writeText(APP_URL); toast("Link to the app copied"); } catch (e) { toast(APP_URL); }
 }
-function closePreview() { const o = document.getElementById("preview"); if (o) { o.remove(); document.body.style.overflow = ""; navSync(); } }
+// the preview, or a form open in the app (which goes back to its forms, unless something else is opening in its place)
+function closePreview(quiet) {
+  const o = document.getElementById("preview"); if (!o) return;
+  const rf = o.classList.contains("rfv"), back = !quiet && o._back;
+  o.remove(); if (rf) rfvClose(); document.body.style.overflow = ""; navSync();
+  if (back) back();
+}
 /* Send: the file goes out through the phone's share menu (Gmail, WhatsApp…) with a subject and message the user can edit */
 const LOAD_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 20h14"/></svg>`;
 /* a catalog file (Settings → Catalog → Save my catalog as a file) loaded on another phone, in the Claude version, or by a colleague */
@@ -9286,6 +9309,7 @@ document.addEventListener("click", e => {
     case "rf-open": { const f = formsOf(p).find(x => x.id === id); if (f) rfOpenFile(f); break; }
     case "rf-save": { const s = document.getElementById("rf-to"); if (s) rfSave(s.value); break; }
     case "rf-share": { const f = formsOf(p).find(x => x.id === id); if (f) rfShareFile(f); break; }
+    case "rf-dl": { const f = formsOf(p).find(x => x.id === id); if (f) rfSaveFile(f); break; }
     case "rf-del": { const f = formsOf(p).find(x => x.id === id); if (!f) break; if (b.classList.contains("armed")) rfDelete(p, f); else { b.classList.add("armed"); b.title = "Tap again to delete"; toast("Tap the bin again to delete the form."); setTimeout(() => { if (b.isConnected) b.classList.remove("armed"); }, 3000); } break; }
     case "rf-skip": rfSkip(); break;
     case "preview-sku": {
@@ -10787,24 +10811,155 @@ function rfList(p) {
     <label class="btn rf-add"><input type="file" accept="application/pdf,.pdf,image/*" data-rfimport="${esc(p.id)}" hidden>+ Add a form</label></div>`);
 }
 
-/* a form opens as it is, the original file: in a new tab on a computer; on a phone the browser hands it to its PDF viewer
-   (or saves it, with Open). Share sends the file itself (to WhatsApp, mail, Drive); delete asks twice */
+/* a form opens right here, in the app, as it is: its pages one under the other, the width of the screen. Pinch to zoom in on it,
+   or double-tap (again: back to the whole width). Share at the top sends the file itself (WhatsApp, mail, Drive); back or ×
+   returns to the forms. Delete asks twice */
 async function rfFileOf(f) {
   const bytes = await rfBytes(f).catch(() => null);
   if (!bytes) toast("This form isn't on this phone, and the account can't be reached now.");
   return bytes ? new Blob([bytes], { type: f.type }) : null;
 }
+const rfv = { tok: 0, doc: null, pages: [], z: 1, fitW: 0, url: "", busy: false, paintT: 0 };
+const RFV_MAX = 4, RFV_PX = 2560;   // the most it zooms; the widest a page is drawn, in pixels (what a phone's memory holds well)
 async function rfOpenFile(f) {
   const blob = await rfFileOf(f); if (!blob) return;
-  const url = URL.createObjectURL(blob); setTimeout(() => URL.revokeObjectURL(url), 120000);
-  const w = isAndroid() ? null : window.open(url, "_blank");   // (not "noopener": then it says null even when it opened)
-  if (!w) { const a = document.createElement("a"); a.href = url; a.download = f.name || "form.pdf"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => toast(isAndroid() ? "The form is in Downloads: tap Open." : "The form was saved to Downloads."), 400); }
+  const p = cur(), L = rfFormLine(f);
+  closeModal(); closePreview(true);
+  const o = document.createElement("div");
+  o.className = "preview rfv"; o.id = "preview";
+  o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "The form: " + L.t);
+  o.innerHTML = `<div class="pv-bar"><span class="rfv-t"><b>${esc(L.t)}</b>${L.s ? `<span class="hint">${esc(L.s)}</span>` : ""}</span><button class="iconbtn" type="button" data-act="rf-share" data-id="${esc(f.id)}" aria-label="Share the form" title="Share">${SHARE_ICON}</button><button class="x" type="button" data-act="preview-close" aria-label="Close the form">×</button></div>
+    <div class="pv-scroll rfv-scroll"><div class="rfv-pages"><p class="hint rfv-wait">Opening the form…</p></div></div>`;
+  o._back = p ? () => { if (app.view === "production" && cur() === p && formsOf(p).length) rfList(p); } : null;   // back: to the forms
+  document.body.appendChild(o); document.body.style.overflow = "hidden";
+  o.querySelector(".x").focus(); navSync();
+  const tok = ++rfv.tok, box = o.querySelector(".rfv-pages");
+  Object.assign(rfv, { doc: null, pages: [], z: 1 });
+  try {
+    if (/^image\//.test(f.type)) { rfv.url = URL.createObjectURL(blob); box.innerHTML = `<img class="rfv-page rfv-img" src="${rfv.url}" alt="The form">`; }
+    else {
+      const lib = await pdfLib(), doc = await lib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()), isEvalSupported: false }).promise;
+      if (tok !== rfv.tok) { doc.destroy(); return; }
+      rfv.doc = doc; box.innerHTML = "";
+      for (let i = 1; i <= doc.numPages; i++) {
+        const pg = await doc.getPage(i); if (tok !== rfv.tok) return;
+        const vp = pg.getViewport({ scale: 1 }), el = document.createElement("div");
+        el.className = "rfv-page"; el.style.aspectRatio = `${vp.width} / ${vp.height}`; el.setAttribute("aria-label", `Page ${i} of ${doc.numPages}`);
+        box.appendChild(el); rfv.pages.push({ pg, el, w: 0 });
+      }
+    }
+    rfvFit(); rfvWire(o);
+  } catch (e) {
+    errNote(e, "rf-view"); if (tok !== rfv.tok) return;
+    box.innerHTML = `<div class="rfv-fail"><p class="hint">The form can't be shown here right now.</p><button class="btn" type="button" data-act="rf-dl" data-id="${esc(f.id)}">${SAVE_ICON}<span>Save it to this ${isTouch() ? "phone" : "computer"}</span></button></div>`;
+  }
+}
+// the pages the width of the screen (on a computer, a comfortable reading width), times the zoom
+function rfvFit() {
+  const o = document.getElementById("preview"); if (!o || !o.classList.contains("rfv")) return;
+  const sc = o.querySelector(".rfv-scroll"), box = o.querySelector(".rfv-pages");
+  rfv.fitW = Math.max(200, Math.min(sc.clientWidth - 24, 980));
+  box.style.width = Math.round(rfv.fitW * rfv.z) + "px";
+  rfvPaint();
+}
+/* each page drawn sharp for how big it is on the screen now: the ones in view first, sharp at the zoom; the rest at the whole width */
+function rfvPaint() { clearTimeout(rfv.paintT); rfv.paintT = setTimeout(rfvPaintNow, 40); }
+async function rfvPaintNow() {
+  if (rfv.busy || !rfv.doc) return;
+  rfv.busy = true; const tok = rfv.tok;
+  try {
+    for (let guard = 0; guard < 60; guard++) {
+      const sc = document.querySelector("#preview.rfv .rfv-scroll"); if (!sc || tok !== rfv.tok) break;
+      const r = sc.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const todo = rfv.pages.map(P => {
+        const b = P.el.getBoundingClientRect(), near = b.bottom > r.top - r.height * .5 && b.top < r.bottom + r.height * .5;
+        const want = near ? Math.min(RFV_PX, Math.round(b.width * dpr)) : Math.min(1400, Math.round(rfv.fitW * Math.min(dpr, 2)));
+        return { P, want, d: Math.abs(b.top + b.height / 2 - (r.top + r.height / 2)) };
+      }).filter(x => !x.P.w || Math.abs(x.P.w - x.want) / x.want > .12).sort((a, b) => a.d - b.d);
+      if (!todo.length) break;
+      const { P, want } = todo[0], vp = P.pg.getViewport({ scale: want / P.pg.getViewport({ scale: 1 }).width });
+      const cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      await P.pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+      if (tok !== rfv.tok) break;
+      const old = P.el.querySelector("canvas"); if (old) { old.width = old.height = 0; old.remove(); }   // the old drawing let go of right away
+      P.el.appendChild(cv); P.w = want;
+    }
+  } catch (e) { errNote(e, "rf-draw"); }
+  finally { rfv.busy = false; }
+}
+/* zoom to z, keeping the point (cx, cy) on the screen where it is */
+function rfvZoom(z, cx, cy) {
+  const o = document.getElementById("preview"); if (!o || !o.classList.contains("rfv")) return;
+  const sc = o.querySelector(".rfv-scroll"), box = o.querySelector(".rfv-pages"), r = sc.getBoundingClientRect();
+  z = Math.min(RFV_MAX, Math.max(1, z));
+  const mx = cx - r.left, my = cy - r.top, px = (sc.scrollLeft + mx - box.offsetLeft) / box.offsetWidth, py = (sc.scrollTop + my - box.offsetTop) / box.offsetHeight;
+  box.style.transition = box.style.transform = "";
+  rfv.z = z; box.style.width = Math.round(rfv.fitW * z) + "px";
+  sc.scrollLeft = box.offsetLeft + px * box.offsetWidth - mx; sc.scrollTop = box.offsetTop + py * box.offsetHeight - my;
+  rfvPaint();
+}
+// the same, gliding there (a double-tap)
+function rfvGlide(z, cx, cy) {
+  const o = document.getElementById("preview"), sc = o && o.querySelector(".rfv-scroll"), box = o && o.querySelector(".rfv-pages"); if (!box) return;
+  z = Math.min(RFV_MAX, Math.max(1, z));
+  if (swCalm()) { rfvZoom(z, cx, cy); return; }
+  const r = sc.getBoundingClientRect();
+  box.style.transformOrigin = `${sc.scrollLeft + cx - r.left - box.offsetLeft}px ${sc.scrollTop + cy - r.top - box.offsetTop}px`;
+  box.style.transition = `transform .22s ${swEase}`; box.style.transform = `scale(${z / rfv.z})`;
+  setTimeout(() => rfvZoom(z, cx, cy), 230);
+}
+function rfvWire(o) {
+  const sc = o.querySelector(".rfv-scroll"), box = o.querySelector(".rfv-pages");
+  let pin = null, tap = null, last = null, touchAt = 0, scrollT = 0;
+  sc.addEventListener("touchstart", e => {
+    touchAt = Date.now();
+    if (e.touches.length === 2) {   // pinch: the pages scale around the point between the fingers; let go, and they're drawn sharp at that size
+      const [a, b] = e.touches, r = sc.getBoundingClientRect(), cx = (a.clientX + b.clientX) / 2, cy = (a.clientY + b.clientY) / 2;
+      pin = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, cx, cy, s: 1 }; tap = null;
+      box.style.transition = ""; box.style.transformOrigin = `${sc.scrollLeft + cx - r.left - box.offsetLeft}px ${sc.scrollTop + cy - r.top - box.offsetTop}px`;
+      e.preventDefault(); return;
+    }
+    if (e.touches.length === 1) { const t = e.touches[0]; tap = { x: t.clientX, y: t.clientY, t: Date.now() }; }
+  }, { passive: false });
+  sc.addEventListener("touchmove", e => {
+    if (pin && e.touches.length === 2) {
+      e.preventDefault();
+      const [a, b] = e.touches, z = Math.min(RFV_MAX * 1.15, Math.max(.8, rfv.z * Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) / pin.d));
+      pin.s = z / rfv.z; box.style.transform = `scale(${pin.s})`; return;
+    }
+    if (tap && e.touches.length === 1) { const t = e.touches[0]; if (Math.hypot(t.clientX - tap.x, t.clientY - tap.y) > 10) tap = null; }
+  }, { passive: false });
+  sc.addEventListener("touchend", e => {
+    touchAt = Date.now();
+    if (pin) { if (e.touches.length < 2) { const P = pin; pin = null; tap = null; last = null; rfvZoom(rfv.z * P.s, P.cx, P.cy); } return; }
+    if (!tap || e.touches.length || Date.now() - tap.t > 300) { tap = null; return; }
+    const here = { x: tap.x, y: tap.y, t: Date.now() }; tap = null;
+    if (last && here.t - last.t < 320 && Math.hypot(here.x - last.x, here.y - last.y) < 36) { last = null; e.preventDefault(); rfvGlide(rfv.z > 1.05 ? 1 : 2.5, here.x, here.y); return; }
+    last = here;
+  }, { passive: false });
+  sc.addEventListener("touchcancel", () => { if (pin) { const P = pin; pin = null; rfvZoom(rfv.z * P.s, P.cx, P.cy); } tap = null; });
+  sc.addEventListener("dblclick", e => { if (Date.now() - touchAt < 800) return; rfvGlide(rfv.z > 1.05 ? 1 : 2.5, e.clientX, e.clientY); });   // a mouse
+  sc.addEventListener("wheel", e => { if (!e.ctrlKey) return; e.preventDefault(); rfvZoom(rfv.z * Math.exp(-e.deltaY * .01), e.clientX, e.clientY); }, { passive: false });   // a trackpad's pinch, ctrl + wheel
+  sc.addEventListener("scroll", () => { clearTimeout(scrollT); scrollT = setTimeout(rfvPaint, 120); }, { passive: true });
+}
+function rfvClose() {
+  rfv.tok++; clearTimeout(rfv.paintT);
+  if (rfv.doc) { try { rfv.doc.destroy(); } catch (e) {} }
+  if (rfv.url) URL.revokeObjectURL(rfv.url);
+  Object.assign(rfv, { doc: null, pages: [], url: "", z: 1 });
+}
+// when it can't be shown here: the file saved to the phone (Downloads), as it is
+async function rfSaveFile(f) {
+  const blob = await rfFileOf(f); if (!blob) return;
+  const url = URL.createObjectURL(blob), a = document.createElement("a"); setTimeout(() => URL.revokeObjectURL(url), 120000);
+  a.href = url; a.download = f.name || "form.pdf"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => toast(isAndroid() ? "The form is in Downloads: tap Open." : "The form was saved to Downloads."), 400);
 }
 async function rfShareFile(f) {
   const blob = await rfFileOf(f); if (!blob) return;
   const name = f.name || "form.pdf";
   try { const file = new File([blob], name, { type: f.type }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return; } } catch (e) { if (e && e.name === "AbortError") return; }
-  rfOpenFile(f);
+  rfSaveFile(f);   // no sharing here (most computers): saved to Downloads instead
 }
 function rfDelete(p, f) {
   p.forms = formsOf(p).filter(x => x !== f); rfDropFile(f); touch(p);
