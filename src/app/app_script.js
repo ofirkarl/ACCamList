@@ -203,7 +203,7 @@ function perTableHtml(per, hi) {   // hi: the focal length looked for (Find a le
     const part = per.slice(r * k, r * k + k), pad = k - part.length;
     // a row of the table: its label, a cell a lens (every other one shaded), empty cells where a shorter last row ends; the next rows' first line ruled off
     const line = (cls, head, val, first) => { const top = first && r ? " top" : "";
-      return `<span class="lt-h${top}">${head}</span>` + part.map((x, i) => `<span class="${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls}${top}"></span>`.repeat(pad); };
+      return `<span class="lt-h r-${cls}${top}">${head}</span>` + part.map((x, i) => `<span class="${cls} r-${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls} r-${cls} pad${top}"></span>`.repeat(pad); };
     out += line("mm", "MM", perMM, true) + line("t", "T", x => (x.label || "").replace(/^T\s*/i, "") || "–") + line("cf", "CF", x => x.mod || "–");
   }
   return `<span class="lt-row"><span class="lt" style="--k:${k}" title="Lens by lens: focal length, stop, close focus">${out}</span></span>`;

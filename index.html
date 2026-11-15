@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611151859";
+window.AC_BUILD = "202611151929";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2936,16 +2936,19 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .add { border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); color: var(--accent); }
 .add:hover { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
 .item .stepper, .f-card .stepper { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); box-shadow: inset 0 0 0 1px var(--accent); }
-/* a set lens by lens: a small table like the Lens Cards (MM over T and CF), each column its own width, left aligned */
+/* a set lens by lens: a small table like the Lens Cards (MM over T and CF), each column its own width, left aligned, no frame:
+   the MM row a band in a light palette tint, a hairline under CF, a bigger set's next rows set off by a gap */
 .lt-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; column-gap: 8px; margin-top: 4px; }
-.lt { display: inline-grid; grid-template-columns: auto repeat(var(--k), auto); max-width: 100%; overflow-x: auto; border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line)); border-radius: 8px; font-size: 12.5px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.lt { display: inline-grid; grid-template-columns: auto repeat(var(--k), auto); max-width: 100%; overflow-x: auto; font-size: 12.5px; line-height: 1.2; font-variant-numeric: tabular-nums; }
 .lt > span { padding: 2px 4px; text-align: center; white-space: nowrap; color: var(--fg); }
 .lt > .lt-h { padding-inline: 6px 3px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--muted); align-self: stretch; display: flex; align-items: center; }
 .lt > .mm { font-weight: 700; }
 .lt > .cf { color: var(--accent); font-weight: 600; }
-.lt > .z { background: color-mix(in srgb, var(--accent) 10%, transparent); }
-.lt > .top { border-top: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); }
-.lt > .on { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+.lt > .r-mm { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.lt > .r-cf { border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent); }
+.lt > .top { margin-top: 6px; }
+.lt > .on { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.lt > .r-mm.on { background: color-mix(in srgb, var(--accent) 38%, transparent); }
 .f-set .lt-row { margin-top: 0; }
 .item > .info > .lt-row { margin-top: 3px; column-gap: 6px; }
 .lt-row > .ctl-sp { width: 94px; }   /* Add beside the table when it fits (it sits 4px past the details' edge) */
@@ -3172,7 +3175,7 @@ function perTableHtml(per, hi) {   // hi: the focal length looked for (Find a le
     const part = per.slice(r * k, r * k + k), pad = k - part.length;
     // a row of the table: its label, a cell a lens (every other one shaded), empty cells where a shorter last row ends; the next rows' first line ruled off
     const line = (cls, head, val, first) => { const top = first && r ? " top" : "";
-      return `<span class="lt-h${top}">${head}</span>` + part.map((x, i) => `<span class="${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls}${top}"></span>`.repeat(pad); };
+      return `<span class="lt-h r-${cls}${top}">${head}</span>` + part.map((x, i) => `<span class="${cls} r-${cls}${i % 2 ? " z" : ""}${hi != null && x.f === hi ? " on" : ""}${top}">${esc(val(x))}</span>`).join("") + `<span class="${cls} r-${cls} pad${top}"></span>`.repeat(pad); };
     out += line("mm", "MM", perMM, true) + line("t", "T", x => (x.label || "").replace(/^T\s*/i, "") || "–") + line("cf", "CF", x => x.mod || "–");
   }
   return `<span class="lt-row"><span class="lt" style="--k:${k}" title="Lens by lens: focal length, stop, close focus">${out}</span></span>`;
