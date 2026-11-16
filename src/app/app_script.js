@@ -4194,6 +4194,100 @@ function listItemsOf(p) {
 const listItemName = it => it.id ? (ITEM.get(it.id) ? ITEM.get(it.id).it.name : "Item no longer in the catalog") : it.name;
 const listPcs = L => L.items.reduce((a, it) => a + it.qty, 0);
 function listDupes(p, L) { return L.items.filter(it => it.id ? p.items[it.id] : customLineId(p, it.name, it.section)); }
+/* ---------- Copy from another list: its gear (and, if wanted, its details: crew, dates, the note) into this one ----------
+   The other unit of the same production first, then the same rental house's lists, then the other houses' (with a warning:
+   each item is matched to this house's catalog by its name, what has no match comes as a typed line). Then the source can be emptied */
+const cpfName = x => { const m = x.mainOf ? findProd(x.mainOf) : null; return (m ? m.name : x.name) || "Untitled production"; };
+const cpfUnit = x => x.mainOf ? "2nd Unit" : x.unit2 ? "Main Unit" : "";
+function cpfSources(p) {
+  const other = otherUnit(p), at = x => x.updatedAt || x.createdAt || 0;
+  const all = app.productions.filter(x => x !== p && !x.browse && (Object.keys(x.items || {}).length || x.dp || x.ac || x.shootStart));
+  const same = all.filter(x => x !== other && x.houseId === p.houseId).sort((a, z) => at(z) - at(a));
+  const diff = all.filter(x => x !== other && x.houseId !== p.houseId).sort((a, z) => at(z) - at(a));
+  return [...(other && all.includes(other) ? [other] : []), ...same, ...diff];
+}
+const CPF_STOP = new Set(["the", "with", "and", "of", "for", "a"]);
+const cpfToks = s => norm(s).replace(/(\d)\s*mm\b/g, "$1").split(/[^a-z0-9.\u0590-\u05ff]+/).map(t => t.replace(/^\.+|\.+$/g, "")).filter(t => t && !CPF_STOP.has(t));
+// the same item in another house's catalog: the same numbers (focal length, model) and most of the words; else none
+function twinIn(hid, id) {
+  const e = ITEM.get(id); if (!e) return null;
+  if (e.h.id === hid) return id;
+  const A = cpfToks(e.it.name), na = A.filter(t => /\d/.test(t));
+  let best = null, s1 = 0, s2 = 0;
+  for (const x of ITEM.values()) {
+    if (x.h.id !== hid || (e.c && x.c && x.c.id !== e.c.id)) continue;
+    const B = cpfToks(x.it.name), nb = B.filter(t => /\d/.test(t));
+    if (na.length !== nb.length || na.some(n => !nb.includes(n))) continue;
+    const sc = A.filter(t => B.includes(t)).length / new Set([...A, ...B]).size;
+    if (sc > s1) { s2 = s1; s1 = sc; best = x; } else if (sc > s2) s2 = sc;
+  }
+  return best && s1 >= 0.6 && s1 - s2 >= 0.1 ? best.it.id : null;
+}
+// the source's gear as a list for this production: the same items (or their matches in this house's catalog), typed lines as they are
+function cpfItems(p, src) {
+  const out = [], matched = [], typed = []; let same = 0;
+  for (const it of listItemsOf(src)) {
+    if (!it.id || src.houseId === p.houseId) { out.push(it); continue; }
+    const e = ITEM.get(it.id), name = e ? e.it.name : "", tw = e ? twinIn(p.houseId, it.id) : null;
+    if (tw) { out.push({ ...it, id: tw }); const tn = ITEM.get(tw).it.name; if (qKey(tn) === qKey(name)) same++; else matched.push([name, tn]); }
+    else if (name) { const l = src.items[it.id]; out.push({ name, section: (l && l.section) || e.it.section || "accessories", qty: it.qty, note: it.note, kids: it.kids }); typed.push(name); }
+  }
+  return { items: out, matched, typed, same, cross: src.houseId !== p.houseId };
+}
+function cpfOpen(p, from) { app.cpf = { to: p.id, from: from || "", mode: "add" }; cpfRender(); }
+function cpfRender() {
+  const c = app.cpf, p = c && findProd(c.to); if (!p) return;
+  const src = c.from ? findProd(c.from) : null, h = houseById(p.houseId);
+  const sub = x => { const n = Object.keys(x.items || {}).length, xh = houseById(x.houseId);
+    return [cpfUnit(x), x.houseId !== p.houseId && xh ? `<span class="cpf-h" style="--hc:var(--house-${esc(x.houseId)}, var(--accent))">${esc(xh.name)}</span>` : "", `${n} item${n === 1 ? "" : "s"}`].filter(Boolean).join(" · "); };
+  let body;
+  if (!src) {
+    const list = cpfSources(p);
+    body = list.length ? `<div class="cpf-list">${list.map(x => `<button type="button" class="cpf-src" data-act="cpf-src" data-id="${esc(x.id)}"><b dir="auto">${esc(cpfName(x))}</b><span class="hint">${sub(x)}</span></button>`).join("")}</div>`
+      : `<p class="hint">There's no other list to copy from yet.</p>`;
+    body += `<div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button></div>`;
+  } else {
+    const n = Object.keys(src.items || {}).length, here = Object.keys(p.items || {}).length, cross = src.houseId !== p.houseId, sh = houseById(src.houseId);
+    const det = p.mainOf ? "DP, 1st AC, prep and shoot days" : "Production company, DP, 1st AC, prep and shoot days, the note on the list";
+    body = `<div class="cpf-from"><span><b dir="auto">${esc(cpfName(src))}</b><span class="hint">${sub(src)}</span></span><button class="btn ghost sm" type="button" data-act="cpf-src" data-id="">Change</button></div>
+      ${cross ? `<div class="warnbox" role="alert"><b>From ${esc(sh ? sh.name : "another house")} to ${esc(h.name)}</b><p>Each item is matched to ${esc(h.name)}'s catalog by its name. What has no match comes in as a typed line. You'll see the matches after.</p></div>` : ""}
+      <label class="check"><input type="checkbox" id="cpf-gear" ${n ? "checked" : "disabled"}><span>The gear <span class="hint">(${n} item${n === 1 ? "" : "s"})</span></span></label>
+      ${here && n ? `<div class="cpf-mode"><span class="hint">Items already on this list:</span><div class="seg sm" role="group" aria-label="Items already on this list"><button type="button" data-act="cpf-mode" data-v="add" aria-pressed="${c.mode === "add"}">Add to the quantity</button><button type="button" data-act="cpf-mode" data-v="skip" aria-pressed="${c.mode === "skip"}">Leave them</button></div></div>` : ""}
+      <label class="check"><input type="checkbox" id="cpf-det"><span>The details <span class="hint">(${det})</span></span></label>
+      ${n ? `<label class="check"><input type="checkbox" id="cpf-empty"><span>Then empty <b dir="auto">${esc(cpfName(src))}${cpfUnit(src) ? " · " + cpfUnit(src) : ""}</b>'s list <span class="hint">(Undo brings it back)</span></span></label>` : ""}
+      <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cpf-go">Copy</button></div>`;
+  }
+  showModal(`<div class="sheet cpf-sheet"><div class="cs-head"><h3 class="plain">Copy from another list</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
+    <p class="hint cpf-to">Into <b dir="auto">${esc(cpfName(p))}${cpfUnit(p) ? " · " + cpfUnit(p) : ""}</b></p>${body}</div>`);
+}
+function cpfGo() {
+  const c = app.cpf, p = c && findProd(c.to), src = c && findProd(c.from); if (!p || !src) return;
+  const gear = !!document.getElementById("cpf-gear")?.checked, det = !!document.getElementById("cpf-det")?.checked, empty = !!document.getElementById("cpf-empty")?.checked;
+  if (!gear && !det && !empty) { toast("Tick what to copy."); return; }
+  const DF = p.mainOf ? ["dp", "ac", "acPhone", "prep", "shootStart", "shootEnd", "shootDays", "days"] : ["company", "dp", "ac", "acPhone", "prep", "shootStart", "shootEnd", "shootDays", "days", "notes", "notesRich", "notesBold", "notesSize"];
+  const cp = v => v && typeof v === "object" ? clone(v) : v;   // (clone turns a string into {})
+  const before = { items: clone(p.items), clashOk: cp(p.clashOk), det: Object.fromEntries(DF.map(k => [k, cp(p[k])])), sameDates: p.sameDates }, srcItems = clone(src.items), srcOk = cp(src.clashOk);
+  const u2 = !p.mainOf ? unit2Of(p) : null, u2Notes = u2 ? { notes: u2.notes, notesRich: clone(u2.notesRich) } : null;
+  let r = { items: [], matched: [], typed: [], same: 0, cross: false }, n = 0;
+  if (gear) { r = cpfItems(p, src); n = applySavedList(p, { items: r.items }, 1, c.mode).n; }
+  if (det) { for (const k of DF) if (src[k] !== undefined) p[k] = cp(src[k]); if (p.mainOf) p.sameDates = false;
+    if (u2 && DF.includes("notes")) { u2.notes = p.notes; u2.notesRich = clone(p.notesRich || []); touch(u2); } }
+  if (empty) { src.items = {}; src.clashOk = {}; touch(src); }
+  touch(p); closeModal(); app.cpf = null;
+  app.tab = "list"; render();
+  const what = [gear ? `${n} item${n === 1 ? "" : "s"}` : "", det ? "the details" : ""].filter(Boolean).join(" and ");
+  const undo = () => { const q = findProd(p.id); if (!q) return; q.items = before.items; q.clashOk = before.clashOk; for (const [k, v] of Object.entries(before.det)) { if (v === undefined) delete q[k]; else q[k] = v; } if (q.mainOf) q.sameDates = before.sameDates; touch(q);
+    if (u2 && u2Notes) { Object.assign(u2, u2Notes); touch(u2); }
+    if (empty) { const sq = findProd(src.id); if (sq) { sq.items = srcItems; sq.clashOk = srcOk; touch(sq); } } rerenderKeepScroll(); };
+  if (r.cross && gear) {   // from another house: what was matched and what came as a typed line, to check
+    showModal(`<div class="sheet cpf-sheet"><div class="cs-head"><h3 class="plain">Copied from ${esc((houseById(src.houseId) || {}).name || "another house")}</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
+      ${r.same ? `<p class="hint"><b class="num">${r.same}</b> the same item${r.same === 1 ? "" : "s"} in ${esc(houseById(p.houseId).name)}'s catalog.</p>` : ""}
+      ${r.matched.length ? `<p class="hint">Matched by name (${r.matched.length}), check them:</p><ul class="cpf-res">${r.matched.map(([a, z]) => `<li><span dir="auto">${esc(a)}</span><span class="cpf-arrow" aria-hidden="true">→</span><b dir="auto">${esc(z)}</b></li>`).join("")}</ul>` : ""}
+      ${r.typed.length ? `<p class="hint">No match in ${esc(houseById(p.houseId).name)}'s catalog: typed lines (${r.typed.length}):</p><ul class="cpf-res">${r.typed.map(a => `<li><span dir="auto">${esc(a)}</span></li>`).join("")}</ul>` : ""}
+      <div class="modal-actions"><span class="grow"></span><button class="btn primary" type="button" data-act="modal-close">Done</button></div></div>`);
+  }
+  undoable("Copied", what + (empty ? ", and emptied the other list" : ""), undo);
+}
 /* put a saved list into a production. Items already there are added to (mode "add") or left alone (mode "skip"); an item's own packages
    come along when it is the trigger, and a package item the list holds itself keeps the list's quantity (no double add) */
 function applySavedList(p, L, mult, mode) {
@@ -5889,7 +5983,7 @@ function mediaRedraw(p) {
 const SEC_CAT = { camera: "camera", lens: "lenses", filters: "filters", accessories: "camera_accessories" };
 const secTape = s => SEC_CAT[s.id] && (app.settings.catColors || {})[SEC_CAT[s.id]] ? catTape({ id: SEC_CAT[s.id] }) : `var(--sec-${s.custom ? "custom" : s.id}, var(--pal-slate))`;
 function viewList(p, h) {
-  const mainSrc = p.mainOf ? findProd(p.mainOf) : null;
+  const ou = otherUnit(p);   // the production's other unit: its gear one tap away when this list is empty
   const t = totals(p), by = linesBySection(p), issues = coverageIssues(p), clashes = clashIssues(p);
   const secs = allSections(), closed = s => app.open.has("secx/" + s.id);
   const anyOpen = secs.some(s => by[s.id].length && !closed(s));
@@ -5906,8 +6000,8 @@ function viewList(p, h) {
     <div class="list-tools lt-one" data-keep="tools">
       <label class="search lsearch" for="lq"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
         <input data-sug="search" id="lq" type="search" placeholder="${t.lines ? `Search ${t.lines} item${t.lines === 1 ? "" : "s"}` : "Search the list"}" autocomplete="off" value="${esc(app.lq || "")}" aria-label="Search the Camera List (${t.lines} items, ${t.pcs} pcs)"></label>
-      ${t.lines ? allBtn("sec-all", anyOpen) + `<button class="btn icon-btn lt-ico" type="button" data-act="list-save" aria-label="Save as a list in Favorites" title="Save as a list">${LIST_ICON}</button><button class="btn icon-btn lt-ico clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button>` : ""}</div>
-    ${mainSrc && Object.keys(mainSrc.items || {}).length ? `<button class="btn ghost sm u2-pull" type="button" data-act="u2-pull" data-id="${esc(p.id)}">${COPY_ICON}<span>Copy from Main Unit</span></button>` : ""}
+      ${t.lines ? allBtn("sec-all", anyOpen) : ""}<button class="btn icon-btn lt-ico" type="button" data-act="cpf-open" aria-label="Copy from another list" title="Copy from another list">${COPY_ICON}</button>${t.lines ? `<button class="btn icon-btn lt-ico" type="button" data-act="list-save" aria-label="Save as a list in Favorites" title="Save as a list">${LIST_ICON}</button><button class="btn icon-btn lt-ico clear-list" type="button" data-act="reset-gear" id="resetBtn" aria-label="Clear list" title="Clear list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"></path></svg></button>` : ""}</div>
+    ${!t.lines && ou && Object.keys(ou.items || {}).length ? `<button class="btn ghost sm u2-pull" type="button" data-act="cpf-open" data-from="${esc(ou.id)}">${COPY_ICON}<span>Copy from ${ou.mainOf ? "2nd Unit" : "Main Unit"}</span></button>` : ""}
     <div id="copyFallback"></div>
     ${covBoxHtml(p, issues)}
     ${clashes.map(i => `<div class="warnbox" role="alert"><b>Doesn't work together</b><p>${clashPair(i)}${i.r.why ? ` · ${esc(i.r.why)}` : ""}</p>${clashActs(i, false)}</div>`).join("")}
@@ -6658,6 +6752,10 @@ document.addEventListener("click", e => {
     case "pm-dup": closeModal(); startDuplicate(id); break;
     case "pm-edit": closeModal(); app.pid = id; app.formFor = id; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
     case "unit-sw": if (findProd(id) && id !== app.pid) { app.pid = id; app.editing = null; rerenderKeepScroll(); toast(findProd(id).mainOf ? "2nd Unit list" : "Main Unit list"); } break;
+    case "cpf-open": cpfOpen(cur(), b.dataset.from || ""); break;
+    case "cpf-src": if (app.cpf) { app.cpf.from = b.dataset.id || ""; cpfRender(); } break;
+    case "cpf-mode": if (app.cpf) { app.cpf.mode = b.dataset.v; document.querySelectorAll('[data-act="cpf-mode"]').forEach(x => x.setAttribute("aria-pressed", String(x === b))); } break;
+    case "cpf-go": cpfGo(); break;
     case "u2-pull": {
       // the 2nd Unit's list takes the Main Unit's: straight in when it is empty, otherwise add what is missing or replace it all
       const q = findProd(id), m = q && findProd(q.mainOf); if (!q || !m) break;
