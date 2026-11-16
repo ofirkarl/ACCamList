@@ -2821,6 +2821,9 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .u2-fold[aria-expanded="true"] .chev { transform: rotate(180deg); }
 .u2-sum { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52vw; }
 .u2-sum:empty { display: none; }
+/* the production's form: the note printed on the list (the notepad's editor, a few lines high) */
+.nt-form { display: grid; gap: 6px; }
+.nt-form .nt-ed { min-height: 72px; max-height: 40vh; }
 </style>
 
 <div class="app">
@@ -5172,15 +5175,16 @@ function ntTodoAdd() {
   const { p, list } = ntTodo(); list.push({ id: uid("t"), t: t.slice(0, 200), done: false }); pcSave(p); buzz("tap");
   ntTodoPaint(true);
 }
-// the notepad's text: the production's notes (both its units carry them), or the user's own with no list
-const ntSrc = p => p || { notesRich: app.settings.ntFree || [] };
-// where the notepad on screen keeps its text: on the Notes page the production's notes (or your own), on the Prep Checklist its own notes
+// the Notes page's notepad: the production's own notepad (both its units carry it; not printed), or the user's own with no list.
+// The note printed on the list, under the production's details, is another thing: written in the production's form (p.notes)
+const ntSrc = p => p ? { notesRich: p.padRich || [], notes: p.pad || "" } : { notesRich: app.settings.ntFree || [] };
+// where the notepad on screen keeps its text: on the Notes page the production's notepad (or your own), on the Prep Checklist its own notes (the production's form: sent with the form)
 function ntTarget() { return app.view === "prep" ? { kind: "prep", p: pcCur() } : app.view === "notes" ? { kind: "notes", p: ntCur() } : null; }
 function ntKeep(ed = ntEd(), to = ntTarget()) {
   if (!ed || !to) return;
   const m = ntRead(ed), p = to.p;
   if (to.kind === "prep") { const d = pcData(p); if (JSON.stringify(d.padRich || []) === JSON.stringify(m) && d.pad === ntPlain(m)) return; d.padRich = m; d.pad = ntPlain(m); pcSave(p); }
-  else if (p) { if (JSON.stringify(p.notesRich || []) === JSON.stringify(m)) return; for (const x of [p, unit2Of(p)].filter(Boolean)) { x.notesRich = clone(m); x.notes = ntPlain(m); touch(x); } }
+  else if (p) { if (JSON.stringify(p.padRich || []) === JSON.stringify(m)) return; for (const x of [p, unit2Of(p)].filter(Boolean)) { x.padRich = clone(m); x.pad = ntPlain(m); touch(x); } }
   else { if (JSON.stringify(app.settings.ntFree || []) === JSON.stringify(m)) return; app.settings.ntFree = m; touchSettings(); }
   const sv = document.getElementById(to.kind === "prep" ? "pcSaved" : "ntSaved"); if (sv) { sv.hidden = false; replay(sv, "pop"); }
 }
@@ -5199,7 +5203,7 @@ function viewNotes() {
       <div class="nt-pane nt-todo" id="ntTodo" role="tabpanel"${tab === "check" ? "" : " hidden"}>${ntTodoHtml()}</div>
       <div class="nt-pane nt-padpane" id="ntPad" role="tabpanel"${tab === "pad" ? "" : " hidden"}>${ntBarHtml()}
         <div class="nt-ed${m.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-label="Notepad" spellcheck="true">${ntHtml(m, false)}</div>
-        <span class="hint pc-saved">${p ? "Printed on the camera list. " : ""}<b id="ntSaved" class="me-saved" hidden>✓ Saved</b></span></div>
+        <span class="hint pc-saved"><b id="ntSaved" class="me-saved" hidden>✓ Saved</b></span></div>
     </section>`;
 }
 var ntT = 0;
@@ -5237,7 +5241,8 @@ function viewForm() {
   const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
   const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;
   const u2 = unit2Of(editing || src), u2same = u2 ? u2.sameDates !== false : true, u2days = u2 && u2.days || {};
-  const u2fold = !!(u2 && app.settings.u2Fold);   // the 2nd Unit's details folded away (its fold arrow), as last left
+  const u2fold = !!(u2 && app.settings.u2Fold);
+  const docNote = ntModel(p);   // the note printed on the list, under the production's details (the Notes page's notepad is another thing)   // the 2nd Unit's details folded away (its fold arrow), as last left
   return `<section class="pad">
     <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" ${back} aria-label="${editing ? "Back to list" : "Productions"}" title="${editing ? "Back to list" : "Productions"}">${BACK_ICON_L}</button><h2>${editing ? "Production details" : src ? "Duplicate production" : "New production"}</h2><span></span></div>
     ${src ? `<p class="hint" style="margin:0">A copy of ${esc(src.name || "the production")} with all ${totals(src).lines} items. Nothing is made until you tap Create.</p>` : ""}</div>
@@ -5284,6 +5289,11 @@ function viewForm() {
           <span class="err" id="u2Err" hidden></span>
         </div>
       </div>
+      <div class="field nt-form"><span class="lbl" id="docnote-lbl">Note on the list</span>
+        ${ntBarHtml()}
+        <div class="nt-ed${docNote.length ? "" : " empty"}" id="f-notes" contenteditable="true" dir="auto" role="textbox" aria-multiline="true" aria-labelledby="docnote-lbl" spellcheck="true">${ntHtml(docNote, false)}</div>
+        <span class="hint">Printed on the camera list, under the production's details.</span>
+        <input type="hidden" name="notes" value="${esc(ntPlain(docNote))}"><input type="hidden" name="notesRich" value="${esc(JSON.stringify(docNote))}"></div>
       <div class="form-actions">
         <div class="grow"><button class="btn primary" type="submit">${editing ? "Save details" : "Create production"}</button>
         <button class="btn" type="button" ${back}>Cancel</button></div>
@@ -5691,7 +5701,7 @@ function viewProduction() {
     return [k, /<small>/.test(o2) && !/<small>/.test(out) ? out + `<small aria-hidden="true">&nbsp;</small>` : out];  // same height as the other unit's row
   });
   if (unitLine(p)) facts.splice(1, 0, ["Unit", esc(unitLine(p))]);
-  if (p.notes) facts.push(["Notes", `<span class="pf-notes">${esc(p.notes)}</span>`]);
+  if (p.notes) facts.push(["Note on the list", `<span class="pf-notes">${esc(p.notes)}</span>`]);
   const missing = !p.dp && !p.ac && !p.shootStart;
   const fv = favoritesFor(p), nFav = fv.starred.length + fv.custom.length;
   const infoOpen = app.open.has("prodfacts");
@@ -10299,6 +10309,7 @@ document.addEventListener("submit", e => {
     const fields = { name: v.name.trim(), company: v.company.trim(), dp: v.dp.trim(), ac: v.ac.trim(), acPhone: v.acPhone.trim(),
       prep: v.prep, shootStart: v.shootStart, shootEnd: v.shootEnd && v.shootEnd >= v.shootStart ? v.shootEnd : v.shootStart,
       shootDays: v.shootDays ? String(Math.max(0, parseInt(v.shootDays, 10) || 0)) : "", days: json(v.days),
+      notes: (v.notes || "").trim(), notesRich: (() => { try { const m = JSON.parse(v.notesRich || "[]"); return Array.isArray(m) ? m : []; } catch (err) { return []; } })(), notesBold: false, notesSize: "m",
       houseId: document.getElementById("housePick").dataset.value };
     if (!fields.name) { document.getElementById("f-name").focus(); return; }
     if (!houseById(fields.houseId)) { const err = document.getElementById("houseErr"); if (err) err.hidden = false; document.querySelector("#housePick .house-opt")?.focus(); return; }
