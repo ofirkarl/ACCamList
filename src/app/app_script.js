@@ -2370,6 +2370,24 @@ if (typeof document !== "undefined" && document.addEventListener) {
     clearTimeout(ntT); ntPending = () => ntKeep(ed, to); ntT = setTimeout(ntFlush, 600); });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") ntFlush(); });
 }
+/* the 2nd Unit's details fold away under its arrow (on: open; null: the 2nd Unit is off, no arrow); folded, the arrow's line
+   says what's in them: the DP and the dates */
+function u2SumText(u2, same) {
+  if (!u2) return "";
+  const when = same ? "Main Unit dates" : u2.shootStart ? shootWhenText(u2.shootStart, u2.shootEnd, u2.days || {}) : "";
+  return [u2.dp, when].filter(Boolean).join(" · ");
+}
+function u2Fold(fold) {
+  const body = document.getElementById("u2Body"), btn = document.querySelector('[data-act="u2-fold"]'), f = document.getElementById("prodForm");
+  if (!body || !btn) return;
+  btn.hidden = fold === null; body.hidden = fold !== false;
+  btn.setAttribute("aria-expanded", String(fold === false)); btn.setAttribute("aria-label", (fold ? "Open" : "Fold") + " the 2nd Unit's details");
+  let sum = "";
+  if (fold && f) { const same = f.elements.u2_same?.checked, dates = document.getElementById("f-u2-dates")?.querySelector(".d-range:not(.muted)");
+    sum = [f.elements.u2_dp?.value.trim(), same ? "Main Unit dates" : dates ? dates.textContent.trim() : ""].filter(Boolean).join(" · "); }
+  document.getElementById("u2Sum").textContent = sum;
+  if (fold !== null) { app.settings.u2Fold = !!fold; touchSettings(); }
+}
 function viewForm() {
   const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
   const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
@@ -2381,6 +2399,7 @@ function viewForm() {
   const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
   const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;
   const u2 = unit2Of(editing || src), u2same = u2 ? u2.sameDates !== false : true, u2days = u2 && u2.days || {};
+  const u2fold = !!(u2 && app.settings.u2Fold);   // the 2nd Unit's details folded away (its fold arrow), as last left
   return `<section class="pad">
     <div class="prod-head"><div class="cam-bar in-app"><button class="iconbtn cb-back" type="button" ${back} aria-label="${editing ? "Back to list" : "Productions"}" title="${editing ? "Back to list" : "Productions"}">${BACK_ICON_L}</button><h2>${editing ? "Production details" : src ? "Duplicate production" : "New production"}</h2><span></span></div>
     ${src ? `<p class="hint" style="margin:0">A copy of ${esc(src.name || "the production")} with all ${totals(src).lines} items. Nothing is made until you tap Create.</p>` : ""}</div>
@@ -2405,8 +2424,9 @@ function viewForm() {
           <input type="hidden" name="days" id="f-days" value="${esc(days ? JSON.stringify(days) : "")}"><input type="hidden" name="shootDays" id="f-ndays" value="${esc(days ? "" : p.shootDays)}"></div>
       </div>
       <div class="u2">
-        <label class="check u2-on"><input type="checkbox" name="u2on" id="f-u2on" ${u2 ? "checked" : ""}><b>Add 2nd Unit</b></label>
-        <div class="u2-body" id="u2Body" ${u2 ? "" : "hidden"}>
+        <div class="u2-head"><label class="check u2-on"><input type="checkbox" name="u2on" id="f-u2on" ${u2 ? "checked" : ""}><b>Add 2nd Unit</b></label>
+          <button type="button" class="iconbtn u2-fold" data-act="u2-fold" aria-controls="u2Body" aria-expanded="${!u2fold}" aria-label="${u2fold ? "Open" : "Fold"} the 2nd Unit's details" ${u2 ? "" : "hidden"}><span class="u2-sum" id="u2Sum">${u2fold ? esc(u2SumText(u2, u2same)) : ""}</span>${CHEV}</button></div>
+        <div class="u2-body" id="u2Body" ${u2 && !u2fold ? "" : "hidden"}>
           <span class="hint">A second list for this production, with its own camera crew. You can start it as a copy of the main list.</span>
           <div class="row3">
             <div class="field"><label for="f-u2dp">2nd Unit DP</label><input data-sug="dp" id="f-u2dp" name="u2_dp" value="${esc(u2 ? u2.dp : "")}"></div>
@@ -2437,7 +2457,7 @@ function viewForm() {
 
 /* the shoot dates button on the form: the range and how many shoot days it makes */
 function datesBtnHtml(a, b, days, typed) {
-  if (!a) return `<span class="d-range muted">Pick the first and last shoot day</span><span class="d-n">${CAL_ICON}</span>`;
+  if (!a) return `<span class="d-range muted">Pick the shoot days</span><span class="d-n">${CAL_ICON}</span>`;
   const range = shootWhenText(a, b, days), n = days ? countShootDays(a, b, days) : Number(typed) || countShootDays(a, b, {});
   return `<span class="d-range">${range.split(", ").map(x => `<span class="nw">${esc(x)}</span>`).join(", ")}</span><span class="d-n"><b class="num">${n}</b> shoot day${n === 1 ? "" : "s"}</span>`;
 }
@@ -6788,6 +6808,7 @@ document.addEventListener("click", e => {
       break;
     }
     /* the shoot dates calendar */
+    case "u2-fold": u2Fold(b.getAttribute("aria-expanded") === "true"); break;
     case "cal-open": calOpen(b.dataset.mode, b.dataset.target); break;
     case "cal-day": calPick(b.dataset.d); break;
     case "cal-mode": { cal.pick = b.dataset.v === "days"; app.settings.calPick = cal.pick; touchSettings();
@@ -7234,7 +7255,7 @@ document.addEventListener("change", e => {
   if (t.name === "readers" && t.type === "checkbox") { app.settings.readers = t.checked; touchSettings(); for (const q of app.productions) { applyDefaults(q); touch(q); } toast(t.checked ? "Card readers added to your lists" : "Card readers taken off your lists"); return; }
   if (t.name === "helperOn" && t.type === "checkbox") { setHelper(t.checked); app.helperMissing = false; rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
-  if (t.id === "f-u2on") { document.getElementById("u2Body").hidden = !t.checked; if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
+  if (t.id === "f-u2on") { u2Fold(!t.checked ? null : false); if (t.checked) document.getElementById("f-u2dp")?.focus(); return; }
   if (t.id === "f-u2same") { document.getElementById("u2Dates").hidden = t.checked; return; }
   if (t.dataset.settitle) { app.settings.docTitle = t.value.trim().slice(0, 60); touchSettings(); toast("Title saved"); return; }
   if (t.dataset.pkq) { dd.q[t.dataset.pkq] = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); return; }
@@ -7449,7 +7470,7 @@ document.addEventListener("submit", e => {
     // switching the 2nd Unit off takes its list away: ask first when it has items
     if (!u2on && oldQ && totals(oldQ).lines && f.dataset.u2drop !== "1") {
       f.dataset.u2drop = "1"; const err = document.getElementById("u2Err");
-      if (err) { err.textContent = `Tap Save again to remove the 2nd Unit and its ${totals(oldQ).lines} items.`; err.hidden = false; document.getElementById("u2Body").hidden = false; }
+      if (err) { err.textContent = `Tap Save again to remove the 2nd Unit and its ${totals(oldQ).lines} items.`; err.hidden = false; u2Fold(false); document.getElementById("u2Body").hidden = false; }
       return;
     }
     const was = app.pid;
