@@ -214,7 +214,7 @@ ok(A.linesBySection(p).camera[0][0] === camIds[camIds.length - 1], "line dragged
 ok(A.moveLine(p, mbp, "aks", null) && p.items[mbp].section === "aks" && A.linesBySection(p).aks.at(-1)[0] === mbp, "line dragged into another section");
 const txt2 = A.listText(p);
 ok(txt2.indexOf("AKS") < txt2.indexOf("MacBook Pro"), "moved line exported under its new section");
-fs.writeFileSync(process.argv[2].replace("document.xml", "edit_tree.html"), et);
+if (process.argv[2]) fs.writeFileSync(process.argv[2].replace("document.xml", "edit_tree.html"), et);   // a page to look at, only when run by hand (GitHub runs it with no path)
 
 // --- the user's own categories, subcategories and gear list sections
 const [vv, vg] = A.addCategory(U, "Video Village", "Monitors", "display");
