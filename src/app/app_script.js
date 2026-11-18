@@ -2393,13 +2393,15 @@ function viewForm() {
   const editing = app.formFor ? mainOf(findProd(app.formFor)) : null;
   const src = !editing && app.dupFrom ? app.productions.find(p => p.id === app.dupFrom) : null;
   const me = app.settings.me || {};
-  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)" } : newProduction({ ac: me.name || "", acPhone: me.phone || "", ...(app.formHouse && houseById(app.formHouse) ? { houseId: app.formHouse } : {}) }));
+  // a copy of a job whose shoot days have passed starts without its dates: kept, they'd send the copy straight to the Archive
+  const stale = !!src && !!lastDayOf(src) && dayGap(lastDayOf(src), todayIso()) >= 1, NODATES = { prep: "", shootStart: "", shootEnd: "", days: {}, shootDays: "" };
+  const p = editing || (src ? { ...src, name: (src.name || "Production") + " (copy)", ...(stale ? NODATES : {}) } : newProduction({ ac: me.name || "", acPhone: me.phone || "", ...(app.formHouse && houseById(app.formHouse) ? { houseId: app.formHouse } : {}) }));
   const hasItems = (editing || src) && totals(editing || src).lines > 0;
   const houses = HOUSES.map(h => `<button class="house-opt" type="button" data-act="pick-house" data-house="${h.id}" aria-pressed="${h.id === p.houseId}" style="--hc:var(--house-${esc(h.id)}, var(--accent))" ${hasItems && h.id !== p.houseId ? "disabled" : ""}><b>${esc(h.name)}</b><span><span class="num">${houseCount(h)}</span> items in catalog</span></button>`).join("");
   // an old list with a typed-in day count keeps it until its dates are picked again
   const days = p.shootDays && !Object.keys(p.days || {}).length ? null : p.days || {};
   const back = editing ? `data-act="open" data-id="${esc(app.pid && findProd(app.pid) ? app.pid : editing.id)}" data-keep="1"` : `data-act="home" data-id=""`;
-  const u2 = unit2Of(editing || src), u2same = u2 ? u2.sameDates !== false : true, u2days = u2 && u2.days || {};
+  const u2raw = unit2Of(editing || src), u2 = u2raw && stale ? { ...u2raw, ...NODATES } : u2raw, u2same = u2 ? u2.sameDates !== false : true, u2days = u2 && u2.days || {};
   const u2fold = !!(u2 && app.settings.u2Fold);
   const docNote = ntModel(p);   // the note printed on the list, under the production's details (the Notes page's notepad is another thing)   // the 2nd Unit's details folded away (its fold arrow), as last left
   return `<section class="pad">
@@ -2423,7 +2425,8 @@ function viewForm() {
         <div class="field"><span class="lbl" id="dates-lbl">Shoot days</span>
           <button class="date-btn" type="button" data-act="cal-open" data-mode="shoot" id="f-dates" aria-labelledby="dates-lbl f-dates">${datesBtnHtml(p.shootStart, p.shootEnd, days, p.shootDays)}</button>
           <input type="hidden" name="shootStart" id="f-start" value="${esc(p.shootStart)}"><input type="hidden" name="shootEnd" id="f-end" value="${esc(p.shootEnd)}">
-          <input type="hidden" name="days" id="f-days" value="${esc(days ? JSON.stringify(days) : "")}"><input type="hidden" name="shootDays" id="f-ndays" value="${esc(days ? "" : p.shootDays)}"></div>
+          <input type="hidden" name="days" id="f-days" value="${esc(days ? JSON.stringify(days) : "")}"><input type="hidden" name="shootDays" id="f-ndays" value="${esc(days ? "" : p.shootDays)}">
+          ${stale ? `<span class="hint">The dates of <b dir="auto">${esc(src.name || "the list you copied")}</b> have passed, so the copy starts without them.</span>` : ""}</div>
       </div>
       <div class="u2">
         <div class="u2-head"><label class="check u2-on"><input type="checkbox" name="u2on" id="f-u2on" ${u2 ? "checked" : ""}><b>Add 2nd Unit</b></label>
@@ -7607,6 +7610,8 @@ document.addEventListener("submit", e => {
     else if (p.unit && !p.mainOf) p.unit = "";
     app.dupFrom = null;
     touch(p);
+    // saved with shoot days that have all passed: it goes to the Archive by itself, so say where it is
+    if (isArchived(p) && !(p.arch === "on")) setTimeout(() => toast("Its shoot days have passed, so it's in the Archive (Home › Archive)."), 1600);
     const stay = was && findProd(was) && mainOf(findProd(was)) === p ? was : p.id;
     app.pid = stay; app.view = "production"; app.q = ""; app.lq = ""; app.fq = ""; app.cat = "all"; render(); window.scrollTo(0, 0);
     if (ask) unit2StartDialog(p);

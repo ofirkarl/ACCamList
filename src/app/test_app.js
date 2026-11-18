@@ -325,6 +325,11 @@ A.setNote(ap, ""); ok(!A.noteOf(ap), "note deleted");
 const am = find("utopia", /^ARRI Alexa Mini$/);
 ok(A.ITEM.get(am).it.url === "https://utopiacam.com/shop/alexa-mini/" && A.rowHtml(p, A.ITEM.get(am).it, "").includes('href="https://utopiacam.com/shop/alexa-mini/"'), "Utopia item links to its product page");
 ok(A.ITEM.get(find("fitussi", /^ARRI Alexa Mini$/)).it.url === "https://fitussi.co.il/product/alexa-mini/", "Fitussi item links to its product page");
+// --- a copy of a job whose shoot days have passed starts without its dates (kept, it would go straight to the Archive)
+{ const old = A.newProduction({ name: "Old job", houseId: "utopia", shootStart: "2025-03-01", shootEnd: "2025-03-04" }); A.app.productions.push(old);
+  A.app.dupFrom = old.id; A.app.formFor = null; const fh = A.viewForm(); A.app.dupFrom = null;
+  ok(/name="shootStart" id="f-start" value=""/.test(fh) && /Old job<\/b> have passed, so the copy starts without them/.test(fh), "duplicating a past job: the copy's dates start empty, and it says why");
+  A.app.productions.splice(A.app.productions.indexOf(old), 1); }
 // --- Copy from another list: the other unit first; from another house each item matched to this house's catalog (or a typed line)
 { const fm = find("fitussi", /^ARRI Alexa Mini$/), um = find("utopia", /^ARRI Alexa Mini$/);
   ok(A.twinIn("utopia", fm) === um && A.twinIn("utopia", um) === um, "an item in another house's catalog: its match by name (the same house: itself)");
