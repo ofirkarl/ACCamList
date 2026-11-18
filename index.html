@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611182214";
+window.AC_BUILD = "202611182236";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2990,25 +2990,22 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .cpf-res { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 34vh; overflow: auto; font-size: 14px; }
 .cpf-res li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
 .cpf-arrow { color: var(--muted); }
-/* a Camera List line: the tools (favorite, product page, edit, remove) pinned top-right, the counter bottom-right, the name and the
-   details in full-width lines between them: the name wraps under the tools, the last line keeps clear of the counter */
-.line .l-grid.l-flow { display: flex; align-items: flex-start; gap: 4px; position: relative; }
-.line .l-flow > .handle { flex: none; width: 22px; align-self: stretch; margin-inline-start: -4px; }
-.line .l-flow > .l-body { display: flow-root; flex: 1; min-width: 0; }
-.line .l-body > .tools { float: right; display: flex; margin: -4px -4px -8px 8px; }
-.line .l-body > .tools > :is(.star, .ext, .ext-gap, .iconbtn, .x) { width: 30px; height: 26px; min-height: 0; min-width: 0; padding: 0; font-size: 16px; display: inline-grid; place-items: center; }
-.line .l-body > .tools svg { width: 15px; height: 15px; }
-.line .l-body > .tools > .ext-gap { display: none; }
-.line .l-body > .nm-col { display: block; line-height: 1.35; }
-.line .l-body > .nm-col .nm { overflow-wrap: anywhere; }
-.line .l-body > .l-meta { display: block; margin-top: 3px; line-height: 24px; }
-.line .l-body > .l-meta > .specs { display: inline; }
-.line .l-body > .l-meta > .specs > * { display: inline-block; vertical-align: middle; margin-inline-end: 8px; line-height: 1.35; }
-.line .l-body > .l-per { display: block; margin-top: 4px; }
-.line .l-flow > .l-bottom { position: absolute; right: -2px; bottom: 0; display: flex; }
-.line .l-flow .ctl-sp { display: inline-block; width: 104px; height: 34px; vertical-align: middle; }
-.line .l-flow.sets .ctl-sp { width: 132px; }
-.line .l-flow .lt-row > .ctl-sp { width: 100px; }
+/* a Camera List line in two columns: the name and its short details on the left, never reaching into the right column (the tools,
+   favorite · product page · edit · remove, over the counter); a set's lens-by-lens table under both. The grip sits centred on the
+   line's height, whatever it holds */
+.lines li.line { padding-inline-start: 34px; }
+.line .l-grid.l-g2 { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "n r" "m r" "c c"; column-gap: 10px; row-gap: 4px; align-items: start; position: static; }
+.line .l-g2 > .handle { grid-area: auto; position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 26px; height: 44px; margin: 0; }   /* (auto: no grid area of the line it sits in, so the whole line is its frame) */
+.lines li.line:has(> .editor) .l-g2 > .handle { top: 8px; transform: none; }
+.line .l-g2 > .nm-col { grid-area: n; align-self: start; grid-row: auto; }
+.line .l-g2 > .nm-col .nm { overflow-wrap: anywhere; }
+.line .l-g2 > .l-meta { grid-area: m; align-self: start; }
+.line .l-g2 > .l-per { grid-area: c; min-width: 0; margin-top: 2px; }
+.line .l-g2 > .l-right { grid-area: r; grid-row: 1 / 3; display: grid; justify-items: end; row-gap: 6px; align-self: start; margin-top: -3px; }
+.line .l-g2 > .l-right > .tools { display: flex; margin: 0 -3px 0 0; }
+.line .l-g2 > .l-right > .tools > :is(.star, .ext, .ext-gap, .iconbtn, .x) { width: 27px; height: 26px; min-height: 0; min-width: 0; padding: 0; margin: 0; font-size: 16px; display: inline-grid; place-items: center; }
+.line .l-g2 > .l-right > .tools svg { width: 15px; height: 15px; }
+.line .l-g2 > .l-right > .l-bottom { display: flex; justify-content: flex-end; }
 /* Add Gear / Favorites rows, as the Camera List's: the tools (favorite, product page) at the top-right, the name wrapping under them */
 #tree li.item, .fav-list li.item { padding-inline-start: 14px; }
 .item.has-link { min-height: 0; }
@@ -7510,12 +7507,9 @@ function lineHtml(p, id, l) {
   const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
-  /* the line: its tools (favorite, product page, edit, remove) at the top-right, the counter at the bottom-right; the name and the
-     details run in full-width lines between them, the last one keeping clear of the counter (a spacer at its end) */
-  const SP = `<span class="ctl-sp" aria-hidden="true"></span>`, meta = chips || (l.custom ? `<button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button>` : "");
-  const lineBody = `<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${meta || perL ? "" : SP}</span>`
-    + (meta ? `<span class="l-meta">${meta}${perL ? "" : SP}</span>` : "")
-    + (perL ? `<span class="l-per">${perL.replace(/<\/span>$/, SP + "</span>")}</span>` : "");
+  /* the line in two columns: the name and its short details on the left, never reaching into the right one, which holds the tools
+     (favorite, product page, edit, remove) over the counter; a set's lens-by-lens table under both. The grip: centred on the line */
+  const meta = chips || (l.custom ? `<button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button>` : "");
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
   const editor = editing ? `<div class="editor">
       <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}">${e ? `<span class="hint">A new name is kept in ${esc(e.h.name)}'s catalog too, for your next lists.</span>` : ""}</div>
@@ -7526,9 +7520,10 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid l-flow${l.tx !== undefined && !wlEven(id, l) ? " sets" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>
-        <span class="l-body"><span class="tools">${starBtn(key, { name: l.name, section: l.section })}${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">${EDIT_ICON}</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">${X_ICON}</button></span>${lineBody}</span>
-        <span class="l-bottom">${qtys}</span></div>
+      <div class="l-grid l-g2"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>
+        <span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span></span>
+        <span class="l-right"><span class="tools">${starBtn(key, { name: l.name, section: l.section })}${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">${EDIT_ICON}</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">${X_ICON}</button></span><span class="l-bottom">${qtys}</span></span>
+        ${meta ? `<span class="l-meta">${meta}</span>` : ""}${perL ? `<span class="l-per">${perL}</span>` : ""}</div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}

@@ -931,7 +931,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- round 18: a Camera List line like a Favorites row: the star before the name, the page, edit and remove in the corner
 { const q = A.newProduction({ name: "Rows", houseId: "utopia" }); A.app.productions.push(q); let id0; for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 1); id0 = id; break; }
   A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list"; const v = A.viewProduction();
-  ok(/<button class="handle"[^]*?<\/button>\s*<span class="l-body"><span class="tools"><button class="star"[^]*?data-act="edit-line"[^]*?data-act="remove"[^]*?<\/span><span class="nm-col">/.test(v) && /<span class="l-bottom">[^]*?class="stepper/.test(v), "Camera List line: the handle, then the tools (favorite, product page, edit, remove) at the top-right with the name wrapping under them, the counter at the bottom-right");
+  ok(/<div class="l-grid l-g2"><button class="handle"[^]*?<\/button>\s*<span class="nm-col">[^]*?<span class="l-right"><span class="tools"><button class="star"[^]*?data-act="edit-line"[^]*?data-act="remove"[^]*?<\/span><span class="l-bottom">[^]*?class="stepper/.test(v), "Camera List line: the name on the left; on the right the tools (favorite, product page, edit, remove) over the counter");
   A.app.view = "home"; }
 
 // --- a typed-in item joins the catalog: the star and the line move to the catalog item, nothing left twice
