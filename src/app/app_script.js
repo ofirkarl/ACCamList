@@ -693,6 +693,23 @@ function brandRows(its, render, ed, kB, renameKey, listKey, order, searching) {
       + (closed ? "" : list.map(it => render(it, b)).join(""));
   }).join("");
 }
+/* a subcategory's items in the order Add Gear shows them while editing: its loose items, then the manufacturer list (a flat
+   subcategory), then each folder (by manufacturer, where it is split so), each as the user arranged it */
+function shownOrder(h, s) {
+  const groups = groupItems(s.items, s), out = [], bo = peekEdits(h.id).brandOrder || {};
+  const byBrand = (its, order) => { const m = new Map(); for (const it of its) { const b = it.brand || "Generic"; if (!m.has(b)) m.set(b, []); m.get(b).push(it); } return userOrder([...m.entries()].sort((a, b) => brandSort(a[0], b[0])), order, e => e[0]).flatMap(e => e[1]); };
+  const loose = groups.findIndex(([g]) => g === "");
+  if (loose >= 0) out.push(...groups.splice(loose, 1)[0][1]);
+  let rest = groups;
+  if (isFlat(h, s)) {
+    const natural = [], other = [];
+    for (const grp of groups) (grp[1].length && !(s.extra || []).includes(grp[0]) && grp[1].every(it => (it.brand || "Generic") === grp[0]) ? natural : other).push(grp);
+    out.push(...byBrand(natural.flatMap(g => g[1]), bo[s.key]));
+    rest = other;
+  }
+  for (const [g, its] of rest) out.push(...(splitByBrand(h, s, g) ? byBrand(its, bo[s.key + "/" + g]) : its));
+  return out.map(it => it.id);
+}
 /* the items a manufacturer list shows: a group's items, or a flat subcategory's items that sit with their manufacturer */
 function listItems(h, listKey) {
   const [c, sId, g] = splitKey(listKey), s = subOf(h, c, sId);
@@ -3136,7 +3153,7 @@ function treeHtml(p, h) {
         brands = fmt.covs.map(({ cov, its }) => {
           const kF = kS + "#" + (cov || "other"), open = searching || app.open.has(kF);
           const nSel = its.filter(it => p.items[it.id]).length;
-          return `<details class="brand fmt" data-k="${esc(kF)}" ${open ? "open" : ""}><summary><span class="bname">${esc(COV_LABEL[cov] || "Other")}</span><span class="sumr">${selBadge(nSel, kF)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items flat">${brandRows(its, it => rowHtml(p, it, q), false, kS, null, kF, (peekEdits(h.id).brandOrder || {})[kS], searching)}</ul></details>`;
+          return `<details class="brand fmt" data-k="${esc(kF)}" ${open ? "open" : ""}><summary><span class="bname">${esc(COV_LABEL[cov] || "Other")}</span><span class="sumr">${selBadge(nSel, kF)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items flat">${brandRows(its, it => rowHtml(p, it, q), false, kS, null, kF, isFlat(h, s) ? (peekEdits(h.id).brandOrder || {})[kS] : s.gorder, searching)}</ul></details>`;
         }).join("") + fmt.other.map(renderGroup).join("");
       } else if (isFlat(h, s)) {
         // items sitting in their own manufacturer's group go in one list with a heading per manufacturer; folders you made stay folders
@@ -4449,7 +4466,7 @@ function catRank() {
   if (RANK) return RANK;
   RANK = new Map(); let n = 0;
   for (const h of HOUSES) for (const c of h.categories) for (const sub of [c.direct, ...c.subcategories]) {
-    for (const g of groupsOf(h, sub)) for (const it of sub.items) if (grpOf(it, sub) === g && !RANK.has(it.id)) RANK.set(it.id, n++);
+    for (const id of shownOrder(h, sub)) if (!RANK.has(id)) RANK.set(id, n++);
     for (const it of sub.items) if (!RANK.has(it.id)) RANK.set(it.id, n++);
   }
   return RANK;
@@ -7788,19 +7805,28 @@ function dragTarget(x, y) {
 function dropLabel(t) {
   const p = cur(), h = p && houseById(p.houseId);
   if (!h) return "";
+  const at = name => (t.after ? "after " : "before ") + name;   // a move within its own list says where in it
+  if (drag.kind === "cat" && t.ref) {
+    const e = ITEM.get(drag.id), r = ITEM.get(t.ref);
+    if (e && r && e.s === r.s && grpOf(e.it, e.s) === grpOf(r.it, r.s) && (!t.brand || t.brand === e.it.brand)) return at(r.it.name);
+  }
   if (drag.kind === "cat" && t.key) {
     const [c, s, g] = splitKey(t.key), sub = subOf(h, c, s);
     if (!sub) return "";
     if (sub.direct) return catOfSub(h, sub)?.name || "";
     return sub.name + (g && g !== NOFOLDER ? " › " + headLabel(h, sub.key + "/" + g, g) : "") + (t.brand ? " › " + t.brand : "");
   }
+  if (drag.kind === "csub" && t.ref && catOfSub(h, subByKey(h, drag.id))?.id === t.cat) return at(subByKey(h, t.ref)?.name || "");
   if (drag.kind === "csub" && t.cat) return h.categories.find(c => c.id === t.cat)?.name || "";
+  if (drag.kind === "cgrp" && t.ref && splitKey(drag.id).slice(0, 2).join("/") === t.sub) return at(headLabel(h, t.sub + "/" + t.ref, t.ref));
   if (drag.kind === "cgrp" && t.sub) return subByKey(h, t.sub)?.name || "";
+  if (drag.kind === "ccat" && t.ref) return at(h.categories.find(c => c.id === t.ref)?.name || "");
   if (drag.kind === "cmfr") {
     if (t.list === drag.id && t.ref) return (t.after ? "after " : "before ") + t.ref;
     const [c, sId, g] = splitKey(t.list || ""), sub = subOf(h, c, sId);
     return sub ? sub.name + (g ? " › " + headLabel(h, t.list, g) : "") : "";
   }
+  if (drag.kind === "line" && t.ref && p.items[drag.id] && p.items[t.ref] && t.sec === p.items[drag.id].section) return at(p.items[t.ref].name || ITEM.get(t.ref)?.it.name || "");
   if (drag.kind === "line" && t.sec) return secName(t.sec);
   if (drag.kind === "sec" && t.ref) return `${t.col === "R" ? "right" : "left"} column, ${t.after ? "after" : "before"} ${secName(t.ref)}`;
   return "";
@@ -7809,13 +7835,27 @@ function paintTarget(t) {
   document.querySelectorAll(".drop-on, .drop-before, .drop-after").forEach(n => n.classList.remove("drop-on", "drop-before", "drop-after"));
   if (t && !t.self) t.el.classList.add(t.ref ? (t.after ? "drop-after" : "drop-before") : "drop-on");
 }
+/* the part of the screen the list shows in: below the bar at the top, above the tab bar at the bottom */
+function dragBounds() {
+  const bar = document.querySelector(".bar"), nav = document.querySelector(".navbar");
+  const top = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0, H = window.innerHeight;
+  const bot = nav && !nav.hidden && nav.offsetHeight ? Math.min(H, nav.getBoundingClientRect().top) : H;
+  return { top, bot: bot > top + 40 ? bot : H };
+}
+/* the label that follows the finger: what is moved, and where it would land. It rides above the finger, so the place it would
+   land (under the finger) stays in sight */
+function ghostSet(dest) {
+  const g = drag.ghost; if (!g) return;
+  g.innerHTML = `<b>${esc(drag.label0)}</b>${dest ? `<span>→ ${esc(dest)}</span>` : ""}`;
+  const w = g.offsetWidth, hh = g.offsetHeight;
+  g.style.transform = `translate(${Math.round(Math.max(8, Math.min(innerWidth - w - 8, drag.x - w / 2)))}px, ${Math.round(Math.max(4, drag.y - hh - 44))}px)`;
+}
 function moveDrag() {
-  drag.ghost.style.transform = `translate(${Math.round(drag.x + 14)}px, ${Math.round(drag.y - 20)}px)`;
   const chip = drag.kind !== "line" ? document.elementFromPoint(drag.x, drag.y)?.closest(".chip[data-cat]") : null;
   if (chip) {
     paintTarget(null); drag.target = null;
     const name = chip.dataset.cat === "all" ? "all categories" : chip.textContent.replace(/\d+/g, "").trim();
-    drag.ghost.textContent = drag.label0 + "  →  show " + name;
+    ghostSet("show " + name);
     if (drag.chip !== chip.dataset.cat) {
       clearTimeout(drag.ct); drag.chip = chip.dataset.cat;
       drag.ct = setTimeout(() => { if (drag.on && drag.chip === chip.dataset.cat) showCategoryWhileDragging(chip.dataset.cat); }, 450);
@@ -7823,11 +7863,13 @@ function moveDrag() {
     return;
   }
   clearTimeout(drag.ct); drag.chip = null;
-  drag.target = dragTarget(drag.x, drag.y);
+  // a finger over the bar at the top or the tab bar at the bottom (where the page scrolls) drops at the list's edge
+  const { top, bot } = dragBounds(), y = Math.min(Math.max(drag.y, top + 2), bot - 2);
+  drag.target = dragTarget(drag.x, y);
   paintTarget(drag.target);
-  drag.ghost.textContent = drag.label0 + (drag.target && !drag.target.self ? "  →  " + dropLabel(drag.target) : "");
+  ghostSet(drag.target && !drag.target.self ? dropLabel(drag.target) : "");
   // hovering a closed heading opens it, so an item can travel into a collapsed group
-  const sum = drag.kind === "ccat" ? null : document.elementFromPoint(drag.x, drag.y)?.closest(drag.kind === "csub" ? "#tree details.cat > summary" : drag.kind === "cgrp" || drag.kind === "cmfr" ? "#tree details.cat > summary, #tree details.sub > summary" : "#tree summary");
+  const sum = drag.kind === "ccat" ? null : document.elementFromPoint(drag.x, y)?.closest(drag.kind === "csub" ? "#tree details.cat > summary" : drag.kind === "cgrp" || drag.kind === "cmfr" ? "#tree details.cat > summary, #tree details.sub > summary" : "#tree summary");
   const d = sum && sum.parentElement;
   if (d && !d.open) {
     const moved = drag.hx === undefined || Math.hypot(drag.x - drag.hx, drag.y - drag.hy) > 24;
@@ -7866,10 +7908,14 @@ function startDrag() {
     const wrap = document.getElementById("listSecs"), t0 = drag.row ? drag.row.getBoundingClientRect().top : 0;
     if (wrap) { wrap.classList.add("sec-drag"); if (drag.row) window.scrollBy(0, drag.row.getBoundingClientRect().top - t0); }
   }
+  if (["ccat", "csub", "cgrp", "cmfr"].includes(drag.kind)) {  // the same in the catalog: while a heading is moved, every list folds to its headings, the one held stays under the finger
+    const tree = document.getElementById("tree"), t0 = drag.row ? drag.row.getBoundingClientRect().top : 0;
+    if (tree) { tree.classList.add("fold-" + drag.kind); if (drag.row) window.scrollBy(0, drag.row.getBoundingClientRect().top - t0); }
+  }
   const loop = () => {
     if (!drag.on) return;
-    const bar = document.querySelector(".bar"), top = bar ? Math.max(0, bar.getBoundingClientRect().bottom) : 0;
-    const m = 72, H = window.innerHeight, y = drag.y;
+    const { top, bot } = dragBounds();
+    const m = 72, H = bot, y = drag.y;
     // nothing above the catalog takes a drop, so once its top is in view, stop scrolling up
     const tree = drag.kind !== "line" && document.getElementById("tree");
     const atTop = tree && tree.getBoundingClientRect().top >= top;
@@ -7879,12 +7925,27 @@ function startDrag() {
   };
   drag.raf = requestAnimationFrame(loop);
 }
+/* after a drop in the catalog: what was moved shows where the finger let it go and lights up a moment, so even a move of one place is seen */
+function dropFlash(sel, y0) {
+  const el = document.querySelector(sel); if (!el) return;
+  const r = el.getBoundingClientRect(), { top, bot } = dragBounds();
+  if (y0 != null) window.scrollBy(0, r.top + r.height / 2 - y0);
+  else if (r.top < top || r.bottom > bot) window.scrollBy(0, r.top - (top + bot - r.height) / 2);
+  const r2 = el.getBoundingClientRect();   // all of it in sight, clear of the bars
+  if (r2.bottom > bot - 6) window.scrollBy(0, r2.bottom - bot + 6); else if (r2.top < top + 6) window.scrollBy(0, r2.top - top - 6);
+  replay(el, "flash");
+}
 function endDrag(drop) {
   const { on, target: t, kind, id, brand: dragBrand } = drag;
   cancelAnimationFrame(drag.raf); clearTimeout(drag.ht); clearTimeout(drag.ct); drag.chip = null; drag.origin = null;
   document.getElementById("dragHold")?.remove();
   drag.ghost?.remove(); drag.row?.classList.remove("dragging"); document.body.classList.remove("is-dragging"); paintTarget(null);
   document.getElementById("listSecs")?.classList.remove("sec-drag");
+  // the catalog opens back up around the heading that was held, which stays where the finger left it
+  const tree = document.getElementById("tree"), held = drag.row, heldY = tree && /\bfold-c/.test(tree.className) && held && held.isConnected ? held.getBoundingClientRect().top : null;
+  if (tree) tree.classList.remove("fold-ccat", "fold-csub", "fold-cgrp", "fold-cmfr");
+  if (heldY !== null) window.scrollBy(0, held.getBoundingClientRect().top - heldY);
+  const eb = dragBounds(), dropY = Math.min(Math.max(drag.y, eb.top + 2), eb.bot - 2);   // where it was let go: what moved shows there
   Object.assign(drag, { pending: false, on: false, ghost: null, target: null, hover: null, row: null });
   if (!on) {
     if (drop && kind === "cat" && cur()) catEditDialog(houseById(cur().houseId), id);
@@ -7895,23 +7956,23 @@ function endDrag(drop) {
   if (!drop || !t || t.self || !p) return;
   if (kind === "cat") {
     const h = houseById(p.houseId);
-    const before = ITEM.get(id)?.s;
+    const e0 = ITEM.get(id), before = e0 && e0.s.key + "/" + grpOf(e0.it, e0.s);
     let moved = moveCatItem(h, id, t.key);
     if (t.ref) moved = reorderItem(h, id, t.ref, t.after) || moved;
     if (t.brand && t.brand !== ITEM.get(id)?.it.brand) moved = setItemBrand(h, id, t.brand) || moved;
     if (moved) {
       const e = ITEM.get(id), g = grpOf(e.it, e.s);
       app.open.add(e.c.id); app.open.add(e.s.key); app.open.add(e.s.key + "/" + g);
-      rerenderKeepScroll();
+      rerenderKeepScroll(); dropFlash(`#tree li[data-row="${CSS.escape(id)}"]`, dropY);
       if (t.brand) toast(`Moved to ${t.brand}`);
-      else if (before !== e.s || !t.ref) toast(e.s.direct ? `Moved to ${e.c.name}` : `Moved to ${e.s.name}${g ? " › " + headLabel(h, e.s.key + "/" + g, g) : ""}`);
+      else if (before !== e.s.key + "/" + g) toast(e.s.direct ? `Moved to ${e.c.name}` : `Moved to ${e.s.name}${g ? " › " + headLabel(h, e.s.key + "/" + g, g) : ""}`);
     }
   } else if (kind === "cmfr") {
     const h = houseById(p.houseId);
     if (moveBrand(h, id, dragBrand, t.list, t.ref, t.after)) {
       const [c, sId, g] = splitKey(t.list), sub = subOf(h, c, sId);
       if (sub) { app.open.add(catOfSub(h, sub)?.id); app.open.add(sub.key); if (g) app.open.add(t.list); }
-      rerenderKeepScroll();
+      rerenderKeepScroll(); dropFlash(`#tree li.mfr-head[data-list="${CSS.escape(t.list)}"][data-brand="${CSS.escape(dragBrand)}"]`, dropY);
       if (t.list !== id && sub) toast(`${dragBrand} moved to ${sub.name}${g ? " › " + headLabel(h, t.list, g) : ""}`);
     }
   } else if (kind === "cgrp") {
@@ -7919,7 +7980,7 @@ function endDrag(drop) {
     if (moveGroup(h, id, t.sub, t.ref, t.after)) {
       const to = subByKey(h, t.sub);
       app.open.add(t.sub); if (to) app.open.add(catOfSub(h, to).id);
-      rerenderKeepScroll();
+      rerenderKeepScroll(); dropFlash(`#tree details.brand[data-k="${CSS.escape(t.sub + "/" + splitKey(id)[2])}"] > summary`, dropY);
       if (splitKey(id)[0] + "/" + splitKey(id)[1] !== t.sub && to) toast(`Moved to ${to.name}`);
     }
   } else if (kind === "sec") {
@@ -7931,10 +7992,11 @@ function endDrag(drop) {
       toast(`${secName(id)}: ${t.col === "R" ? "right" : "left"} column of the page`);
     } else rerenderKeepScroll();
   } else if (kind === "ccat") {
-    if (moveCat(houseById(p.houseId), id, t.ref, t.after)) rerenderKeepScroll();
+    if (moveCat(houseById(p.houseId), id, t.ref, t.after)) { rerenderKeepScroll(); dropFlash(`#tree details.cat[data-k="${CSS.escape(id)}"] > summary`, dropY); }
   } else if (kind === "csub") {
     const h = houseById(p.houseId);
-    if (moveSub(h, id, t.cat, t.ref, t.after)) { app.open.add(t.cat); rerenderKeepScroll(); toast(`Moved to ${h.categories.find(c => c.id === t.cat)?.name || ""}`); }
+    const from = catOfSub(h, subByKey(h, id))?.id;
+    if (moveSub(h, id, t.cat, t.ref, t.after)) { app.open.add(t.cat); rerenderKeepScroll(); dropFlash(`#tree details.sub[data-k="${CSS.escape(id)}"] > summary`, dropY); if (from !== t.cat) toast(`Moved to ${h.categories.find(c => c.id === t.cat)?.name || ""}`); }
   } else {
     const moved = moveLine(p, id, t.sec, t.ref, t.after);
     rerenderKeepScroll();
