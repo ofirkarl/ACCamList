@@ -2256,10 +2256,20 @@ function deleteProductions(ids) {
 }
 /* a copy of a production, and of its 2nd Unit when it has one */
 function dupWithUnit(src, fields) {
-  const c = copyProduction(src, fields); delete c.unit2; app.productions.push(c); touch(c);
+  const c = copyProduction(src, fields); delete c.unit2; if (c.mainOf) { delete c.mainOf; c.unit = ""; } app.productions.push(c); touch(c);
   const q = unit2Of(src);
   if (q) { const cq = copyProduction(q, { name: c.name, company: c.company, mainOf: c.id }); app.productions.push(cq); c.unit2 = cq.id; touch(cq); }
   return c;
+}
+/* a list that says it is a production's 2nd Unit while that production's 2nd Unit is another list (a copy made from a 2nd Unit
+   before this was fixed) is hidden from the productions: it becomes a production of its own again. Run on the saved lists at start */
+function unitRepair() {
+  let n = 0;
+  for (const x of app.productions) {
+    const m = x.mainOf ? findProd(x.mainOf) : null;
+    if (m && m.unit2 !== x.id) { delete x.mainOf; x.unit = ""; touch(x); n++; }
+  }
+  return n;
 }
 /* the 2nd Unit's list: a copy of the main one, or empty */
 function unit2StartDialog(p) {
@@ -2269,8 +2279,11 @@ function unit2StartDialog(p) {
       <button class="btn" type="button" data-act="u2-empty" data-id="${esc(p.id)}">Start empty</button></div></div>`);
 }
 function startDuplicate(id) {
-  if (!app.productions.some(x => x.id === id)) return;
-  app.sel = null; app.dupFrom = id; app.formFor = null; app.view = "form"; render(); window.scrollTo(0, 0);
+  const x = findProd(id); if (!x) return;
+  // a production shown by its 2nd Unit's list (its Main list empty) is duplicated whole, both units: never the 2nd Unit alone,
+  // whose copy would still say it belongs to the original production and so be hidden from the productions
+  const m = x.mainOf ? findProd(x.mainOf) || x : x;
+  app.sel = null; app.dupFrom = m.id; app.formFor = null; app.view = "form"; render(); window.scrollTo(0, 0);
   document.getElementById("f-name")?.select();
 }
 /* the standalone app's account line: who is signed in, or why to sign in (inside Claude there is nothing to show) */
@@ -7584,7 +7597,7 @@ document.addEventListener("submit", e => {
     }
     const was = app.pid;
     if (p) { Object.assign(p, fields); toast("Details saved"); }
-    else if (src) { p = copyProduction(src, fields); delete p.unit2; app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
+    else if (src) { p = copyProduction(src, fields); delete p.unit2; if (p.mainOf) { delete p.mainOf; p.unit = ""; } app.productions.push(p); app.tab = "list"; toast(`Made ${p.name} with ${totals(p).lines} items`); }
     else {
       p = newProduction(fields); app.productions.push(p); app.tab = "add";
       const sl = v.startList && savedLists().find(x => x.id === v.startList);
@@ -8031,6 +8044,7 @@ document.addEventListener("keydown", e => {
 app.productions = lsGet(LS_KEY, []);
 if (!Array.isArray(app.productions)) app.productions = [];
 for (const pr of app.productions) upData(pr, "production");
+unitRepair();
 {
   const s = lsGet(LS_SET, null);
   if (s && typeof s === "object") app.settings = { favorites: {}, rules: [], ...s };
