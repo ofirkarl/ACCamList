@@ -2998,13 +2998,13 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h), wl = on && p.items[it.id].tx !== undefined ? p.items[it.id] : null;
-  /* the product page globe pinned to the row's top-right corner, Add / the counter to its bottom-right corner; the name and the
-     details (tags, close focus lens by lens) run in full-width lines between them, the last line keeping clear of Add (a spacer) */
-  const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "", specs = specsHtml(it, extra, { q }), note = noteHtml(it.id);
+  /* the row's tools (favorite, product page) at its top-right, Add / the counter at its bottom-right, as on the Camera List; the name
+     and the details (tags, close focus lens by lens) run in full-width lines between them, the last one keeping clear of Add */
+  const specs = specsHtml(it, extra, { q }), note = noteHtml(it.id);
   const sp = `<span class="ctl-sp" aria-hidden="true"></span>`;
   const name = `<span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>`;
-  return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
-    <span class="info"><span class="nm-row">${name}${specs || note ? "" : sp}</span>${specs ? (note ? specs : specs.replace(/<\/span>$/, sp + "</span>")) : ""}${note ? note + `<span class="ctl-sp blk" aria-hidden="true"></span>` : ""}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
+  return `<li class="item ${on ? "on" : ""}${link ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">
+    <span class="info"><span class="tools">${starBtn(it.id, { name: it.name, section: it.section })}${link}</span><span class="nm-row">${name}${specs || note ? "" : sp}</span>${specs ? (note ? specs : specs.replace(/<\/span>$/, sp + "</span>")) : ""}${note ? note + `<span class="ctl-sp blk" aria-hidden="true"></span>` : ""}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
 }
 
 /* ----- Add Gear: the rental house catalog ----- */
@@ -4475,6 +4475,12 @@ function lineHtml(p, id, l) {
   const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
+  /* the line: its tools (favorite, product page, edit, remove) at the top-right, the counter at the bottom-right; the name and the
+     details run in full-width lines between them, the last one keeping clear of the counter (a spacer at its end) */
+  const SP = `<span class="ctl-sp" aria-hidden="true"></span>`, meta = chips || (l.custom ? `<button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button>` : "");
+  const lineBody = `<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${meta || perL ? "" : SP}</span>`
+    + (meta ? `<span class="l-meta">${meta}${perL ? "" : SP}</span>` : "")
+    + (perL ? `<span class="l-per">${perL.replace(/<\/span>$/, SP + "</span>")}</span>` : "");
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
   const editor = editing ? `<div class="editor">
       <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}">${e ? `<span class="hint">A new name is kept in ${esc(e.h.name)}'s catalog too, for your next lists.</span>` : ""}</div>
@@ -4485,10 +4491,9 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid${chips || l.custom ? "" : " no-meta"}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span></span>
-        <span class="l-right"><span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">${EDIT_ICON}</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">${X_ICON}</button></span>
-        <span class="l-bottom">${qtys}</span></span>
-        ${chips ? `<span class="l-meta">${chips}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}${perL ? `<span class="l-per">${perL}</span>` : ""}</div>
+      <div class="l-grid l-flow${l.tx !== undefined && !wlEven(id, l) ? " sets" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>
+        <span class="l-body"><span class="tools">${starBtn(key, { name: l.name, section: l.section })}${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">${EDIT_ICON}</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">${X_ICON}</button></span>${lineBody}</span>
+        <span class="l-bottom">${qtys}</span></div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}

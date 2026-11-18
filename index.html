@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611182201";
+window.AC_BUILD = "202611182214";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -2990,6 +2990,33 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .cpf-res { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 34vh; overflow: auto; font-size: 14px; }
 .cpf-res li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
 .cpf-arrow { color: var(--muted); }
+/* a Camera List line: the tools (favorite, product page, edit, remove) pinned top-right, the counter bottom-right, the name and the
+   details in full-width lines between them: the name wraps under the tools, the last line keeps clear of the counter */
+.line .l-grid.l-flow { display: flex; align-items: flex-start; gap: 4px; position: relative; }
+.line .l-flow > .handle { flex: none; width: 22px; align-self: stretch; margin-inline-start: -4px; }
+.line .l-flow > .l-body { display: flow-root; flex: 1; min-width: 0; }
+.line .l-body > .tools { float: right; display: flex; margin: -4px -4px -8px 8px; }
+.line .l-body > .tools > :is(.star, .ext, .ext-gap, .iconbtn, .x) { width: 30px; height: 26px; min-height: 0; min-width: 0; padding: 0; font-size: 16px; display: inline-grid; place-items: center; }
+.line .l-body > .tools svg { width: 15px; height: 15px; }
+.line .l-body > .tools > .ext-gap { display: none; }
+.line .l-body > .nm-col { display: block; line-height: 1.35; }
+.line .l-body > .nm-col .nm { overflow-wrap: anywhere; }
+.line .l-body > .l-meta { display: block; margin-top: 3px; line-height: 24px; }
+.line .l-body > .l-meta > .specs { display: inline; }
+.line .l-body > .l-meta > .specs > * { display: inline-block; vertical-align: middle; margin-inline-end: 8px; line-height: 1.35; }
+.line .l-body > .l-per { display: block; margin-top: 4px; }
+.line .l-flow > .l-bottom { position: absolute; right: -2px; bottom: 0; display: flex; }
+.line .l-flow .ctl-sp { display: inline-block; width: 104px; height: 34px; vertical-align: middle; }
+.line .l-flow.sets .ctl-sp { width: 132px; }
+.line .l-flow .lt-row > .ctl-sp { width: 100px; }
+/* Add Gear / Favorites rows, as the Camera List's: the tools (favorite, product page) at the top-right, the name wrapping under them */
+#tree li.item, .fav-list li.item { padding-inline-start: 14px; }
+.item.has-link { min-height: 0; }
+.item > .info > .tools { float: right; display: flex; margin: -5px -6px -8px 8px; }
+.item > .info > .tools > :is(.star, .ext) { width: 30px; height: 28px; min-height: 0; min-width: 0; margin: 0; padding: 0; display: inline-grid; place-items: center; font-size: 17px; }
+.item > .info > .tools svg { width: 16px; height: 16px; }
+.item.has-link > .info > .nm-row { padding-inline-end: 0; }
+.browse-on .item > .info > .tools > .star { display: none; }
 </style>
 </head>
 <body>
@@ -6006,13 +6033,13 @@ if (typeof window !== "undefined" && window.addEventListener) {
 }
 function rowHtml(p, it, q, extra) {
   const on = !!p.items[it.id], e = ITEM.get(it.id), link = linkHtml(it, e?.h), wl = on && p.items[it.id].tx !== undefined ? p.items[it.id] : null;
-  /* the product page globe pinned to the row's top-right corner, Add / the counter to its bottom-right corner; the name and the
-     details (tags, close focus lens by lens) run in full-width lines between them, the last line keeping clear of Add (a spacer) */
-  const corner = link ? link.replace('class="ext"', 'class="ext corner"') : "", specs = specsHtml(it, extra, { q }), note = noteHtml(it.id);
+  /* the row's tools (favorite, product page) at its top-right, Add / the counter at its bottom-right, as on the Camera List; the name
+     and the details (tags, close focus lens by lens) run in full-width lines between them, the last one keeping clear of Add */
+  const specs = specsHtml(it, extra, { q }), note = noteHtml(it.id);
   const sp = `<span class="ctl-sp" aria-hidden="true"></span>`;
   const name = `<span class="nm nm-btn" role="button" tabindex="0" data-act="note" data-id="${esc(it.id)}" title="${esc(it.name)} · tap to add a note">${nameHtml(it.lens ? lensShortName(it, lensSpec(it, e?.s.id)) : it.name, q)}</span>`;
-  return `<li class="item ${on ? "on" : ""}${corner ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">${corner}${starBtn(it.id, { name: it.name, section: it.section })}
-    <span class="info"><span class="nm-row">${name}${specs || note ? "" : sp}</span>${specs ? (note ? specs : specs.replace(/<\/span>$/, sp + "</span>")) : ""}${note ? note + `<span class="ctl-sp blk" aria-hidden="true"></span>` : ""}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
+  return `<li class="item ${on ? "on" : ""}${link ? " has-link" : ""}${wl ? " has-tx" : ""}" data-row="${esc(it.id)}">
+    <span class="info"><span class="tools">${starBtn(it.id, { name: it.name, section: it.section })}${link}</span><span class="nm-row">${name}${specs || note ? "" : sp}</span>${specs ? (note ? specs : specs.replace(/<\/span>$/, sp + "</span>")) : ""}${note ? note + `<span class="ctl-sp blk" aria-hidden="true"></span>` : ""}</span><span class="ctl">${ctlHtml(p, it.id)}</span></li>`;
 }
 
 /* ----- Add Gear: the rental house catalog ----- */
@@ -7483,6 +7510,12 @@ function lineHtml(p, id, l) {
   const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
   const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
+  /* the line: its tools (favorite, product page, edit, remove) at the top-right, the counter at the bottom-right; the name and the
+     details run in full-width lines between them, the last one keeping clear of the counter (a spacer at its end) */
+  const SP = `<span class="ctl-sp" aria-hidden="true"></span>`, meta = chips || (l.custom ? `<button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button>` : "");
+  const lineBody = `<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span>${meta || perL ? "" : SP}</span>`
+    + (meta ? `<span class="l-meta">${meta}${perL ? "" : SP}</span>` : "")
+    + (perL ? `<span class="l-per">${perL.replace(/<\/span>$/, SP + "</span>")}</span>` : "");
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
   const editor = editing ? `<div class="editor">
       <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}">${e ? `<span class="hint">A new name is kept in ${esc(e.h.name)}'s catalog too, for your next lists.</span>` : ""}</div>
@@ -7493,10 +7526,9 @@ function lineHtml(p, id, l) {
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
     </div>` : "";
   return `<li class="line" data-line="${esc(id)}" data-s="${esc(hay)}">
-      <div class="l-grid${chips || l.custom ? "" : " no-meta"}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>${starBtn(key, { name: l.name, section: l.section })}<span class="nm-col"><span class="nm">${esc(l.name)}${l.note ? ` <span class="note">(${esc(l.note)})</span>` : ""}</span></span>
-        <span class="l-right"><span class="tools">${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">${EDIT_ICON}</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">${X_ICON}</button></span>
-        <span class="l-bottom">${qtys}</span></span>
-        ${chips ? `<span class="l-meta">${chips}</span>` : l.custom ? `<span class="l-meta"><button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button></span>` : ""}${perL ? `<span class="l-per">${perL}</span>` : ""}</div>
+      <div class="l-grid l-flow${l.tx !== undefined && !wlEven(id, l) ? " sets" : ""}"><button class="handle" type="button" data-drag="line" data-id="${esc(id)}" aria-label="Move ${esc(l.name)}: drag, or use the arrow keys">${GRIP}</button>
+        <span class="l-body"><span class="tools">${starBtn(key, { name: l.name, section: l.section })}${(e && linkHtml(e.it, e.h)) || `<span class="ext-gap" aria-hidden="true"></span>`}<button class="iconbtn" type="button" data-act="edit-line" data-id="${esc(id)}" aria-label="Edit ${esc(l.name)}" aria-expanded="${editing}">${EDIT_ICON}</button><button class="x" type="button" data-act="remove" data-id="${esc(id)}" aria-label="Remove ${esc(l.name)}">${X_ICON}</button></span>${lineBody}</span>
+        <span class="l-bottom">${qtys}</span></div>
       ${l.autoWhy ? `<span class="auto">${esc(`${l.auto} auto-added: ${l.autoWhy}`)}</span>` : ""}
       ${kids}
       ${editor}

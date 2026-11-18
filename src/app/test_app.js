@@ -360,7 +360,7 @@ ok(A.ITEM.get(find("fitussi", /^ARRI Alexa Mini$/)).it.url === "https://fitussi.
   ok(A.headerParts(pr).some(x => x.plain === "- Shoot: 03–04.12, 10.12.26 // 3 shoot days total") && /3–4\.12<\/span>, <span class="nw">10\.12\.26/.test(A.datesBtnHtml(a, z, days)), "the document and the dates button show the days picked"); }
 // --- Add Gear rows: the globe pinned to the top-right corner, Add to the bottom-right; the details' last line keeps clear of Add
 { const sig = find("utopia", /^ARRI Signature Prime T1\.8\/95mm/), h1 = A.rowHtml(p, A.ITEM.get(sig).it, ""), at = k => h1.indexOf(k);
-  ok(/^<li class="item [^"]*has-link[^"]*"[^>]*><a class="ext corner"/.test(h1) && at('class="nm ') < at('class="specs"') && at('class="ctl-sp"') > at('class="specs"') && /<\/span><\/span><span class="ctl">[\s\S]*<\/span><\/li>$/.test(h1), "a lens row: the globe in the corner, the details, Add at the bottom-right corner");
+  ok(/^<li class="item [^"]*has-link[^"]*"[^>]*>\s*<span class="info"><span class="tools"><button class="star"[^]*?<a class="ext"/.test(h1) && at('class="nm ') < at('class="specs"') && at('class="ctl-sp"') > at('class="specs"') && /<\/span><\/span><span class="ctl">[\s\S]*<\/span><\/li>$/.test(h1), "a lens row: the favorite and the globe at the top-right, the details, Add at the bottom-right");
   const plain = [...A.ITEM].find(([id, e]) => e.h.id === "utopia" && !e.it.lens && !e.it.camera && !A.specsHtml(e.it, "", {}))[0], h2 = A.rowHtml(p, A.ITEM.get(plain).it, "");
   ok(/<span class="nm-row">[\s\S]*class="ctl-sp"[\s\S]*<span class="ctl">/.test(h2) && !/class="specs"/.test(h2), "a row with no details: the name keeps clear of Add"); }
 const fitAll = [...A.ITEM.values()].filter(e => e.h.id === "fitussi"), utoAll = [...A.ITEM.values()].filter(e => e.h.id === "utopia" && !e.it.own);
@@ -931,7 +931,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 // --- round 18: a Camera List line like a Favorites row: the star before the name, the page, edit and remove in the corner
 { const q = A.newProduction({ name: "Rows", houseId: "utopia" }); A.app.productions.push(q); let id0; for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 1); id0 = id; break; }
   A.app.pid = q.id; A.app.view = "production"; A.app.tab = "list"; const v = A.viewProduction();
-  ok(/<button class="handle"[^]*?<\/button><button class="star"[^]*?<span class="nm-col">/.test(v) && /<span class="tools">[^]*?data-act="edit-line"[^]*?data-act="remove"/.test(v) && !/<span class="tools">[^<]*(<a[^]*?<\/a>)?<button class="star"/.test(v), "Camera List line: handle, star, name, stepper; product page, edit and remove in the corner");
+  ok(/<button class="handle"[^]*?<\/button>\s*<span class="l-body"><span class="tools"><button class="star"[^]*?data-act="edit-line"[^]*?data-act="remove"[^]*?<\/span><span class="nm-col">/.test(v) && /<span class="l-bottom">[^]*?class="stepper/.test(v), "Camera List line: the handle, then the tools (favorite, product page, edit, remove) at the top-right with the name wrapping under them, the counter at the bottom-right");
   A.app.view = "home"; }
 
 // --- a typed-in item joins the catalog: the star and the line move to the catalog item, nothing left twice
