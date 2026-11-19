@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611190817";
+window.AC_BUILD = "202611190822";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3008,9 +3008,13 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* Add Gear / Favorites rows, as the Camera List's: the tools (favorite, product page) at the top-right, the name wrapping under them */
 #tree li.item, .fav-list li.item { padding-inline-start: 14px; }
 #tree li.item.edit { align-items: center; }
-/* the preview's page count: how many pages the PDF comes to */
-.pv-pages { flex: none; font-size: 12.5px; font-weight: 600; color: var(--accent); white-space: nowrap; padding: 3px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent); }
+/* the preview's format (1 2 3: one column, Media beside, two columns) and how many pages it prints to, on the label line */
+.pv-lrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.pv-pages { text-transform: none; letter-spacing: 0; font-size: 12px; }
 .pv-pages:empty { display: none; }
+.pv-seg.pv-fmt { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pv-seg.pv-fmt .btn { justify-content: center; font-variant-numeric: tabular-nums; }
+.pv-seg.pv-fmt .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); position: relative; z-index: 1; }
 /* while a heading is moved (a category, subcategory, folder or manufacturer), the lists fold to their headings, as Camera List sections do */
 #tree.fold-ccat details.cat > .cat-body,
 #tree.fold-csub .cat-body > :not(details.sub, ul.items.direct), #tree.fold-csub details.sub > :not(summary),
@@ -9552,12 +9556,13 @@ function openPreview(p) {
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
   if (app.settings.exportLayout === "table") { app.settings.exportLayout = "clean"; touchSettings(); }  // one layout now
-  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><span class="pv-pages" id="pvPages" title="Pages when printed (the PDF)"></span>
+  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
-    <div class="pv-units pv-cols"><span class="seg sm" role="group" aria-label="Page layout">${[["one", "One column"], ["media", "Media beside"], ["two", "Two columns"]].map(([k, t]) => `<button type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}">${t}</button>`).join("")}</span></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
     <div class="pv-actions">
+      <div class="pv-save" role="group" aria-labelledby="pv-fmt-l"><span class="pv-lrow"><span class="pv-lbl" id="pv-fmt-l">Format</span><span class="pv-lbl pv-pages" id="pvPages"></span></span>
+        <div class="pv-seg pv-fmt">${[["one", "1"], ["media", "2"], ["two", "3"]].map(([k, t], i) => `<button class="btn" type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}" aria-label="Format ${t}: ${["one column", "Media beside Camera and Lens", "two columns"][i]}">${t}</button>`).join("")}</div></div>
       <div class="pv-save" role="group" aria-labelledby="pv-save-l"><span class="pv-lbl" id="pv-save-l">Save to this ${isTouch() ? "phone" : "computer"}</span>
         <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button></div></div>
       <div class="pv-send" role="group" aria-labelledby="pv-send-l"><span class="pv-lbl" id="pv-send-l">Send</span>

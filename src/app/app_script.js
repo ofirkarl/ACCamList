@@ -6503,12 +6503,13 @@ function openPreview(p) {
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
   if (app.settings.exportLayout === "table") { app.settings.exportLayout = "clean"; touchSettings(); }  // one layout now
-  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><span class="pv-pages" id="pvPages" title="Pages when printed (the PDF)"></span>
+  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
-    <div class="pv-units pv-cols"><span class="seg sm" role="group" aria-label="Page layout">${[["one", "One column"], ["media", "Media beside"], ["two", "Two columns"]].map(([k, t]) => `<button type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}">${t}</button>`).join("")}</span></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
     <div class="pv-actions">
+      <div class="pv-save" role="group" aria-labelledby="pv-fmt-l"><span class="pv-lrow"><span class="pv-lbl" id="pv-fmt-l">Format</span><span class="pv-lbl pv-pages" id="pvPages"></span></span>
+        <div class="pv-seg pv-fmt">${[["one", "1"], ["media", "2"], ["two", "3"]].map(([k, t], i) => `<button class="btn" type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}" aria-label="Format ${t}: ${["one column", "Media beside Camera and Lens", "two columns"][i]}">${t}</button>`).join("")}</div></div>
       <div class="pv-save" role="group" aria-labelledby="pv-save-l"><span class="pv-lbl" id="pv-save-l">Save to this ${isTouch() ? "phone" : "computer"}</span>
         <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button></div></div>
       <div class="pv-send" role="group" aria-labelledby="pv-send-l"><span class="pv-lbl" id="pv-send-l">Send</span>
