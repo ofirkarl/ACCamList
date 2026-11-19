@@ -706,6 +706,28 @@ function promoteGroup(h, gkey, cat, refSub, after) {
   applyCatalog(); touchSettings();
   return { key: nk, name, removed };
 }
+/* a subcategory made a category of its own, placed before or after refCat: its folders become the new category's
+   subcategories, its loose items the category's own items; the subcategory, left empty, goes */
+function promoteSub(h, skey, refCat, after) {
+  const from = subByKey(h, skey); if (!from) return null;
+  const ed = catEdits(h.id), name = from.name, groups = groupItems(from.items, from), extra = (from.extra || []).filter(g => !groups.some(([x]) => x === g));
+  const [cid] = addCategory(h, name);
+  for (const [g, its] of groups) {
+    const ids = its.map(x => x.id);
+    if (!g) { for (const id of ids) moveCatItem(h, id, cid + "/_"); continue; }
+    const nk = addSubcategory(h, cid, headLabel(h, skey + "/" + g, g), ITEM.get(ids[0])?.it.section || from.section, true);
+    applyCatalog();
+    for (const id of ids) moveCatItem(h, id, nk);
+  }
+  for (const g of extra) addSubcategory(h, cid, headLabel(h, skey + "/" + g, g), from.section, true);
+  delete ed.groups[skey]; delete ed.groupOrder[skey];
+  applyCatalog();
+  moveCat(h, cid, refCat, after);
+  const left = subByKey(h, skey);
+  if (left && !left.items.length) { if (customDef(h, skey)) deleteCustom(h, skey); else (ed.hideSubs || (ed.hideSubs = [])).includes(skey) || ed.hideSubs.push(skey); }
+  applyCatalog(); touchSettings();
+  return { id: cid, name };
+}
 /* every folder (group) in a subcategory, in display order, including the user's empty ones */
 function subGroupNames(h, sub) {
   const names = groupItems(sub.items, sub).map(([g]) => g).filter(Boolean);
@@ -7984,7 +8006,11 @@ function dragTarget(x, y) {
       return { el: d, cat: d.closest("details.cat").dataset.k, ref: d.dataset.k, after: y > r.top + r.height / 2 };
     }
     const c = el.closest("#tree details.cat");
-    return c ? { el: c.querySelector(":scope > summary"), cat: c.dataset.k, ref: null } : null;
+    if (!c) return null;
+    const cs = c.querySelector(":scope > summary"), r = cs.getBoundingClientRect(), e = Math.max(14, r.height * .3);
+    if (y >= r.top && y < r.top + e) return { el: c, toCat: true, refCat: c.dataset.k, after: false, side: "before" };   // a category's heading, top or bottom third: a category of its own there
+    if (y <= r.bottom && y > r.bottom - e) return { el: c, toCat: true, refCat: c.dataset.k, after: true, side: "after" };
+    return { el: cs, cat: c.dataset.k, ref: null };
   }
   if (drag.kind === "sec") {
     const sc = el.closest("#listSecs .section[data-sec]"); if (!sc) return null;
@@ -8018,6 +8044,7 @@ function dropLabel(t) {
     if (sub.direct) return into + (catOfSub(h, sub)?.name || "");
     return into + sub.name + (g && g !== NOFOLDER ? " › " + headLabel(h, sub.key + "/" + g, g) : "") + (t.brand ? " › " + t.brand : "");
   }
+  if (drag.kind === "csub" && t.toCat) return `category ${t.after ? "after" : "before"} ${h.categories.find(c => c.id === t.refCat)?.name || ""}`;
   if (drag.kind === "csub" && t.block) { const n = t.ids[t.after ? t.ids.length - 1 : 0]; return at(ITEM.get(n)?.it.name || ""); }
   if (drag.kind === "csub" && t.ref && catOfSub(h, subByKey(h, drag.id))?.id === t.cat) return at(subByKey(h, t.ref)?.name || "");
   if (drag.kind === "csub" && t.cat) return h.categories.find(c => c.id === t.cat)?.name || "";
@@ -8232,6 +8259,11 @@ function endDrag(drop) {
     if (moveCat(houseById(p.houseId), id, t.ref, t.after)) { rerenderKeepScroll(); dropFlash(`#tree details.cat[data-k="${CSS.escape(id)}"] > summary`, dropY); }
   } else if (kind === "csub") {
     const h = houseById(p.houseId);
+    if (t.toCat) {
+      const snap = clone((app.settings.catalog || {})[h.id] || {}), r = promoteSub(h, id, t.refCat, t.after);
+      if (r) { app.open.add(r.id); rerenderKeepScroll(); dropFlash(`#tree details.cat[data-k="${CSS.escape(r.id)}"] > summary`, dropY); undoable("Made a category:", r.name, () => { (app.settings.catalog || (app.settings.catalog = {}))[h.id] = snap; applyCatalog(); touchSettings(); rerenderKeepScroll(); }); }
+      return;
+    }
     const from = catOfSub(h, subByKey(h, id))?.id;
     if (t.block ? subByBlock(h, id, t) : moveSub(h, id, t.cat, t.ref, t.after)) { app.open.add(t.cat); rerenderKeepScroll(); dropFlash(`#tree details.sub[data-k="${CSS.escape(id)}"] > summary`, dropY); if (from !== t.cat) toast(`Moved to ${h.categories.find(c => c.id === t.cat)?.name || ""}`); }
   } else {
