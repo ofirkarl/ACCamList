@@ -4489,7 +4489,7 @@ function savedListsHtml(p, h) {
 /* a saved list opened: the same card in the same place (back and edit beside the name), then the list section by section like the Camera List */
 function savedListOpenHtml(L) {
   const pp = listProd(L), by = linesBySection(pp), m = (app.listMul || {})[L.id] || 1;
-  const kids = it => (it.kids || []).length ? `<ul class="kids">${it.kids.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
+  const kids = it => (it.kids || []).length ? `<ul class="kids">${it.kids.map(c => `<li>– ${c.qty ? c.qty + "x " : ""}${esc(c.name)}</li>`).join("")}</ul>` : "";
   const byId = Object.fromEntries(L.items.map((it, i) => [it.id || "c" + i, it]));
   const secs = allSections().filter(s => by[s.id].length).map(s => `<div class="section" style="--tape: ${secTape(s)}"><h3><span>${tapeIcon(s.custom ? "custom" : s.id, secName(s.id))}${esc(secName(s.id))}</span><span class="cnt num">${by[s.id].reduce((a, [, l]) => a + l.qty, 0)}</span></h3>
       <div class="sec-body"><ul class="lines">${by[s.id].map(([id, l]) => { const it = byId[id]; return `<li class="line sl-line"><span class="sl-q num">${it.qty} x</span><span class="sl-ln"><span dir="auto">${esc(l.name)}</span>${it.note ? `<span class="sl-lnote" dir="auto"> (${esc(it.note)})</span>` : ""}${kids(it)}</span></li>`; }).join("")}</ul></div></div>`).join("");
@@ -4574,7 +4574,7 @@ function lineHtml(p, id, l) {
   const qtys = l.tx !== undefined
     ? (wlEven(id, l) ? stepper("l", id, lineQty(l), null, false) : setsCtl("l", id, l))   // wireless video: sets where every item has its quantity (a 1:1 set: whole sets only)
     : stepper("l", id, l.qty, null, false);
-  const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty}x ${esc(c.name)}</li>`).join("")}</ul>` : "";
+  const kids = (l.children || []).length ? `<ul class="kids">${l.children.map(c => `<li>– ${c.qty ? c.qty + "x " : ""}${esc(c.name)}</li>`).join("")}</ul>` : "";
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   // the short details (format, stop, mount) sit under the name; a set's lens-by-lens line takes the whole width below
   const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
@@ -4587,7 +4587,7 @@ function lineHtml(p, id, l) {
   const editor = editing ? `<div class="editor">
       <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}">${e ? `<span class="hint">A new name is kept in ${esc(e.h.name)}'s catalog too, for your next lists.</span>` : ""}</div>
       <div class="field"><span class="lbl">Sub-items</span>
-        <ul class="children">${(l.children || []).map(c => `<li class="child">${stepper("k", id + "|" + c.id, c.qty, null, true)}<input type="text" data-kname="${esc(id + "|" + c.id)}" value="${esc(c.name)}" aria-label="Sub-item name"><button class="x" type="button" data-act="krm" data-id="${esc(id + "|" + c.id)}" aria-label="Remove ${esc(c.name)}">×</button></li>`).join("")}</ul>
+        <ul class="children">${(l.children || []).map(c => `<li class="child">${stepper("k", id + "|" + c.id, c.qty || "", null, true).replace('value=""', 'value="" placeholder="—" title="No quantity: − below 1, + to count again"')}<input type="text" data-kname="${esc(id + "|" + c.id)}" value="${esc(c.name)}" aria-label="Sub-item name"><button class="x" type="button" data-act="krm" data-id="${esc(id + "|" + c.id)}" aria-label="Remove ${esc(c.name)}">×</button></li>`).join("")}</ul>
         <form class="custom-add" data-kadd="${esc(id)}" autocomplete="off"><input name="name" placeholder="Add a sub-item" aria-label="New sub-item"><button type="submit">+ Add</button></form></div>
       <div class="field"><label for="eo-${esc(id)}">Note</label><input data-sug="note" id="eo-${esc(id)}" type="text" data-note="${esc(id)}" placeholder="Shown in brackets after the name" value="${esc(l.note)}"></div>
       <div class="editor-actions"><button class="btn" type="button" data-act="dup-line" data-id="${esc(id)}">Duplicate</button><button class="btn primary" type="button" data-act="edit-done">Done</button></div>
@@ -5041,7 +5041,7 @@ const PC_CK = `<span class="pc-ck" aria-hidden="true"><svg viewBox="0 0 24 24" f
 function pcRowHtml(p, id, l) {
   const d = pcData(p), ok = !!d.ok[id], note = (d.note[id] || "").trim(), open = app.pcNote === id;
   const wl = l.tx !== undefined, q = wl && !wlBal(l) ? "" : `${lineQty(l)}×`;
-  const sub = [wl && !wlBal(l) ? [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · ") : "", ...(l.children || []).map(c => `${c.qty}x ${c.name}`)].filter(Boolean);
+  const sub = [wl && !wlBal(l) ? [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · ") : "", ...(l.children || []).map(c => `${c.qty ? c.qty + "x " : ""}${c.name}`)].filter(Boolean);
   return `<li class="pc-row${ok ? " ok" : ""}${note ? " att" : ""}" data-pcrow="${esc(id)}">
     <div class="pc-main" data-act="pc-ok" data-id="${esc(id)}" role="checkbox" aria-checked="${ok}" tabindex="0">${PC_CK}
       <span class="pc-q num">${q}</span>
@@ -6268,7 +6268,7 @@ function exportRows(id, l) {
   const extra = [];
   if (l.note) extra.push(l.note);
   if (e && e.it.lens && e.it.lens.set && e.it.lens.focals) extra.push(e.it.lens.focals);
-  const kids = (l.children || []).map(c => `${c.qty}x ${c.name}`);
+  const kids = (l.children || []).map(c => `${c.qty ? c.qty + "x " : ""}${c.name}`);
   const base = { extra, kids, sku: l.sku || (e && e.it.sku) || "", l };
   // whole sets: just the sets. A set broken up: how many of each, on one line ("2x TX · 3x RX")
   if (l.tx !== undefined) return [{ ...base, kids: [wlBal(l) ? "" : [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · "), ...kids].filter(Boolean), qty: wlBal(l) ? lineQty(l) : "", name: l.name }];   // a broken set has no count of sets: its TX and RX say it
@@ -7188,10 +7188,8 @@ document.addEventListener("click", e => {
     case "rename-reset": { const l = p.items[id]; if (l && l.orig) { l.name = l.orig; touch(p); rerenderKeepScroll(); } break; }
     case "kinc": case "kdec": {
       const { l, c } = kidRef(p, id); if (!c) break;
-      const und = snapItems(p);
-      c.qty = clampQ(c.qty + (act === "kinc" ? 1 : -1));
-      if (!c.qty) l.children = l.children.filter(k => k !== c);
-      touch(p); rerenderKeepScroll(); if (!c.qty) undoable("Removed", c.name, und); break;
+      c.qty = clampQ((c.qty || 0) + (act === "kinc" ? 1 : -1));   // below 1: no quantity, just the sub-item's name (× removes it)
+      touch(p); rerenderKeepScroll(); break;
     }
     case "krm": { const { l, c } = kidRef(p, id); if (c) { const und = snapItems(p); l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); undoable("Removed", c.name, und); } break; }
     case "undo": { const fn = undoFn; hideUndo(); if (fn) fn(); break; }
@@ -7535,7 +7533,7 @@ document.addEventListener("change", e => {
   const f = t.dataset.f;
   if (t.dataset.cqty) { const ids = setQty(p, t.dataset.cqty, t.value, p.items[t.dataset.cqty] ? f : undefined); if (app.tab === "fav") rerenderKeepScroll(); else refreshRows(p, ids); return; }
   if (t.dataset.lqty) { listQty(p, () => setQty(p, t.dataset.lqty, t.value, f)); return; }
-  if (t.dataset.kqty) { const { l, c } = kidRef(p, t.dataset.kqty); if (c) { c.qty = clampQ(t.value); if (!c.qty) l.children = l.children.filter(k => k !== c); touch(p); rerenderKeepScroll(); } return; }
+  if (t.dataset.kqty) { const { l, c } = kidRef(p, t.dataset.kqty); if (c) { c.qty = clampQ(t.value); touch(p); rerenderKeepScroll(); } return; }   // 0 or empty: a sub-item with no quantity (× removes it)
   if (t.dataset.ename) {  // a line renamed: its catalog item takes the name too, for the next lists
     const id = t.dataset.ename, l = p.items[id], e = ITEM.get(id);
     if (l && e && !l.custom) { const from = e.it.name; if (renameCatItem(e.h, id, l.name)) { syncLineNames(id, from, l.name); l.orig = l.name; toast(`Renamed in ${e.h.name}'s catalog too`); } }

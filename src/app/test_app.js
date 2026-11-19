@@ -83,6 +83,7 @@ A.setQty(p, bolt, 2, "tx");
 const mbp = find("utopia", /Apple MacBook Pro/);
 A.setQty(p, mbp, 1);
 p.items[mbp].children.push({ id: "k1", name: "USB Hub", qty: 1 });
+p.items[mbp].children.push({ id: "k2", name: "Charger", qty: 0 });   // a sub-item with no quantity
 p.items[mbp].name = "MacBook Pro";
 
 // --- coverage warning (popup + list box)
@@ -177,6 +178,7 @@ console.log("\n" + txt);
 ok(/\n(Teradek|[^\n\d]*Bolt) 6 LT 750[^\n]*\n   - 2x TX · 3x RX\n/.test(txt) && !/\dx [^\n]*Bolt 6 LT 750/.test(txt) && !/\(TX\)|\(RX\)/.test(txt), "a broken set (2 TX, 3 RX) exported with no count of sets, its TX and RX on one line under it");
 { const w = A.newProduction({ houseId: "utopia", name: "W" }); A.setQty(w, bolt, 2); ok(!/- \d+x [TR]X/.test(A.listText(w)), "whole sets exported as just the sets, no TX or RX under them"); }
 ok(/- 1x USB Hub/.test(txt), "sub-items exported");
+ok(/   - Charger\n/.test(txt) && !/\dx Charger/.test(txt), "a sub-item with no quantity: exported as just its name");
 fs.writeFileSync(DOC, A.docxXml(p));
 fs.writeFileSync(DOC.replace("document.xml", "pdf.html"), "<meta charset=utf-8>" + A.exportHtml(p));
 console.log(A.csvText(p).split("\r\n").slice(0, 3).join("\n"));
