@@ -1450,3 +1450,14 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   A.moveCatItem(U, arri, "camera/cinema");
   ok(A.grpOf(A.ITEM.get(arri).it, A.ITEM.get(arri).s) === "ARRI", "…but into the ARRI folder that is already there, an ARRI item joins it");
   A.app.settings.catalog = saved; A.applyCatalog(); }
+
+// --- page layouts: one column, Media beside Camera and Lens, two columns; the same in Word
+{ const fsx = require("fs"), keep = A.app.settings.docCols;
+  for (const m of ["one", "media", "two"]) {
+    A.app.settings.docCols = m;
+    const x = A.docxXml(p), h = A.exportHtml(p);
+    if (process.argv[2]) fsx.writeFileSync(process.argv[2].replace("document.xml", "doc-" + m + ".xml"), x);
+    const bands = (h.match(/class="cl-band"/g) || []).length, wb = (x.match(/<w:gridCol w:w="4619"\/>/g) || []).length;
+    ok(m === "one" ? !bands && !wb : bands === 1 && wb === 2, `layout "${m}": ${m === "one" ? "no columns" : "one band of two columns"}, in the page and in Word`);
+  }
+  A.app.settings.docCols = keep; }

@@ -9247,22 +9247,42 @@ function cleanTitleHtml(p, page, stamp = verStamp()) {
       <div style="font-size:11px;color:#777;padding-top:4px;text-align:right">${page ? esc(page) : ""}</div></div>
     <div style="text-align:center;margin-top:6px"><div style="font-size:25px;line-height:1.15;font-weight:700"><bdi>${esc(p.name || "Production")}</bdi></div>${unit ? `<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-top:3px">${esc(unit)}</div>` : ""}</div></div>`;
 }
+/* how the sections sit on the page: one under another, Media beside Camera and Lens, or two columns (the Camera List's left and
+   right sections) */
+const docCols = () => ["media", "two"].includes(app.settings.docCols) ? app.settings.docCols : "one";
+function docArrange(parts, one, band) {   // one(part): a section across the page; band(left parts, right parts): side by side
+  const mode = docCols(), out = [];
+  if (mode === "two") { const L = parts.filter(x => x.col !== "R"), R = parts.filter(x => x.col === "R"); return L.length && R.length ? [band(L, R)] : parts.map(one); }
+  if (mode === "media") {
+    const top = parts.filter(x => x.id === "camera" || x.id === "lens"), med = parts.filter(x => x.id === "media");
+    if (top.length && med.length) {
+      let placed = false;
+      for (const x of parts) {
+        if (top.includes(x) || med.includes(x)) { if (!placed) { out.push(band(top, med)); placed = true; } continue; }
+        out.push(one(x));
+      }
+      return out;
+    }
+  }
+  return parts.map(one);
+}
 function exportHtmlClean(p, o = {}) {
   const by = linesBySection(p), sku = skuOn();
-  let body = "";
+  const parts = [];
   for (const s of allSections()) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
     if (!rows.length) continue;
-    body += `<div class="cl-sec" data-sec="${esc(s.id)}"><div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty === "" ? "" : r.qty + " x"}</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("") + `</div>`;
+    parts.push({ id: s.id, col: s.column, html: `<div class="cl-sec" data-sec="${esc(s.id)}"><div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty === "" ? "" : r.qty + " x"}</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("") + `</div>` });
   }
+  const body = docArrange(parts, x => x.html, (L, R) => `<div class="cl-band"><div>${L.map(x => x.html).join("")}</div><div>${R.map(x => x.html).join("")}</div></div>`).join("");
   const info = infoRows(p), cols = crewCols(p);
   const line = r => `<div class="cl-i"><b>${esc(r.k)}:</b> <bdi>${esc(r.v)}</bdi></div>`;
   const infoHtml = info.length || cols || p.notes ? `<div class="cl-inf" data-break>${info.slice(0, 1).map(line).join("")}
       ${cols ? `<div class="cl-crew">${cols.map(c => `<div class="cl-col${c.dim ? " cl-dim" : ""}"><div class="cl-ch">${esc(c.name)}</div>${c.rows.map(line).join("")}</div>`).join("")}</div>` : ""}
       ${info.slice(1).map(line).join("")}
       ${p.notes ? `<div class="cl-i cl-notes">${ntHtml(ntModel(p), true, NT_PX.m)}</div>` : ""}</div>` : "";
-  return `<div class="cl" style="width:794px;box-sizing:border-box;padding:0 56px;background:#fff">
-    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:11.5px;line-height:1.3}.cl .cl-inf{margin:14px 0 0;text-align:center}.cl .cl-i{font-size:11px;line-height:1.4;color:#111}.cl .cl-i b{font-weight:700}.cl .cl-dim{color:#9a9a9a}.cl .cl-dim b{font-weight:600}.cl .cl-crew{display:grid;grid-template-columns:1fr 1fr;margin:6px auto 4px;max-width:600px}.cl .cl-col{padding:2px 14px}.cl .cl-col+.cl-col{border-left:1px solid #ccc}.cl .cl-ch{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}.cl .cl-dim .cl-i{color:#9a9a9a}.cl .cl-notes{white-space:pre-wrap;margin-top:5px;unicode-bidi:plaintext}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:13px;padding:4px 0 3px;font-weight:700;font-size:11px}.cl .cl-r{display:flex;padding-top:4px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:11.5px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:10.5px;padding-top:0}.cl .cl-x{font-size:10.5px;font-style:italic;color:#555;padding-top:0}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:12px;border-top:1px solid #111;padding-top:6px}</style>
+  return `<div class="cl${docCols() === "two" ? " cl-two" : ""}" style="width:794px;box-sizing:border-box;padding:0 56px;background:#fff">
+    <style>.cl{color:#111;font-family:${CLEAN_FONT};font-size:11.5px;line-height:1.3}.cl .cl-inf{margin:14px 0 0;text-align:center}.cl .cl-i{font-size:11px;line-height:1.4;color:#111}.cl .cl-i b{font-weight:700}.cl .cl-dim{color:#9a9a9a}.cl .cl-dim b{font-weight:600}.cl .cl-crew{display:grid;grid-template-columns:1fr 1fr;margin:6px auto 4px;max-width:600px}.cl .cl-col{padding:2px 14px}.cl .cl-col+.cl-col{border-left:1px solid #ccc}.cl .cl-ch{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}.cl .cl-dim .cl-i{color:#9a9a9a}.cl .cl-notes{white-space:pre-wrap;margin-top:5px;unicode-bidi:plaintext}.cl .cl-sh{border-top:1px solid #111;border-bottom:1px solid #111;margin-top:13px;padding:4px 0 3px;font-weight:700;font-size:11px}.cl .cl-r{display:flex;padding-top:4px}.cl .cl-q{width:38px;flex:none;font-weight:700;white-space:nowrap}.cl .cl-n{flex:1;min-width:0;font-size:11.5px}.cl .cl-n b{font-weight:700}.cl .cl-k{font-size:10.5px;padding-top:0}.cl .cl-x{font-size:10.5px;font-style:italic;color:#555;padding-top:0}.cl .cl-s{flex:none;width:96px;padding-left:10px;text-align:right;color:#777;font-size:10px;font-family:'Courier New',monospace;padding-top:2px;overflow-wrap:anywhere}.cl .cl-nt{margin-top:12px;border-top:1px solid #111;padding-top:6px}.cl .cl-band{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:26px;align-items:start}.cl .cl-band .cl-s{width:64px;font-size:9px}.cl .cl-band .cl-q{width:30px}.cl.cl-two .cl-sh{margin-top:9px;padding:3px 0 2px}.cl.cl-two .cl-r{padding-top:2px}.cl.cl-two .cl-inf{margin-top:8px}</style>
     ${o.pdf ? "" : `<div style="padding-top:4px">${cleanTitleHtml(p)}</div>`}
     ${infoHtml}
     ${body}
@@ -9286,21 +9306,24 @@ function docxXmlClean(p) {
   const para = (runs, o = {}) => `<w:p><w:pPr>${o.keep ? "<w:keepNext/>" : ""}${o.bdr ? `<w:pBdr><w:top w:val="single" w:sz="6" w:space="2" w:color="111111"/><w:bottom w:val="single" w:sz="6" w:space="2" w:color="111111"/></w:pBdr>` : ""}<w:spacing w:before="${o.before || 0}" w:after="${o.after ?? 0}"/>${o.ind ? `<w:ind w:left="${o.ind}"/>` : ""}${o.right ? '<w:jc w:val="right"/>' : ""}</w:pPr>${runs}</w:p>`;
   const noBorders = `<w:tblBorders>${["top", "left", "bottom", "right", "insideH", "insideV"].map(v => `<w:${v} w:val="nil"/>`).join("")}</w:tblBorders>`;
   const cell = (w, content) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:vAlign w:val="top"/></w:tcPr>${content || para("")}</w:tc>`;
-  const table = (cols, rows) => `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/>${noBorders}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${cols.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows.join("")}</w:tbl>`;
+  const table = (cols, rows, tw = W_TEXT) => `<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/>${noBorders}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${cols.map(w => `<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows.join("")}</w:tbl>`;
   const info = infoRows(p), cols = crewCols(p), center = runs => `<w:p><w:pPr><w:spacing w:before="0" w:after="20"/><w:jc w:val="center"/></w:pPr>${runs}</w:p>`;
   const line = (r, dim) => center(wRun(r.k + ": ", { b: true, sz: 19, color: dim ? "9A9A9A" : "" }) + wRun(r.v, { sz: 19, color: dim ? "9A9A9A" : "" }));
   const half = W_TEXT / 2, edge = v => `<w:${v} w:val="nil"/>`;
   const crew = cols ? `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/><w:tblBorders>${["top", "left", "bottom", "right", "insideH"].map(edge).join("")}<w:insideV w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tblBorders><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid><w:gridCol w:w="${half}"/><w:gridCol w:w="${half}"/></w:tblGrid><w:tr>${cols.map(c => `<w:tc><w:tcPr><w:tcW w:w="${half}" w:type="dxa"/></w:tcPr>${center(wRun(c.name, { b: true, caps: true, sz: 16, color: c.dim ? "9A9A9A" : "" }))}${c.rows.map(r => line(r, c.dim)).join("") || center("")}</w:tc>`).join("")}</w:tr></w:tbl>` : "";
   let body = info.slice(0, 1).map(r => line(r)).join("") + crew + info.slice(1).map(r => line(r)).join("")
     + (p.notes ? ntDocx(ntModel(p), { center: true }) : "");
-  const S = sku ? 1500 : 0, Q = 640, N = W_TEXT - Q - S;
-  for (const s of allSections()) {
-    const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
-    if (!rows.length) continue;
-    body += para(wRun(secName(s.id), { b: true, sz: 20 }), { bdr: true, keep: true, before: 200, after: 30 });
+  // a section: its heading, then its rows. In a column (half the width) the count and the SKU take less room
+  const GAP = 400, HALF = (W_TEXT - GAP) / 2;
+  const secXml = (s, rows, tw) => { const S = sku ? (tw < W_TEXT ? 1050 : 1500) : 0, Q = tw < W_TEXT ? 520 : 640, N = tw - Q - S; let x = ""; const col = tw < W_TEXT, z = v => col ? v - 2 : v;   // in a column: a size smaller, and the rows don't hold together (Word splits the column across pages)
+    x += para(wRun(secName(s.id), { b: true, sz: z(20) }), { bdr: true, keep: true, before: col ? 110 : 200, after: 30 });
     // every row but a section's last keeps with the next: Word moves a section that doesn't fit to the next page whole
-    body += table(sku ? [Q, N, S] : [Q, N], rows.map((r, ri) => { const keep = ri < rows.length - 1; return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: 19 }), { keep }))}${cell(N, para(wRun(r.name, { b: true, sz: 19 }), { keep }) + r.kids.map(t => para(wRun(t, { sz: 17 }), { keep })).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 17 }), { keep })).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`; }));
-  }
+    x += table(sku ? [Q, N, S] : [Q, N], rows.map((r, ri) => { const keep = col ? ri === 0 : ri < rows.length - 1; return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: z(19) }), { keep }))}${cell(N, para(wRun(r.name, { b: true, sz: z(19) }), { keep }) + r.kids.map(t => para(wRun(t, { sz: z(17) }), { keep })).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: z(17) }), { keep })).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: z(15), mono: true }), { right: true })) : ""}</w:tr>`; }), tw);
+    return x; };
+  const parts = allSections().map(s => ({ id: s.id, col: s.column, rows: by[s.id].flatMap(([id, l]) => exportRows(id, l)) })).filter(x => x.rows.length);
+  const cellOf = (w, xml) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/></w:tcPr>${xml}<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:tc>`;
+  const band = (L, R) => `<w:tbl><w:tblPr><w:tblW w:w="${W_TEXT}" w:type="dxa"/>${noBorders}<w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${HALF}"/><w:gridCol w:w="${GAP}"/><w:gridCol w:w="${HALF}"/></w:tblGrid><w:tr>${cellOf(HALF, L.map(x => secXml(x, x.rows, HALF)).join(""))}${cellOf(GAP, "")}${cellOf(HALF, R.map(x => secXml(x, x.rows, HALF)).join(""))}</w:tr></w:tbl>`;
+  body += docArrange(parts, x => secXml(x, x.rows, W_TEXT), band).join("");
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1250" w:right="1134" w:bottom="1134" w:left="1134" w:header="560" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 }
 const docxXml = p => layoutOf() === "table" ? docxXmlTable(p) : docxXmlClean(p);
@@ -9378,6 +9401,7 @@ function openPreview(p) {
   if (app.settings.exportLayout === "table") { app.settings.exportLayout = "clean"; touchSettings(); }  // one layout now
   o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><span class="pv-pages" id="pvPages" title="Pages when printed (the PDF)"></span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
+    <div class="pv-units pv-cols"><span class="seg sm" role="group" aria-label="Page layout">${[["one", "One column"], ["media", "Media beside"], ["two", "Two columns"]].map(([k, t]) => `<button type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}">${t}</button>`).join("")}</span></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
     <div class="pv-actions">
@@ -9631,7 +9655,10 @@ function pageEnds(node, usable) {
   for (const el of node.querySelectorAll("[data-break]")) if (!el.closest(".cl-sec")) cuts.push(bot(el));
   for (const sc of secs) {
     cuts.push(bot(sc));
-    if (sc.offsetHeight > usable) for (const r of sc.querySelectorAll("[data-break]")) cuts.push(bot(r));   // too long for one page: it may end at a row
+    if (sc.offsetHeight > usable) {   // too long for one page: it may end at a row (in two columns, where no row of the other column is cut)
+      const rs = [...sc.querySelectorAll("[data-break]")].map(r => { const q = r.getBoundingClientRect(); return [q.top - top0, q.bottom - top0]; });
+      for (const [, b] of rs) if (!rs.some(([t, b2]) => t < b - .5 && b2 > b + .5)) cuts.push(b);
+    }
   }
   if (!secs.length) for (const el of node.querySelectorAll("[data-break]")) cuts.push(bot(el));
   cuts.sort((a, b) => a - b);
@@ -10314,6 +10341,12 @@ document.addEventListener("click", e => {
     case "rf-dl": { const f = formsOf(p).find(x => x.id === id); if (f) rfSaveFile(f); break; }
     case "rf-del": { const f = formsOf(p).find(x => x.id === id); if (!f) break; if (b.classList.contains("armed")) rfDelete(p, f); else { b.classList.add("armed"); b.title = "Tap again to delete"; toast("Tap the bin again to delete the form."); setTimeout(() => { if (b.isConnected) b.classList.remove("armed"); }, 3000); } break; }
     case "rf-skip": rfSkip(); break;
+    case "pv-cols": {   // the page layout: one column, Media beside Camera and Lens, or two columns; Word and PDF alike
+      app.settings.docCols = id; touchSettings();
+      document.querySelectorAll('#preview [data-act="pv-cols"]').forEach(x => x.setAttribute("aria-pressed", String(x.dataset.id === docCols())));
+      const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = exportHtml(p); fitPreview(); }
+      break;
+    }
     case "preview-sku": {
       app.settings.exportSku = !skuOn(); touchSettings();
       b.setAttribute("aria-pressed", String(skuOn())); b.textContent = "SKU " + (skuOn() ? "on" : "off");
