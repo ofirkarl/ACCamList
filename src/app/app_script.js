@@ -6357,7 +6357,7 @@ function exportHtmlClean(p, o = {}) {
   for (const s of allSections()) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
     if (!rows.length) continue;
-    body += `<div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty === "" ? "" : r.qty + " x"}</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("");
+    body += `<div class="cl-sec" data-sec="${esc(s.id)}"><div class="cl-sh">${esc(secName(s.id))}</div>` + rows.map(r => `<div class="cl-r" data-break><span class="cl-q">${r.qty === "" ? "" : r.qty + " x"}</span><div class="cl-n"><b>${esc(r.name)}</b>${r.kids.map(t => `<div class="cl-k">${esc(t)}</div>`).join("")}${r.extra.map(t => `<div class="cl-x">${esc(t)}</div>`).join("")}</div>${sku ? `<span class="cl-s">${esc(r.sku)}</span>` : ""}</div>`).join("") + `</div>`;
   }
   const info = infoRows(p), cols = crewCols(p);
   const line = r => `<div class="cl-i"><b>${esc(r.k)}:</b> <bdi>${esc(r.v)}</bdi></div>`;
@@ -6402,7 +6402,8 @@ function docxXmlClean(p) {
     const rows = by[s.id].flatMap(([id, l]) => exportRows(id, l));
     if (!rows.length) continue;
     body += para(wRun(secName(s.id), { b: true, sz: 20 }), { bdr: true, keep: true, before: 200, after: 30 });
-    body += table(sku ? [Q, N, S] : [Q, N], rows.map(r => `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: 19 })))}${cell(N, para(wRun(r.name, { b: true, sz: 19 })) + r.kids.map(t => para(wRun(t, { sz: 17 }))).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 17 }))).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`));
+    // every row but a section's last keeps with the next: Word moves a section that doesn't fit to the next page whole
+    body += table(sku ? [Q, N, S] : [Q, N], rows.map((r, ri) => { const keep = ri < rows.length - 1; return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: 19 }), { keep }))}${cell(N, para(wRun(r.name, { b: true, sz: 19 }), { keep }) + r.kids.map(t => para(wRun(t, { sz: 17 }), { keep })).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: 17 }), { keep })).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: 15, mono: true }), { right: true })) : ""}</w:tr>`; }));
   }
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rIdHdr"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1250" w:right="1134" w:bottom="1134" w:left="1134" w:header="560" w:footer="567" w:gutter="0"/></w:sectPr></w:body></w:document>`;
 }
@@ -6479,7 +6480,7 @@ function openPreview(p) {
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
   if (app.settings.exportLayout === "table") { app.settings.exportLayout = "clean"; touchSettings(); }  // one layout now
-  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
+  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span><span class="pv-pages" id="pvPages" title="Pages when printed (the PDF)"></span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
@@ -6504,6 +6505,7 @@ function fitPreview() {
   paper.style.transform = `scale(${k})`;
   fit.style.width = 794 * k + "px";
   fit.style.height = paper.offsetHeight * k + "px";
+  pvPages(cur());
 }
 /* the preview moves to the other unit's list: the page slides out toward the side you came from, the other slides in, and its crew lines fade up */
 function swapPreview(p, dir) {
@@ -6725,6 +6727,40 @@ async function sendNow(p, f) {
 }
 window.addEventListener("resize", fitPreview);
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+/* where the pages end. A page ends between sections: a section that won't fit in what's left of the page starts the next one,
+   so a section is never split, unless it is longer than a whole page (then it ends at a row). Before the first section, the details. */
+function pageEnds(node, usable) {
+  const top0 = node.getBoundingClientRect().top, H = node.scrollHeight, bot = el => el.getBoundingClientRect().bottom - top0;
+  const secs = [...node.querySelectorAll(".cl-band, .cl-sec")].filter(el => !el.parentElement.closest(".cl-band")), cuts = [];   // a band of side-by-side sections is one block
+  for (const el of node.querySelectorAll("[data-break]")) if (!el.closest(".cl-sec")) cuts.push(bot(el));
+  for (const sc of secs) {
+    cuts.push(bot(sc));
+    if (sc.offsetHeight > usable) for (const r of sc.querySelectorAll("[data-break]")) cuts.push(bot(r));   // too long for one page: it may end at a row
+  }
+  if (!secs.length) for (const el of node.querySelectorAll("[data-break]")) cuts.push(bot(el));
+  cuts.sort((a, b) => a - b);
+  const ends = [];
+  for (let start = 0; start < H - 1;) {
+    const limit = start + usable;
+    if (limit >= H) { ends.push(H); break; }
+    let best = start;
+    for (const c of cuts) if (c > start + 40 && c <= limit) best = c;
+    if (best === start) best = limit;
+    ends.push(best); start = best;
+  }
+  return ends;
+}
+/* how many pages the PDF comes to (the preview says it) */
+function pageCount(p) {
+  const clean = layoutOf() === "clean";
+  const mk = html => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:-12000px;top:0;width:794px;background:#fff;visibility:hidden"; d.innerHTML = html; document.body.appendChild(d); return d; };
+  const host = mk(exportHtml(p, { pdf: true })), head = clean ? mk(`<div style="box-sizing:border-box;width:794px;padding:0 56px">${cleanTitleHtml(p, "9 out of 9")}</div>`) : null;
+  try {
+    const TOP = 40, BOTTOM = 44, headH = head ? head.firstElementChild.offsetHeight : 0, bodyTop = clean ? TOP + headH + 10 : TOP;
+    return pageEnds(host.firstElementChild, 1123 - bodyTop - BOTTOM).length;
+  } finally { host.remove(); head?.remove(); }
+}
+function pvPages(p) { const el = document.getElementById("pvPages"); if (!el) return; try { const n = pageCount(p); el.textContent = `${n} page${n === 1 ? "" : "s"}`; } catch (e) { el.textContent = ""; } }
 async function buildPdf(p) {
   if (!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
   if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
@@ -6739,17 +6775,7 @@ async function buildPdf(p) {
     const bodyTop = clean ? TOP + headH + 10 : TOP, USABLE = PAGE_PX - bodyTop - BOTTOM, H = node.scrollHeight;
     const SCALE = Math.min(2, Math.sqrt(14e6 / (794 * Math.max(H, 1))));  // stay under mobile canvas limits
     const canvas = await window.html2canvas(node, { scale: SCALE, backgroundColor: "#ffffff" });
-    const top0 = node.getBoundingClientRect().top;
-    const cuts = [...node.querySelectorAll("[data-break]")].map(el => el.getBoundingClientRect().bottom - top0);
-    const ends = [];
-    for (let start = 0; start < H - 1;) {
-      const limit = start + USABLE;
-      if (limit >= H) { ends.push(H); break; }
-      let best = start;
-      for (const c of cuts) if (c > start + 40 && c <= limit) best = c;
-      if (best === start) best = limit;
-      ends.push(best); start = best;
-    }
+    const ends = pageEnds(node, USABLE);
     const pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
     const pw = pdf.internal.pageSize.getWidth(), k = pw / 794, n = ends.length;
     let s0 = 0;
