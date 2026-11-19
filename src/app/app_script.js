@@ -293,7 +293,9 @@ const splitKey = k => { const a = String(k).split("/"); return [a[0], a[1], a.le
 const subByKey = (h, key) => (h._subs && h._subs.get(key)) || null;
 const subOf = (h, cid, sid) => subByKey(h, cid + "/" + sid);
 const catOfSub = (h, sub) => h.categories.find(c => c.direct === sub || c.subcategories.includes(sub)) || null;
-const naturalGroup = (it, s) => s.groupBy ? (it.group || "Other") : (it.brand || "Generic");
+/* the folder an item falls in by itself: its type in a type-grouped subcategory, its manufacturer in the rental house's own ones.
+   In a subcategory the user made, none: items lie in it as put there, in folders only the user made */
+const naturalGroup = (it, s) => s.groupBy ? (it.group || "Other") : s.custom ? "__none" : (it.brand || "Generic");
 /* a category or subcategory the user made, by its heading key */
 function customDef(h, k) {
   if (!h) return null;
@@ -484,10 +486,12 @@ function groupsOf(h, s) {
   return userOrder(s.groupBy ? gs : gs.sort((a, b) => a === "Generic" ? 1 : b === "Generic" ? -1 : a.localeCompare(b, "en", { sensitivity: "base" })), s.gorder, g => g);
 }
 const headLabel = (h, k, fallback) => peekEdits(h.id).heads[k] || fallback;
+/* the folder an item moved or added into a subcategory lands in: its own folder if that subcategory already has one, else none
+   (loose in the subcategory). The app never makes a folder the user did not */
 function defaultGroup(it, s, h) {
   const nat = naturalGroup(it, s);
-  if (!s.groupBy) return nat;
   const gs = groupsOf(h, s);
+  if (!s.groupBy) return nat === "__none" || gs.includes(nat) ? nat : "__none";
   return gs.includes(nat) ? nat : gs.includes("Other") ? "Other" : gs[0] || "Other";
 }
 /* the gear list section most items of a subcategory go to */
@@ -525,7 +529,8 @@ function moveCatItem(h, id, key) {
   const own = e.it.own && catEdits(h.id).newItems.find(d => d.id === id);
   if (own) {
     own.c = c; own.s = s;
-    own.g = g || (sameSub ? own.g : undefined);
+    const dg = defaultGroup(e.it, tgt, h);
+    own.g = g || (sameSub ? own.g : dg !== naturalGroup(e.it, tgt) ? dg : undefined);
     if (!sameSub) own.section = typicalSection(h, c, s, own.section);
     clean(own); applyCatalog(); touchSettings();
     return true;
@@ -557,7 +562,7 @@ function saveCatItem(h, id, v) {
   const moved = kc !== bl.c || ks !== bl.s;
   const brand = String(v.brand || "").trim().slice(0, 60) || (ITEM.get(id)?.it.brand) || base.brand;
   const now = { ...base, brand };
-  const g = pickedGroup(v) || defaultGroup(now, tgt, h);
+  const g = pickedGroup(v) || (v.g === "__brand" ? naturalGroup(now, tgt) : defaultGroup(now, tgt, h));
   storeItemEdit(h, id, {
     name: name && name !== base.name ? name : undefined,
     brand: brand !== base.brand ? brand : undefined,
@@ -582,11 +587,17 @@ function syncLineNames(id, from, to) {
   for (const q of app.productions) { const l = q.items && q.items[id]; if (l && (l.name === from || !l.name)) { l.name = to; l.orig = to; touch(q); } else if (l && l.orig === from) l.orig = to; }
 }
 /* a new item of the user's own, placed where they chose */
+/* a new item with no folder picked: its manufacturer's folder if the subcategory has one, else loose in it */
+function newGroup(h, kc, ks, brand) {
+  const sub = subOf(h, kc, ks); if (!sub) return undefined;
+  const it = { brand: String(brand || "").trim() }, dg = defaultGroup(it, sub, h);
+  return dg !== naturalGroup(it, sub) ? dg : undefined;
+}
 function createOwnItem(h, v) {
   const [kc, ks] = splitKey(v.s);
   if (!subOf(h, kc, ks)) return null;
   const d = clean({ id: uid("ui-"), name: String(v.name || "").trim().slice(0, 160), brand: String(v.brand || "").trim().slice(0, 60), sku: String(v.sku || "").trim().slice(0, 40), url: safeUrl(String(v.url || "").trim()),
-    c: kc, s: ks, g: pickedGroup(v), section: v.section || typicalSection(h, kc, ks, "accessories") });
+    c: kc, s: ks, g: pickedGroup(v) || (v.g === "__brand" ? undefined : newGroup(h, kc, ks, v.brand)), section: v.section || typicalSection(h, kc, ks, "accessories") });
   if (v.lens) d.lens = v.lens;
   if (!d.name) return null;
   catEdits(h.id).newItems.push(d);

@@ -1430,3 +1430,21 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   A.app.settings.catalog = saved; A.applyCatalog(); A.app.editCat = false; A.app.cat = "all";
   A.app.productions.splice(A.app.productions.indexOf(p), 1); }
 
+
+// --- the app never makes a folder the user did not: items put in a subcategory lie in it as put there
+{ const U = A.houseById("utopia"), saved = JSON.parse(JSON.stringify(A.app.settings.catalog || {}));
+  const ck = A.addFolder(U, "camera_accessories", "Cables");
+  const a = A.createOwnItem(U, { s: "camera_accessories/_", name: "BNC Drum" }), b = A.createOwnItem(U, { s: "camera_accessories/_", name: "BNC Jumpers" });
+  const sony = [...A.ITEM.values()].find(e => e.h.id === "utopia" && e.it.brand === "Sony" && !e.it.own).it.id;
+  for (const id of [a, b, sony]) A.moveCatItem(U, id, ck);
+  const sub = A.ITEM.get(a).s;
+  ok(sub.key === ck && [a, b, sony].every(id => A.grpOf(A.ITEM.get(id).it, A.ITEM.get(id).s) === ""), "moved into a subcategory the user made: loose in it, no Generic or Sony folder made");
+  const n = A.createOwnItem(U, { s: ck, name: "BNC Cable 20m" });
+  ok(A.grpOf(A.ITEM.get(n).it, A.ITEM.get(n).s) === "", "a new item there: loose in it too");
+  const c = A.createOwnItem(U, { s: "camera_accessories/_", name: "Odd cable" });
+  A.moveCatItem(U, c, "camera/cinema");
+  ok(A.grpOf(A.ITEM.get(c).it, A.ITEM.get(c).s) === "", "an item with no manufacturer moved into a rental house's subcategory: loose, no Generic folder");
+  const arri = [...A.ITEM.values()].find(e => e.h.id === "utopia" && e.it.brand === "ARRI" && e.s.key !== "camera/cinema" && !e.s.groupBy).it.id;
+  A.moveCatItem(U, arri, "camera/cinema");
+  ok(A.grpOf(A.ITEM.get(arri).it, A.ITEM.get(arri).s) === "ARRI", "…but into the ARRI folder that is already there, an ARRI item joins it");
+  A.app.settings.catalog = saved; A.applyCatalog(); }
