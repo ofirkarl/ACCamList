@@ -611,6 +611,22 @@ const safeUrl = u => { if (!/^https?:\/\//i.test(u || "")) return ""; try { retu
 const linkHtml = (it, h) => it && safeUrl(it.url) ? `<a class="ext" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer" title="Product page${h ? " on " + esc(h.name) : ""}" aria-label="Open ${esc(it.name)} on ${esc(h ? h.name : "the rental house")}'s site">${LINK_ICON}</a>` : "";
 const noteHtml = id => noteOf(id) ? `<span class="inote">${esc(noteOf(id))}</span>` : "";
 /* drag a subcategory: into a category, before or after another subcategory */
+/* a subcategory dropped by a block of its category's own items (items in no subcategory, which sit after the subcategory they
+   were put by): just above that block, or just below it */
+function subByBlock(h, key, t) {
+  const c = h.categories.find(x => x.id === t.cat); if (!c) return false;
+  const keys = c.subcategories.map(x => x.key), A = t.anchor;
+  let ch = false;
+  if (A === key) {   // the block that follows it: above it, it already is; below it, the block goes up to the one before
+    if (!t.after) return false;
+    const i = keys.indexOf(key), P = i > 0 ? keys[i - 1] : "";
+    for (const id of t.ids) ch = setLooseAnchor(h, id, t.cat, P) || ch;
+    return ch;
+  }
+  ch = A ? moveSub(h, key, t.cat, A, true) : moveSub(h, key, t.cat, keys.find(k => k !== key) || null, false);
+  if (!t.after) for (const id of t.ids) ch = setLooseAnchor(h, id, t.cat, key) || ch;
+  return ch;
+}
 function moveSub(h, key, toCat, refKey, after) {
   const ed = catEdits(h.id), [home] = splitKey(key);
   const c = h.categories.find(x => x.id === toCat), x = subByKey(h, key);
@@ -7838,6 +7854,11 @@ function dragTarget(x, y) {
     return { el: d, ref: d.dataset.k, after: y > r.top + r.height / 2 };
   }
   if (drag.kind === "csub") {
+    const ul = el.closest("#tree .cat-body > ul.items.direct");   // a block of the category's own items: above it or below it
+    if (ul) {
+      const r = ul.getBoundingClientRect(), prev = ul.previousElementSibling, ids = [...ul.querySelectorAll("li[data-row]")].map(li => li.dataset.row);
+      return { el: ul, cat: ul.closest("details.cat").dataset.k, block: true, ref: "_", anchor: prev && prev.matches("details.sub") ? prev.dataset.k : "", ids, after: y > r.top + r.height / 2 };
+    }
     const d = el.closest("#tree details.sub");
     if (d) {
       if (d.dataset.k === drag.id) return { el: d, self: true };
@@ -7879,6 +7900,7 @@ function dropLabel(t) {
     if (sub.direct) return into + (catOfSub(h, sub)?.name || "");
     return into + sub.name + (g && g !== NOFOLDER ? " › " + headLabel(h, sub.key + "/" + g, g) : "") + (t.brand ? " › " + t.brand : "");
   }
+  if (drag.kind === "csub" && t.block) { const n = t.ids[t.after ? t.ids.length - 1 : 0]; return at(ITEM.get(n)?.it.name || ""); }
   if (drag.kind === "csub" && t.ref && catOfSub(h, subByKey(h, drag.id))?.id === t.cat) return at(subByKey(h, t.ref)?.name || "");
   if (drag.kind === "csub" && t.cat) return h.categories.find(c => c.id === t.cat)?.name || "";
   if (drag.kind === "cgrp" && t.ref && splitKey(drag.id).slice(0, 2).join("/") === t.sub) return at(headLabel(h, t.sub + "/" + t.ref, t.ref));
@@ -8086,7 +8108,7 @@ function endDrag(drop) {
   } else if (kind === "csub") {
     const h = houseById(p.houseId);
     const from = catOfSub(h, subByKey(h, id))?.id;
-    if (moveSub(h, id, t.cat, t.ref, t.after)) { app.open.add(t.cat); rerenderKeepScroll(); dropFlash(`#tree details.sub[data-k="${CSS.escape(id)}"] > summary`, dropY); if (from !== t.cat) toast(`Moved to ${h.categories.find(c => c.id === t.cat)?.name || ""}`); }
+    if (t.block ? subByBlock(h, id, t) : moveSub(h, id, t.cat, t.ref, t.after)) { app.open.add(t.cat); rerenderKeepScroll(); dropFlash(`#tree details.sub[data-k="${CSS.escape(id)}"] > summary`, dropY); if (from !== t.cat) toast(`Moved to ${h.categories.find(c => c.id === t.cat)?.name || ""}`); }
   } else {
     const moved = moveLine(p, id, t.sec, t.ref, t.after);
     rerenderKeepScroll();
