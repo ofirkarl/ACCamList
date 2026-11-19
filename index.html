@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611182322";
+window.AC_BUILD = "202611190717";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3331,9 +3331,10 @@ function catEdits(hid) {
   e.items = e.items || {}; e.heads = e.heads || {}; e.cats = e.cats || []; e.subs = e.subs || [];
   e.newItems = e.newItems || []; e.subMoves = e.subMoves || {}; e.subOrder = e.subOrder || {}; e.catOrder = e.catOrder || [];
   e.groupOrder = e.groupOrder || {}; e.itemOrder = e.itemOrder || {}; e.groups = e.groups || {}; e.brandSplit = e.brandSplit || {}; e.flat = e.flat || {}; e.brandOrder = e.brandOrder || {}; e.hidden = e.hidden || {};
+  e.looseAt = e.looseAt || {};
   return e;
 }
-const hasEdits = h => { const e = peekEdits(h.id); if (editKey(e) === editKey(STARTER.catalog[h.id])) return false; return ["items", "heads", "subMoves", "subOrder", "groupOrder", "itemOrder", "groups", "brandSplit", "flat", "brandOrder", "hidden"].some(k => Object.keys(e[k] || {}).length) || ["cats", "subs", "newItems", "catOrder"].some(k => (e[k] || []).length); };
+const hasEdits = h => { const e = peekEdits(h.id); if (editKey(e) === editKey(STARTER.catalog[h.id])) return false; return ["items", "heads", "subMoves", "subOrder", "groupOrder", "itemOrder", "groups", "brandSplit", "flat", "brandOrder", "looseAt", "hidden"].some(k => Object.keys(e[k] || {}).length) || ["cats", "subs", "newItems", "catOrder"].some(k => (e[k] || []).length); };
 const splitKey = k => { const a = String(k).split("/"); return [a[0], a[1], a.length > 2 ? a.slice(2).join("/") : ""]; };
 const subByKey = (h, key) => (h._subs && h._subs.get(key)) || null;
 const subOf = (h, cid, sid) => subByKey(h, cid + "/" + sid);
@@ -3744,16 +3745,17 @@ function brandRows(its, render, ed, kB, renameKey, listKey, order, searching) {
 function shownOrder(h, s) {
   const groups = groupItems(s.items, s), out = [], bo = peekEdits(h.id).brandOrder || {};
   const byBrand = (its, order) => { const m = new Map(); for (const it of its) { const b = it.brand || "Generic"; if (!m.has(b)) m.set(b, []); m.get(b).push(it); } return userOrder([...m.entries()].sort((a, b) => brandSort(a[0], b[0])), order, e => e[0]).flatMap(e => e[1]); };
-  const loose = groups.findIndex(([g]) => g === "");
-  if (loose >= 0) out.push(...groups.splice(loose, 1)[0][1]);
-  let rest = groups;
+  const li = groups.findIndex(([g]) => g === ""), loose = li >= 0 ? groups.splice(li, 1)[0][1] : [];
+  let rest = groups, flat = [];
   if (isFlat(h, s)) {
     const natural = [], other = [];
     for (const grp of groups) (grp[1].length && !(s.extra || []).includes(grp[0]) && grp[1].every(it => (it.brand || "Generic") === grp[0]) ? natural : other).push(grp);
-    out.push(...byBrand(natural.flatMap(g => g[1]), bo[s.key]));
+    flat = byBrand(natural.flatMap(g => g[1]), bo[s.key]);
     rest = other;
   }
-  for (const [g, its] of rest) out.push(...(splitByBrand(h, s, g) ? byBrand(its, bo[s.key + "/" + g]) : its));
+  const lb = looseBlocks(h, s.key, loose, subGroupNames(h, s), new Set(rest.map(g => g[0])));
+  out.push(...lb.get(""), ...flat);
+  for (const [g, its] of rest) out.push(...(splitByBrand(h, s, g) ? byBrand(its, bo[s.key + "/" + g]) : its), ...(lb.get(g) || []));
   return out.map(it => it.id);
 }
 /* the items a manufacturer list shows: a group's items, or a flat subcategory's items that sit with their manufacturer */
@@ -3811,6 +3813,53 @@ function deleteFolder(h, gkey) {
   delete ed.heads[gkey];
   if (ed.groupOrder[skey]) ed.groupOrder[skey] = ed.groupOrder[skey].filter(x => x !== g);
   applyCatalog(); touchSettings();
+}
+/* items in no folder (straight in a category, or in a type-grouped subcategory) can sit among the folders: each is kept after
+   one of them (looseAt: box → item → folder), or above them all. A box is the category's id, or the subcategory's key. */
+const looseBox = e => e.s.direct ? e.c.id : grpOf(e.it, e.s) === "" ? e.s.key : null;
+const looseOrder = (h, box) => { const c = h.categories.find(x => x.id === box); return c ? c.subcategories.map(x => x.key) : subGroupNames(h, subByKey(h, box) || { items: [] }); };
+/* split such items into the block above the folders and one after each folder shown; a folder not shown hands its items to the one before it */
+function looseBlocks(h, box, items, order, shown) {
+  const at = (peekEdits(h.id).looseAt || {})[box] || {}, blocks = new Map([["", []]]);
+  for (const it of items) {
+    let i = at[it.id] ? order.indexOf(at[it.id]) : -1;
+    while (i >= 0 && !shown.has(order[i])) i--;
+    const a = i >= 0 ? order[i] : "";
+    if (!blocks.has(a)) blocks.set(a, []);
+    blocks.get(a).push(it);
+  }
+  return blocks;
+}
+function setLooseAnchor(h, id, box, anchor) {
+  const now = peekEdits(h.id).looseAt || {};
+  const stale = Object.keys(now).filter(b => b !== box && now[b][id] !== undefined), differs = !!box && ((now[box] || {})[id] || "") !== anchor;
+  if (!stale.length && !differs) return false;
+  const la = catEdits(h.id).looseAt;
+  for (const b of stale) { delete la[b][id]; if (!Object.keys(la[b]).length) delete la[b]; }
+  if (differs) {
+    if (anchor) (la[box] || (la[box] = {}))[id] = anchor;
+    else { delete la[box][id]; if (!Object.keys(la[box]).length) delete la[box]; }
+  }
+  RANK = null; touchSettings();
+  return true;
+}
+/* after a drop on or by another item: an item in no folder joins the block of the item it was dropped by (none: above the folders) */
+function syncLoose(h, id, ref) {
+  const e = ITEM.get(id); if (!e) return false;
+  const box = looseBox(e), r = ref && ITEM.get(ref);
+  return setLooseAnchor(h, id, box, box && r && looseBox(r) === box ? (((peekEdits(h.id).looseAt || {})[box] || {})[ref] || "") : "");
+}
+/* dropped by a folder rather than in it: just above or just below that folder */
+function placeLoose(h, id, t) {
+  const order = looseOrder(h, t.boxId), i = order.indexOf(t.folder);
+  const anchor = t.side === "after" ? t.folder : i > 0 ? order[i - 1] : "";
+  let ch = setLooseAnchor(h, id, t.boxId, anchor);
+  const e = ITEM.get(id); if (!e) return ch;
+  const la = (peekEdits(h.id).looseAt || {})[t.boxId] || {}, res = x => (la[x] && order.includes(la[x]) ? la[x] : "");
+  const mates = e.s.items.filter(x => x.id !== id && looseBox(ITEM.get(x.id)) === t.boxId && res(x.id) === anchor);
+  // right after the folder: first of the items there; right before the next one: last of them
+  if (mates.length) ch = reorderItem(h, id, t.side === "after" ? mates[0].id : mates[mates.length - 1].id, t.side !== "after") || ch;
+  return ch;
 }
 /* drop an item before or after another one in the same subcategory */
 function reorderItem(h, id, refId, after) {
@@ -6169,7 +6218,7 @@ function treeHtml(p, h) {
   const out = [];
   for (const c of h.categories) {
     if (app.cat !== "all" && app.cat !== c.id) continue;
-    const subs = [];
+    const subs = [], subKeys = [];
     let cn = 0;
     for (const s of c.subcategories) {
       const items = searching ? s.items.filter(it => itHit(it, s)) : s.items;
@@ -6192,7 +6241,7 @@ function treeHtml(p, h) {
         return `<details class="brand" data-k="${esc(kB)}"${dz(kB)} ${open ? "open" : ""}><summary${dz(kB)}><span class="bname">${ed ? `<button class="handle" type="button" data-drag="cgrp" data-id="${esc(kB)}" data-label="${esc(label)}" aria-label="Move ${esc(label)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${hl(label, q)}${pen(kB, label)}</span><span class="sumr">${selBadge(nSel, kB)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items">` +
           (its.length ? (splitByBrand(h, s, b) ? brandRows(its, (it, br) => ed ? editRowHtml(it, kB, q, br) : rowHtml(p, it, q), ed, kB, null, kB, (peekEdits(h.id).brandOrder || {})[kB], searching) : its.map(it => ed ? editRowHtml(it, kB, q) : rowHtml(p, it, q)).join("")) : `<li class="drop-empty"${dz(kB)}>Empty folder. Drag items here.</li>`) + addHere + `</ul></details>`;
       };
-      let brands;
+      let brands, folders;
       const fmt = !ed && c.id === "lenses" ? lensFormats(groups, s) : null;
       if (fmt) {
         // lenses: first by format (Full frame, Super 35…), then by manufacturer; folders the user made stay folders
@@ -6200,17 +6249,22 @@ function treeHtml(p, h) {
           const kF = kS + "#" + (cov || "other"), open = searching || app.open.has(kF);
           const nSel = its.filter(it => p.items[it.id]).length;
           return `<details class="brand fmt" data-k="${esc(kF)}" ${open ? "open" : ""}><summary><span class="bname">${esc(COV_LABEL[cov] || "Other")}</span><span class="sumr">${selBadge(nSel, kF)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items flat">${brandRows(its, it => rowHtml(p, it, q), false, kS, null, kF, isFlat(h, s) ? (peekEdits(h.id).brandOrder || {})[kS] : s.gorder, searching)}</ul></details>`;
-        }).join("") + fmt.other.map(renderGroup).join("");
+        }).join("");
+        folders = fmt.other;
       } else if (isFlat(h, s)) {
         // items sitting in their own manufacturer's group go in one list with a heading per manufacturer; folders you made stay folders
         const natural = [], other = [];
         for (const grp of groups) (grp[1].length && !(s.extra || []).includes(grp[0]) && grp[1].every(it => (it.brand || "Generic") === grp[0]) ? natural : other).push(grp);
         const flatItems = natural.flatMap(([, its]) => its);
-        brands = (flatItems.length ? `<ul class="items flat">${brandRows(flatItems, (it, br) => ed ? editRowHtml(it, kS, q, br) : rowHtml(p, it, q), ed, kS, br => kS + "/" + br, kS, (peekEdits(h.id).brandOrder || {})[kS], searching)}</ul>` : "") + other.map(renderGroup).join("");
-      } else brands = groups.map(renderGroup).join("");
+        brands = flatItems.length ? `<ul class="items flat">${brandRows(flatItems, (it, br) => ed ? editRowHtml(it, kS, q, br) : rowHtml(p, it, q), ed, kS, br => kS + "/" + br, kS, (peekEdits(h.id).brandOrder || {})[kS], searching)}</ul>` : "";
+        folders = other;
+      } else { brands = ""; folders = groups; }
       // dropping on a type-grouped subcategory (not on one of its folders) puts the item straight in it
       const subDrop = s.groupBy ? kS + "/" + NOFOLDER : kS;
-      if (looseItems.length) brands = `<ul class="items loose">${looseItems.map(it => ed ? editRowHtml(it, subDrop, q) : rowHtml(p, it, q)).join("")}</ul>` + brands;
+      // items in no folder: above the folders, or each after the folder it was put by
+      const lb = looseBlocks(h, kS, looseItems, subGroupNames(h, s), new Set(folders.map(g => g[0])));
+      const looseUl = its => its && its.length ? `<ul class="items loose">${its.map(it => ed ? editRowHtml(it, subDrop, q) : rowHtml(p, it, q)).join("")}</ul>` : "";
+      brands = looseUl(lb.get("")) + brands + folders.map(g => renderGroup(g) + looseUl(lb.get(g[0]))).join("");
       const nSel = selCount(p, e => e.s === s && e.h.id === h.id);
       const sHandle = ed ? `<button class="handle" type="button" data-drag="csub" data-id="${esc(kS)}" data-label="${esc(s.name)}" aria-label="Move ${esc(s.name)}: drag, or use the arrow keys">${GRIP}</button>` : "";
       const addItem = ed && !searching ? `<div class="add-row inset"><button class="add-head" type="button" data-act="new-item" data-k="${esc(kS)}">+ New item in ${esc(s.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(kS)}">+ New folder in ${esc(s.name)}</button></div>` : "";
@@ -6218,17 +6272,21 @@ function treeHtml(p, h) {
       const nHeads = (brands.match(/<details class="brand|class="mfr-head/g) || []).length;
       const anyClosed = /<details class="brand[^>]*" >/.test(brands) || brands.includes('class="mfr-head closed"');
       const allBtn = !ed && !searching && nHeads >= 2 ? `<div class="sub-tools"><button class="btn ghost sm" type="button" data-act="sub-all" data-k="${esc(kS)}" data-open="${anyClosed ? 1 : 0}">${anyClosed ? "Open all" : "Close all"}</button></div>` : "";
+      subKeys.push(kS);
       subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
     }
     const dItems = searching ? c.direct.items.filter(it => itHit(it, c.direct)) : c.direct.items;
     cn += dItems.length;
-    const direct = dItems.length ? `<ul class="items direct">${dItems.map(it => ed ? editRowHtml(it, c.direct.key, q) : rowHtml(p, it, q)).join("")}</ul>`
+    // the category's own items: above its subcategories, or each after the subcategory it was put by
+    const dlb = looseBlocks(h, c.id, dItems, c.subcategories.map(x => x.key), new Set(subKeys));
+    const dUl = its => its && its.length ? `<ul class="items direct">${its.map(it => ed ? editRowHtml(it, c.direct.key, q) : rowHtml(p, it, q)).join("")}</ul>` : "";
+    const direct = dItems.length ? dUl(dlb.get(""))
       : ed && !searching && !subs.length ? `<p class="drop-zone"${dz(c.direct.key)}>Drag items here to put them straight in ${esc(c.name)}</p>` : "";
     if (!subs.length && !dItems.length && (!ed || searching)) continue;
     const nSel = selCount(p, e => e.c.id === c.id && e.h.id === h.id);
     const open = searching || app.cat === c.id || app.open.has(c.id);
     const addSub = ed ? `<div class="add-row"><button class="add-head" type="button" data-act="new-item" data-k="${esc(c.direct.key)}">+ New item in ${esc(c.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(c.id)}">+ New folder in ${esc(c.name)}</button></div>` : "";
-    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.join("")}${addSub}</div></details>`);
+    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.map((x, i) => x + dUl(dlb.get(subKeys[i]))).join("")}${addSub}</div></details>`);
   }
   if (ed && !searching) out.push(`<button class="add-head big" type="button" data-act="new-cat">+ Add category or subcategory</button>`);
   const lq = searching ? parseLensQuery(app.q) : null;
@@ -7511,9 +7569,12 @@ var RANK = null;
 function catRank() {
   if (RANK) return RANK;
   RANK = new Map(); let n = 0;
-  for (const h of HOUSES) for (const c of h.categories) for (const sub of [c.direct, ...c.subcategories]) {
-    for (const id of shownOrder(h, sub)) if (!RANK.has(id)) RANK.set(id, n++);
-    for (const it of sub.items) if (!RANK.has(it.id)) RANK.set(it.id, n++);
+  const add = id => { if (!RANK.has(id)) RANK.set(id, n++); };
+  for (const h of HOUSES) for (const c of h.categories) {
+    const keys = c.subcategories.map(x => x.key), lb = looseBlocks(h, c.id, c.direct.items, keys, new Set(keys));
+    lb.get("").forEach(it => add(it.id));
+    for (const sub of c.subcategories) { shownOrder(h, sub).forEach(add); sub.items.forEach(it => add(it.id)); (lb.get(sub.key) || []).forEach(it => add(it.id)); }
+    c.direct.items.forEach(it => add(it.id));
   }
   return RANK;
 }
@@ -10791,7 +10852,7 @@ function dragTarget(x, y) {
       const r = t.getBoundingClientRect();
       return { el: t, key: t.dataset.drop, ref: t.dataset.row, after: y > r.top + r.height / 2, brand: t.dataset.brand };
     }
-    return { el: t, key: t.dataset.drop, brand: t.dataset.brand };
+    return looseZone(t, y) || { el: t, key: t.dataset.drop, brand: t.dataset.brand };
   }
   if (drag.kind === "cmfr") {
     const mh = el.closest("#tree .mfr-head[data-list]");
@@ -10852,6 +10913,7 @@ function dropLabel(t) {
   const p = cur(), h = p && houseById(p.houseId);
   if (!h) return "";
   const at = name => (t.after ? "after " : "before ") + name;   // a move within its own list says where in it
+  if (drag.kind === "cat" && t.side) return t.side + " " + t.label;
   if (drag.kind === "cat" && t.ref) {
     const e = ITEM.get(drag.id), r = ITEM.get(t.ref);
     if (e && r && e.s === r.s && grpOf(e.it, e.s) === grpOf(r.it, r.s) && (!t.brand || t.brand === e.it.brand)) return at(r.it.name);
@@ -10859,8 +10921,9 @@ function dropLabel(t) {
   if (drag.kind === "cat" && t.key) {
     const [c, s, g] = splitKey(t.key), sub = subOf(h, c, s);
     if (!sub) return "";
-    if (sub.direct) return catOfSub(h, sub)?.name || "";
-    return sub.name + (g && g !== NOFOLDER ? " › " + headLabel(h, sub.key + "/" + g, g) : "") + (t.brand ? " › " + t.brand : "");
+    const into = t.ref ? "" : "into ";
+    if (sub.direct) return into + (catOfSub(h, sub)?.name || "");
+    return into + sub.name + (g && g !== NOFOLDER ? " › " + headLabel(h, sub.key + "/" + g, g) : "") + (t.brand ? " › " + t.brand : "");
   }
   if (drag.kind === "csub" && t.ref && catOfSub(h, subByKey(h, drag.id))?.id === t.cat) return at(subByKey(h, t.ref)?.name || "");
   if (drag.kind === "csub" && t.cat) return h.categories.find(c => c.id === t.cat)?.name || "";
@@ -10879,7 +10942,30 @@ function dropLabel(t) {
 }
 function paintTarget(t) {
   document.querySelectorAll(".drop-on, .drop-before, .drop-after").forEach(n => n.classList.remove("drop-on", "drop-before", "drop-after"));
-  if (t && !t.self) t.el.classList.add(t.ref ? (t.after ? "drop-after" : "drop-before") : "drop-on");
+  if (t && !t.self) t.el.classList.add(t.side ? "drop-" + t.side : t.ref ? (t.after ? "drop-after" : "drop-before") : "drop-on");
+}
+/* an item held by a folder's heading: its top edge puts the item just above that folder, its bottom edge (or the foot of the open
+   folder) just below it, the middle in it. The same below the last folder, and between them. Where the folder sits among
+   others: a subcategory among its category's, a folder among its type-grouped subcategory's. */
+function looseZone(t, y) {
+  const h = houseById(cur().houseId), at = (d, side) => {
+    const sub = d.classList.contains("sub"), sd = !sub && d.closest("details.sub");
+    if (!sub && !(d.classList.contains("brand") && !d.classList.contains("fmt") && sd && subByKey(h, sd.dataset.k)?.groupBy)) return null;
+    const boxId = sub ? d.closest("details.cat").dataset.k : sd.dataset.k, folder = sub ? d.dataset.k : splitKey(d.dataset.k)[2];
+    const label = sub ? subByKey(h, folder)?.name || "" : headLabel(h, d.dataset.k, folder);
+    return { el: d, key: sub ? boxId + "/_" : boxId + "/" + NOFOLDER, side, boxId, folder, label };
+  };
+  const fd = t.closest("details.brand, details.sub, details.cat"); if (!fd) return null;
+  const sm = fd.querySelector(":scope > summary");
+  if (sm && (t === sm || sm.contains(t)) && !fd.classList.contains("cat")) {
+    const r = sm.getBoundingClientRect(), e = Math.max(16, r.height * .3);   // the heading's top and bottom thirds: beside the folder; its middle: into it
+    return y < r.top + e ? at(fd, "before") : !fd.open && y > r.bottom - e ? at(fd, "after") : null;
+  }
+  if (t !== fd) return null;   // an empty folder's "drag here", a manufacturer's heading: in it
+  if (!fd.classList.contains("cat") && y > fd.getBoundingClientRect().bottom - 14) return at(fd, "after");
+  // in an open category or type-grouped subcategory, below its folders (by "+ New item"): after the last one above
+  const kids = [...fd.querySelectorAll(fd.classList.contains("cat") ? ":scope > .cat-body > details.sub" : ":scope > details.brand")].filter(d => d.getBoundingClientRect().bottom <= y + 1);
+  return kids.length ? at(kids[kids.length - 1], "after") : null;
 }
 /* the part of the screen the list shows in: below the bar at the top, above the tab bar at the bottom */
 function dragBounds() {
@@ -10916,7 +11002,7 @@ function moveDrag() {
   ghostSet(drag.target && !drag.target.self ? dropLabel(drag.target) : "");
   // hovering a closed heading opens it, so an item can travel into a collapsed group
   const sum = drag.kind === "ccat" ? null : document.elementFromPoint(drag.x, y)?.closest(drag.kind === "csub" ? "#tree details.cat > summary" : drag.kind === "cgrp" || drag.kind === "cmfr" ? "#tree details.cat > summary, #tree details.sub > summary" : "#tree summary");
-  const d = sum && sum.parentElement;
+  const d = sum && !(drag.target && drag.target.side) && sum.parentElement;   // not by a heading's edge: that's above or below it
   if (d && !d.open) {
     const moved = drag.hx === undefined || Math.hypot(drag.x - drag.hx, drag.y - drag.hy) > 24;
     if (drag.hover !== d || moved) {
@@ -10961,7 +11047,7 @@ function startDrag() {
   const loop = () => {
     if (!drag.on) return;
     const { top, bot } = dragBounds();
-    const m = 72, H = bot, y = drag.y;
+    const m = 44, H = bot, y = drag.y;   // a narrow band at each edge, so the rows next to the tab bar can still be dropped by
     // nothing above the catalog takes a drop, so once its top is in view, stop scrolling up
     const tree = drag.kind !== "line" && document.getElementById("tree");
     const atTop = tree && tree.getBoundingClientRect().top >= top;
@@ -11004,8 +11090,12 @@ function endDrag(drop) {
     const h = houseById(p.houseId);
     const e0 = ITEM.get(id), before = e0 && e0.s.key + "/" + grpOf(e0.it, e0.s);
     let moved = moveCatItem(h, id, t.key);
-    if (t.ref) moved = reorderItem(h, id, t.ref, t.after) || moved;
-    if (t.brand && t.brand !== ITEM.get(id)?.it.brand) moved = setItemBrand(h, id, t.brand) || moved;
+    if (t.side) moved = placeLoose(h, id, t) || moved;
+    else {
+      if (t.ref) moved = reorderItem(h, id, t.ref, t.after) || moved;
+      if (t.brand && t.brand !== ITEM.get(id)?.it.brand) moved = setItemBrand(h, id, t.brand) || moved;
+      moved = syncLoose(h, id, t.ref) || moved;
+    }
     if (moved) {
       const e = ITEM.get(id), g = grpOf(e.it, e.s);
       app.open.add(e.c.id); app.open.add(e.s.key); app.open.add(e.s.key + "/" + g);
