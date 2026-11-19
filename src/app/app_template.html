@@ -3378,6 +3378,9 @@ function applyCatalog() {
       s.gorder = (ed.groupOrder || {})[s.key] || null;
       s.extra = (ed.groups || {})[s.key] || [];
     }
+    // rental house subcategories the user removed once they were empty (one that has items again shows again)
+    const gone = ed.hideSubs || [];
+    if (gone.length) for (const c of h.categories) c.subcategories = c.subcategories.filter(x => !gone.includes(x.key) || x.items.length || (x.extra || []).length);
   }
   for (const h of HOUSES) for (const c of h.categories) for (const s of [c.direct, ...c.subcategories]) for (const it of s.items)
     ITEM.set(it.id, { it, h, c, s, ord: BLOC.get(it.id).ord });
@@ -3578,6 +3581,32 @@ function moveGroup(h, gkey, toSubKey, refG, after) {
   ed.groupOrder[toSubKey] = gs;
   applyCatalog(); touchSettings();
   return true;
+}
+/* a folder made a subcategory of a category: its items move into a new subcategory of the folder's name, placed among the
+   category's subcategories (before or after refSub); the subcategory it came from, left empty, goes */
+function promoteGroup(h, gkey, cat, refSub, after) {
+  const [c, s, g] = splitKey(gkey), skey = c + "/" + s, from = subByKey(h, skey), cc = h.categories.find(x => x.id === cat);
+  if (!from || !g || !cc) return null;
+  const ed = catEdits(h.id), name = headLabel(h, gkey, g), ids = from.items.filter(x => grpOf(x, from) === g).map(x => x.id);
+  const ex = cc.subcategories.find(x => norm(x.name) === norm(name) && x.key !== skey);
+  const nk = ex ? ex.key : addSubcategory(h, cat, name, ITEM.get(ids[0])?.it.section || typicalSection(h, c, s), true);
+  applyCatalog();
+  for (const id of ids) moveCatItem(h, id, nk);
+  if ((ed.groups[skey] || []).includes(g)) { ed.groups[skey] = ed.groups[skey].filter(x => x !== g); if (!ed.groups[skey].length) delete ed.groups[skey]; }
+  delete ed.heads[gkey]; delete ed.brandSplit[gkey];
+  if (ed.groupOrder[skey]) ed.groupOrder[skey] = ed.groupOrder[skey].filter(x => x !== g);
+  applyCatalog();
+  moveSub(h, nk, cat, refSub, after);
+  // the subcategory it came from, now empty, goes: the user's own is deleted, a rental house one is hidden
+  let removed = null;
+  const left = subByKey(h, skey);
+  if (left && !left.items.length && !(left.extra || []).length) {
+    removed = left.name;
+    if (customDef(h, skey)) deleteCustom(h, skey);
+    else { (ed.hideSubs || (ed.hideSubs = [])).includes(skey) || ed.hideSubs.push(skey); }
+  }
+  applyCatalog(); touchSettings();
+  return { key: nk, name, removed };
 }
 /* every folder (group) in a subcategory, in display order, including the user's empty ones */
 function subGroupNames(h, sub) {
@@ -7143,6 +7172,7 @@ function headDialog(scope, h, k) {
   const ownFolder = scope !== "section" && g && isOwnGroup(h, k);
   const own = scope === "section" ? (app.settings.customSections || []).find(c => c.id === k) : ownFolder || customDef(h, k);
   const nOwn = scope === "section" || !own || ownFolder ? 0 : ownItemsIn(h, k).length;
+  const emptyHouse = scope !== "section" && s && !g && !own && (x => x && !x.items.length && !(x.extra || []).length)(subByKey(h, k));   // a rental house subcategory left empty can go
   const delWhat = (scope === "section" ? "Its items move back to their usual section." : ownFolder ? "Items in it go back to their usual group." : s ? "Rental house items in it go back to where the rental house lists them." : "Rental house items and subcategories in it go back to where the rental house lists them.")
     + (nOwn ? ` The ${nOwn} item${nOwn === 1 ? "" : "s"} you created in it ${nOwn === 1 ? "is" : "are"} deleted too.` : "");
   const catObj = scope !== "section" && !s && !g ? h.categories.find(c => c.id === k) : null;
@@ -7153,8 +7183,8 @@ function headDialog(scope, h, k) {
     <div class="field"><label for="hd-name">Name</label><input id="hd-name" name="name" maxlength="60" value="${esc(now)}" required>
       ${now !== orig ? `<span class="hint">Original name: ${esc(orig)}</span>` : scope === "section" ? `<span class="hint">Used in every list and in the Word, PDF and CSV exports.</span>` : ""}</div>
     ${catObj ? swatchField(catObj, "hd-col") : ""}
-    ${own ? `<p class="hint">You made this ${what}. ${delWhat}</p>` : ""}
-    <div class="modal-actions">${own ? `<button class="btn danger" type="button" data-act="head-delete" data-scope="${scope}" data-k="${esc(k)}">Delete</button>` : now !== orig ? `<button class="btn ghost" type="button" data-act="head-reset" data-scope="${scope}" data-k="${esc(k)}">Use original</button>` : ""}<span class="grow"></span>
+    ${own ? `<p class="hint">You made this ${what}. ${delWhat}</p>` : emptyHouse ? `<p class="hint">This subcategory is empty. Delete takes it off the catalog; it comes back if gear is put in it again.</p>` : ""}
+    <div class="modal-actions">${own || emptyHouse ? `<button class="btn danger" type="button" data-act="head-delete" data-scope="${scope}" data-k="${esc(k)}">Delete</button>` : now !== orig ? `<button class="btn ghost" type="button" data-act="head-reset" data-scope="${scope}" data-k="${esc(k)}">Use original</button>` : ""}<span class="grow"></span>
       <button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save</button></div>
   </form>`);
   const inp = document.getElementById("hd-name"); if (inp) { inp.focus(); inp.select && inp.select(); }
@@ -10218,6 +10248,7 @@ document.addEventListener("click", e => {
       if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "Confirm delete"; break; }
       if (b.dataset.scope === "section") deleteSection(b.dataset.k);
       else if (isOwnGroup(houseById(p.houseId), b.dataset.k)) deleteFolder(houseById(p.houseId), b.dataset.k);
+      else if (splitKey(b.dataset.k)[1] && !customDef(houseById(p.houseId), b.dataset.k)) { const ed = catEdits(p.houseId); (ed.hideSubs || (ed.hideSubs = [])).includes(b.dataset.k) || ed.hideSubs.push(b.dataset.k); applyCatalog(); touchSettings(); }
       else { deleteCustom(houseById(p.houseId), b.dataset.k); if (app.cat === b.dataset.k) app.cat = "all"; }
       closeModal(); rerenderKeepScroll(); toast("Deleted");
       break;
@@ -10827,7 +10858,14 @@ function dragTarget(x, y) {
       return { el: d, sub: d.closest("details.sub").dataset.k, ref: splitKey(d.dataset.k)[2], after: y > r.top + r.height / 2 };
     }
     const sd = el.closest("#tree details.sub");
-    return sd ? { el: sd.querySelector(":scope > summary"), sub: sd.dataset.k, ref: null } : null;
+    if (sd) {
+      const r = sd.querySelector(":scope > summary").getBoundingClientRect(), e = Math.max(14, r.height * .3), cat = sd.closest("details.cat").dataset.k;
+      if (y < r.top + e) return { el: sd, promote: true, cat, refSub: sd.dataset.k, after: false, side: "before" };
+      if (y > r.bottom - e && y <= r.bottom) return { el: sd, promote: true, cat, refSub: sd.dataset.k, after: true, side: "after" };
+      return { el: sd.querySelector(":scope > summary"), sub: sd.dataset.k, ref: null };
+    }
+    const cd = el.closest("#tree details.cat");   // on a category: a subcategory of it, at its end
+    return cd ? { el: cd.querySelector(":scope > summary"), promote: true, cat: cd.dataset.k, refSub: null, after: true } : null;
   }
   if (drag.kind === "ccat") {
     const d = el.closest("#tree details.cat"); if (!d) return null;
@@ -10885,6 +10923,7 @@ function dropLabel(t) {
   if (drag.kind === "csub" && t.block) { const n = t.ids[t.after ? t.ids.length - 1 : 0]; return at(ITEM.get(n)?.it.name || ""); }
   if (drag.kind === "csub" && t.ref && catOfSub(h, subByKey(h, drag.id))?.id === t.cat) return at(subByKey(h, t.ref)?.name || "");
   if (drag.kind === "csub" && t.cat) return h.categories.find(c => c.id === t.cat)?.name || "";
+  if (drag.kind === "cgrp" && t.promote) return t.refSub ? `subcategory ${t.after ? "after" : "before"} ${subByKey(h, t.refSub)?.name || ""}` : `subcategory of ${h.categories.find(c => c.id === t.cat)?.name || ""}`;
   if (drag.kind === "cgrp" && t.ref && splitKey(drag.id).slice(0, 2).join("/") === t.sub) return at(headLabel(h, t.sub + "/" + t.ref, t.ref));
   if (drag.kind === "cgrp" && t.sub) return subByKey(h, t.sub)?.name || "";
   if (drag.kind === "ccat" && t.ref) return at(h.categories.find(c => c.id === t.ref)?.name || "");
@@ -11068,6 +11107,12 @@ function endDrag(drop) {
       if (sub) { app.open.add(catOfSub(h, sub)?.id); app.open.add(sub.key); if (g) app.open.add(t.list); }
       rerenderKeepScroll(); dropFlash(`#tree li.mfr-head[data-list="${CSS.escape(t.list)}"][data-brand="${CSS.escape(dragBrand)}"]`, dropY);
       if (t.list !== id && sub) toast(`${dragBrand} moved to ${sub.name}${g ? " › " + headLabel(h, t.list, g) : ""}`);
+    }
+  } else if (kind === "cgrp" && t.promote) {
+    const h = houseById(p.houseId), snap = clone((app.settings.catalog || {})[h.id] || {}), r = promoteGroup(h, id, t.cat, t.refSub, t.after);
+    if (r) {
+      app.open.add(t.cat); rerenderKeepScroll(); dropFlash(`#tree details.sub[data-k="${CSS.escape(r.key)}"] > summary`, dropY);
+      undoable(r.removed ? `Made a subcategory; removed the empty ${r.removed}:` : "Made a subcategory:", r.name, () => { (app.settings.catalog || (app.settings.catalog = {}))[h.id] = snap; applyCatalog(); touchSettings(); rerenderKeepScroll(); });
     }
   } else if (kind === "cgrp") {
     const h = houseById(p.houseId);
