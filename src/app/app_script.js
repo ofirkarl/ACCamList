@@ -6503,12 +6503,12 @@ function openPreview(p) {
   o.className = "preview"; o.id = "preview";
   o.setAttribute("role", "dialog"); o.setAttribute("aria-modal", "true"); o.setAttribute("aria-label", "Document preview");
   if (app.settings.exportLayout === "table") { app.settings.exportLayout = "clean"; touchSettings(); }  // one layout now
-  o.innerHTML = `<div class="pv-bar"><b>Preview</b><span class="hint">${esc(fileBase(p))}</span>
+  o.innerHTML = `<div class="pv-bar"><b>Preview<span class="pv-pages" id="pvPages"></span></b><span class="hint">${esc(fileBase(p))}</span>
       <button class="btn sm" type="button" data-act="preview-sku" aria-pressed="${skuOn()}">SKU ${skuOn() ? "on" : "off"}</button><button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</span></div>` : ""; })()}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${exportHtml(p)}</div></div></div>
     <div class="pv-actions">
-      <div class="pv-save" role="group" aria-labelledby="pv-fmt-l"><span class="pv-lrow"><span class="pv-lbl" id="pv-fmt-l">Format</span><span class="pv-lbl pv-pages" id="pvPages"></span></span>
+      <div class="pv-save" role="group" aria-labelledby="pv-fmt-l"><span class="pv-lbl" id="pv-fmt-l">Format</span>
         <div class="pv-seg pv-fmt">${[["one", "1"], ["media", "2"], ["two", "3"]].map(([k, t], i) => `<button class="btn" type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}" aria-label="Format ${t}: ${["one column", "Media beside Camera and Lens", "two columns"][i]}">${t}</button>`).join("")}</div></div>
       <div class="pv-save" role="group" aria-labelledby="pv-save-l"><span class="pv-lbl" id="pv-save-l">Save to this ${isTouch() ? "phone" : "computer"}</span>
         <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button></div></div>
@@ -6779,16 +6779,27 @@ function pageEnds(node, usable) {
   return ends;
 }
 /* how many pages the PDF comes to (the preview says it) */
-function pageCount(p) {
+function pagePlan(p) {
   const clean = layoutOf() === "clean";
   const mk = html => { const d = document.createElement("div"); d.style.cssText = "position:fixed;left:-12000px;top:0;width:794px;background:#fff;visibility:hidden"; d.innerHTML = html; document.body.appendChild(d); return d; };
   const host = mk(exportHtml(p, { pdf: true })), head = clean ? mk(`<div style="box-sizing:border-box;width:794px;padding:0 56px">${cleanTitleHtml(p, "9 out of 9")}</div>`) : null;
   try {
     const TOP = 40, BOTTOM = 44, headH = head ? head.firstElementChild.offsetHeight : 0, bodyTop = clean ? TOP + headH + 10 : TOP;
-    return pageEnds(host.firstElementChild, 1123 - bodyTop - BOTTOM).length;
+    return { ends: pageEnds(host.firstElementChild, 1123 - bodyTop - BOTTOM), H: host.firstElementChild.scrollHeight };
   } finally { host.remove(); head?.remove(); }
 }
-function pvPages(p) { const el = document.getElementById("pvPages"); if (!el) return; try { const n = pageCount(p); el.textContent = `${n} page${n === 1 ? "" : "s"}`; } catch (e) { el.textContent = ""; } }
+const pageCount = p => pagePlan(p).ends.length;
+/* the preview shows where the printed pages end: a dashed line with "Page 2" … across the paper, and the count by the title */
+function pvPages(p) {
+  const el = document.getElementById("pvPages"), paper = document.querySelector("#preview .pv-paper"); if (!el || !paper) return;
+  paper.querySelectorAll(".pv-brk").forEach(x => x.remove());
+  try {
+    const { ends, H } = pagePlan(p), n = ends.length, doc = paper.firstElementChild;
+    el.textContent = `${n} page${n === 1 ? "" : "s"}`;
+    const off = doc.offsetTop + doc.scrollHeight - H;   // the preview has the title over the body; the PDF prints it in each page's header
+    ends.slice(0, -1).forEach((e, i) => { const b = document.createElement("div"); b.className = "pv-brk"; b.style.top = off + e + 6 + "px"; b.innerHTML = `<span>Page ${i + 2}</span>`; paper.appendChild(b); });
+  } catch (e) { el.textContent = ""; }
+}
 async function buildPdf(p) {
   if (!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
   if (!window.jspdf) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
