@@ -2866,8 +2866,7 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .pv-logo-box { position: absolute; z-index: 4; touch-action: none; cursor: move; outline: calc(1px * var(--pvk, 1)) dashed color-mix(in srgb, var(--accent) 65%, transparent); }
 .pv-logo-box.on { outline-style: solid; }
 .pv-logo-box > img { display: block; width: 100%; height: 100%; pointer-events: none; user-select: none; }
-.pv-logo-box.behind > img { mix-blend-mode: multiply; }   /* behind the text: the type shows through it, as in the document */
-.pv-logo-box.behind { z-index: 0; }
+.pv-logo-box.behind { z-index: auto; mix-blend-mode: multiply; }   /* behind the text: blended with the page under it (not in a layer of its own), so the type shows through, as in the document */
 .pv-logo-c { position: absolute; width: calc(9px * var(--pvk, 1)); height: calc(9px * var(--pvk, 1)); border: 0 solid var(--accent); }
 .pv-logo-c::after { content: ""; position: absolute; inset: calc(-11px * var(--pvk, 1)); }   /* a finger's reach around the small mark */
 .pv-logo-c[data-c="nw"] { left: calc(-3px * var(--pvk, 1)); top: calc(-3px * var(--pvk, 1)); border-left-width: calc(2px * var(--pvk, 1)); border-top-width: calc(2px * var(--pvk, 1)); cursor: nwse-resize; }
@@ -2907,24 +2906,25 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .browse-on .item > .info > .tools > .star { display: none; }
 /* the preview's tools, compact: "Edit document" folds the format and logo rows away to see the whole page; save and send stay, one row */
 .pv-actions { display: block; padding-top: 0; }
-.pv-fold { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 30px; margin: 0 auto; background: none; border: 0; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; }
+.pv-fold { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 38px; margin: 0 auto; background: none; border: 0; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; cursor: pointer; }
 .pv-fold svg { width: 14px; height: 14px; transition: transform .25s var(--ease, ease); }
 .pv-actions.folded .pv-fold svg { transform: rotate(180deg); }
-.pv-edit { display: grid; gap: 8px; max-width: 420px; margin: 0 auto 10px; }
+.pv-edit { display: grid; gap: 14px; max-width: 420px; margin: 2px auto 14px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }   /* the editing rows, apart from save and send */
 .pv-actions.folded .pv-edit { display: none; }
-.pv-row { display: flex; align-items: center; gap: 8px; min-height: 36px; }
+.pv-actions.folded .pv-fold { margin-bottom: 6px; }
+.pv-row { display: flex; align-items: center; gap: 10px; min-height: 40px; }
 .pv-row[hidden] { display: none; }
-.pv-k { width: 62px; flex: none; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.pv-k { width: 72px; flex: none; font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .pv-mini { display: inline-flex; flex: none; }
 .pv-mini[hidden] { display: none; }
 .pv-row > .pv-mini:last-child:not(:nth-child(2)) { margin-inline-start: auto; }
-.pv-mini .btn { min-height: 0; height: 34px; min-width: 40px; padding: 0 12px; justify-content: center; font-size: 14px; font-weight: 600; border-radius: 0; box-shadow: none; }
+.pv-mini .btn { min-height: 0; height: 38px; min-width: 44px; padding: 0 14px; justify-content: center; font-size: 14px; font-weight: 600; border-radius: 0; box-shadow: none; }
 .pv-mini .btn + .btn { margin-inline-start: -1px; }
 .pv-mini .btn:first-child { border-start-start-radius: 10px; border-end-start-radius: 10px; }
 .pv-mini .btn:last-child { border-start-end-radius: 10px; border-end-end-radius: 10px; }
 .pv-mini .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); position: relative; z-index: 1; }
 .pv-mini .btn:disabled { opacity: .45; }
-.pv-go { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) 4px repeat(3, minmax(0, 1fr)); gap: 6px; max-width: 420px; margin: 0 auto; }
+.pv-go { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) 6px repeat(3, minmax(0, 1fr)); gap: 7px; max-width: 420px; margin: 0 auto; }
 .pv-go .btn { display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 52px; padding: 7px 2px 6px; border-radius: 12px; font-size: 12px; font-weight: 600; }
 .pv-go .btn span { white-space: nowrap; }
 .pv-go .btn svg { width: 18px; height: 18px; }
@@ -9543,7 +9543,7 @@ function docxXmlClean(p) {
   const secXml = (s, rows, tw) => { const S = sku ? (tw < W_TEXT ? 1050 : 1500) : 0, Q = tw < W_TEXT ? 520 : 640, N = tw - Q - S; let x = ""; const col = tw < W_TEXT, z = v => col ? v - 2 : v;   // in a column: a size smaller, and the rows don't hold together (Word splits the column across pages)
     x += para(wRun(secName(s.id), { b: true, sz: z(20) }), { bdr: true, keep: true, before: col ? 110 : 200, after: 30 });
     // every row but a section's last keeps with the next: Word moves a section that doesn't fit to the next page whole
-    x += table(sku ? [Q, N, S] : [Q, N], rows.map((r, ri) => { const keep = col ? ri === 0 : ri < rows.length - 1; return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: z(19) }), { keep }))}${cell(N, para(wRun(r.name, { b: true, sz: z(19) }), { keep }) + r.kids.map(t => para(wRun(t, { sz: z(17) }), { keep })).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: z(17) }), { keep })).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: z(15), mono: true }), { right: true })) : ""}</w:tr>`; }), tw);
+    x += table(sku ? [Q, N, S] : [Q, N], rows.map((r, ri) => { const keep = col || rows.length > 32 ? ri === 0 : ri < rows.length - 1; /* a section longer than about a page isn't held together (Word would push it whole to a new page and leave this one empty) */ return `<w:tr><w:trPr><w:cantSplit/></w:trPr>${cell(Q, para(wRun(r.qty === "" ? "" : r.qty + " x", { b: true, sz: z(19) }), { keep }))}${cell(N, para(wRun(r.name, { b: true, sz: z(19) }), { keep }) + r.kids.map(t => para(wRun(t, { sz: z(17) }), { keep })).join("") + r.extra.map(t => para(wRun(t, { i: true, color: "555555", sz: z(17) }), { keep })).join(""))}${sku ? cell(S, para(wRun(r.sku, { color: "777777", sz: z(15), mono: true }), { right: true })) : ""}</w:tr>`; }), tw);
     return x; };
   const parts = allSections().map(s => ({ id: s.id, col: s.column, rows: by[s.id].flatMap(([id, l]) => exportRows(id, l)) })).filter(x => x.rows.length);
   const cellOf = (w, xml) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/></w:tcPr>${xml}<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr></w:p></w:tc>`;
@@ -9592,7 +9592,7 @@ async function buildDocx(p) {
   z.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
   z.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${clean ? '<Relationship Id="rIdHdr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>' : ""}</Relationships>`);
   z.file("word/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/><w:sz w:val="20"/><w:szCs w:val="20"/><w:lang w:val="en-US"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`);
-  z.file("word/document.xml", docxXml(p));
+  let docXml = docxXml(p);
   if (clean) {   // the header's pictures: "Generated by" with the app's logo, and the user's own logo
     const credit = await creditImage().catch(() => null), logo = docLogo(), rels = [], media = {};
     if (credit) { z.file("word/media/credit.png", credit.data.split(",")[1], { base64: true }); rels.push(`<Relationship Id="rIdCredit" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/credit.png"/>`); media.credit = credit; }
@@ -9600,7 +9600,21 @@ async function buildDocx(p) {
       const ext = /^data:image\/jpeg/.test(url) ? "jpeg" : "png"; z.file("word/media/logo." + ext, url.split(",")[1], { base64: true }); rels.push(`<Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${ext}"/>`); media.logo = logoBox(logo); }
     if (rels.length) z.file("word/_rels/header1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels.join("")}</Relationships>`);
     z.file("word/header1.xml", docxHeaderClean(p, media));
+    if (media.logo && !logoBehind(logo)) {
+      // in front of the text: Word draws a header's pictures behind the page's text, so on the first page the logo goes in the page itself
+      // (in front), and that page's header is the same without it. On the pages after, Word keeps it behind the text
+      const ext = /logo\.jpeg/.test(rels.join("")) ? "jpeg" : "png";
+      z.file("word/header2.xml", docxHeaderClean(p, { ...media, logo: null }));
+      if (media.credit) z.file("word/_rels/header2.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels[0]}</Relationships>`);
+      docXml = docXml.replace('xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">', 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">')
+        .replace("<w:body>", `<w:body><w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/></w:pPr>${wPic("rIdLogoB", 3, media.logo.w, media.logo.h, "Logo", media.logo, 1, false)}</w:p>`)
+        .replace('<w:headerReference w:type="default" r:id="rIdHdr"/>', '<w:headerReference w:type="default" r:id="rIdHdr"/><w:headerReference w:type="first" r:id="rIdHdr1"/>')
+        .replace("</w:sectPr>", "<w:titlePg/></w:sectPr>");
+      z.file("word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdHdr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/><Relationship Id="rIdHdr1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/><Relationship Id="rIdLogoB" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${ext}"/></Relationships>`);
+      z.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="jpeg" ContentType="image/jpeg"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/><Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/></Types>`);
+    }
   }
+  z.file("word/document.xml", docXml);
   return z.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
 }
 /* PDF: the same two-column layout, drawn as HTML and paged at row boundaries */
