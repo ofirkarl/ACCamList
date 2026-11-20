@@ -590,7 +590,7 @@ body.finder-on .app > main > .pad:first-child .tabs { margin-top: 12px; }
 .ll b { font-size: 13px; }
 .sub-tools { display: flex; justify-content: flex-end; padding: 0 2px; margin-top: -2px; }
 .sub-tools .btn { font-size: 12px; padding: 4px 8px; }
-.add-li { list-style: none; padding: 8px 14px 10px; }
+.add-li { list-style: none; padding: 8px 14px 10px; display: flex; flex-wrap: wrap; gap: 8px; }
 .add-li .add-head { font-size: 13px; padding: 8px 12px; }
 .brand.fmt > summary .bname { font-weight: 700; }
 /* preview: Send, and the send dialog */
@@ -2856,6 +2856,8 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* Add Gear / Favorites rows, as the Camera List's: the tools (favorite, product page) at the top-right, the name wrapping under them */
 #tree li.item, .fav-list li.item { padding-inline-start: 14px; }
 #tree li.item.edit { align-items: center; }
+/* a folder inside a folder: set in a step, under its parent's heading */
+#tree details.brand > details.brand { margin: 6px 0 6px 14px; }
 /* the preview's format (1 2 3: one column, Media beside, two columns); the page count by the title, and where each printed page ends on the paper */
 .pv-pages { margin-inline-start: 10px; font-weight: 500; font-size: 13px; color: var(--muted); }
 .pv-pages:empty { display: none; }
@@ -2868,7 +2870,7 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* while a heading is moved (a category, subcategory, folder or manufacturer), the lists fold to their headings, as Camera List sections do */
 #tree.fold-ccat details.cat > .cat-body,
 #tree.fold-csub .cat-body > :not(details.sub, ul.items.direct), #tree.fold-csub details.sub > :not(summary),
-#tree.fold-cgrp .cat-body > :not(details.sub), #tree.fold-cgrp details.sub > :not(summary, details.brand), #tree.fold-cgrp details.brand > :not(summary),
+#tree.fold-cgrp .cat-body > :not(details.sub), #tree.fold-cgrp details.sub > :not(summary, details.brand), #tree.fold-cgrp details.brand > :not(summary, details.brand),
 #tree.fold-cmfr li.item, #tree.fold-cmfr li.add-li, #tree.fold-cmfr .add-row { display: none; }
 /* where a move would land: a clear line at the edge of the row or heading (drawn above the heading's own fill, which hid a shadow) */
 #tree :is(details, li.item, li.mfr-head, ul.items):is(.drop-before, .drop-after) { position: relative; box-shadow: none; }
@@ -3390,7 +3392,20 @@ function groupsOf(h, s) {
   const gs = [...new Set([...(s.groupBy ? s.groups || [] : []), ...s.items.map(x => grpOf(x, s)), ...(s.extra || [])])].filter(Boolean);
   return userOrder(s.groupBy ? gs : gs.sort((a, b) => a === "Generic" ? 1 : b === "Generic" ? -1 : a.localeCompare(b, "en", { sensitivity: "base" })), s.gorder, g => g);
 }
-const headLabel = (h, k, fallback) => peekEdits(h.id).heads[k] || fallback;
+/* folders inside folders: a folder's name is its path, its parent's path and its own name joined by GSEP ("Cables␟BNC") */
+const GSEP = "\u001f", gLeaf = g => String(g).split(GSEP).pop(), gParent = g => { g = String(g); const i = g.lastIndexOf(GSEP); return i < 0 ? "" : g.slice(0, i); };
+const gUnder = (g, a) => g === a || String(g).startsWith(a + GSEP);   // g is a, or inside it
+const headLabel = (h, k, fallback) => peekEdits(h.id).heads[k] || gLeaf(fallback);
+const pathLabel = (h, skey, g) => { const a = String(g).split(GSEP); return a.map((_, i) => headLabel(h, skey + "/" + a.slice(0, i + 1).join(GSEP), a[i])).join(" › "); };
+/* a subcategory's folders as a tree: every folder with its parents (a parent with only folders in it still shows), in order;
+   kids(path) the folders right inside one ("" for the top) */
+function groupTree(groups, order) {
+  const all = new Map(groups.map(g => [g[0], g]));
+  for (const [g] of groups) for (let p = gParent(g); p; p = gParent(p)) if (!all.has(p)) all.set(p, [p, []]);
+  const list = userOrder([...all.values()], order, x => x[0]), kids = p => list.filter(([g]) => g && gParent(g) === p);
+  const total = g => list.filter(([x]) => gUnder(x, g)).reduce((n, [, its]) => n + its.length, 0);
+  return { list, kids, total };
+}
 /* the folder an item moved or added into a subcategory lands in: its own folder if that subcategory already has one, else none
    (loose in the subcategory). The app never makes a folder the user did not */
 function defaultGroup(it, s, h) {
@@ -3557,6 +3572,40 @@ function moveSub(h, key, toCat, refKey, after) {
   return true;
 }
 /* drag a group: reorder it inside its subcategory, or take all its items into another subcategory */
+function relocateGroup(h, gkey, toSubKey, newPath) {
+  const [c, s, g] = splitKey(gkey), from = subOf(h, c, s), skey = c + "/" + s;
+  if (!from || !g || !newPath || (skey === toSubKey && newPath === g)) return false;
+  if (skey === toSubKey && gUnder(newPath, g)) return false;   // not into itself
+  const ed = catEdits(h.id), re = x => newPath + String(x).slice(g.length);
+  for (const it of from.items.filter(x => gUnder(grpOf(x, from), g))) moveCatItem(h, it.id, toSubKey + "/" + re(grpOf(it, from)));
+  for (const k of Object.keys(ed.heads)) { const [kc, ks, kg] = splitKey(k); if (kc + "/" + ks === skey && kg && gUnder(kg, g)) { ed.heads[toSubKey + "/" + re(kg)] = ed.heads[k]; delete ed.heads[k]; } }
+  for (const k of Object.keys(ed.brandSplit)) { const [kc, ks, kg] = splitKey(k); if (kc + "/" + ks === skey && kg && gUnder(kg, g)) { ed.brandSplit[toSubKey + "/" + re(kg)] = ed.brandSplit[k]; delete ed.brandSplit[k]; } }
+  const own = (ed.groups[skey] || []).filter(x => gUnder(x, g));
+  // the folder and the empty folders inside it come along as the user's own (a manufacturer folder moved is one the user placed)
+  ed.groups[skey] = (ed.groups[skey] || []).filter(x => !gUnder(x, g)); if (!ed.groups[skey].length) delete ed.groups[skey];
+  const dest = ed.groups[toSubKey] || (ed.groups[toSubKey] = []);
+  for (const x of [g, ...own]) if (!dest.includes(re(x))) dest.push(re(x));
+  if (ed.groupOrder[skey]) ed.groupOrder[skey] = ed.groupOrder[skey].filter(x => !gUnder(x, g));
+  applyCatalog(); touchSettings();
+  return true;
+}
+/* a folder dropped by another (before or after it, beside it in its parent folder) or into one (inside, last) */
+function placeGroup(h, gkey, toSubKey, t) {
+  const [c, s, g] = splitKey(gkey);
+  const parent = t.into !== undefined ? t.into : gParent(t.ref || "");
+  const np = (parent ? parent + GSEP : "") + gLeaf(g);
+  if (c + "/" + s === toSubKey && np !== g && gUnder(np, g)) return null;   // not into itself
+  let ch = false;
+  if (c + "/" + s !== toSubKey || np !== g) ch = relocateGroup(h, gkey, toSubKey, np);
+  const to = subByKey(h, toSubKey); if (!to) return ch;
+  const ed = catEdits(h.id), gs = subGroupNames(h, to).filter(x => x !== np);
+  let at = t.ref ? gs.indexOf(t.ref) : -1;
+  at = at < 0 ? gs.length : at + (t.after ? 1 : 0);
+  gs.splice(at, 0, np);
+  if (JSON.stringify(gs) !== JSON.stringify(ed.groupOrder[toSubKey] || [])) { ed.groupOrder[toSubKey] = gs; ch = true; }
+  applyCatalog(); touchSettings();
+  return ch ? toSubKey + "/" + np : null;
+}
 function moveGroup(h, gkey, toSubKey, refG, after) {
   const [c, s, g] = splitKey(gkey), from = subOf(h, c, s);
   if (!from || !g || !subByKey(h, toSubKey)) return false;
@@ -3641,6 +3690,8 @@ function addFolder(h, parent, name, section) {
   name = String(name || "").trim().slice(0, 60);
   if (!name) return null;
   if (!parent.includes("/")) return ensureSub(h, parent, name, section);
+  const [pc, ps, pg] = splitKey(parent);
+  if (pg) { parent = pc + "/" + ps; name = pg + GSEP + name; }   // a folder inside a folder
   const sub = subByKey(h, parent); if (!sub) return null;
   const ed = catEdits(h.id), list = ed.groups[parent] || (ed.groups[parent] = []);
   const ex = subGroupNames(h, sub).find(g => norm(g) === norm(name) || norm(headLabel(h, parent + "/" + g, g)) === norm(name));
@@ -3687,9 +3738,12 @@ function shownOrder(h, s) {
     flat = byBrand(natural.flatMap(g => g[1]), bo[s.key]);
     rest = other;
   }
-  const lb = looseBlocks(h, s.key, loose, subGroupNames(h, s), new Set(rest.map(g => g[0])));
+  const tree = groupTree(groups, s.gorder), inR = new Set(rest.map(g => g[0]));
+  const top = tree.list.filter(([g]) => !gParent(g) && (inR.has(g) || !groups.some(([x]) => x === g)));
+  const lb = looseBlocks(h, s.key, loose, subGroupNames(h, s).filter(g => !gParent(g)), new Set(top.map(g => g[0])));
   out.push(...lb.get(""), ...flat);
-  for (const [g, its] of rest) out.push(...(splitByBrand(h, s, g) ? byBrand(its, bo[s.key + "/" + g]) : its), ...(lb.get(g) || []));
+  const walk = ([g, its]) => { tree.kids(g).forEach(walk); out.push(...(splitByBrand(h, s, g) ? byBrand(its, bo[s.key + "/" + g]) : its)); };   // a folder's folders first, then its items, as Add Gear shows
+  for (const grp of top) { walk(grp); out.push(...(lb.get(grp[0]) || [])); }
   return out.map(it => it.id);
 }
 /* the items a manufacturer list shows: a group's items, or a flat subcategory's items that sit with their manufacturer */
@@ -6165,15 +6219,15 @@ function treeHtml(p, h) {
         for (const g of s.extra || []) if (!groups.some(([x]) => x === g)) groups.push([g, []]);
         groups.splice(0, groups.length, ...userOrder(groups, s.gorder, x => x[0]));
       }
-      const kS = s.key;
+      const kS = s.key, tree = groupTree(groups, s.gorder);
       const renderGroup = ([b, its]) => {
-        const kB = kS + "/" + b, label = headLabel(h, kB, b);
+        const kB = kS + "/" + b, label = headLabel(h, kB, b), inner = tree.kids(b).map(renderGroup).join("");   // its folders first, then its items
         const open = searching || groups.length === 1 || app.open.has(kB);
-        const nSel = its.filter(it => p.items[it.id]).length;
+        const sub = tree.list.filter(([x]) => gUnder(x, b)).flatMap(([, x]) => x), nSel = sub.filter(it => p.items[it.id]).length, nAll = sub.length;
         // a folder of the user's own gets its own "+ New item", which lands in it
-        const addHere = ed && !searching && isOwnGroup(h, kB) ? `<li class="add-li"><button class="add-head" type="button" data-act="new-item" data-k="${esc(kB)}">+ New item in ${esc(label)}</button></li>` : "";
-        return `<details class="brand" data-k="${esc(kB)}"${dz(kB)} ${open ? "open" : ""}><summary${dz(kB)}><span class="bname">${ed ? `<button class="handle" type="button" data-drag="cgrp" data-id="${esc(kB)}" data-label="${esc(label)}" aria-label="Move ${esc(label)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${hl(label, q)}${pen(kB, label)}</span><span class="sumr">${selBadge(nSel, kB)}<span class="cnt">${its.length}</span>${CHEV}</span></summary><ul class="items">` +
-          (its.length ? (splitByBrand(h, s, b) ? brandRows(its, (it, br) => ed ? editRowHtml(it, kB, q, br) : rowHtml(p, it, q), ed, kB, null, kB, (peekEdits(h.id).brandOrder || {})[kB], searching) : its.map(it => ed ? editRowHtml(it, kB, q) : rowHtml(p, it, q)).join("")) : `<li class="drop-empty"${dz(kB)}>Empty folder. Drag items here.</li>`) + addHere + `</ul></details>`;
+        const addHere = ed && !searching ? `<li class="add-li">${isOwnGroup(h, kB) ? `<button class="add-head" type="button" data-act="new-item" data-k="${esc(kB)}">+ New item in ${esc(label)}</button>` : ""}<button class="add-head" type="button" data-act="new-folder" data-k="${esc(kB)}">+ New folder in ${esc(label)}</button></li>` : "";   // folders inside folders, as deep as wanted
+        return `<details class="brand" data-k="${esc(kB)}"${dz(kB)} ${open ? "open" : ""}><summary${dz(kB)}><span class="bname">${ed ? `<button class="handle" type="button" data-drag="cgrp" data-id="${esc(kB)}" data-label="${esc(label)}" aria-label="Move ${esc(label)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${hl(label, q)}${pen(kB, label)}</span><span class="sumr">${selBadge(nSel, kB)}<span class="cnt">${nAll}</span>${CHEV}</span></summary>${inner}<ul class="items">` +
+          (its.length ? (splitByBrand(h, s, b) ? brandRows(its, (it, br) => ed ? editRowHtml(it, kB, q, br) : rowHtml(p, it, q), ed, kB, null, kB, (peekEdits(h.id).brandOrder || {})[kB], searching) : its.map(it => ed ? editRowHtml(it, kB, q) : rowHtml(p, it, q)).join("")) : inner ? "" : `<li class="drop-empty"${dz(kB)}>Empty folder. Drag items here.</li>`) + addHere + `</ul></details>`;
       };
       let brands, folders;
       const fmt = !ed && c.id === "lenses" ? lensFormats(groups, s) : null;
@@ -6193,10 +6247,11 @@ function treeHtml(p, h) {
         brands = flatItems.length ? `<ul class="items flat">${brandRows(flatItems, (it, br) => ed ? editRowHtml(it, kS, q, br) : rowHtml(p, it, q), ed, kS, br => kS + "/" + br, kS, (peekEdits(h.id).brandOrder || {})[kS], searching)}</ul>` : "";
         folders = other;
       } else { brands = ""; folders = groups; }
+      { const inF = new Set(folders.map(g => g[0])); folders = tree.list.filter(([g]) => !gParent(g) && (inF.has(g) || !groups.some(([x]) => x === g))); }   // the top folders; folders inside folders show in their parent
       // dropping on a type-grouped subcategory (not on one of its folders) puts the item straight in it
       const subDrop = s.groupBy ? kS + "/" + NOFOLDER : kS;
       // items in no folder: above the folders, or each after the folder it was put by
-      const lb = looseBlocks(h, kS, looseItems, subGroupNames(h, s), new Set(folders.map(g => g[0])));
+      const lb = looseBlocks(h, kS, looseItems, subGroupNames(h, s).filter(g => !gParent(g)), new Set(folders.map(g => g[0])));
       const looseUl = its => its && its.length ? `<ul class="items loose">${its.map(it => ed ? editRowHtml(it, subDrop, q) : rowHtml(p, it, q)).join("")}</ul>` : "";
       brands = looseUl(lb.get("")) + brands + folders.map(g => renderGroup(g) + looseUl(lb.get(g[0]))).join("");
       const nSel = selCount(p, e => e.s === s && e.h.id === h.id);
@@ -6808,7 +6863,7 @@ function groupOpts(h, skey, sel, ownMode) {
   if (!sub) return brandOpt + `<option value="__new">New group…</option>`;
   const gs = groupsOf(h, sub);
   if (sel && sel !== "__brand" && sel !== NOFOLDER && !gs.includes(sel)) gs.unshift(sel);
-  return brandOpt + optList(gs.map(g => [g, headLabel(h, skey + "/" + g, g)]), sel) + `<option value="__new">${sub.groupBy ? "+ New folder…" : "New group…"}</option>`;
+  return brandOpt + optList(gs.map(g => [g, pathLabel(h, skey, g)]), sel) + `<option value="__new">${sub.groupBy ? "+ New folder…" : "New group…"}</option>`;
 }
 const NEW_CAT = `<option value="__new">+ New category…</option>`, NEW_SUB = `<option value="__new">+ New subcategory…</option>`;
 const catOptions = (h, sel) => (sel === "__new" ? NEW_CAT.replace('">', '" selected>') : NEW_CAT) + `<optgroup label="Existing categories">${optList(h.categories.map(c => [c.id, c.name]), sel)}</optgroup>`;
@@ -7158,7 +7213,7 @@ function newHeadDialog(kind, h, cid) {
 }
 function folderDialog(h, parent) {
   const inCat = !parent.includes("/");
-  const where = inCat ? h.categories.find(c => c.id === parent)?.name : subByKey(h, parent)?.name;
+  const pg = splitKey(parent)[2], where = inCat ? h.categories.find(c => c.id === parent)?.name : pg ? headLabel(h, parent, pg) : subByKey(h, parent)?.name;
   const secs = inCat ? optList(allSections().map(s => [s.id, secName(s.id)]), typicalSection(h, parent, "_", "accessories")) : "";
   showModal(`<form class="form dialog" id="folderForm" data-parent="${esc(parent)}" autocomplete="off">
     <h3 class="plain">New folder in ${esc(where || "")}</h3>
@@ -10669,7 +10724,7 @@ document.addEventListener("submit", e => {
     if (!name) { f.elements.name.focus(); return; }
     const parent = f.dataset.parent, key = addFolder(h, parent, name, f.elements.section ? f.elements.section.value : undefined);
     if (!key) return;
-    if (parent.includes("/")) { app.open.add(splitKey(parent)[0]); app.open.add(parent); app.open.add(key); }
+    if (parent.includes("/")) { const [pc, ps] = splitKey(parent); app.open.add(pc); app.open.add(pc + "/" + ps); app.open.add(parent); app.open.add(key); }
     else { app.open.add(parent); app.open.add(key); }
     closeModal(); rerenderKeepScroll(); toast(`Added folder ${name}. Drag items into it.`);
     return;
@@ -10874,10 +10929,12 @@ function dragTarget(x, y) {
   }
   if (drag.kind === "cgrp") {
     const d = el.closest("#tree details.brand");
-    if (d) {
-      if (d.dataset.k === drag.id) return { el: d, self: true };
-      const r = d.querySelector(":scope > summary").getBoundingClientRect();
-      return { el: d, sub: d.closest("details.sub").dataset.k, ref: splitKey(d.dataset.k)[2], after: y > r.top + r.height / 2 };
+    if (d) {   // a folder: by its heading's top or bottom third, beside it; its middle, or anywhere in it open, inside it
+      if (d.dataset.k === drag.id || d.dataset.k.startsWith(drag.id + GSEP)) return { el: d, self: true };
+      const sm = d.querySelector(":scope > summary"), r = sm.getBoundingClientRect(), e = Math.max(12, r.height * .3), g = splitKey(d.dataset.k)[2], sub = d.closest("details.sub").dataset.k;
+      if (y >= r.top && y < r.top + e) return { el: d, sub, ref: g, after: false };
+      if (y <= r.bottom && y > r.bottom - e && !d.open) return { el: d, sub, ref: g, after: true };
+      return { el: sm, sub, into: g };
     }
     const sd = el.closest("#tree details.sub");
     if (sd) {
@@ -10951,6 +11008,7 @@ function dropLabel(t) {
   if (drag.kind === "csub" && t.ref && catOfSub(h, subByKey(h, drag.id))?.id === t.cat) return at(subByKey(h, t.ref)?.name || "");
   if (drag.kind === "csub" && t.cat) return h.categories.find(c => c.id === t.cat)?.name || "";
   if (drag.kind === "cgrp" && t.promote) return t.refSub ? `subcategory ${t.after ? "after" : "before"} ${subByKey(h, t.refSub)?.name || ""}` : `subcategory of ${h.categories.find(c => c.id === t.cat)?.name || ""}`;
+  if (drag.kind === "cgrp" && t.into) return "into " + headLabel(h, t.sub + "/" + t.into, t.into);
   if (drag.kind === "cgrp" && t.ref && splitKey(drag.id).slice(0, 2).join("/") === t.sub) return at(headLabel(h, t.sub + "/" + t.ref, t.ref));
   if (drag.kind === "cgrp" && t.sub) return subByKey(h, t.sub)?.name || "";
   if (drag.kind === "ccat" && t.ref) return at(h.categories.find(c => c.id === t.ref)?.name || "");
@@ -11142,11 +11200,12 @@ function endDrag(drop) {
       undoable(r.removed ? `Made a subcategory; removed the empty ${r.removed}:` : "Made a subcategory:", r.name, () => { (app.settings.catalog || (app.settings.catalog = {}))[h.id] = snap; applyCatalog(); touchSettings(); rerenderKeepScroll(); });
     }
   } else if (kind === "cgrp") {
-    const h = houseById(p.houseId);
-    if (moveGroup(h, id, t.sub, t.ref, t.after)) {
+    const h = houseById(p.houseId), nk = placeGroup(h, id, t.sub, t.into ? t : t.ref ? t : { into: "", ref: null });
+    if (nk) {
       const to = subByKey(h, t.sub);
       app.open.add(t.sub); if (to) app.open.add(catOfSub(h, to).id);
-      rerenderKeepScroll(); dropFlash(`#tree details.brand[data-k="${CSS.escape(t.sub + "/" + splitKey(id)[2])}"] > summary`, dropY);
+      for (let x = gParent(splitKey(nk)[2]); x; x = gParent(x)) app.open.add(t.sub + "/" + x);   // the folders it is now in, open
+      rerenderKeepScroll(); dropFlash(`#tree details.brand[data-k="${CSS.escape(nk)}"] > summary`, dropY);
       if (splitKey(id)[0] + "/" + splitKey(id)[1] !== t.sub && to) toast(`Moved to ${to.name}`);
     }
   } else if (kind === "sec") {
