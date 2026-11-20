@@ -6458,6 +6458,12 @@ const docLogo = () => { const l = app.settings.docLogo; return l && typeof l.dat
 const LOGO_H = 40, LOGO_W = 150;   // the user's logo at most, in the title (px of the 794-px page)
 const logoSize = l => { const k = Math.min(LOGO_H / l.h, LOGO_W / l.w); return { w: Math.round(l.w * k), h: Math.round(l.h * k) }; };
 /* where the logo sits on every page, and how big: moved and sized freely in the preview (px of the 794×1123 page). At first, top right */
+const logoOpacity = (l = docLogo()) => { const o = +(l && l.pos && l.pos.op); return o >= .05 && o <= 1 ? o : 1; };
+const logoBehind = (l = docLogo()) => !!(l && l.pos && l.pos.behind);
+/* the logo as a picture with its see-through-ness made in */
+function logoFaded(l, op) {
+  return new Promise(res => { const im = new Image(); im.onload = () => { const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight; const x = c.getContext("2d"); x.globalAlpha = op; x.drawImage(im, 0, 0); res({ im, url: op < 1 ? c.toDataURL("image/png") : l.data }); }; im.onerror = () => res(null); im.src = l.data; });
+}
 function logoBox(l = docLogo()) {
   if (!l) return null;
   const r = l.w / l.h, d = logoSize(l), pos = l.pos || { x: 794 - 56 - d.w, y: 76, h: d.h };
@@ -6562,10 +6568,10 @@ const xmlEsc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").repla
 const wRun = (t, o = {}) => `<w:r><w:rPr>${o.b ? "<w:b/><w:bCs/>" : ""}${o.i ? "<w:i/>" : ""}${o.color ? `<w:color w:val="${o.color}"/>` : ""}${o.mono ? '<w:rFonts w:ascii="Courier New" w:hAnsi="Courier New"/>' : ""}${o.caps ? "<w:caps/>" : ""}<w:sz w:val="${o.sz || 20}"/><w:szCs w:val="${o.sz || 20}"/>${hasHebrew(t) ? "<w:rtl/>" : ""}</w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
 const W_TEXT = 9638;
 /* a picture in a line of Word (sizes in px of the 794-px page) */
-function wPic(rid, id, w, h, name, at) {   // at {x, y}: placed on the page there, over nothing (not in the line)
+function wPic(rid, id, w, h, name, at, op = 1, behind = false) {   // at {x, y}: placed on the page there, over nothing (not in the line)
   const cx = Math.round(w * 7560000 / 794), cy = Math.round(h * 7560000 / 794), E = v => Math.round(v * 7560000 / 794);
-  const pic = `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="pic${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>`;
-  if (at) return `<w:r><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="2" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>${E(at.x)}</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>${E(at.y)}</wp:posOffset></wp:positionV><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="${id}" name="${name}" descr="${name}"/><wp:cNvGraphicFramePr/>${pic}</wp:anchor></w:drawing></w:r>`;
+  const pic = `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${id}" name="pic${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}">${op < 1 ? `<a:alphaModFix amt="${Math.round(op * 100000)}"/>` : ""}</a:blip><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>`;
+  if (at) return `<w:r><w:drawing><wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="2" behindDoc="${behind ? 1 : 0}" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>${E(at.x)}</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>${E(at.y)}</wp:posOffset></wp:positionV><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="${id}" name="${name}" descr="${name}"/><wp:cNvGraphicFramePr/>${pic}</wp:anchor></w:drawing></w:r>`;
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${id}" name="${name}" descr="${name}"/><wp:cNvGraphicFramePr/>${pic}</wp:inline></w:drawing></w:r>`;
 }
 function docxHeaderClean(p, media = {}) {
@@ -6573,7 +6579,7 @@ function docxHeaderClean(p, media = {}) {
   const unit = unitLine(p);
   const tabs = `<w:tabs><w:tab w:val="center" w:pos="${W_TEXT / 2}"/><w:tab w:val="right" w:pos="${W_TEXT}"/></w:tabs>`, gray = { sz: 16, color: "8A8A8A" };
   // "Camera List" centered on top, the version and the save time in gray at the top left, the page count right, then the production, then the unit
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="0"/></w:pPr>${media.logo ? wPic("rIdLogo", 1, media.logo.w, media.logo.h, "Logo", media.logo) : ""}${wRun("Version " + docVer(p), gray)}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 28 })}<w:r><w:tab/></w:r>${fld("PAGE", 17)}${wRun(" / ", { sz: 17, color: "777777" })}${fld("NUMPAGES", 17)}</w:p><w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="${unit || media.credit ? 0 : 160}"/></w:pPr>${wRun("\u200E" + verStamp() + "\u200E", gray)}<w:r><w:tab/></w:r>${wRun(p.name || "Production", { b: true, sz: 36 })}</w:p>${unit || media.credit ? `<w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="160"/></w:pPr>${media.credit ? wPic("rIdCredit", 2, media.credit.w, media.credit.h, "Generated by AC Cam List") : ""}${unit ? `<w:r><w:tab/></w:r>${wRun(unit, { b: true, caps: true, sz: 17 })}` : ""}</w:p>` : ""}</w:hdr>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"><w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="0"/></w:pPr>${media.logo ? wPic("rIdLogo", 1, media.logo.w, media.logo.h, "Logo", media.logo, 1, logoBehind()) : ""}${wRun("Version " + docVer(p), gray)}<w:r><w:tab/></w:r>${wRun(docTitle(p), { sz: 28 })}<w:r><w:tab/></w:r>${fld("PAGE", 17)}${wRun(" / ", { sz: 17, color: "777777" })}${fld("NUMPAGES", 17)}</w:p><w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="${unit || media.credit ? 0 : 160}"/></w:pPr>${wRun("\u200E" + verStamp() + "\u200E", gray)}<w:r><w:tab/></w:r>${wRun(p.name || "Production", { b: true, sz: 36 })}</w:p>${unit || media.credit ? `<w:p><w:pPr>${tabs}<w:spacing w:before="0" w:after="160"/></w:pPr>${media.credit ? wPic("rIdCredit", 2, media.credit.w, media.credit.h, "Generated by AC Cam List") : ""}${unit ? `<w:r><w:tab/></w:r>${wRun(unit, { b: true, caps: true, sz: 17 })}` : ""}</w:p>` : ""}</w:hdr>`;
 }
 function docxXmlClean(p) {
   const by = linesBySection(p), sku = skuOn();
@@ -6645,7 +6651,8 @@ async function buildDocx(p) {
   if (clean) {   // the header's pictures: "Generated by" with the app's logo, and the user's own logo
     const credit = await creditImage().catch(() => null), logo = docLogo(), rels = [], media = {};
     if (credit) { z.file("word/media/credit.png", credit.data.split(",")[1], { base64: true }); rels.push(`<Relationship Id="rIdCredit" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/credit.png"/>`); media.credit = credit; }
-    if (logo) { const ext = /^data:image\/jpeg/.test(logo.data) ? "jpeg" : "png"; z.file("word/media/logo." + ext, logo.data.split(",")[1], { base64: true }); rels.push(`<Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${ext}"/>`); media.logo = logoBox(logo); }
+    if (logo) { const op = logoOpacity(logo), url = op < 1 ? ((await logoFaded(logo, op)) || {}).url || logo.data : logo.data;   // its see-through-ness made into the picture (every Word reader shows it)
+      const ext = /^data:image\/jpeg/.test(url) ? "jpeg" : "png"; z.file("word/media/logo." + ext, url.split(",")[1], { base64: true }); rels.push(`<Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.${ext}"/>`); media.logo = logoBox(logo); }
     if (rels.length) z.file("word/_rels/header1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rels.join("")}</Relationships>`);
     z.file("word/header1.xml", docxHeaderClean(p, media));
   }
@@ -6688,12 +6695,22 @@ function openPreview(p) {
         <div class="pv-seg pv-fmt">${[["one", "1"], ["media", "2"], ["two", "3"]].map(([k, t], i) => `<button class="btn" type="button" data-act="pv-cols" data-id="${k}" aria-pressed="${docCols() === k}" aria-label="Format ${t}: ${["one column", "Media beside Camera and Lens", "two columns"][i]}">${t}</button>`).join("")}</div></div>
       <div class="pv-save" role="group" aria-labelledby="pv-logo-l"><span class="pv-lbl" id="pv-logo-l">Your logo</span>
         <div class="pv-seg pv-logo"><button class="btn" type="button" data-act="pv-logo" id="pvLogoBtn">${docLogo() ? "Change" : "Add"}</button><button class="btn" type="button" data-act="pv-logo-rm" id="pvLogoRm" ${docLogo() ? "" : "disabled"}>Remove</button></div>
+        <div class="pv-logo-opts" id="pvLogoOpts" ${docLogo() ? "" : "hidden"}>
+          <div class="pv-seg"><button class="btn" type="button" data-act="pv-logo-layer" data-id="front" aria-pressed="${!logoBehind()}">In front of text</button><button class="btn" type="button" data-act="pv-logo-layer" data-id="behind" aria-pressed="${logoBehind()}">Behind text</button></div>
+          <label class="pv-op"><span>Opacity</span><input type="range" id="pvLogoOp" min="10" max="100" step="5" value="${Math.round(logoOpacity() * 100)}"><b id="pvLogoOpV">${Math.round(logoOpacity() * 100)}%</b></label>
+        </div>
         <input type="file" id="pvLogoFile" accept="image/png,image/jpeg,image/webp" hidden></div>
       <div class="pv-save" role="group" aria-labelledby="pv-save-l"><span class="pv-lbl" id="pv-save-l">Save to this ${isTouch() ? "phone" : "computer"}</span>
         <div class="pv-seg"><button class="btn" type="button" data-act="export-docx" aria-label="Save as Word">${SAVE_ICON}<span>Word</span></button><button class="btn" type="button" data-act="export-pdf" aria-label="Save as PDF">${SAVE_ICON}<span>PDF</span></button></div></div>
       <div class="pv-send" role="group" aria-labelledby="pv-send-l"><span class="pv-lbl" id="pv-send-l">Send</span>
         <div class="pv-three"><button class="btn" type="button" data-act="copy" aria-label="Copy the list as text">${COPY_ICON}<span>Copy</span></button><button class="btn" type="button" data-act="wa-send" id="waGo" aria-label="Send the file in WhatsApp">${WA_ICON}<span>WhatsApp</span></button><button class="btn primary" type="button" data-act="send-open" aria-label="Send the file by email">${MAIL_ICON}<span>Email</span></button></div></div></div>`;
   document.body.appendChild(o);
+  o.querySelector("#pvLogoOp")?.addEventListener("input", e => {   // the logo's opacity, seen on the paper as it moves
+    const L = docLogo(); if (!L) return; const v = Math.min(100, Math.max(10, +e.target.value || 100));
+    const b = logoBox(L); L.pos = { ...(L.pos || { x: Math.round(b.x), y: Math.round(b.y), h: Math.round(b.h) }), op: v / 100 };
+    document.getElementById("pvLogoOpV").textContent = v + "%"; pvLogo();
+  });
+  o.querySelector("#pvLogoOp")?.addEventListener("change", () => touchSettings());
   o.querySelector("#pvLogoFile")?.addEventListener("change", async e => {   // the user's logo, for every list's document (top right)
     const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
     try { app.settings.docLogo = await readLogo(f); touchSettings(); pvRepaint(p); toast("Logo added: it shows at the top right of every list's document."); }
@@ -6709,6 +6726,9 @@ function pvRepaint(p) {   // the preview's paper and logo buttons, after a chang
   const paper = document.querySelector("#preview .pv-paper"); if (paper) paper.innerHTML = exportHtml(p);
   const b = document.getElementById("pvLogoBtn"), r = document.getElementById("pvLogoRm");
   if (b) b.textContent = docLogo() ? "Change" : "Add"; if (r) r.disabled = !docLogo();
+  const op = document.getElementById("pvLogoOpts"); if (op) op.hidden = !docLogo();
+  document.querySelectorAll('#preview [data-act="pv-logo-layer"]').forEach(x => x.setAttribute("aria-pressed", String((x.dataset.id === "behind") === logoBehind())));
+  const rg = document.getElementById("pvLogoOp"); if (rg) { rg.value = Math.round(logoOpacity() * 100); document.getElementById("pvLogoOpV").textContent = rg.value + "%"; }
   fitPreview();
 }
 function fitPreview() {
@@ -6730,17 +6750,21 @@ function pvLogo() {
   if (!b) { el?.remove(); return; }
   if (!el) {
     el = document.createElement("div"); el.className = "pv-logo-box"; el.setAttribute("aria-label", "Your logo: drag to move, drag the corner to size it");
-    el.innerHTML = `<img alt="" draggable="false"><span class="pv-logo-rs" aria-hidden="true"></span>`;
+    el.innerHTML = `<img alt="" draggable="false">${["nw", "ne", "sw", "se"].map(c => `<span class="pv-logo-c" data-c="${c}" aria-hidden="true"></span>`).join("")}`;
     paper.appendChild(el);
     el.addEventListener("pointerdown", e => {
       const L = docLogo(); if (!L) return;
       e.preventDefault(); e.stopPropagation(); el.setPointerCapture(e.pointerId);
-      const k = paper.getBoundingClientRect().width / 794, s = logoBox(L), rs = e.target.classList.contains("pv-logo-rs"), x0 = e.clientX, y0 = e.clientY;
+      const k = paper.getBoundingClientRect().width / 794, s = logoBox(L), cn = e.target.dataset && e.target.dataset.c, x0 = e.clientX, y0 = e.clientY, r = s.w / s.h;
       el.classList.add("on");
       const mv = ev => {
         const dx = (ev.clientX - x0) / k, dy = (ev.clientY - y0) / k;
-        L.pos = rs ? { x: s.x, y: s.y, h: Math.max(12, s.h + Math.max(dy, dx * s.h / s.w)) } : { x: s.x + dx, y: s.y + dy, h: s.h };
-        const b2 = logoBox(L); L.pos = { x: Math.round(b2.x), y: Math.round(b2.y), h: Math.round(b2.h) }; place();
+        const keep = { op: L.pos && L.pos.op, behind: L.pos && L.pos.behind };
+        if (cn) {   // a corner: the logo grows or shrinks from it, the opposite corner stays, its proportions kept
+          const gx = cn.includes("e") ? dx : -dx, gy = cn.includes("s") ? dy : -dy, h = Math.max(12, s.h + Math.max(gy, gx / r)), w = h * r;
+          L.pos = { x: cn.includes("w") ? s.x + s.w - w : s.x, y: cn.includes("n") ? s.y + s.h - h : s.y, h };
+        } else L.pos = { x: s.x + dx, y: s.y + dy, h: s.h };
+        const b2 = logoBox(L); L.pos = { x: Math.round(b2.x), y: Math.round(b2.y), h: Math.round(b2.h), ...keep }; place();
       };
       const up = () => { el.removeEventListener("pointermove", mv); el.removeEventListener("pointerup", up); el.removeEventListener("pointercancel", up); el.classList.remove("on"); touchSettings(); };
       el.addEventListener("pointermove", mv); el.addEventListener("pointerup", up); el.addEventListener("pointercancel", up);
@@ -6748,6 +6772,7 @@ function pvLogo() {
   }
   const place = () => { const q = logoBox(); if (!q) return; Object.assign(el.style, { left: q.x + "px", top: q.y + "px", width: q.w + "px", height: q.h + "px" }); };
   const img = el.querySelector("img"); if (img.getAttribute("src") !== l.data) img.src = l.data;
+  img.style.opacity = logoOpacity(l); el.classList.toggle("behind", logoBehind(l));
   place();
 }
 /* the preview moves to the other unit's list: the page slides out toward the side you came from, the other slides in, and its crew lines fade up */
@@ -7036,19 +7061,26 @@ async function buildPdf(p) {
     const pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
     const pw = pdf.internal.pageSize.getWidth(), k = pw / 794, n = ends.length, logo = docLogo(), lb = logoBox(logo);
     let s0 = 0;
+    // the user's logo, where it was put, as see-through as set; in front of the text, or behind it (blended in under the type, so the type stays black)
+    const op = logoOpacity(logo), behind = logoBehind(logo), lf = lb ? await logoFaded(logo, op) : null;
+    const under = (cv, top, sc) => { if (!lf || !behind) return; const x = cv.getContext("2d"); x.globalAlpha = op; x.globalCompositeOperation = "multiply"; x.drawImage(lf.im, lb.x * sc, (lb.y - top) * sc, lb.w * sc, lb.h * sc); x.globalAlpha = 1; x.globalCompositeOperation = "source-over"; };
+    const putLogo = () => lf && pdf.addImage(lf.url, op < 1 || /^data:image\/png/.test(logo.data) ? "PNG" : "JPEG", lb.x * k, lb.y * k, lb.w * k, lb.h * k);
     for (let i = 0; i < n; i++) {
       const e = ends[i], h = e - s0, c2 = document.createElement("canvas");
       c2.width = canvas.width; c2.height = Math.max(1, Math.round(h * SCALE));
       const ctx = c2.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c2.width, c2.height);
       ctx.drawImage(canvas, 0, Math.round(s0 * SCALE), canvas.width, c2.height, 0, 0, canvas.width, c2.height);
+      under(c2, bodyTop, SCALE);
       if (i) pdf.addPage();
+      if (behind) putLogo();   // in the margins, where no part of the page is drawn over it
       if (head) {
         head.firstElementChild.innerHTML = cleanTitleHtml(p, n > 1 ? `${i + 1} out of ${n}` : "", stamp);
         const hc = await window.html2canvas(head.firstElementChild, { scale: 2, backgroundColor: "#ffffff" });
+        under(hc, TOP, 2);
         pdf.addImage(hc.toDataURL("image/jpeg", 0.92), "JPEG", 0, TOP * k, pw, head.firstElementChild.offsetHeight * k);
       }
       pdf.addImage(c2.toDataURL("image/jpeg", 0.92), "JPEG", 0, bodyTop * k, pw, h * k);
-      if (lb) pdf.addImage(logo.data, /^data:image\/jpeg/.test(logo.data) ? "JPEG" : "PNG", lb.x * k, lb.y * k, lb.w * k, lb.h * k);   // the user's logo, where it was put
+      if (!behind) putLogo();
       s0 = e;
     }
     return pdf.output("blob");
@@ -7678,6 +7710,7 @@ document.addEventListener("click", e => {
     case "rf-del": { const f = formsOf(p).find(x => x.id === id); if (!f) break; if (b.classList.contains("armed")) rfDelete(p, f); else { b.classList.add("armed"); b.title = "Tap again to delete"; toast("Tap the bin again to delete the form."); setTimeout(() => { if (b.isConnected) b.classList.remove("armed"); }, 3000); } break; }
     case "rf-skip": rfSkip(); break;
     case "pv-logo": document.getElementById("pvLogoFile")?.click(); break;
+    case "pv-logo-layer": { const L = docLogo(); if (!L) break; const b0 = logoBox(L); L.pos = { ...(L.pos || { x: Math.round(b0.x), y: Math.round(b0.y), h: Math.round(b0.h) }), behind: id === "behind" }; touchSettings(); pvRepaint(p); break; }
     case "pv-logo-rm": { const keep = app.settings.docLogo; delete app.settings.docLogo; touchSettings(); pvRepaint(p); undoable("Removed", "your logo", () => { app.settings.docLogo = keep; touchSettings(); pvRepaint(p); }); break; }
     case "pv-cols": {   // the page layout: one column, Media beside Camera and Lens, or two columns; Word and PDF alike
       app.settings.docCols = id; touchSettings();
