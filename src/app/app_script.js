@@ -6465,7 +6465,7 @@ const LOGO_H = 40, LOGO_W = 150;   // the user's logo at most, in the title (px 
 const logoSize = l => { const k = Math.min(LOGO_H / l.h, LOGO_W / l.w); return { w: Math.round(l.w * k), h: Math.round(l.h * k) }; };
 /* where the logo sits on every page, and how big: moved and sized freely in the preview (px of the 794×1123 page). At first, top right */
 const logoOpacity = (l = docLogo()) => { const o = +(l && l.pos && l.pos.op); return o >= .05 && o <= 1 ? o : 1; };
-const logoBehind = (l = docLogo()) => !!(l && l.pos && l.pos.behind);
+const logoBehind = () => false;   // the logo always sits in front of the text (the Front/Behind choice was taken out)
 const logoLocked = (l = docLogo()) => !!(l && l.pos && l.pos.lock);   // set in place: no frame, no corners, not moved by a touch
 const LOCK_ICON = on => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="${on ? "M8 11V7a4 4 0 0 1 8 0v4" : "M8 11V7a4 4 0 0 1 7.5-1.9"}"/></svg>`;
 /* the logo as a picture with its see-through-ness made in */
@@ -6726,7 +6726,7 @@ function openPreview(p) {
 </div>
         <div class="pv-row"><span class="pv-k" id="pv-logo-l">Logo</span>
           <span class="pv-mini" role="group" aria-labelledby="pv-logo-l"><button class="btn" type="button" data-act="pv-logo" id="pvLogoBtn">${docLogo() ? "Change" : "Add"}</button><button class="btn" type="button" data-act="pv-logo-rm" id="pvLogoRm" aria-label="Remove the logo" ${docLogo() ? "" : "disabled"}>${TRASH_SM}</button><button class="btn" type="button" data-act="pv-logo-lock" id="pvLogoLock" aria-label="Lock the logo in place" aria-pressed="${logoLocked()}" ${docLogo() ? "" : "disabled"}>${LOCK_ICON(logoLocked())}</button></span>
-          <span class="pv-mini pv-logo-opts" id="pvLogoOpts" role="group" aria-label="The logo: in front of the text or behind it" ${docLogo() ? "" : "hidden"}><button class="btn" type="button" data-act="pv-logo-layer" data-id="front" aria-pressed="${!logoBehind()}">Front</button><button class="btn" type="button" data-act="pv-logo-layer" data-id="behind" aria-pressed="${logoBehind()}">Behind</button></span></div>
+</div>
         <label class="pv-row pv-op" id="pvLogoOpRow" ${docLogo() ? "" : "hidden"}><span class="pv-k">Opacity</span><input type="range" id="pvLogoOp" min="10" max="100" step="5" value="${Math.round(logoOpacity() * 100)}" aria-label="Logo opacity"><b id="pvLogoOpV">${Math.round(logoOpacity() * 100)}%</b></label>
         <input type="file" id="pvLogoFile" accept="image/png,image/jpeg,image/webp" hidden>
       </div>
@@ -6756,7 +6756,6 @@ function pvRepaint(p) {   // the preview's paper and logo buttons, after a chang
   const b = document.getElementById("pvLogoBtn"), r = document.getElementById("pvLogoRm");
   if (b) b.textContent = docLogo() ? "Change" : "Add"; if (r) r.disabled = !docLogo();
   const lk = document.getElementById("pvLogoLock"); if (lk) { lk.disabled = !docLogo(); lk.setAttribute("aria-pressed", String(logoLocked())); lk.innerHTML = LOCK_ICON(logoLocked()); lk.setAttribute("aria-label", logoLocked() ? "Unlock the logo to move it" : "Lock the logo in place"); }
-  const op = document.getElementById("pvLogoOpts"); if (op) op.hidden = !docLogo();
   const opr = document.getElementById("pvLogoOpRow"); if (opr) opr.hidden = !docLogo();
   document.querySelectorAll('#preview [data-act="pv-logo-layer"]').forEach(x => x.setAttribute("aria-pressed", String((x.dataset.id === "behind") === logoBehind())));
   const rg = document.getElementById("pvLogoOp"); if (rg) { rg.value = Math.round(logoOpacity() * 100); document.getElementById("pvLogoOpV").textContent = rg.value + "%"; }
