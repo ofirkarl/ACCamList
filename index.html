@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231902";
+window.AC_BUILD = "202611231911";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -6088,7 +6088,7 @@ function pickerHtml(key) {
   const subs = (anyOk ? `<option value="*camera" ${any ? "selected" : ""}>Any camera</option>` : "") + (c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "");
   let items = "";
   if (any) return pickerShell(key, h, cats, subs, c, `<option value="${esc(anyCamOf(h.id))}" selected>Every camera on the list</option>`, true);
-  const chosen = key === "when" && !dd.fixed ? new Set([v.id, ...(dd.also || [])]) : null;
+  const chosen = key === "when" && !dd.fixed ? new Set([v.id, ...(dd.also || [])]) : key === "ca" || key === "cb" ? new Set(cx[key[1]]) : null;   // ticks
   if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${(chosen ? chosen.has(it.id) : it.id === v.id) ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
   return pickerShell(key, h, cats, subs, c, items, !sub, !!chosen);
 }
@@ -10919,7 +10919,7 @@ document.addEventListener("click", e => {
         dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
       else dd.also = (dd.also || []).filter(x => x !== id);
       document.getElementById("pk-when-chips").innerHTML = pkWhenChips(); document.getElementById("pk-when").innerHTML = pickerHtml("when"); break; }
-    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); document.getElementById("cx-" + k).innerHTML = cxChips(k); break; }
+    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); document.getElementById("cx-" + k).innerHTML = cxChips(k); const bx = document.getElementById("pk-c" + k); if (bx) bx.innerHTML = pickerHtml("c" + k); break; }
     case "clash-swap": case "clash-drop": case "clash-keep": {
       const q = cur(); closeModal(); if (!q) break;
       const rid = b.dataset.rid, r = clashRules().find(x => x.id === rid); let ids = [];
@@ -11173,6 +11173,11 @@ document.addEventListener("change", e => {
     else if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
     else if (t.dataset.pks) { v.s = t.value; v.id = k === "when" && t.value === "*camera" ? anyCamOf(dd.house) : ""; }
     else v.id = t.value;
+    if (t.dataset.pki && (k === "ca" || k === "cb") && t.multiple) {   // ticks: what's ticked here, with what's ticked in other subcategories
+      const here = new Set([...t.options].map(o => o.value).filter(Boolean)), on = [...t.selectedOptions].map(o => o.value).filter(Boolean), list = cx[k[1]];
+      cx[k[1]] = [...list.filter(x => !here.has(x) || on.includes(x)), ...on.filter(x => !list.includes(x))];
+      v.id = ""; document.getElementById("cx-" + k[1]).innerHTML = cxChips(k[1]); return;
+    }
     if (t.dataset.pki && (k === "ca" || k === "cb") && t.value) {  // picked: it joins the list above, and the picker is ready for another
       const list = cx[k[1]]; if (!list.includes(t.value)) list.push(t.value);
       v.id = ""; document.getElementById("cx-" + k[1]).innerHTML = cxChips(k[1]);
