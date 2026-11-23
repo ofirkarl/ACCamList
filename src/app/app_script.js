@@ -1637,9 +1637,22 @@ const REC_FPS = [23.976, 24, 25, 29.97, 30, 48, 50, 59.94, 60, 72, 75, 90, 96, 1
 const fpsLabel = f => f === 23.976 ? "23.98" : String(f);
 function fmtDur(sec) { const mins = Math.floor(sec / 60); if (mins < 60) return `${mins} min`; const h = Math.floor(mins / 60), r = mins % 60; return r ? `${h} h ${r} min` : `${h} h`; }
 /* the cards that fit a camera, in its rental house: one of each card the camera takes */
+/* a card's kind: the folder it came in from the rental house (Codex Compact Drive, CFast 2.0…), whatever folder or place it has
+   been moved to in the catalog since (Ofir, 23.11: the Alexa 35 found no media) */
+function cardKind(id, x) {
+  const b = BITEM.get(id), at = BLOC.get(id);
+  if (b && at && at.s === "media" && b.group) return b.group;
+  return x && x.s.id === "media" ? grpOf(x.it, x.s) : "";
+}
 function cardChoices(e, houseId) {
   const types = (e && e.it.camera && e.it.camera.media) || [], out = [];
-  for (const type of types) for (const [id, x] of ITEM) if (x.h.id === houseId && x.s.id === "media" && grpOf(x.it, x.s) === type) out.push({ id, name: x.it.name, type });
+  for (const type of types) for (const [id, x] of ITEM) if (x.h.id === houseId && (cardKind(id, x) === type || (x.s.id === "media" && grpOf(x.it, x.s) === type)) && !out.some(o => o.id === id)) out.push({ id, name: x.it.name, type });
+  return out;
+}
+/* every card the house has, by kind: to choose one by hand when none is known to fit the camera */
+function allCards(houseId) {
+  const out = [];
+  for (const [id, x] of ITEM) if (x.h.id === houseId) { const k = cardKind(id, x); if (k && (x.s.id === "media" || BLOC.get(id)?.s === "media")) out.push({ id, name: x.it.name, type: k, any: true }); }
   return out;
 }
 /* what a camera's cards hold at its recording format: per card and all together */
@@ -4977,7 +4990,7 @@ function mediaCamHtml(p, id) {
   }
   if (!l || !e) return "";
   recEnsure(l, e, p);
-  const r = recResult(l, e), choices = cardChoices(e, mcHouseOf(p, e)), card = l.rec.card, onList = free ? F.n : card && p.items[card] ? lineQty(p.items[card]) : 0;
+  const fit = cardChoices(e, mcHouseOf(p, e)), choices = fit.length ? fit : allCards(mcHouseOf(p, e)), card = l.rec.card, r = recResult(l, e), onList = free ? F.n : card && p.items[card] ? lineQty(p.items[card]) : 0;
   const c = r.c, md = r.md, u = esc(key), open = mcOpen && mcOpen.id === key ? mcOpen.k : "";
   const cardName = card ? ITEM.get(card)?.it.name || "" : "", sizeUnknown = card && !!mediaSizesOf(card);
   const lab = (label, x) => `<span class="t-l"><span>${label}</span>${x ? `<span class="t-x">${x}</span>` : ""}</span>`;
