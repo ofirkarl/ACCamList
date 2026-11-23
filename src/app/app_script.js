@@ -37,6 +37,38 @@ if (typeof window !== "undefined" && window.addEventListener) {
   window.addEventListener("unhandledrejection", e => errNote(e, "promise"));
 }
 
+/* ---------- ND and ND Grad sets (Ofir, 23.11): the filters of one kind and size ("Tiffen NDF 4X5.6 – 03", "– 06" ...) show as one
+   row, "Tiffen NDF 4X5.6 Set", and the densities are chosen inside it. A full ND set is 0.3 to 2.1, a Grad set 0.3, 0.6, 0.9: those
+   start chosen; the house's other densities (0.1, 1.0, 2.4 ...) can be added. A house that lists one filter for all its densities
+   (Fitussi's "NDF 4X5.65") gets the standard ones to choose from ---------- */
+const ND_STD = { nd: ["0.3", "0.6", "0.9", "1.2", "1.5", "1.8", "2.1"], ndg: ["0.3", "0.6", "0.9"] };
+const ND_RX = /\s*[–-]\s*(\d+(?:\.\d+)?)\s*$/;
+const ndLabel = t => { const v = /^0\d$/.test(t) ? +("0." + t[1]) : parseFloat(t); return isFinite(v) ? v.toFixed(1) : t; };   // "03" and "0.3": 0.3
+const ND_MEMBER = new Map();   // a single density's catalog id -> its set's id (lists made before the sets still find the filter)
+for (const h of HOUSES) for (const c of h.categories) for (const s of c.subcategories) {
+  const kind = /^nd$|^ndg$/.test(s.id) && c.id === "filters" ? s.id : null; if (!kind) continue;
+  const fam = new Map(), out = [];
+  for (const it of s.items) {
+    if (/variable/i.test(it.name)) { out.push(it); continue; }
+    const m = it.name.match(ND_RX);
+    if (!m) { if (/\b\d+(?:\.\d+)?\s*x\s*\d/i.test(it.name)) { it.ndset = ND_STD[kind].map(d => ({ d })); it.ndstd = ND_STD[kind]; } out.push(it); continue; }
+    const key = it.name.replace(ND_RX, "").trim();
+    if (!fam.has(key)) { const set = { key, items: [] }; fam.set(key, set); out.push(set); }
+    fam.get(key).items.push(it);
+  }
+  s.items = out.map(x => {
+    if (!x.items) return x;
+    if (x.items.length < 2) return x.items[0];
+    const m0 = x.items[0], id = m0.id.split(":")[0] + ":ndset-" + flatKey(x.key);
+    const ndset = x.items.map(it => ({ d: ndLabel(it.name.match(ND_RX)[1]), id: it.id, sku: it.sku || "", name: it.name })).sort((a, b) => parseFloat(a.d) - parseFloat(b.d));
+    x.items.forEach(it => ND_MEMBER.set(it.id, id));
+    const set = { ...m0, id, name: x.key + " Set", ndset, ndstd: ND_STD[kind].filter(d => ndset.some(n => n.d === d)) };
+    delete set.sku; delete set.url; delete set.site_name;
+    return set;
+  });
+}
+function flatKey(t) { return String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+
 /* ---------- catalog index ---------- */
 const ITEM = new Map();
 let LENS_NAMES = null;  // catalog lenses by name, for list lines matched by name (made on first use)
@@ -3124,8 +3156,40 @@ function stepper(act, id, val, field, small) {
   const f = field ? ` data-f="${field}"` : "";
   return `<span class="stepper${small ? " sm" : ""}"><button type="button" data-act="${act}dec" data-id="${esc(id)}"${f} aria-label="Decrease${field ? " " + field.toUpperCase() : ""}">−</button><input type="number" min="0" max="999" inputmode="numeric" data-${act}qty="${esc(id)}"${f} value="${val}" aria-label="${field ? field.toUpperCase() + " quantity" : "Quantity"}"><button type="button" data-act="${act}inc" data-id="${esc(id)}"${f} aria-label="Increase${field ? " " + field.toUpperCase() : ""}">+</button></span>`;
 }
+/* what a set on the list has: the densities when they are few, else how many */
+const ndSummary = nd => !(nd || []).length ? "Choose" : nd.length <= 3 ? nd.join(" · ") : `${nd.length} filters`;
+/* the set's picker: a toggle for each density, the standard set ready chosen (or what the list has) */
+function ndPicker(p, id) {
+  const e = ITEM.get(id); if (!e || !e.it.ndset) return;
+  const l = p.items[id], on = new Set(l ? l.nd || [] : e.it.ndstd || []);
+  const all = e.it.ndset.map(x => x.d), std = e.it.ndstd || [];
+  showModal(`<div class="sheet nd-sheet" data-id="${esc(id)}"><h3 class="plain">${esc(e.it.name)}</h3>
+    <p class="hint">Tap the filters you want from the set.</p>
+    <div class="nd-grid" role="group" aria-label="Densities">${all.map(d => `<button class="btn nd-d" type="button" data-act="nd-tog" data-v="${esc(d)}" aria-pressed="${on.has(d)}">${esc(d)}</button>`).join("")}</div>
+    <div class="nd-quick">${std.length && std.length < all.length ? `<button class="btn sm" type="button" data-act="nd-std">Standard set</button>` : ""}<button class="btn sm" type="button" data-act="nd-all">All</button><button class="btn sm" type="button" data-act="nd-none">None</button></div>
+    <div class="sheet-acts"><button class="btn primary" type="button" data-act="nd-ok" data-id="${esc(id)}">${l ? "Save" : "Add to the list"}</button>
+      ${l ? `<button class="btn danger" type="button" data-act="nd-rm" data-id="${esc(id)}">Remove from the list</button>` : ""}</div></div>`);
+  ndCount();
+}
+function ndCount() {
+  const m = document.querySelector(".nd-sheet"); if (!m) return;
+  const n = m.querySelectorAll('.nd-d[aria-pressed="true"]').length, ok = m.querySelector('[data-act="nd-ok"]'), had = !!m.querySelector('[data-act="nd-rm"]');
+  if (ok) { ok.textContent = n ? (had ? `Save · ${n} filter${n === 1 ? "" : "s"}` : `Add ${n} filter${n === 1 ? "" : "s"} to the list`) : had ? "Remove from the list" : "Choose filters"; ok.disabled = !n && !had; }
+}
+/* the list's line for a set: one line, its densities after the name ("Tiffen NDF 4X5.6 Set (0.3, 0.6, 0.9)") */
+function ndApply(p, id, nd) {
+  const e = ITEM.get(id); if (!e) return;
+  const order = e.it.ndset.map(x => x.d); nd = order.filter(d => nd.includes(d));
+  if (!nd.length) { if (p.items[id]) { const und = snapItems(p), nm = p.items[id].name; delete p.items[id]; touch(p); undoable("Removed:", nm, () => { p.items = und; touch(p); rerenderKeepScroll(); }); } return; }
+  const had = !!p.items[id];
+  if (!had) { p.items[id] = lineFromCatalog(id); applyDefaults(p); }
+  p.items[id].nd = nd; touch(p);
+}
 function ctlHtml(p, id) {
   const l = p.items[id];
+  const nd = ITEM.get(id)?.it.ndset;
+  if (nd) return l ? `<button class="add nd-on" type="button" data-act="ndpick" data-id="${esc(id)}" aria-label="Change the filters chosen in this set">${ndSummary(l.nd)}</button>`
+    : `<button class="add" type="button" data-act="ndpick" data-id="${esc(id)}" aria-label="Add: choose the filters in this set">+ Add</button>`;
   if (!l) return `<button class="add" type="button" data-act="cinc" data-id="${esc(id)}" aria-label="Add">+ Add</button>`;
   return l.tx !== undefined && !wlEven(id, l) ? setsCtl("c", id, l) : stepper("c", id, lineQty(l), null, false);
 }
@@ -3241,7 +3305,7 @@ function groupItems(items, s) {
   else out = [...m.entries()].sort((a, b) => a[0] === "Generic" ? 1 : b[0] === "Generic" ? -1 : a[0].localeCompare(b[0], "en", { sensitivity: "base" }));
   return userOrder(out, s.gorder, e => e[0]);
 }
-const hay = (it, s) => norm(it.name + " " + (it.sku || "") + " " + noteOf(it.id) + " " + it.brand + " " + (it.group || "") + " " + s.name + " " + (it.site_name || "") + " " + (it.lens ? (it.lens.focals || "") + " " + (it.lens.coverage || "") : ""));
+const hay = (it, s) => norm(it.name + " " + (it.sku || "") + (it.ndset ? " " + it.ndset.map(x => x.d + " " + (x.sku || "")).join(" ") : "") + " " + noteOf(it.id) + " " + it.brand + " " + (it.group || "") + " " + s.name + " " + (it.site_name || "") + " " + (it.lens ? (it.lens.focals || "") + " " + (it.lens.coverage || "") : ""));
 /* forgiving search: when nothing matches exactly, a word may be a letter or two off (a swapped, missing or extra letter) and still count */
 function editDist(a, b, max) {
   if (Math.abs(a.length - b.length) > max) return max + 1;
@@ -4686,11 +4750,12 @@ function lineHtml(p, id, l) {
   const specs = e ? specsHtml(e.it, "", { list: true }) : "";
   // the short details (format, stop, mount) sit under the name; a set's lens-by-lens line takes the whole width below
   const cut = specs.indexOf('<span class="lt-row'), chips = cut >= 0 ? specs.slice(0, cut) : specs, perL = cut >= 0 ? specs.slice(cut) : "";
-  const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
+  const hay = norm([l.name, l.note, l.brand, l.sku || (e && e.it.sku), ...(l.nd || []), ...(l.children || []).map(c => c.name)].filter(Boolean).join(" "));
   const editing = app.editing === id;
   /* the line in two columns: the name and its short details on the left, never reaching into the right one, which holds the tools
      (favorite, product page, edit, remove) over the counter; a set's lens-by-lens table under both. The grip: centred on the line */
-  const meta = chips || (l.custom ? `<button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button>` : "");
+  const ndBtn = e && e.it.ndset ? `<button class="nd-chip" type="button" data-act="ndpick" data-id="${esc(id)}" aria-label="Change the filters in this set">${(l.nd || []).length ? esc(l.nd.join(" · ")) : "Choose filters"} ${EDIT_ICON}</button>` : "";
+  const meta = ndBtn + (chips || (l.custom ? `<button class="to-cat" type="button" data-act="to-catalog" data-id="${esc(id)}">Add to catalog</button>` : ""));
   // the line's editor: name, sub-items, note. Its section follows where the item lives in the catalog
   const editor = editing ? `<div class="editor">
       <div class="field"><label for="en-${esc(id)}">Name</label><input id="en-${esc(id)}" type="text" data-ename="${esc(id)}" value="${esc(l.name)}">${e ? `<span class="hint">A new name is kept in ${esc(e.h.name)}'s catalog too, for your next lists.</span>` : ""}</div>
@@ -6376,8 +6441,10 @@ function exportRows(id, l) {
   const extra = [];
   if (l.note) extra.push(l.note);
   if (e && e.it.lens && e.it.lens.set && e.it.lens.focals) extra.push(e.it.lens.focals);
+  if ((l.nd || []).length) extra.unshift(l.nd.join(", "));
   const kids = (l.children || []).map(c => `${c.qty ? c.qty + "x " : ""}${c.name}`);
-  const base = { extra, kids, sku: l.sku || (e && e.it.sku) || "", l };
+  const ndSku = e && e.it.ndset && (l.nd || []).length ? e.it.ndset.filter(x => l.nd.includes(x.d) && x.sku).map(x => x.sku).join(", ") : "";
+  const base = { extra, kids, sku: l.sku || ndSku || (e && e.it.sku) || "", l };
   // whole sets: just the sets. A set broken up: how many of each, on one line ("2x TX · 3x RX")
   if (l.tx !== undefined) return [{ ...base, kids: [wlBal(l) ? "" : [l.tx ? `${l.tx}x TX` : "", l.rx ? `${l.rx}x RX` : ""].filter(Boolean).join(" · "), ...kids].filter(Boolean), qty: wlBal(l) ? lineQty(l) : "", name: l.name }];   // a broken set has no count of sets: its TX and RX say it
   return [{ ...base, qty: l.qty, name: l.name }];
@@ -7480,6 +7547,17 @@ document.addEventListener("click", e => {
       const inp = document.querySelector(`[data-pick="${CSS.escape(id)}"]`);
       if (inp) inp.value = Math.max(0, Math.min(9, (parseInt(inp.value, 10) || 0) + (act === "pk-inc" ? 1 : -1)));
       break;
+    }
+    case "ndpick": ndPicker(p, id); break;
+    case "nd-tog": b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true")); ndCount(); break;
+    case "nd-std": case "nd-all": case "nd-none": {
+      const m = b.closest(".nd-sheet"), e = m && ITEM.get(m.dataset.id), std = new Set((e && e.it.ndstd) || []);
+      m?.querySelectorAll(".nd-d").forEach(x => x.setAttribute("aria-pressed", String(act === "nd-all" || (act === "nd-std" && std.has(x.dataset.v)))));
+      ndCount(); break;
+    }
+    case "nd-ok": case "nd-rm": {
+      const m = b.closest(".nd-sheet"); const nd = act === "nd-rm" || !m ? [] : [...m.querySelectorAll('.nd-d[aria-pressed="true"]')].map(x => x.dataset.v);
+      ndApply(p, id, nd); closeModal(); rerenderKeepScroll(); break;
     }
     case "cinc": case "cdec": {
       const l = p.items[id];
