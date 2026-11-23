@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231843";
+window.AC_BUILD = "202611231859";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3100,6 +3100,9 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .pk-sub { margin: 6px 0 2px; }
 .pk-sub small { color: var(--muted); font-weight: 400; }
 .pk-nm .pk-tag { display: inline-block; margin-inline-start: 8px; font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; vertical-align: 2px; }
+.pk-t .pk-also { display: block; font-weight: 400; }
+#pk-when-chips:empty { display: none; }
+#pk-when-chips .pk-more-hint { flex-basis: 100%; margin: 2px 0 0; }
 </style>
 </head>
 <body>
@@ -4504,7 +4507,7 @@ const isAnyCam = id => /:\*camera$/.test(id || "");
 const anyCamOf = hid => hid + ":*camera";
 const camCatOf = h => h && h.categories.find(c => [c.direct, ...c.subcategories].some(s => s.items.some(it => it.camera)));
 function ruleMatches(r, e) {
-  if (r.kind === "item") return !!e && (e.it.id === r.when || (isAnyCam(r.when) && e.h.id === r.when.split(":")[0] && !!e.it.camera && !e.it.camera.film)) && (!!r.text || ITEM.has(r.add));
+  if (r.kind === "item") return !!e && (e.it.id === r.when || (r.also || []).includes(e.it.id) || (isAnyCam(r.when) && e.h.id === r.when.split(":")[0] && !!e.it.camera && !e.it.camera.film)) && (!!r.text || ITEM.has(r.add));
   if (!e || !e.it.camera) return false;
   if (r.kind === "media") return (e.it.camera.media || []).length > 0;
   if (e.it.camera.film || e.it.camera.sensor === "fixed") return false;
@@ -5982,7 +5985,7 @@ function calDone() {
 }
 
 function ruleParts(r) {
-  if (r.kind === "item") { const any = isAnyCam(r.when), a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: any ? "Any camera" : a ? a.it.name : gone, add: r.text || (b ? b.it.name : gone), house: any ? (houseById(r.when.split(":")[0]) || {}).name || "" : a ? a.h.name : "" }; }
+  if (r.kind === "item") { const any = isAnyCam(r.when), a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: (any ? "Any camera" : a ? a.it.name : gone) + ((r.also || []).length ? ` + ${r.also.length} more` : ""), also: (r.also || []).map(itName), add: r.text || (b ? b.it.name : gone), house: any ? (houseById(r.when.split(":")[0]) || {}).name || "" : a ? a.h.name : "" }; }
   return { when: r.label, add: r.kind === "media" ? "memory cards to match the camera, and a card reader" : r.battery.label, house: "" };
 }
 /* packages and "doesn't work together": their own page, reached from the bottom of Productions */
@@ -5993,7 +5996,7 @@ function rulesGroups(only) {
   const byWhen = new Map();
   for (const r of app.settings.rules) { const k = r.kind === "item" ? r.when : "rule:" + r.id; if (!byWhen.has(k)) byWhen.set(k, []); byWhen.get(k).push(r); }
   const rules = [...byWhen].map(([k, rs]) => { const x = ruleParts(rs[0]), item = rs[0].kind === "item";
-    return `<div class="package${isAnyCam(k) ? " any" : ""}"><div class="pk-head"><div class="pk-t"><b>${esc(x.when)}</b><small>${x.house && HOUSES.length > 1 ? `${esc(x.house)} · ` : ""}${isAnyCam(k) ? "with each camera on the list" : "with each one"}</small></div>${item && (ITEM.has(k) || isAnyCam(k)) ? `<button class="iconbtn pk-edit" type="button" data-act="pkg-edit" data-id="${esc(k)}" aria-label="Edit this package" title="Edit">${PEN_ICON}</button>` : ""}</div>
+    return `<div class="package${isAnyCam(k) ? " any" : ""}"><div class="pk-head"><div class="pk-t"><b>${esc(x.when)}</b>${x.also && x.also.length ? `<small class="pk-also">${esc([ruleParts({ ...rs[0], also: [] }).when, ...x.also].join(", "))}</small>` : ""}<small>${x.house && HOUSES.length > 1 ? `${esc(x.house)} · ` : ""}${isAnyCam(k) ? "with each camera on the list" : "with each one"}</small></div>${item && (ITEM.has(k) || isAnyCam(k)) ? `<button class="iconbtn pk-edit" type="button" data-act="pkg-edit" data-id="${esc(k)}" aria-label="Edit this package" title="Edit">${PEN_ICON}</button>` : ""}</div>
       ${rs.map(pkRow).join("")}
       ${item && (ITEM.has(k) || isAnyCam(k)) ? `<button class="btn ghost sm pk-plus" type="button" data-act="${isAnyCam(k) ? "pkg-edit" : "pkg-add"}" data-id="${esc(k)}">+ Add an item</button>` : ""}</div>`; }).join("");
   const clashRows = (app.settings.clashes || []).map(r => `<div class="rule clash"><button class="txt" type="button" data-act="clash-edit" data-rid="${esc(r.id)}" aria-label="Edit this rule">
@@ -6085,7 +6088,8 @@ function pickerHtml(key) {
   const subs = (anyOk ? `<option value="*camera" ${any ? "selected" : ""}>Any camera</option>` : "") + (c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "");
   let items = "";
   if (any) return pickerShell(key, h, cats, subs, c, `<option value="${esc(anyCamOf(h.id))}" selected>Every camera on the list</option>`, true);
-  if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${it.id === v.id ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
+  const chosen = key === "when" ? new Set([v.id, ...(dd.also || [])]) : null;
+  if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.filter(it => !chosen || !chosen.has(it.id)).map(it => `<option value="${esc(it.id)}" ${!chosen && it.id === v.id ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
   return pickerShell(key, h, cats, subs, c, items, !sub);
 }
 function pickerShell(key, h, cats, subs, c, items, itemOff) {
@@ -6109,6 +6113,8 @@ function pkFind(key, q) {
 /* a new "doesn't work together" rule: one or more items, what they don't work with, and what to use instead */
 const cx = { id: "", a: [], b: [] };
 const pickOf = id => { const e = ITEM.get(id); return e ? { c: e.c.id, s: e.s.key, id } : {}; };
+/* "When you add": one item or several (Ofir, 23.11: ten monitors, each with a wheeled stand). The first one picked leads (its media) */
+const pkWhenChips = () => { const ids = [dd.when.id, ...(dd.also || [])].filter(x => x && !isAnyCam(x)); return ids.length < 1 ? "" : ids.map(id => `<span class="cx-chip">${esc(itName(id))}<button type="button" class="cx-x" data-act="pk-wx" data-id="${esc(id)}" aria-label="Take off ${esc(itName(id))}">×</button></span>`).join("") + (ids.length ? `<span class="hint pk-more-hint">Pick more from the menus to add them.</span>` : ""); };
 const cxChips = k => cx[k].map(id => `<span class="cx-chip">${esc(itName(id))}<button type="button" class="cx-x" data-act="cx-x" data-k="${k}" data-id="${esc(id)}" aria-label="Take off ${esc(itName(id))}">×</button></span>`).join("");
 function clashDialog(rid) {
   const r = rid && (app.settings.clashes || []).find(x => x.id === rid);
@@ -6132,11 +6138,11 @@ function ruleDialog(whenId, edit) {
   const fixed = whenId && ITEM.get(whenId);
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
   dd.house = fixed ? fixed.h.id : (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id);
-  dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {}; dd.edit = ""; dd.reader = !!(fixed && (app.settings.pkReaders || {})[whenId]);
+  dd.when = fixed ? pickOf(whenId) : {}; dd.also = []; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {}; dd.edit = ""; dd.reader = !!(fixed && (app.settings.pkReaders || {})[whenId]);
   dd.adds = []; dd.sub = {}; if (!fixed || !pkgKinds().length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">${fixed ? "Add to the package" : "New package"}</h3>
     ${!fixed && HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
-    ${fixed ? `<p class="pk-fixed">When you add <b>${esc(fixed.it.name)}</b></p>` : `<fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>`}
+    ${fixed ? `<p class="pk-fixed">When you add <b>${esc(fixed.it.name)}</b></p>` : `<fieldset class="pk"><legend>When you add</legend><div class="cx-chips" id="pk-when-chips">${pkWhenChips()}</div><div id="pk-when">${pickerHtml("when")}</div></fieldset>`}
     <fieldset class="pk"><legend>Comes with</legend>
       <div id="pk-media">${pkgMediaHtml()}</div>
       <div id="pk-adds">${pkgAddsHtml()}</div>
@@ -6149,7 +6155,7 @@ function ruleDialog(whenId, edit) {
 function pkgEditDialog(whenId) {
   const any = isAnyCam(whenId), e = ITEM.get(whenId); if (!e && !any) return;
   const rs = app.settings.rules.filter(r => r.kind === "item" && r.when === whenId);
-  dd.house = any ? whenId.split(":")[0] : e.h.id; dd.when = any ? { c: (camCatOf(houseById(dd.house)) || {}).id || "", s: "*camera", id: whenId } : pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.sub = {}; dd.reader = !!(app.settings.pkReaders || {})[whenId];
+  dd.house = any ? whenId.split(":")[0] : e.h.id; dd.when = any ? { c: (camCatOf(houseById(dd.house)) || {}).id || "", s: "*camera", id: whenId } : pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.sub = {}; dd.also = [...((rs[0] || {}).also || [])]; dd.reader = !!(app.settings.pkReaders || {})[whenId];
   const kinds = pkgKinds();
   rs.forEach((r, i) => {
     const kind = kinds.find(k => k.cards.some(c => c.id === r.add));
@@ -6158,7 +6164,7 @@ function pkgEditDialog(whenId) {
   });
   if (!dd.adds.length && !kinds.length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">Edit package</h3>
-    <fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>
+    <fieldset class="pk"><legend>When you add</legend><div class="cx-chips" id="pk-when-chips">${pkWhenChips()}</div><div id="pk-when">${pickerHtml("when")}</div></fieldset>
     <fieldset class="pk"><legend>Comes with</legend>
       <div id="pk-media">${pkgMediaHtml()}</div>
       <div id="pk-adds">${pkgAddsHtml()}</div>
@@ -10908,6 +10914,11 @@ document.addEventListener("click", e => {
     case "clash-new": clashDialog(); break;
     case "clash-edit": clashDialog(b.dataset.rid); break;
     case "clash-del": app.settings.clashes = clashRules().filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
+    case "pk-wx": {
+      if (dd.when.id === id) { const nx = (dd.also || []).shift(); const keep = { c: dd.when.c, s: dd.when.s }; dd.when = nx ? { ...keep, id: nx } : { ...keep, id: "" };
+        dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
+      else dd.also = (dd.also || []).filter(x => x !== id);
+      document.getElementById("pk-when-chips").innerHTML = pkWhenChips(); document.getElementById("pk-when").innerHTML = pickerHtml("when"); break; }
     case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); document.getElementById("cx-" + k).innerHTML = cxChips(k); break; }
     case "clash-swap": case "clash-drop": case "clash-keep": {
       const q = cur(); closeModal(); if (!q) break;
@@ -11145,8 +11156,16 @@ document.addEventListener("change", e => {
   if (t.dataset.pkfind) return;
   if (t.dataset.pkreader) { dd.reader = t.checked; t.closest(".pk-kind")?.classList.toggle("on", t.checked); return; }
   if (t.dataset.pkc || t.dataset.pks || t.dataset.pki) {
-    const k = t.dataset.pkc || t.dataset.pks || t.dataset.pki, v = dd[k];
-    if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
+    const k = t.dataset.pkc || t.dataset.pks || t.dataset.pki, v = dd[k], prevWhen = k === "when" ? v.id : null;
+    if (k === "when" && !dd.fixed) {   // the items picked stay picked while the menus move on
+      dd.also = dd.also || [];
+      if (t.dataset.pkc) { v.c = t.value; v.s = ""; if (isAnyCam(v.id)) v.id = ""; }
+      else if (t.dataset.pks) { v.s = t.value; if (t.value === "*camera") { v.id = anyCamOf(dd.house); dd.also = []; } else if (isAnyCam(v.id)) v.id = ""; }
+      else if (t.value) { if (!v.id || isAnyCam(v.id)) v.id = t.value; else if (v.id !== t.value && !dd.also.includes(t.value)) dd.also.push(t.value); }
+      document.getElementById("pk-when-chips").innerHTML = pkWhenChips();
+      if (t.dataset.pki) { document.getElementById("pk-when").innerHTML = pickerHtml("when"); if (prevWhen === v.id) { pkOpen(document.querySelector("#pk-when [data-pki]")); return; } }   // the list opens again, for the next one
+    }
+    else if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
     else if (t.dataset.pks) { v.s = t.value; v.id = k === "when" && t.value === "*camera" ? anyCamOf(dd.house) : ""; }
     else v.id = t.value;
     if (t.dataset.pki && (k === "ca" || k === "cb") && t.value) {  // picked: it joins the list above, and the picker is ready for another
@@ -11161,7 +11180,7 @@ document.addEventListener("change", e => {
       if (next && next.dataset.pks && next.options.length === 2 && next.options[1].value !== "*camera") { v.s = next.options[1].value; box.innerHTML = pickerHtml(k); next = box.querySelector("[data-pki]"); }
       pkOpen(next);
     } else if (!t.dataset.pki) { const box = document.getElementById("pk-" + k); box.innerHTML = pickerHtml(k); }
-    if (k === "when") {
+    if (k === "when" && prevWhen !== v.id) {
       dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml();
       const untouched = dd.adds.length === 1 && !(dd[dd.adds[0]] || {}).c;
       if (pkgKinds().length && untouched) { dd.adds = []; document.getElementById("pk-adds").innerHTML = ""; }
@@ -11405,12 +11424,15 @@ document.addEventListener("submit", e => {
       else if (dd[k] && dd[k].id) items.push([dd[k].id, qty, "", sub]);
     }
     if (!items.length) return say("Choose what comes with it.");
-    if (items.some(([id]) => id === when)) return say("Choose a different item to come with it.");
+    if (items.some(([id]) => id && (id === when || (dd.also || []).includes(id)))) return say("Choose a different item to come with it.");
     if (dd.edit) app.settings.rules = app.settings.rules.filter(r => !(r.kind === "item" && r.when === dd.edit));  // the package as it now stands replaces the old one
     for (const [add, qty, text, sub] of items) {
       const ex = app.settings.rules.find(r => r.kind === "item" && r.when === when && (text ? r.text === text : r.add === add && !r.text) && !!r.sub === sub);
       if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when, add, qty, ...(text ? { text } : {}), ...(sub ? { sub: true } : {}) });
     }
+    const sib = (app.settings.rules.find(r => r.kind === "item" && r.when === when && r.also) || {}).also || [];   // "Add to the package": the package keeps its items
+    const also = isAnyCam(when) ? [] : [...new Set((dd.fixed ? sib : dd.also || []).filter(x => x && x !== when))];
+    for (const r of app.settings.rules) if (r.kind === "item" && r.when === when) { if (also.length) r.also = also; else delete r.also; }
     for (const q of app.productions) if (applyDefaults(q).length) touch(q);   // lists already holding the item take the package as it now is
     const pr = app.settings.pkReaders || (app.settings.pkReaders = {}), hadR = !!pr[when] || !!(dd.edit && pr[dd.edit]);
     if (dd.edit && dd.edit !== when) delete pr[dd.edit];

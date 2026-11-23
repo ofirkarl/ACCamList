@@ -1530,3 +1530,8 @@ ok(A.skuPack(["FIL-N53","FIL-N56","FIL-N510"]) === "FIL-N5\u00a03/6/10" && A.sku
   A.applyDefaults(q); ok(q.items[ids[0]].children.length === 2, "packages: subitems are not added twice");
   A.setQty(q, ids[0], 0); A.applyDefaults(q); ok(!q.items["pkt-short-bnc"], "packages: the free-text line goes with the item");
   A.app.settings.rules = keep; }
+{ const keep = A.app.settings.rules, mons = [...A.ITEM].filter(([id, e]) => e.h.id === "utopia" && e.s.id === "monitors").slice(0, 3).map(x => x[0]), stand = [...A.ITEM].find(([id, e]) => e.h.id === "utopia" && e.s.id !== "monitors" && !e.it.camera)[0];
+  A.app.settings.rules = [{ id: "m1", kind: "item", house: "utopia", when: mons[0], also: [mons[1], mons[2]], add: stand, qty: 1 }];
+  const q = A.newProduction({ name: "Mon", houseId: "utopia" }); A.setQty(q, mons[1], 1); A.setQty(q, mons[2], 2); A.applyDefaults(q);
+  ok(mons.length === 3 && q.items[stand] && A.lineQty(q.items[stand]) === 3, "packages: several items set off one package (each monitor brings its stand)");
+  A.app.settings.rules = keep; }
