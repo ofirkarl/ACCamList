@@ -1701,7 +1701,7 @@ function applyDefaults(p) {
       // one card reader for each kind of card on the list
       if (r.kind === "media") { const rd = resolveReader(t.type, p.houseId); if (rd && !want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${t.type} cards`], label: rd.label }); }
       // a camera whose package asks for it: a reader for each kind of card the package brings
-      if (r.kind === "item" && (app.settings.pkReaders || {})[r.when]) { const te = ITEM.get(t.id);
+      if (r.kind === "item" && false) {   // a reader for each kind of card: taken out with its tick (23.11) const te = ITEM.get(t.id);
         if (te && te.s.id === "media") { const type = grpOf(te.it, te.s);
           if (type && !(p.readerOff || {})[type]) { const rd = resolveReader(type, p.houseId) || { id: "auto-reader-" + flat(type), label: type + " card reader" }; if (!want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${type} cards`], label: rd.label }); } } }
     }
@@ -3097,7 +3097,7 @@ function pkgMediaHtml() {
     return `<div class="pk-kind${m.on ? " on" : ""}"><label class="check"><input type="checkbox" data-pkmedia="on" data-type="${t}" ${m.on ? "checked" : ""}> ${t}</label>
       ${m.on ? `<div class="pk-kq">${k.cards.length > 1 ? `<select aria-label="${t} card" data-pkmedia="id" data-type="${t}">${k.cards.map(c => `<option value="${esc(c.id)}" ${c.id === m.id ? "selected" : ""}>${esc(shortCard(c.name))}</option>`).join("")}</select>` : `<span class="pk-card">${esc(shortCard(k.cards[0].name))}</span>`}
         ${pkStep(`aria-label="How many ${t} cards" data-pkmedia="qty" data-type="${t}"`, m.qty, "pkmq", `data-type="${t}"`)}</div>` : ""}</div>`; }).join("")}
-    <div class="pk-kind pk-reader${dd.reader ? " on" : ""}"><label class="check"><input type="checkbox" data-pkreader="1" ${dd.reader ? "checked" : ""}> Card reader for each card type</label></div></div>`;
+</div>`;   // (the "Card reader for each card type" tick was taken out, Ofir 23.11: a reader is an item like any other)
 }
 /* a quantity in the package dialog: − number +, the same stepper as on the list */
 const pkStep = (attrs, v, act, data) => `<span class="stepper"><button type="button" data-act="${act}-dec" ${data} aria-label="Fewer">−</button><input type="number" min="0" max="99" inputmode="numeric" ${attrs} value="${v}"><button type="button" data-act="${act}-inc" ${data} aria-label="More">+</button></span>`;
@@ -8372,7 +8372,7 @@ document.addEventListener("submit", e => {
     for (const q of app.productions) if (applyDefaults(q).length) touch(q);   // lists already holding the item take the package as it now is
     const pr = app.settings.pkReaders || (app.settings.pkReaders = {}), hadR = !!pr[when] || !!(dd.edit && pr[dd.edit]);
     if (dd.edit && dd.edit !== when) delete pr[dd.edit];
-    if (pkgKinds().length) { if (dd.reader) pr[when] = true; else delete pr[when]; }
+    delete pr[when];
     if (hadR !== !!pr[when]) for (const q of app.productions) { applyDefaults(q); touch(q); }
     touchSettings(); closeModal(); rerenderKeepScroll(); toast(dd.edit ? "Package updated" : dd.fixed ? "Added to the package" : "Package saved"); dd.edit = "";
     return;

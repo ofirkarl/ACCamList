@@ -813,9 +813,9 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.app.settings.pkReaders = { [cam]: true, [cam2]: true };
   const pr = A.newProduction({ name: "Readers", houseId: "utopia" }); A.app.productions.push(pr);
   A.setQty(pr, cam, 1); A.setQty(pr, cam2, 1);
-  ok(pr.items[dock]?.qty === 1 && pr.items[sdr]?.qty === 1, "a camera package with the reader tick: one Codex dock for both Codex drives, one SD reader");
+  ok(!pr.items[dock] && !pr.items[sdr], "the reader tick was taken out (23.11): an old tick brings no reader");
   A.app.settings.pkReaders = {}; A.applyDefaults(pr); ok(!pr.items[dock] && !pr.items[sdr], "tick off: the readers come off");
-  A.app.settings.readers = true; A.applyDefaults(pr); ok(A.app.settings.readers === false && A.app.settings.pkReaders[cam] && A.app.settings.pkReaders[cam2] && pr.items[dock], "the old switch moves onto every package with cards");
+  A.app.settings.readers = true; A.applyDefaults(pr); ok(A.app.settings.readers === false && !pr.items[dock], "the old switch is cleared, and brings no reader");
   A.app.settings.rules = keepRules; A.app.settings.pkReaders = keepPR || {}; }
 
 // --- a file once built is used again while the list stays the same
