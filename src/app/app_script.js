@@ -7808,11 +7808,7 @@ document.addEventListener("click", e => {
     case "rinc": case "rdec": { const r = app.settings.rules.find(x => x.id === b.dataset.rid); if (r) { r.qty = Math.max(0, Math.min(99, r.qty + (act === "rinc" ? 1 : -1))); touchSettings(); rerenderKeepScroll(); } break; }
     case "rdel": app.settings.rules = app.settings.rules.filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
     case "rule-new": ruleDialog(); break;
-    case "pkg-add": {   // one dialog for a package (Ofir, 23.11): "+ Add an item" opens it, a new row ready at the bottom
-      ruleDialog(id, true); if (!document.getElementById("pk-adds")) break;
-      const k = "add" + Date.now().toString(36); dd[k] = {}; dd.q[k] = 1; dd.adds.push(k);
-      document.getElementById("pk-adds").innerHTML = pkgAddsHtml();
-      const row = document.getElementById("pa-" + k); row?.scrollIntoView({ block: "center" }); break; }
+    case "pkg-add": ruleDialog(id); break;
     case "pkg-del": { const w = b.dataset.id, old = app.settings.rules; app.settings.rules = old.filter(r => !(r.kind === "item" && r.when === w)); touchSettings(); closeModal(); rerenderKeepScroll();
       undoable("Deleted", "the package", () => { app.settings.rules = old; touchSettings(); rerenderKeepScroll(); }); break; }
     case "pk-more": { const k = "add" + Date.now().toString(36); dd[k] = b.dataset.text ? { text: "" } : {}; dd.q[k] = 1; dd.adds.push(k); document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); document.getElementById("pk-" + k + (b.dataset.text ? "-t" : "-c"))?.focus(); break; }

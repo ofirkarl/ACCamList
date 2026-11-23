@@ -2961,6 +2961,11 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .search .pk-qdone svg { width: 12px; height: 12px; color: inherit; stroke: currentColor; flex: none; }
 .pk-qdone:active, .pk-qdone:focus-visible { background: var(--accent); color: #fff; }
 .pk-search input::-webkit-search-cancel-button { display: none; }
+/* a card picked for a camera's package fits the phone: the card's menu shrinks, the count stays whole */
+.pk-kq { min-width: 0; max-width: 100%; }
+.pk-kq .nsel { min-width: 0; flex: 1 1 auto; max-width: 11em; }
+.pk-kq .nsel-btn { min-width: 0; }
+#ruleForm { overflow-x: hidden; }
 </style>
 
 <div class="app">
@@ -10786,11 +10791,7 @@ document.addEventListener("click", e => {
     case "rinc": case "rdec": { const r = app.settings.rules.find(x => x.id === b.dataset.rid); if (r) { r.qty = Math.max(0, Math.min(99, r.qty + (act === "rinc" ? 1 : -1))); touchSettings(); rerenderKeepScroll(); } break; }
     case "rdel": app.settings.rules = app.settings.rules.filter(x => x.id !== b.dataset.rid); touchSettings(); rerenderKeepScroll(); break;
     case "rule-new": ruleDialog(); break;
-    case "pkg-add": {   // one dialog for a package (Ofir, 23.11): "+ Add an item" opens it, a new row ready at the bottom
-      ruleDialog(id, true); if (!document.getElementById("pk-adds")) break;
-      const k = "add" + Date.now().toString(36); dd[k] = {}; dd.q[k] = 1; dd.adds.push(k);
-      document.getElementById("pk-adds").innerHTML = pkgAddsHtml();
-      const row = document.getElementById("pa-" + k); row?.scrollIntoView({ block: "center" }); break; }
+    case "pkg-add": ruleDialog(id); break;
     case "pkg-del": { const w = b.dataset.id, old = app.settings.rules; app.settings.rules = old.filter(r => !(r.kind === "item" && r.when === w)); touchSettings(); closeModal(); rerenderKeepScroll();
       undoable("Deleted", "the package", () => { app.settings.rules = old; touchSettings(); rerenderKeepScroll(); }); break; }
     case "pk-more": { const k = "add" + Date.now().toString(36); dd[k] = b.dataset.text ? { text: "" } : {}; dd.q[k] = 1; dd.adds.push(k); document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); document.getElementById("pk-" + k + (b.dataset.text ? "-t" : "-c"))?.focus(); break; }
