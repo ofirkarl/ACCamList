@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231911";
+window.AC_BUILD = "202611231919";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3103,6 +3103,11 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .pk-t .pk-also { display: block; font-weight: 400; }
 #pk-when-chips:empty { display: none; }
 #pk-when-chips .pk-more-hint { flex-basis: 100%; margin: 2px 0 0; }
+/* package and rule search: every match, in a list that scrolls; in a picker of several, each match ticks */
+.pk-hits { max-height: min(52vh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+.pk-hit.tick { position: relative; padding-inline-start: 40px; }
+.pk-hit.tick::before { content: ""; position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; box-sizing: border-box; border: 2px solid color-mix(in srgb, var(--fg) 35%, transparent); border-radius: 5px; }
+.pk-hit.tick[aria-pressed="true"]::before { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / 13px no-repeat; }
 </style>
 </head>
 <body>
@@ -6088,7 +6093,7 @@ function pickerHtml(key) {
   const subs = (anyOk ? `<option value="*camera" ${any ? "selected" : ""}>Any camera</option>` : "") + (c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "");
   let items = "";
   if (any) return pickerShell(key, h, cats, subs, c, `<option value="${esc(anyCamOf(h.id))}" selected>Every camera on the list</option>`, true);
-  const chosen = key === "when" && !dd.fixed ? new Set([v.id, ...(dd.also || [])]) : key === "ca" || key === "cb" ? new Set(cx[key[1]]) : null;   // ticks
+  const chosen = pkMulti(key) ? new Set(pkChosen(key)) : null;   // ticks
   if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${(chosen ? chosen.has(it.id) : it.id === v.id) ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
   return pickerShell(key, h, cats, subs, c, items, !sub, !!chosen);
 }
@@ -6101,14 +6106,29 @@ function pickerShell(key, h, cats, subs, c, items, itemOff, multi) {
     ${/selected>Every camera/.test(items) ? `<span class="hint">One set for each camera on the list, whatever the camera. A camera's own package adds on top.</span>` : ""}`;
 }
 /* the search over a package picker: a few best matches; tapping one fills the three menus */
+/* the pickers that take several items (ticks): what sets a package off, what comes with it, both sides of "doesn't work with" */
+const pkMulti = k => (k === "when" && !dd.fixed) || k === "ca" || k === "cb" || (dd.adds || []).includes(k);
+function pkChosen(k) {
+  const v = dd[k] || {};
+  if (k === "when") return [v.id, ...(dd.also || [])].filter(x => x && !isAnyCam(x));
+  if (k === "ca" || k === "cb") return cx[k[1]];
+  return v.ids || (v.id ? [v.id] : []);
+}
+function pkSetChosen(k, ids) {
+  const v = dd[k];
+  if (k === "when") { const prev = v.id; v.id = ids[0] || ""; dd.also = ids.slice(1); document.getElementById("pk-when-chips").innerHTML = pkWhenChips();
+    if (prev !== v.id) { dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); } return; }
+  if (k === "ca" || k === "cb") { cx[k[1]] = ids; v.id = ""; document.getElementById("cx-" + k[1]).innerHTML = cxChips(k[1]); return; }
+  v.ids = ids; v.id = ids[0] || "";
+}
 function pkFind(key, q) {
   const box = document.getElementById("pk-" + key + "-hits"); if (!box) return;
   const words = norm(q).split(/\s+/).filter(Boolean);
   if (!words.length) { box.hidden = true; box.innerHTML = ""; return; }
-  const hits = [];
-  for (const [id, e] of ITEM) { if (e.h.id !== dd.house) continue; const n = norm(e.it.name + " " + e.s.name); if (words.every(w => n.includes(w))) { hits.push(e); if (hits.length >= 8) break; } }
+  const hits = [], multi = pkMulti(key), on = new Set(multi ? pkChosen(key) : []);
+  for (const [id, e] of ITEM) { if (e.h.id !== dd.house) continue; const n = norm(e.it.name + " " + e.s.name); if (words.every(w => n.includes(w))) { hits.push(e); if (hits.length >= 300) break; } }
   box.hidden = false;
-  box.innerHTML = hits.length ? hits.map(e => `<button type="button" class="pk-hit" data-act="pk-hit" data-k="${key}" data-id="${esc(e.it.id)}"><span>${esc(e.it.name)}</span><small>${esc(e.c.name)}${e.s.direct ? "" : " · " + esc(e.s.name)}</small></button>`).join("") : `<p class="hint">Nothing matches. Try another word.</p>`;
+  box.innerHTML = hits.length ? hits.map(e => `<button type="button" class="pk-hit${multi ? " tick" : ""}" data-act="pk-hit" data-k="${key}" data-id="${esc(e.it.id)}" ${multi ? `aria-pressed="${on.has(e.it.id)}"` : ""}><span>${esc(e.it.name)}</span><small>${esc(e.c.name)}${e.s.direct ? "" : " · " + esc(e.s.name)}</small></button>`).join("") : `<p class="hint">Nothing matches. Try another word.</p>`;
 }
 /* a new "doesn't work together" rule: one or more items, what they don't work with, and what to use instead */
 const cx = { id: "", a: [], b: [] };
@@ -10919,7 +10939,7 @@ document.addEventListener("click", e => {
         dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
       else dd.also = (dd.also || []).filter(x => x !== id);
       document.getElementById("pk-when-chips").innerHTML = pkWhenChips(); document.getElementById("pk-when").innerHTML = pickerHtml("when"); break; }
-    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); document.getElementById("cx-" + k).innerHTML = cxChips(k); const bx = document.getElementById("pk-c" + k); if (bx) bx.innerHTML = pickerHtml("c" + k); break; }
+    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); if (dd["c" + k]) dd["c" + k].id = ""; document.getElementById("cx-" + k).innerHTML = cxChips(k); const bx = document.getElementById("pk-c" + k); if (bx) bx.innerHTML = pickerHtml("c" + k); break; }
     case "clash-swap": case "clash-drop": case "clash-keep": {
       const q = cur(); closeModal(); if (!q) break;
       const rid = b.dataset.rid, r = clashRules().find(x => x.id === rid); let ids = [];
@@ -10932,7 +10952,15 @@ document.addEventListener("click", e => {
     case "share-app": shareApp(); break;
     case "tool-share": closeModal(); shareApp(); break;
     case "pk-hit": {  // the match goes into the menus, as if picked there
-      const k = b.dataset.k; dd[k] = pickOf(b.dataset.id);
+      const k = b.dataset.k;
+      if (pkMulti(k)) {   // several: a tap ticks it (or unticks it); the menus go to where it is, the matches stay
+        const ids = pkChosen(k), hit = b.dataset.id, pk = pickOf(hit); dd[k].c = pk.c; dd[k].s = pk.s;
+        pkSetChosen(k, ids.includes(hit) ? ids.filter(x => x !== hit) : [...ids, hit]);
+        const wrap = document.getElementById("pk-" + k), q = document.getElementById("pk-" + k + "-q")?.value || "";
+        if (wrap) { wrap.innerHTML = pickerHtml(k); const qi = document.getElementById("pk-" + k + "-q"); if (qi) { qi.value = q; pkFind(k, q); } }
+        break;
+      }
+      dd[k] = pickOf(b.dataset.id);
       const wrap = document.getElementById("pk-" + k); if (!wrap) break;
       wrap.innerHTML = pickerHtml(k);
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
@@ -11169,6 +11197,14 @@ document.addEventListener("change", e => {
       else if (t.value) { if (!v.id || isAnyCam(v.id)) v.id = t.value; else if (v.id !== t.value && !dd.also.includes(t.value)) dd.also.push(t.value); }
       document.getElementById("pk-when-chips").innerHTML = pkWhenChips();
       if (t.dataset.pki && (t.multiple || prevWhen === v.id)) { if (!t.multiple) document.getElementById("pk-when").innerHTML = pickerHtml("when"); if (prevWhen === v.id) return; }
+    }
+    else if (pkMulti(k)) {   // what comes with it, and both sides of "doesn't work with": ticked items stay ticked while the menus move on
+      if (t.dataset.pkc) { v.c = t.value; v.s = ""; }
+      else if (t.dataset.pks) v.s = t.value;
+      else if (t.multiple) {
+        const here = new Set([...t.options].map(o => o.value).filter(Boolean)), on = [...t.selectedOptions].map(o => o.value).filter(Boolean), was = pkChosen(k);
+        pkSetChosen(k, [...was.filter(x => !here.has(x) || on.includes(x)), ...on.filter(x => !was.includes(x))]); return;
+      }
     }
     else if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
     else if (t.dataset.pks) { v.s = t.value; v.id = k === "when" && t.value === "*camera" ? anyCamOf(dd.house) : ""; }
@@ -11431,7 +11467,7 @@ document.addEventListener("submit", e => {
     for (const k of dd.adds) {
       const sub = !!(dd.sub || {})[k], q = dd.q[k] ?? 1, qty = sub ? Math.max(0, q) : Math.max(1, q);
       if (dd[k] && dd[k].text !== undefined) { const t = dd[k].text.trim(); if (t) items.push(["", qty, t, sub]); }
-      else if (dd[k] && dd[k].id) items.push([dd[k].id, qty, "", sub]);
+      else if (dd[k]) for (const id of pkChosen(k)) items.push([id, qty, "", sub]);
     }
     if (!items.length) return say("Choose what comes with it.");
     if (items.some(([id]) => id && (id === when || (dd.also || []).includes(id)))) return say("Choose a different item to come with it.");

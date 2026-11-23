@@ -2967,7 +2967,7 @@ function pickerHtml(key) {
   const subs = (anyOk ? `<option value="*camera" ${any ? "selected" : ""}>Any camera</option>` : "") + (c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "");
   let items = "";
   if (any) return pickerShell(key, h, cats, subs, c, `<option value="${esc(anyCamOf(h.id))}" selected>Every camera on the list</option>`, true);
-  const chosen = key === "when" && !dd.fixed ? new Set([v.id, ...(dd.also || [])]) : key === "ca" || key === "cb" ? new Set(cx[key[1]]) : null;   // ticks
+  const chosen = pkMulti(key) ? new Set(pkChosen(key)) : null;   // ticks
   if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${(chosen ? chosen.has(it.id) : it.id === v.id) ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
   return pickerShell(key, h, cats, subs, c, items, !sub, !!chosen);
 }
@@ -2980,14 +2980,29 @@ function pickerShell(key, h, cats, subs, c, items, itemOff, multi) {
     ${/selected>Every camera/.test(items) ? `<span class="hint">One set for each camera on the list, whatever the camera. A camera's own package adds on top.</span>` : ""}`;
 }
 /* the search over a package picker: a few best matches; tapping one fills the three menus */
+/* the pickers that take several items (ticks): what sets a package off, what comes with it, both sides of "doesn't work with" */
+const pkMulti = k => (k === "when" && !dd.fixed) || k === "ca" || k === "cb" || (dd.adds || []).includes(k);
+function pkChosen(k) {
+  const v = dd[k] || {};
+  if (k === "when") return [v.id, ...(dd.also || [])].filter(x => x && !isAnyCam(x));
+  if (k === "ca" || k === "cb") return cx[k[1]];
+  return v.ids || (v.id ? [v.id] : []);
+}
+function pkSetChosen(k, ids) {
+  const v = dd[k];
+  if (k === "when") { const prev = v.id; v.id = ids[0] || ""; dd.also = ids.slice(1); document.getElementById("pk-when-chips").innerHTML = pkWhenChips();
+    if (prev !== v.id) { dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); } return; }
+  if (k === "ca" || k === "cb") { cx[k[1]] = ids; v.id = ""; document.getElementById("cx-" + k[1]).innerHTML = cxChips(k[1]); return; }
+  v.ids = ids; v.id = ids[0] || "";
+}
 function pkFind(key, q) {
   const box = document.getElementById("pk-" + key + "-hits"); if (!box) return;
   const words = norm(q).split(/\s+/).filter(Boolean);
   if (!words.length) { box.hidden = true; box.innerHTML = ""; return; }
-  const hits = [];
-  for (const [id, e] of ITEM) { if (e.h.id !== dd.house) continue; const n = norm(e.it.name + " " + e.s.name); if (words.every(w => n.includes(w))) { hits.push(e); if (hits.length >= 8) break; } }
+  const hits = [], multi = pkMulti(key), on = new Set(multi ? pkChosen(key) : []);
+  for (const [id, e] of ITEM) { if (e.h.id !== dd.house) continue; const n = norm(e.it.name + " " + e.s.name); if (words.every(w => n.includes(w))) { hits.push(e); if (hits.length >= 300) break; } }
   box.hidden = false;
-  box.innerHTML = hits.length ? hits.map(e => `<button type="button" class="pk-hit" data-act="pk-hit" data-k="${key}" data-id="${esc(e.it.id)}"><span>${esc(e.it.name)}</span><small>${esc(e.c.name)}${e.s.direct ? "" : " · " + esc(e.s.name)}</small></button>`).join("") : `<p class="hint">Nothing matches. Try another word.</p>`;
+  box.innerHTML = hits.length ? hits.map(e => `<button type="button" class="pk-hit${multi ? " tick" : ""}" data-act="pk-hit" data-k="${key}" data-id="${esc(e.it.id)}" ${multi ? `aria-pressed="${on.has(e.it.id)}"` : ""}><span>${esc(e.it.name)}</span><small>${esc(e.c.name)}${e.s.direct ? "" : " · " + esc(e.s.name)}</small></button>`).join("") : `<p class="hint">Nothing matches. Try another word.</p>`;
 }
 /* a new "doesn't work together" rule: one or more items, what they don't work with, and what to use instead */
 const cx = { id: "", a: [], b: [] };
@@ -7798,7 +7813,7 @@ document.addEventListener("click", e => {
         dd.media = {}; const md = document.getElementById("pk-media"); if (md) md.innerHTML = pkgMediaHtml(); }
       else dd.also = (dd.also || []).filter(x => x !== id);
       document.getElementById("pk-when-chips").innerHTML = pkWhenChips(); document.getElementById("pk-when").innerHTML = pickerHtml("when"); break; }
-    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); document.getElementById("cx-" + k).innerHTML = cxChips(k); const bx = document.getElementById("pk-c" + k); if (bx) bx.innerHTML = pickerHtml("c" + k); break; }
+    case "cx-x": { const k = b.dataset.k; cx[k] = cx[k].filter(x => x !== id); if (dd["c" + k]) dd["c" + k].id = ""; document.getElementById("cx-" + k).innerHTML = cxChips(k); const bx = document.getElementById("pk-c" + k); if (bx) bx.innerHTML = pickerHtml("c" + k); break; }
     case "clash-swap": case "clash-drop": case "clash-keep": {
       const q = cur(); closeModal(); if (!q) break;
       const rid = b.dataset.rid, r = clashRules().find(x => x.id === rid); let ids = [];
@@ -7811,7 +7826,15 @@ document.addEventListener("click", e => {
     case "share-app": shareApp(); break;
     case "tool-share": closeModal(); shareApp(); break;
     case "pk-hit": {  // the match goes into the menus, as if picked there
-      const k = b.dataset.k; dd[k] = pickOf(b.dataset.id);
+      const k = b.dataset.k;
+      if (pkMulti(k)) {   // several: a tap ticks it (or unticks it); the menus go to where it is, the matches stay
+        const ids = pkChosen(k), hit = b.dataset.id, pk = pickOf(hit); dd[k].c = pk.c; dd[k].s = pk.s;
+        pkSetChosen(k, ids.includes(hit) ? ids.filter(x => x !== hit) : [...ids, hit]);
+        const wrap = document.getElementById("pk-" + k), q = document.getElementById("pk-" + k + "-q")?.value || "";
+        if (wrap) { wrap.innerHTML = pickerHtml(k); const qi = document.getElementById("pk-" + k + "-q"); if (qi) { qi.value = q; pkFind(k, q); } }
+        break;
+      }
+      dd[k] = pickOf(b.dataset.id);
       const wrap = document.getElementById("pk-" + k); if (!wrap) break;
       wrap.innerHTML = pickerHtml(k);
       const sel = document.getElementById("pk-" + k + "-i"); if (sel) { sel.value = b.dataset.id; sel.dispatchEvent(new Event("change", { bubbles: true })); }
@@ -8048,6 +8071,14 @@ document.addEventListener("change", e => {
       else if (t.value) { if (!v.id || isAnyCam(v.id)) v.id = t.value; else if (v.id !== t.value && !dd.also.includes(t.value)) dd.also.push(t.value); }
       document.getElementById("pk-when-chips").innerHTML = pkWhenChips();
       if (t.dataset.pki && (t.multiple || prevWhen === v.id)) { if (!t.multiple) document.getElementById("pk-when").innerHTML = pickerHtml("when"); if (prevWhen === v.id) return; }
+    }
+    else if (pkMulti(k)) {   // what comes with it, and both sides of "doesn't work with": ticked items stay ticked while the menus move on
+      if (t.dataset.pkc) { v.c = t.value; v.s = ""; }
+      else if (t.dataset.pks) v.s = t.value;
+      else if (t.multiple) {
+        const here = new Set([...t.options].map(o => o.value).filter(Boolean)), on = [...t.selectedOptions].map(o => o.value).filter(Boolean), was = pkChosen(k);
+        pkSetChosen(k, [...was.filter(x => !here.has(x) || on.includes(x)), ...on.filter(x => !was.includes(x))]); return;
+      }
     }
     else if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
     else if (t.dataset.pks) { v.s = t.value; v.id = k === "when" && t.value === "*camera" ? anyCamOf(dd.house) : ""; }
@@ -8310,7 +8341,7 @@ document.addEventListener("submit", e => {
     for (const k of dd.adds) {
       const sub = !!(dd.sub || {})[k], q = dd.q[k] ?? 1, qty = sub ? Math.max(0, q) : Math.max(1, q);
       if (dd[k] && dd[k].text !== undefined) { const t = dd[k].text.trim(); if (t) items.push(["", qty, t, sub]); }
-      else if (dd[k] && dd[k].id) items.push([dd[k].id, qty, "", sub]);
+      else if (dd[k]) for (const id of pkChosen(k)) items.push([id, qty, "", sub]);
     }
     if (!items.length) return say("Choose what comes with it.");
     if (items.some(([id]) => id && (id === when || (dd.also || []).includes(id)))) return say("Choose a different item to come with it.");
