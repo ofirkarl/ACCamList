@@ -2943,6 +2943,11 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .nd-quick { display: flex; gap: 8px; flex-wrap: wrap; }
 .nd-chip { display: inline-flex; align-items: center; gap: 6px; text-align: start; line-height: 1.45; max-width: 100%; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: var(--accent-soft); color: var(--accent); border-radius: 8px; padding: 3px 8px; font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; }
 .nd-chip svg { width: 13px; height: 13px; }
+/* packages: free text, and "Add as subitem" (grey, under the item) */
+.pk-more { display: flex; gap: 8px; flex-wrap: wrap; }
+.pk-sub { margin: 6px 0 2px; }
+.pk-sub small { color: var(--muted); font-weight: 400; }
+.pk-nm .pk-tag { display: inline-block; margin-inline-start: 8px; font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; vertical-align: 2px; }
 </style>
 
 <div class="app">
@@ -4346,7 +4351,7 @@ const isAnyCam = id => /:\*camera$/.test(id || "");
 const anyCamOf = hid => hid + ":*camera";
 const camCatOf = h => h && h.categories.find(c => [c.direct, ...c.subcategories].some(s => s.items.some(it => it.camera)));
 function ruleMatches(r, e) {
-  if (r.kind === "item") return !!e && (e.it.id === r.when || (isAnyCam(r.when) && e.h.id === r.when.split(":")[0] && !!e.it.camera && !e.it.camera.film)) && ITEM.has(r.add);
+  if (r.kind === "item") return !!e && (e.it.id === r.when || (isAnyCam(r.when) && e.h.id === r.when.split(":")[0] && !!e.it.camera && !e.it.camera.film)) && (!!r.text || ITEM.has(r.add));
   if (!e || !e.it.camera) return false;
   if (r.kind === "media") return (e.it.camera.media || []).length > 0;
   if (e.it.camera.film || e.it.camera.sensor === "fixed") return false;
@@ -4377,7 +4382,8 @@ function resolveReader(type, houseId) {
   }
   return multi;
 }
-function resolveTarget(r, e, houseId) { return r.kind === "item" ? { id: r.add, label: ITEM.get(r.add).it.name } : r.kind === "media" ? resolveMedia(e, houseId) : resolveBattery(r, houseId); }
+const pkTextId = t => "pkt-" + String(t).toLowerCase().replace(/\s+/g, "-").slice(0, 60);   // a package's free-text line on a list
+function resolveTarget(r, e, houseId) { return r.kind === "item" ? r.text ? { id: pkTextId(r.text), label: r.text } : { id: r.add, label: ITEM.get(r.add).it.name } : r.kind === "media" ? resolveMedia(e, houseId) : resolveBattery(r, houseId); }
 function resolveBattery(r, houseId) {
   const b = r.battery;
   for (const [id, e] of ITEM) {
@@ -4629,7 +4635,7 @@ function applyDefaults(p) {
   lastAutoAdds = [];
   /* what you added yourself sets off its packages; what a package brings sets off its own package too (Ofir, 23.11: the Alexa Mini
      brings a gun mic, and the mic brings its holder). A chain stops where it would come back to an item already in it */
-  const queue = [];
+  const queue = [], subs = [];
   for (const [id, l] of Object.entries(p.items)) {
     const e = ITEM.get(id), manual = lineQty(l) - (l.auto || 0);
     if (e && manual > 0) queue.push({ e, manual, sec: l.section, chain: [id] });
@@ -4637,8 +4643,9 @@ function applyDefaults(p) {
   while (queue.length) {
     const { e, manual, sec, chain } = queue.shift();
     for (const r of app.settings.rules) if ((r.kind === "item" || sec === "camera") && ruleMatches(r, e)) {
+      if (r.kind === "item" && r.sub) { subs.push({ line: e.it.id, rid: r.id, name: r.text || itName(r.add), qty: manual * r.qty }); continue; }   // grey, under the item
       const t = resolveTarget(r, e, p.houseId);
-      const w = want.get(t.id) || { qty: 0, why: [], label: t.label };
+      const w = want.get(t.id) || { qty: 0, why: [], label: t.label, sec };
       w.qty += manual * r.qty;
       w.why.push(`${r.qty} per ${shortName(e.it.name)}`);
       want.set(t.id, w);
@@ -4681,7 +4688,7 @@ function applyDefaults(p) {
   for (const [id, w] of want) {
     let l = p.items[id];
     if (!l) {
-      l = ITEM.has(id) ? { ...lineFromCatalog(id), qty: 0 } : { qty: 0, note: "", name: w.label, brand: "", section: id.startsWith("auto-card-") || id.startsWith("auto-reader-") ? "media" : "power", cat: "", sub: "", custom: true, added: Date.now(), children: [] };
+      l = ITEM.has(id) ? { ...lineFromCatalog(id), qty: 0 } : { qty: 0, note: "", name: w.label, brand: "", section: id.startsWith("auto-card-") || id.startsWith("auto-reader-") ? "media" : id.startsWith("pkt-") && w.sec ? w.sec : "power", cat: "", sub: "", custom: true, added: Date.now(), children: [] };
       p.items[id] = l;
     }
     const old = l.auto || 0;
@@ -4690,6 +4697,16 @@ function applyDefaults(p) {
     if (l.qty <= 0) delete p.items[id];
     if (old !== w.qty) changed.push(id);
     if (w.qty > old) lastAutoAdds.push({ label: w.label, qty: w.qty - old, why: w.why[0] || "" });
+  }
+  // a package's subitems: grey lines under the item that brings them, kept in step with it (a quantity of 0: just the words)
+  const sw = new Map(); for (const x of subs) { const k = x.line + "\u0001" + x.rid, o = sw.get(k); if (o) o.qty += x.qty; else sw.set(k, { ...x }); }
+  for (const [id, l] of Object.entries(p.items)) {
+    const mine = [...sw.values()].filter(x => x.line === id), had = (l.children || []).filter(c => c.pkg);
+    if (!mine.length && !had.length) continue;
+    const kids = (l.children || []).filter(c => !c.pkg || mine.some(x => x.rid === c.pkg));
+    for (const x of mine) { const c = kids.find(k => k.pkg === x.rid); if (c) { if (c.qty !== x.qty || c.name !== x.name) { c.qty = x.qty; c.name = x.name; changed.push(id); } } else { kids.push({ name: x.name, qty: x.qty, pkg: x.rid }); changed.push(id); lastAutoAdds.push({ label: x.name, qty: x.qty, why: "under " + shortName(l.name) }); } }
+    if (kids.length !== (l.children || []).length) changed.push(id);
+    l.children = kids;
   }
   return changed;
 }
@@ -5812,12 +5829,12 @@ function calDone() {
 }
 
 function ruleParts(r) {
-  if (r.kind === "item") { const any = isAnyCam(r.when), a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: any ? "Any camera" : a ? a.it.name : gone, add: b ? b.it.name : gone, house: any ? (houseById(r.when.split(":")[0]) || {}).name || "" : a ? a.h.name : "" }; }
+  if (r.kind === "item") { const any = isAnyCam(r.when), a = ITEM.get(r.when), b = ITEM.get(r.add), gone = "(no longer in the catalog)"; return { when: any ? "Any camera" : a ? a.it.name : gone, add: r.text || (b ? b.it.name : gone), house: any ? (houseById(r.when.split(":")[0]) || {}).name || "" : a ? a.h.name : "" }; }
   return { when: r.label, add: r.kind === "media" ? "memory cards to match the camera, and a card reader" : r.battery.label, house: "" };
 }
 /* packages and "doesn't work together": their own page, reached from the bottom of Productions */
 function rulesGroups(only) {
-  const pkRow = r => { const x = ruleParts(r); return `<div class="pk-row"><span class="pk-nm">${esc(x.add)}</span>
+  const pkRow = r => { const x = ruleParts(r); return `<div class="pk-row"><span class="pk-nm">${esc(x.add)}${r.sub ? `<small class="pk-tag">subitem</small>` : ""}</span>
       <span class="stepper sm"><button type="button" data-act="rdec" data-rid="${esc(r.id)}" aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" data-rqty="${esc(r.id)}" value="${r.qty}" aria-label="How many with each one"><button type="button" data-act="rinc" data-rid="${esc(r.id)}" aria-label="More">+</button></span>
       <button class="x" type="button" data-act="rdel" data-rid="${esc(r.id)}" aria-label="Take ${esc(x.add)} out of the package">×</button></div>`; };
   const byWhen = new Map();
@@ -5963,14 +5980,14 @@ function ruleDialog(whenId, edit) {
   const recent = [...app.productions].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).find(p => houseById(p.houseId));
   dd.house = fixed ? fixed.h.id : (cur() && houseById(cur().houseId) ? cur().houseId : recent ? recent.houseId : HOUSES[0].id);
   dd.when = fixed ? pickOf(whenId) : {}; dd.media = {}; dd.fixed = fixed ? whenId : ""; dd.q = {}; dd.edit = ""; dd.reader = !!(fixed && (app.settings.pkReaders || {})[whenId]);
-  dd.adds = []; if (!fixed || !pkgKinds().length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
+  dd.adds = []; dd.sub = {}; if (!fixed || !pkgKinds().length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">${fixed ? "Add to the package" : "New package"}</h3>
     ${!fixed && HOUSES.length > 1 ? `<div class="field"><label for="rd-house">Rental house</label><select id="rd-house" data-rdhouse="1">${HOUSES.map(h => `<option value="${h.id}" ${h.id === dd.house ? "selected" : ""}>${esc(h.name)}</option>`).join("")}</select></div>` : ""}
     ${fixed ? `<p class="pk-fixed">When you add <b>${esc(fixed.it.name)}</b></p>` : `<fieldset class="pk"><legend>When you add</legend><div id="pk-when">${pickerHtml("when")}</div></fieldset>`}
     <fieldset class="pk"><legend>Comes with</legend>
       <div id="pk-media">${pkgMediaHtml()}</div>
       <div id="pk-adds">${pkgAddsHtml()}</div>
-      <div><button class="btn sm" type="button" data-act="pk-more">+ Another item</button></div></fieldset>
+      <div class="pk-more"><button class="btn sm" type="button" data-act="pk-more">+ Another item</button><button class="btn sm" type="button" data-act="pk-more" data-text="1">+ Free text</button></div></fieldset>
     <span class="err" id="rdErr" hidden></span>
     <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
   if (!fixed) document.getElementById("pk-when-c")?.focus();
@@ -5979,12 +5996,12 @@ function ruleDialog(whenId, edit) {
 function pkgEditDialog(whenId) {
   const any = isAnyCam(whenId), e = ITEM.get(whenId); if (!e && !any) return;
   const rs = app.settings.rules.filter(r => r.kind === "item" && r.when === whenId);
-  dd.house = any ? whenId.split(":")[0] : e.h.id; dd.when = any ? { c: (camCatOf(houseById(dd.house)) || {}).id || "", s: "*camera", id: whenId } : pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.reader = !!(app.settings.pkReaders || {})[whenId];
+  dd.house = any ? whenId.split(":")[0] : e.h.id; dd.when = any ? { c: (camCatOf(houseById(dd.house)) || {}).id || "", s: "*camera", id: whenId } : pickOf(whenId); dd.fixed = ""; dd.edit = whenId; dd.media = {}; dd.q = {}; dd.adds = []; dd.sub = {}; dd.reader = !!(app.settings.pkReaders || {})[whenId];
   const kinds = pkgKinds();
   rs.forEach((r, i) => {
     const kind = kinds.find(k => k.cards.some(c => c.id === r.add));
     if (kind && !dd.media[kind.type]) { dd.media[kind.type] = { on: true, qty: r.qty, id: r.add }; return; }
-    const k = "add" + i; dd[k] = pickOf(r.add); dd.q[k] = r.qty; dd.adds.push(k);
+    const k = "add" + i; dd[k] = r.text ? { text: r.text } : pickOf(r.add); dd.q[k] = r.qty; dd.adds.push(k); if (r.sub) dd.sub[k] = true;
   });
   if (!dd.adds.length && !kinds.length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; }
   showModal(`<form class="form dialog" id="ruleForm" autocomplete="off"><h3 class="plain">Edit package</h3>
@@ -5992,7 +6009,7 @@ function pkgEditDialog(whenId) {
     <fieldset class="pk"><legend>Comes with</legend>
       <div id="pk-media">${pkgMediaHtml()}</div>
       <div id="pk-adds">${pkgAddsHtml()}</div>
-      <div><button class="btn sm" type="button" data-act="pk-more">+ Another item</button></div></fieldset>
+      <div class="pk-more"><button class="btn sm" type="button" data-act="pk-more">+ Another item</button><button class="btn sm" type="button" data-act="pk-more" data-text="1">+ Free text</button></div></fieldset>
     <span class="err" id="rdErr" hidden></span>
     <div class="modal-actions"><button class="btn ghost danger" type="button" data-act="pkg-del" data-id="${esc(whenId)}" aria-label="Delete this package">Delete</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
 }
@@ -6016,7 +6033,7 @@ function pkgMediaHtml() {
     <div class="pk-kind pk-reader${dd.reader ? " on" : ""}"><label class="check"><input type="checkbox" data-pkreader="1" ${dd.reader ? "checked" : ""}> Card reader for each card type</label></div></div>`;
 }
 /* a quantity in the package dialog: − number +, the same stepper as on the list */
-const pkStep = (attrs, v, act, data) => `<span class="stepper"><button type="button" data-act="${act}-dec" ${data} aria-label="Fewer">−</button><input type="number" min="1" max="99" inputmode="numeric" ${attrs} value="${v}"><button type="button" data-act="${act}-inc" ${data} aria-label="More">+</button></span>`;
+const pkStep = (attrs, v, act, data) => `<span class="stepper"><button type="button" data-act="${act}-dec" ${data} aria-label="Fewer">−</button><input type="number" min="0" max="99" inputmode="numeric" ${attrs} value="${v}"><button type="button" data-act="${act}-inc" ${data} aria-label="More">+</button></span>`;
 /* open the next menu down, once the page has turned it into the app's own list */
 function pkOpen(el) {
   if (!el || el.disabled || !el.id) return;
@@ -6028,8 +6045,11 @@ function pkOpen(el) {
   }, 0);
 }
 function pkgAddsHtml() {
-  return dd.adds.map(k => `<div class="pk-add" id="pa-${k}"><div id="pk-${k}">${pickerHtml(k)}</div>
-    <div class="pk-q"><div class="field"><label for="rd-q-${k}">Quantity</label>${pkStep(`id="rd-q-${k}" data-pkq="${k}"`, dd.q[k] || 1, "pkq", `data-k="${k}"`)}</div>
+  dd.sub = dd.sub || {};
+  return dd.adds.map(k => `<div class="pk-add" id="pa-${k}"><div id="pk-${k}">${dd[k] && dd[k].text !== undefined
+      ? `<div class="field"><label for="pk-${k}-t">Free text</label><input id="pk-${k}-t" data-pktxt="${k}" maxlength="120" dir="auto" value="${esc(dd[k].text)}" placeholder="Anything: an item, a note"></div>` : pickerHtml(k)}</div>
+    <label class="check pk-sub"><input type="checkbox" data-pksub="${k}" ${dd.sub[k] ? "checked" : ""}> Add as subitem <small>(grey, under the item)</small></label>
+    <div class="pk-q"><div class="field"><label for="rd-q-${k}">Quantity</label>${pkStep(`id="rd-q-${k}" data-pkq="${k}"`, dd.q[k] ?? 1, "pkq", `data-k="${k}"`)}</div>
     ${dd.adds.length > 1 || pkgKinds().length ? `<button class="btn ghost sm" type="button" data-act="pk-less" data-k="${k}">Remove</button>` : ""}</div></div>`).join("");
 }
 
@@ -7971,7 +7991,8 @@ function mcToggle(p, id, k) {
   if (mcOpen) requestAnimationFrame(() => { const pn = document.getElementById("mc-" + id)?.querySelector(".mc-panel"); (pn?.querySelector(".mc-opt.on") || pn)?.scrollIntoView({ block: "nearest", behavior: "smooth" }); });
 }
 document.addEventListener("input", e => {
-  const t = e.target; if (!t || !t.matches || !t.matches("[data-mcs]")) return;
+  const t = e.target;
+  if (t && t.dataset && t.dataset.pktxt !== undefined && dd[t.dataset.pktxt]) { dd[t.dataset.pktxt].text = t.value; return; } if (!t || !t.matches || !t.matches("[data-mcs]")) return;
   const words = t.value.toLowerCase().split(/\s+/).filter(Boolean), list = t.closest(".mc-cams"); let shown = 0;
   list.querySelectorAll(".mc-opt").forEach(o => { const hit = words.every(w => o.textContent.toLowerCase().includes(w)); o.hidden = !hit; shown += hit; });
   list.querySelector(".mc-none").hidden = shown > 0;
@@ -10723,9 +10744,10 @@ document.addEventListener("click", e => {
     case "pkg-add": ruleDialog(id); break;
     case "pkg-del": { const w = b.dataset.id, old = app.settings.rules; app.settings.rules = old.filter(r => !(r.kind === "item" && r.when === w)); touchSettings(); closeModal(); rerenderKeepScroll();
       undoable("Deleted", "the package", () => { app.settings.rules = old; touchSettings(); rerenderKeepScroll(); }); break; }
-    case "pk-more": { const k = "add" + Date.now().toString(36); dd[k] = {}; dd.q[k] = 1; dd.adds.push(k); document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); document.getElementById("pk-" + k + "-c")?.focus(); break; }
+    case "pk-more": { const k = "add" + Date.now().toString(36); dd[k] = b.dataset.text ? { text: "" } : {}; dd.q[k] = 1; dd.adds.push(k); document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); document.getElementById("pk-" + k + (b.dataset.text ? "-t" : "-c"))?.focus(); break; }
     case "pkq-dec": case "pkq-inc": case "pkmq-dec": case "pkmq-inc": {
-      const inp = b.parentElement.querySelector("input"), n = Math.max(1, Math.min(99, (parseInt(inp.value, 10) || 1) + (act.endsWith("inc") ? 1 : -1)));
+      const inp0 = x => x.parentElement.querySelector("input");
+      const min = act.startsWith("pkq") && (dd.sub || {})[b.dataset.k] ? 0 : 1, v = parseInt(inp0(b).value, 10), inp = inp0(b), n = Math.max(min, Math.min(99, (isNaN(v) ? 1 : v) + (act.endsWith("inc") ? 1 : -1)));
       inp.value = n; if (act.startsWith("pkq")) dd.q[b.dataset.k] = n; else { const m = dd.media[b.dataset.type]; if (m) m.qty = n; }
       break; }
     case "pkg-edit": ruleDialog(b.dataset.id, true); break;
@@ -10946,6 +10968,7 @@ document.addEventListener("change", e => {
   if (t.name === "theme" && t.type === "radio") { setTheme(t.value); return; }
   if (t.dataset.rec && p) { const k = t.dataset.rec, v = t.value; recApply(p, t.dataset.id, (l, e) => recSet(l, e, p, k, v)); return; }
   if (t.name === "readers" && t.type === "checkbox") { app.settings.readers = t.checked; touchSettings(); for (const q of app.productions) { applyDefaults(q); touch(q); } toast(t.checked ? "Card readers added to your lists" : "Card readers taken off your lists"); return; }
+  if (t.dataset && t.dataset.pksub !== undefined) { dd.sub = dd.sub || {}; dd.sub[t.dataset.pksub] = t.checked; const q = document.getElementById("rd-q-" + t.dataset.pksub); if (!t.checked && q && +q.value < 1) { q.value = 1; dd.q[t.dataset.pksub] = 1; } return; }
   if (t.name === "exportSku" && t.type === "checkbox") { app.settings.exportSku = t.checked; touchSettings(); return; }
   if (t.name === "helperOn" && t.type === "checkbox") { setHelper(t.checked); app.helperMissing = false; rerenderKeepScroll(); return; }
   if (t.name === "haptics" && t.type === "checkbox") { app.settings.haptics = t.checked; touchSettings(); buzz("tap"); return; }
@@ -11223,14 +11246,19 @@ document.addEventListener("submit", e => {
     if (!when) return say("Choose the item you add.");
     const items = [];
     for (const m of Object.values(dd.media || {})) if (m.on && m.id) items.push([m.id, m.qty]);
-    for (const k of dd.adds) if (dd[k] && dd[k].id) items.push([dd[k].id, dd.q[k] || 1]);
+    for (const k of dd.adds) {
+      const sub = !!(dd.sub || {})[k], q = dd.q[k] ?? 1, qty = sub ? Math.max(0, q) : Math.max(1, q);
+      if (dd[k] && dd[k].text !== undefined) { const t = dd[k].text.trim(); if (t) items.push(["", qty, t, sub]); }
+      else if (dd[k] && dd[k].id) items.push([dd[k].id, qty, "", sub]);
+    }
     if (!items.length) return say("Choose what comes with it.");
     if (items.some(([id]) => id === when)) return say("Choose a different item to come with it.");
     if (dd.edit) app.settings.rules = app.settings.rules.filter(r => !(r.kind === "item" && r.when === dd.edit));  // the package as it now stands replaces the old one
-    for (const [add, qty] of items) {
-      const ex = app.settings.rules.find(r => r.kind === "item" && r.when === when && r.add === add);
-      if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when, add, qty });
+    for (const [add, qty, text, sub] of items) {
+      const ex = app.settings.rules.find(r => r.kind === "item" && r.when === when && (text ? r.text === text : r.add === add && !r.text) && !!r.sub === sub);
+      if (ex) ex.qty = qty; else app.settings.rules.push({ id: uid("r-"), kind: "item", house: dd.house, when, add, qty, ...(text ? { text } : {}), ...(sub ? { sub: true } : {}) });
     }
+    for (const q of app.productions) if (applyDefaults(q).length) touch(q);   // lists already holding the item take the package as it now is
     const pr = app.settings.pkReaders || (app.settings.pkReaders = {}), hadR = !!pr[when] || !!(dd.edit && pr[dd.edit]);
     if (dd.edit && dd.edit !== when) delete pr[dd.edit];
     if (pkgKinds().length) { if (dd.reader) pr[when] = true; else delete pr[when]; }

@@ -1521,3 +1521,12 @@ ok(A.skuPack(["FIL-N53","FIL-N56","FIL-N510"]) === "FIL-N5\u00a03/6/10" && A.sku
     "packages chain: what a package brings brings its own package (2 → 2 → 4 → back to the first, once: no endless loop)");
   A.setQty(q, ids[0], 0); A.applyDefaults(q); ok(!q.items[ids[1]] && !q.items[ids[2]], "packages chain: taking the item off takes the whole chain off");
   A.app.settings.rules = keep; }
+{ const keep = A.app.settings.rules, ids = [...A.ITEM].filter(([id, e]) => e.h.id === "utopia" && !e.it.camera && e.s.id !== "media").slice(50, 52).map(x => x[0]);
+  A.app.settings.rules = [{ id: "t1", kind: "item", house: "utopia", when: ids[0], add: "", text: "Short BNC", qty: 2 }, { id: "t2", kind: "item", house: "utopia", when: ids[0], add: "", text: "check the batteries", qty: 0, sub: true }, { id: "t3", kind: "item", house: "utopia", when: ids[0], add: ids[1], qty: 1, sub: true }];
+  const q = A.newProduction({ name: "Text", houseId: "utopia" }); A.setQty(q, ids[0], 3); A.applyDefaults(q);
+  const l = q.items[ids[0]], t = q.items["pkt-short-bnc"];
+  ok(t && t.qty === 6 && t.name === "Short BNC" && t.section === l.section, "packages: free text comes in as its own line, in the item's section");
+  ok(l.children.length === 2 && l.children[0].name === "check the batteries" && l.children[0].qty === 0 && l.children[1].qty === 3 && !q.items[ids[1]], "packages: a subitem goes grey under the item (no quantity, or with each one)");
+  A.applyDefaults(q); ok(q.items[ids[0]].children.length === 2, "packages: subitems are not added twice");
+  A.setQty(q, ids[0], 0); A.applyDefaults(q); ok(!q.items["pkt-short-bnc"], "packages: the free-text line goes with the item");
+  A.app.settings.rules = keep; }
