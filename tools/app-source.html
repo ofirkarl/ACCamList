@@ -6067,7 +6067,10 @@ function pkgEditDialog(whenId) {
     <div class="modal-actions"><button class="btn ghost danger" type="button" data-act="pkg-del" data-id="${esc(whenId)}" aria-label="Delete this package">Delete</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
 }
 /* a camera's media in its package: one line for each kind of card it takes, the card already picked; tick, and set how many */
-function pkgKinds() {
+/* the camera's "Media" ticks in the package dialogs were taken out (Ofir, 23.11: they stood in the way of adding items): a card
+   is added like any item, from the search or the menus, and a package's cards show as its rows */
+function pkgKinds() { return []; }
+function pkgKindsOld() {
   const e = ITEM.get(dd.when.id), ch = e && e.it.camera && !e.it.camera.film ? cardChoices(e, dd.house) : [];
   const kinds = [];
   for (const c of ch) { let k = kinds.find(x => x.type === c.type); if (!k) kinds.push(k = { type: c.type, cards: [] }); k.cards.push(c); }

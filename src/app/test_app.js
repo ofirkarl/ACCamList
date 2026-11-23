@@ -746,11 +746,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
 { const keepRules = A.app.settings.rules; A.app.settings.rules = [];
   const a35 = find("utopia", /^ARRI Alexa 35$/), cdx1 = find("utopia", /Codex Compact Drive 1TB/), b250 = find("utopia", /FXLion 250Wh V-Mount/);
   A.dd.house = "utopia"; A.dd.when = { id: a35 }; A.dd.media = {}; A.dd.adds = []; A.dd.q = {};
-  ok(/data-type="Codex Compact Drive"/.test(A.pkgMediaHtml()) && A.dd.media["Codex Compact Drive"].id === cdx1, "a camera's package offers its media, the card picked already");
-  A.dd.media["Codex Compact Drive"].on = true; ok(/data-pkmedia="id"/.test(A.pkgMediaHtml()) && /value="4"/.test(A.pkgMediaHtml()), "ticked: the size (1TB or 2TB) and how many (4)");
-  const fx3 = find("utopia", /^Sony ILME-FX3$/); A.dd.when = { id: fx3 }; A.dd.media = {};
-  ok(/data-type="CFexpress Type A"/.test(A.pkgMediaHtml()) && /data-type="SD"/.test(A.pkgMediaHtml()), "a camera that takes two kinds of card: a line for each");
-  A.dd.when = { id: b250 }; ok(A.pkgMediaHtml() === "", "no media box for an item that isn't a camera");
+  ok(A.pkgMediaHtml() === "", "the camera's Media ticks were taken out of the package dialogs (23.11): cards are added as items");
   A.app.settings.rules.push({ id: "r-a", kind: "item", house: "utopia", when: a35, add: cdx1, qty: 4 }, { id: "r-b", kind: "item", house: "utopia", when: a35, add: b250, qty: 6 });
   const vs = A.viewRules(A.app.rulesTo = "pkg");
   ok(/<h3 id="rs-pkg">Packages<\/h3>/.test(vs) && (vs.match(/class="package"/g) || []).length === 1 && /data-act="pkg-add" data-id="[^"]+"/.test(vs) && /\+ Create a Package/.test(vs), "Packages page: one Alexa 35 package with both items, and + to add another");

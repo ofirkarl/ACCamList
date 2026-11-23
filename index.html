@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611232038";
+window.AC_BUILD = "202611232040";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -6220,7 +6220,10 @@ function pkgEditDialog(whenId) {
     <div class="modal-actions"><button class="btn ghost danger" type="button" data-act="pkg-del" data-id="${esc(whenId)}" aria-label="Delete this package">Delete</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="submit">Save package</button></div></form>`);
 }
 /* a camera's media in its package: one line for each kind of card it takes, the card already picked; tick, and set how many */
-function pkgKinds() {
+/* the camera's "Media" ticks in the package dialogs were taken out (Ofir, 23.11: they stood in the way of adding items): a card
+   is added like any item, from the search or the menus, and a package's cards show as its rows */
+function pkgKinds() { return []; }
+function pkgKindsOld() {
   const e = ITEM.get(dd.when.id), ch = e && e.it.camera && !e.it.camera.film ? cardChoices(e, dd.house) : [];
   const kinds = [];
   for (const c of ch) { let k = kinds.find(x => x.type === c.type); if (!k) kinds.push(k = { type: c.type, cards: [] }); k.cards.push(c); }
