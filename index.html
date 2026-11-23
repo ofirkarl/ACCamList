@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231924";
+window.AC_BUILD = "202611231927";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3108,9 +3108,10 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .pk-hit.tick { position: relative; padding-inline-start: 40px; }
 .pk-hit.tick::before { content: ""; position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; box-sizing: border-box; border: 2px solid color-mix(in srgb, var(--fg) 35%, transparent); border-radius: 5px; }
 .pk-hit.tick[aria-pressed="true"]::before { border-color: var(--accent); background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E") center / 13px no-repeat; }
-.pk-qdone { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-inline-end: -4px; border: 0; border-radius: 50%; background: var(--accent); color: var(--accent-fg); cursor: pointer; }
+.pk-qdone { flex: none; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; margin-inline-end: -2px; border: 1.5px solid var(--accent); border-radius: 50%; background: transparent; color: var(--accent); cursor: pointer; transition: background .12s, color .12s; }   /* a ring before it's tapped, filled as it is */
 .pk-qdone[hidden] { display: none; }
-.search .pk-qdone svg { color: #fff; stroke: #fff; opacity: 1; flex: none; }
+.search .pk-qdone svg { width: 12px; height: 12px; color: inherit; stroke: currentColor; flex: none; }
+.pk-qdone:active, .pk-qdone:focus-visible { background: var(--accent); color: #fff; }
 .pk-search input::-webkit-search-cancel-button { display: none; }
 </style>
 </head>
@@ -6103,7 +6104,7 @@ function pickerHtml(key) {
 }
 function pickerShell(key, h, cats, subs, c, items, itemOff, multi) {
   return `<div class="pk-find"><label class="search pk-search" for="pk-${key}-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-      <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"><button class="pk-qdone" type="button" data-act="pk-qdone" data-k="${key}" aria-label="Done: close the matches" title="Done" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></button></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
+      <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"><button class="pk-qdone" type="button" data-act="pk-qdone" data-k="${key}" aria-label="Done: close the matches" title="Done" hidden><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></button></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
     <div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
     <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${multi && !itemOff ? "multiple" : ""} ${itemOff && !/selected>Every camera/.test(items) ? "disabled" : ""}${/selected>Every camera/.test(items) ? " disabled" : ""}>${/selected>Every camera/.test(items) ? "" : `<option value="">${multi ? "None" : "Choose…"}</option>`}${items}</select></div>
