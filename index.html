@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231948";
+window.AC_BUILD = "202611232038";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3114,9 +3114,12 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .pk-qdone:active, .pk-qdone:focus-visible { background: var(--accent); color: #fff; }
 .pk-search input::-webkit-search-cancel-button { display: none; }
 /* a card picked for a camera's package fits the phone: the card's menu shrinks, the count stays whole */
-.pk-kq { min-width: 0; max-width: 100%; }
-.pk-kq .nsel { min-width: 0; flex: 1 1 auto; max-width: 11em; }
+/* a card picked for a camera's package: its menu takes the whole width (the card's full name), the count under it at the end */
+.pk-kq { min-width: 0; width: 100%; flex-wrap: wrap; justify-content: flex-end; }
+.pk-kq .nsel { min-width: 0; flex: 1 1 100%; max-width: none; }
+.pk-kq select { max-width: none; }
 .pk-kq .nsel-btn { min-width: 0; }
+.pk-kq .nsel-btn .ns-a, .pk-kq .nsel-opt .ns-a { white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 #ruleForm { overflow-x: hidden; }
 </style>
 </head>
