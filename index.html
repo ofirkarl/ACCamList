@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231309";
+window.AC_BUILD = "202611231840";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -4780,16 +4780,22 @@ function applyDefaults(p) {
   for (const l of Object.values(p.items)) if (l.cards) { const c = l.cards.id && p.items[l.cards.id]; if (c && c.auto) { c.auto = 0; delete c.autoWhy; } delete l.cards; }
   const want = new Map();
   lastAutoAdds = [];
+  /* what you added yourself sets off its packages; what a package brings sets off its own package too (Ofir, 23.11: the Alexa Mini
+     brings a gun mic, and the mic brings its holder). A chain stops where it would come back to an item already in it */
+  const queue = [];
   for (const [id, l] of Object.entries(p.items)) {
-    const e = ITEM.get(id);
-    const manual = lineQty(l) - (l.auto || 0);  // only what you added yourself sets off defaults, never what they added
-    if (!e || manual <= 0) continue;
-    for (const r of app.settings.rules) if ((r.kind === "item" || l.section === "camera") && ruleMatches(r, e)) {
+    const e = ITEM.get(id), manual = lineQty(l) - (l.auto || 0);
+    if (e && manual > 0) queue.push({ e, manual, sec: l.section, chain: [id] });
+  }
+  while (queue.length) {
+    const { e, manual, sec, chain } = queue.shift();
+    for (const r of app.settings.rules) if ((r.kind === "item" || sec === "camera") && ruleMatches(r, e)) {
       const t = resolveTarget(r, e, p.houseId);
       const w = want.get(t.id) || { qty: 0, why: [], label: t.label };
       w.qty += manual * r.qty;
       w.why.push(`${r.qty} per ${shortName(e.it.name)}`);
       want.set(t.id, w);
+      { const te = ITEM.get(t.id); if (te && !chain.includes(t.id) && chain.length < 5) queue.push({ e: te, manual: manual * r.qty, sec: te.it.section || lineFromCatalog(t.id).section, chain: [...chain, t.id] }); }
       // one card reader for each kind of card on the list
       if (r.kind === "media") { const rd = resolveReader(t.type, p.houseId); if (rd && !want.has(rd.id)) want.set(rd.id, { qty: 1, why: [`for the ${t.type} cards`], label: rd.label }); }
       // a camera whose package asks for it: a reader for each kind of card the package brings

@@ -1513,3 +1513,11 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   const r = A.exportRows(sid, np.items[sid])[0]; ok(r.extra[0] === "0.3, 0.9" && /^FIL-N5\u00a03\/9$/.test(r.sku), "ND: the document shows the densities after the name, and each one's SKU");
   A.ndApply(np, sid, []); ok(!np.items[sid], "ND: none chosen takes the set off the list"); }
 ok(A.skuPack(["FIL-N53","FIL-N56","FIL-N510"]) === "FIL-N5\u00a03/6/10" && A.skuPack(["AB1","CD2"]) === "AB1, CD2", "a set's SKUs: what they share once");
+{ const keep = A.app.settings.rules, ids = [...A.ITEM].filter(([id, e]) => e.h.id === "utopia" && !e.it.camera && e.s.id !== "media").slice(40, 43).map(x => x[0]);
+  A.app.settings.rules = [{ id: "c1", kind: "item", house: "utopia", when: ids[0], add: ids[1], qty: 1 }, { id: "c2", kind: "item", house: "utopia", when: ids[1], add: ids[2], qty: 2 }, { id: "c3", kind: "item", house: "utopia", when: ids[2], add: ids[0], qty: 1 }];
+  const q = A.newProduction({ name: "Chain", houseId: "utopia" }); A.setQty(q, ids[0], 2); A.applyDefaults(q);
+  if (process.env.DBG) console.log(JSON.stringify(ids.map(i => q.items[i] && [q.items[i].qty, q.items[i].auto])));
+  ok(q.items[ids[1]] && A.lineQty(q.items[ids[1]]) === 2 && q.items[ids[2]] && A.lineQty(q.items[ids[2]]) === 4 && A.lineQty(q.items[ids[0]]) === 6,
+    "packages chain: what a package brings brings its own package (2 → 2 → 4 → back to the first, once: no endless loop)");
+  A.setQty(q, ids[0], 0); A.applyDefaults(q); ok(!q.items[ids[1]] && !q.items[ids[2]], "packages chain: taking the item off takes the whole chain off");
+  A.app.settings.rules = keep; }
