@@ -2973,7 +2973,7 @@ function pickerHtml(key) {
 }
 function pickerShell(key, h, cats, subs, c, items, itemOff, multi) {
   return `<div class="pk-find"><label class="search pk-search" for="pk-${key}-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-      <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
+      <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"><button class="pk-qdone" type="button" data-act="pk-qdone" data-k="${key}" aria-label="Done: close the matches" title="Done" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg></button></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
     <div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
     <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${multi && !itemOff ? "multiple" : ""} ${itemOff && !/selected>Every camera/.test(items) ? "disabled" : ""}${/selected>Every camera/.test(items) ? " disabled" : ""}>${/selected>Every camera/.test(items) ? "" : `<option value="">${multi ? "None" : "Choose…"}</option>`}${items}</select></div>
@@ -2998,6 +2998,7 @@ function pkSetChosen(k, ids) {
 function pkFind(key, q) {
   const box = document.getElementById("pk-" + key + "-hits"); if (!box) return;
   const words = norm(q).split(/\s+/).filter(Boolean);
+  const done = document.querySelector(`[data-act="pk-qdone"][data-k="${key}"]`); if (done) done.hidden = !words.length;
   if (!words.length) { box.hidden = true; box.innerHTML = ""; return; }
   const hits = [], multi = pkMulti(key), on = new Set(multi ? pkChosen(key) : []);
   for (const [id, e] of ITEM) { if (e.h.id !== dd.house) continue; const n = norm(e.it.name + " " + e.s.name); if (words.every(w => n.includes(w))) { hits.push(e); if (hits.length >= 300) break; } }
@@ -7825,6 +7826,8 @@ document.addEventListener("click", e => {
     }
     case "share-app": shareApp(); break;
     case "tool-share": closeModal(); shareApp(); break;
+    case "pk-qdone": {   // done ticking: the matches close, the search empties, the keyboard goes
+      const k = b.dataset.k, q = document.getElementById("pk-" + k + "-q"); if (q) { q.value = ""; q.blur(); } pkFind(k, ""); break; }
     case "pk-hit": {  // the match goes into the menus, as if picked there
       const k = b.dataset.k;
       if (pkMulti(k)) {   // several: a tap ticks it (or unticks it); the menus go to where it is, the matches stay
