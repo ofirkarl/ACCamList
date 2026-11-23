@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611231859";
+window.AC_BUILD = "202611231902";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -6088,16 +6088,16 @@ function pickerHtml(key) {
   const subs = (anyOk ? `<option value="*camera" ${any ? "selected" : ""}>Any camera</option>` : "") + (c ? [c.direct, ...c.subcategories].filter(x => x.items.length).map(x => `<option value="${esc(x.key)}" ${x.key === v.s ? "selected" : ""}>${esc(x.direct ? "(straight in " + c.name + ")" : x.name)}</option>`).join("") : "");
   let items = "";
   if (any) return pickerShell(key, h, cats, subs, c, `<option value="${esc(anyCamOf(h.id))}" selected>Every camera on the list</option>`, true);
-  const chosen = key === "when" ? new Set([v.id, ...(dd.also || [])]) : null;
-  if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.filter(it => !chosen || !chosen.has(it.id)).map(it => `<option value="${esc(it.id)}" ${!chosen && it.id === v.id ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
-  return pickerShell(key, h, cats, subs, c, items, !sub);
+  const chosen = key === "when" && !dd.fixed ? new Set([v.id, ...(dd.also || [])]) : null;
+  if (sub) for (const [g, its] of groupItems(sub.items, sub)) items += `${g ? `<optgroup label="${esc(headLabel(h, sub.key + "/" + g, g))}">` : ""}${its.map(it => `<option value="${esc(it.id)}" ${(chosen ? chosen.has(it.id) : it.id === v.id) ? "selected" : ""}>${esc(it.name)}</option>`).join("")}${g ? "</optgroup>" : ""}`;
+  return pickerShell(key, h, cats, subs, c, items, !sub, !!chosen);
 }
-function pickerShell(key, h, cats, subs, c, items, itemOff) {
+function pickerShell(key, h, cats, subs, c, items, itemOff, multi) {
   return `<div class="pk-find"><label class="search pk-search" for="pk-${key}-q"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
       <input data-sug="search" id="pk-${key}-q" type="search" data-pkfind="${key}" placeholder="Search ${esc(h.name)}" autocomplete="off" aria-label="Search the catalog"></label><div class="pk-hits" id="pk-${key}-hits" hidden></div></div>
     <div class="row2"><div class="field"><label for="pk-${key}-c">Category</label><select id="pk-${key}-c" data-pkc="${key}"><option value="">Choose…</option>${cats}</select></div>
       <div class="field"><label for="pk-${key}-s">Subcategory</label><select id="pk-${key}-s" data-pks="${key}" ${c ? "" : "disabled"}><option value="">Choose…</option>${subs}</select></div></div>
-    <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${itemOff && !/selected>Every camera/.test(items) ? "disabled" : ""}${/selected>Every camera/.test(items) ? " disabled" : ""}>${/selected>Every camera/.test(items) ? "" : `<option value="">Choose…</option>`}${items}</select></div>
+    <div class="field"><label for="pk-${key}-i">Item</label><select id="pk-${key}-i" data-pki="${key}" ${multi && !itemOff ? "multiple" : ""} ${itemOff && !/selected>Every camera/.test(items) ? "disabled" : ""}${/selected>Every camera/.test(items) ? " disabled" : ""}>${/selected>Every camera/.test(items) ? "" : `<option value="">${multi ? "None" : "Choose…"}</option>`}${items}</select></div>
     ${/selected>Every camera/.test(items) ? `<span class="hint">One set for each camera on the list, whatever the camera. A camera's own package adds on top.</span>` : ""}`;
 }
 /* the search over a package picker: a few best matches; tapping one fills the three menus */
@@ -6114,7 +6114,7 @@ function pkFind(key, q) {
 const cx = { id: "", a: [], b: [] };
 const pickOf = id => { const e = ITEM.get(id); return e ? { c: e.c.id, s: e.s.key, id } : {}; };
 /* "When you add": one item or several (Ofir, 23.11: ten monitors, each with a wheeled stand). The first one picked leads (its media) */
-const pkWhenChips = () => { const ids = [dd.when.id, ...(dd.also || [])].filter(x => x && !isAnyCam(x)); return ids.length < 1 ? "" : ids.map(id => `<span class="cx-chip">${esc(itName(id))}<button type="button" class="cx-x" data-act="pk-wx" data-id="${esc(id)}" aria-label="Take off ${esc(itName(id))}">×</button></span>`).join("") + (ids.length ? `<span class="hint pk-more-hint">Pick more from the menus to add them.</span>` : ""); };
+const pkWhenChips = () => { const ids = [dd.when.id, ...(dd.also || [])].filter(x => x && !isAnyCam(x)); return ids.length < 1 ? "" : ids.map(id => `<span class="cx-chip">${esc(itName(id))}<button type="button" class="cx-x" data-act="pk-wx" data-id="${esc(id)}" aria-label="Take off ${esc(itName(id))}">×</button></span>`).join("") ; };
 const cxChips = k => cx[k].map(id => `<span class="cx-chip">${esc(itName(id))}<button type="button" class="cx-x" data-act="cx-x" data-k="${k}" data-id="${esc(id)}" aria-label="Take off ${esc(itName(id))}">×</button></span>`).join("");
 function clashDialog(rid) {
   const r = rid && (app.settings.clashes || []).find(x => x.id === rid);
@@ -11161,9 +11161,14 @@ document.addEventListener("change", e => {
       dd.also = dd.also || [];
       if (t.dataset.pkc) { v.c = t.value; v.s = ""; if (isAnyCam(v.id)) v.id = ""; }
       else if (t.dataset.pks) { v.s = t.value; if (t.value === "*camera") { v.id = anyCamOf(dd.house); dd.also = []; } else if (isAnyCam(v.id)) v.id = ""; }
+      else if (t.multiple) {   // ticks: what's ticked here, with what's ticked in other subcategories; the first one leads
+        const here = new Set([...t.options].map(o => o.value).filter(Boolean)), on = [...t.selectedOptions].map(o => o.value).filter(Boolean);
+        const before = [v.id, ...dd.also].filter(x => x && !isAnyCam(x)), all = [...before.filter(x => !here.has(x) || on.includes(x)), ...on.filter(x => !before.includes(x))];
+        v.id = all[0] || ""; dd.also = all.slice(1);
+      }
       else if (t.value) { if (!v.id || isAnyCam(v.id)) v.id = t.value; else if (v.id !== t.value && !dd.also.includes(t.value)) dd.also.push(t.value); }
       document.getElementById("pk-when-chips").innerHTML = pkWhenChips();
-      if (t.dataset.pki) { document.getElementById("pk-when").innerHTML = pickerHtml("when"); if (prevWhen === v.id) { pkOpen(document.querySelector("#pk-when [data-pki]")); return; } }   // the list opens again, for the next one
+      if (t.dataset.pki && (t.multiple || prevWhen === v.id)) { if (!t.multiple) document.getElementById("pk-when").innerHTML = pickerHtml("when"); if (prevWhen === v.id) return; }
     }
     else if (t.dataset.pkc) { v.c = t.value; v.s = ""; v.id = ""; }
     else if (t.dataset.pks) { v.s = t.value; v.id = k === "when" && t.value === "*camera" ? anyCamOf(dd.house) : ""; }
@@ -11186,7 +11191,7 @@ document.addEventListener("change", e => {
       if (pkgKinds().length && untouched) { dd.adds = []; document.getElementById("pk-adds").innerHTML = ""; }
       else if (!pkgKinds().length && !dd.adds.length) { dd.adds = ["add0"]; dd.add0 = {}; dd.q.add0 = 1; document.getElementById("pk-adds").innerHTML = pkgAddsHtml(); }
     }
-    if (t.dataset.pki && t.value && k === "when" && dd.adds.length && !(dd[dd.adds[0]] || {}).c) pkOpen(document.getElementById("pk-" + dd.adds[0] + "-c"));  // then on to what comes with it
+    if (t.dataset.pki && t.value && !t.multiple && k === "when" && dd.adds.length && !(dd[dd.adds[0]] || {}).c) pkOpen(document.getElementById("pk-" + dd.adds[0] + "-c"));  // then on to what comes with it
     return;
   }
   if (t.form && t.form.id === "meForm") { meSave(t.form); return; }
