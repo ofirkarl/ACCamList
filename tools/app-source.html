@@ -3000,6 +3000,13 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .cal-day.past:not(.in):not(.pk):not(.pick) { background: none; }
 .cal-day.past.start, .cal-day.past.end, .cal-day.past.pk, .cal-day.past.pick { opacity: .55; }
 .cal-head .iconbtn:disabled { opacity: .3; }
+/* Multicam (Ofir, 24.11, C): a camera with a + in the top row, beside the rental forms; the cameras' row shows once there are two.
+   The cameras' row isn't a camera-list row: none of that row's height or padding */
+.ph-camb { position: relative; color: var(--accent); }
+.ph-camb svg { width: 20px; height: 20px; }
+.ph-camb b { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font: 700 13px/18px var(--font-body); text-align: center; }
+.ph-extra .cam-row { min-height: 0; padding: 0; margin: 0; }
+.prod-head.ph-extra { padding-block: 8px 0; gap: 8px; }
 </style>
 
 <div class="app">
@@ -6275,7 +6282,7 @@ function viewProduction() {
   const ou2 = otherUnit(p), ost = ou2 ? prodStatus(ou2) : null;
   const sub = (p.company ? `<span class="ph-co" dir="auto">${esc(p.company)}</span>` : "") + (st ? `<span class="ph-st ${st.k}">${esc(st.t)}</span>` : "");
   const head = finder ? "" : `<div class="prod-head ph-stack">
-      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><span class="grow"></span><button class="btn icon-btn lt-ico ph-forms" type="button" data-act="rf-list" aria-label="Rental forms${formsOf(p).length ? ": " + formsOf(p).length : ""}" title="Rental forms">${RF_ICON}${formsOf(p).length ? `<i class="num">${formsOf(p).length}</i>` : ""}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
+      <div class="ph-nav"><button class="iconbtn ph-back" type="button" data-act="back" aria-label="Back" title="Back">${BACK_ICON_L}</button><span class="grow"></span><button class="btn icon-btn lt-ico ph-camb" type="button" data-act="cam-add" aria-label="Add a camera (multicam)" title="Add a camera">${CAM_SM}<b aria-hidden="true">+</b></button><button class="btn icon-btn lt-ico ph-forms" type="button" data-act="rf-list" aria-label="Rental forms${formsOf(p).length ? ": " + formsOf(p).length : ""}" title="Rental forms">${RF_ICON}${formsOf(p).length ? `<i class="num">${formsOf(p).length}</i>` : ""}</button><button class="btn primary sm ph-export" type="button" data-act="preview" ${t.lines ? "" : "disabled"}>Preview &amp; export</button></div>
       <h2 class="ph-name" dir="auto">${esc(p.name || "Untitled production")}</h2>
       ${sub ? `<p class="ph-sub">${sub}</p>` : ou2 && (ou2.company || ost) ? `<p class="ph-sub" aria-hidden="true">&nbsp;</p>` : ""}
     </div>`;
@@ -6285,8 +6292,8 @@ function viewProduction() {
   const prepTxt = p.prep ? dPart(PREP_ICON, "Prep", fmtDM(p.prep), "") : "";
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
-      ${multicam(p) || app.camOpen === p.id ? `<div class="cam-row${app.camAnim ? " cam-in" : ""}" role="group" aria-label="Cameras"><span class="seg sm cam-sw">${camKeys(p).map(k => `<button type="button" data-act="cam-sw" data-id="${k}" aria-pressed="${k === camActive(p)}" aria-label="Camera ${k}">${k}</button>`).join("")}</span><button class="iconbtn cam-add" type="button" data-act="cam-add" aria-label="Add a camera" title="Add a camera">+</button>${multicam(p) ? `<button class="iconbtn cam-rm" type="button" data-act="cam-rm" aria-label="Remove camera ${camActive(p)}" title="Remove camera ${camActive(p)}">${TRASH_SM}</button>` : `<button class="iconbtn cam-rm" type="button" data-act="cam-close" aria-label="Close multicam" title="Close">×</button>`}</div>`
-        : `<div class="cam-row"><button class="btn sm cam-open" type="button" data-act="cam-open" aria-label="Multicam: a list for each camera">${CAM_SM}<span>Multicam</span></button></div>`}
+      ${multicam(p) ? `<div class="cam-row${app.camAnim ? " cam-in" : ""}" role="group" aria-label="Cameras"><span class="seg sm cam-sw">${camKeys(p).map(k => `<button type="button" data-act="cam-sw" data-id="${k}" aria-pressed="${k === camActive(p)}" aria-label="Camera ${k}">${k}</button>`).join("")}</span><button class="iconbtn cam-add" type="button" data-act="cam-add" aria-label="Add a camera" title="Add a camera">+</button>${multicam(p) ? `<button class="iconbtn cam-rm" type="button" data-act="cam-rm" aria-label="Remove camera ${camActive(p)}" title="Remove camera ${camActive(p)}">${TRASH_SM}</button>` : `<button class="iconbtn cam-rm" type="button" data-act="cam-close" aria-label="Close multicam" title="Close">×</button>`}</div>`
+        : ""}
       ${shootTxt || prepTxt ? `<button class="pdates1" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${shootTxt && prepTxt ? `<span class="pd1-sep" aria-hidden="true"></span>` : ""}${prepTxt}</button>` : `<button class="pdates1 ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
     </div></section>`;
   swExtra = extra;
