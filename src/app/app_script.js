@@ -7383,7 +7383,7 @@ function pvPages(p) {
   if (pr) {   // both units: each one's pages, the count of the two
     let total = 0; const docs = [...paper.querySelectorAll(":scope > .pv-u > *")];
     pr.forEach((u, i) => { if (docs[i]) total += pvPagesOf(u, docs[i], paper); });
-    el.textContent = total ? `${total} pages` : ""; return;
+    el.textContent = total ? `${total} page${total === 1 ? "" : "s"}` : ""; return;
   }
   const n = pvPagesOf(p, paper.firstElementChild, paper); el.textContent = n ? `${n} page${n === 1 ? "" : "s"}` : "";
 }
