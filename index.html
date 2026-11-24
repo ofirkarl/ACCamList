@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611241004";
+window.AC_BUILD = "202611241014";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3124,6 +3124,19 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* both units in one document: where the 2nd Unit starts (a new page) */
 .pv-ubrk { position: relative; height: 64px; margin: 18px 0; display: grid; place-items: center; background: repeating-linear-gradient(90deg, var(--accent) 0 14px, transparent 14px 24px) center / 100% 4px no-repeat; }
 .pv-ubrk > span { font: 700 30px/44px system-ui, sans-serif; color: var(--accent-fg); background: var(--accent); border-radius: 22px; padding: 0 22px; white-space: nowrap; box-shadow: 0 0 0 6px var(--paper, #fff); }
+/* multicam: the cameras' letters and + under the production's name; the starter kit for a new camera */
+.cam-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 8px; }
+.cam-sw .btn, .cam-sw button { min-width: 40px; font-weight: 700; }
+.cam-add, .cam-rm { width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 10px; font-size: 20px; font-weight: 600; color: var(--accent); background: var(--surface); }
+.cam-rm { color: var(--muted); }
+.cam-rm.armed { color: var(--danger, #d33); border-color: currentColor; }
+.ck-list { display: grid; gap: 6px; max-height: 52vh; overflow-y: auto; margin: 10px 0 14px; }
+.ck-h { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 8px 0 0; }
+.ck-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 10px; }
+.ck-row .ck-n { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.3; }
+.ck-row .stepper { flex: none; }
+.ck-row .stepper input { width: 34px; }
+.pv-cams { padding-top: 0; }
 </style>
 </head>
 <body>
@@ -5700,9 +5713,37 @@ const findProd = id => id ? app.productions.find(p => p.id === id) || null : nul
 /* a production with a 2nd Unit is two lists: the main one (p.unit2 points to the other) and the 2nd Unit's (q.mainOf points back) */
 const mainOf = p => (p && p.mainOf && findProd(p.mainOf)) || p;
 /* "Both" in the preview (Ofir, 24.11): the Main Unit and the 2nd Unit as one document, each unit from a new page. The choice stays */
-const docPair = p => { if (!app.settings.pvBoth || !p) return null; const m = (p.mainOf && findProd(p.mainOf)) || p, q = m && m.unit2 ? findProd(m.unit2) : null; return m && q ? [m, q] : null; };
+const docPair = p => {
+  if (!p) return null;
+  if (app.settings.pvAllCams && multicam(p)) return camKeys(p).map(k => camView(p, k));   // every camera's list, one after another
+  if (!app.settings.pvBoth) return null; const m = (p.mainOf && findProd(p.mainOf)) || p, q = m && m.unit2 ? findProd(m.unit2) : null; return m && q ? [m, q] : null; };
 const unit2Of = p => { const m = mainOf(p); return m && m.unit2 ? findProd(m.unit2) : null; };
 const otherUnit = p => !p ? null : p.mainOf ? findProd(p.mainOf) : p.unit2 ? findProd(p.unit2) : null;
+/* ---------- multicam (Ofir, 24.11): a list for each camera, A, B, C…, in one production. The camera being worked on keeps its
+   lines in p.items (so everything else works on it as before); the others wait in p.cams[key].items ---------- */
+const camKeys = p => (p && p.camKeys && p.camKeys.length ? p.camKeys : ["A"]);
+const camActive = p => (p && p.cam) || "A";
+const multicam = p => camKeys(p).length > 1;
+const camItems = (p, k) => k === camActive(p) ? p.items : ((p.cams || {})[k] || {}).items || {};
+const camView = (p, k) => ({ ...p, items: camItems(p, k), camKey: k });   // one camera's list, for its document
+function camSwitch(p, k) {
+  if (!p || k === camActive(p) || !camKeys(p).includes(k)) return;
+  p.cams = p.cams || {}; p.cams[camActive(p)] = { items: p.items }; p.items = (p.cams[k] || {}).items || {}; delete p.cams[k]; p.cam = k; touch(p);
+}
+function camAdd(p) {
+  const keys = camKeys(p), k = String.fromCharCode(65 + keys.length); if (keys.length >= 8) return null;
+  p.camKeys = [...keys, k]; p.cams = p.cams || {}; p.cams[k] = { items: {} }; touch(p); return k;
+}
+function camRemove(p, k) {
+  const keys = camKeys(p); if (keys.length < 2 || !keys.includes(k)) return;
+  if (camActive(p) === k) camSwitch(p, keys.find(x => x !== k));
+  const gone = (p.cams || {})[k]; delete p.cams[k];
+  // the letters close up: B goes, C becomes B
+  const rest = keys.filter(x => x !== k), map = {}; rest.forEach((x, i) => map[x] = String.fromCharCode(65 + i));
+  const cams = {}; for (const [x, v] of Object.entries(p.cams || {})) cams[map[x]] = v; p.cams = cams; p.cam = map[camActive(p)]; p.camKeys = rest.map(x => map[x]);
+  if (p.camKeys.length < 2) { delete p.camKeys; delete p.cams; delete p.cam; }
+  touch(p); return gone;
+}
 /* the 1st AC on a production: the user's own details as one small card (like Settings); a tap opens the two fields to change them */
 const AC_CARD = (n, ph) => `<span class="me-av" aria-hidden="true">${esc(((n || "").trim()[0] || "?").toUpperCase())}</span><span class="me-t"><b>${esc(n || "1st AC")}</b><small>${esc(["1st AC", ph].filter(Boolean).join(" · "))}</small></span>`;
 function acCardHtml(ac, ph) {
@@ -6291,6 +6332,34 @@ function prodStatus(p, today = todayIso()) {
 const CHIP_CAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>`;
 const PREP_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.2L4 17v3h3l5.3-5.2a4 4 0 0 0 5.2-5.3l-2.5 2.5-2.5-2.5z"/></svg>`;
 const INFO_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5h.01"/></svg>`;
+/* a new camera's first lines, guessed from the camera it's added from (Ofir, 24.11): the camera body, the legs and the head, its
+   media and its batteries, each ticked with a count to change. All of it can be edited; anything else is added by hand */
+function camKitGuess(p, from) {
+  const items = camItems(p, from), out = [];
+  for (const [id, l] of Object.entries(items)) {
+    const e = ITEM.get(id), name = l.name || "", sec = l.section;
+    let why = "";
+    if (sec === "camera" && (!e || e.it.camera)) why = "Camera";
+    else if (sec === "support" && /tripod|legs|sticks|head|hi.?hat|high.?hat|baby|spreader|ראש|רגל/i.test(name)) why = "Legs and head";
+    else if (sec === "media" && !/reader|dock|macbook|laptop|drive dock|hub/i.test(name)) why = "Media";
+    else if (/batter|v-?mount|b-?mount|gold.?mount|סולל/i.test(name) && !/charger|plate|adapter/i.test(name)) why = "Batteries";
+    if (!why) continue;
+    const q = lineQty(l) - (l.auto || 0) || lineQty(l);
+    out.push({ id, name, why, qty: why === "Camera" || why === "Legs and head" ? 1 : Math.max(1, q) });
+  }
+  const order = ["Camera", "Legs and head", "Media", "Batteries"];
+  return out.sort((a, b) => order.indexOf(a.why) - order.indexOf(b.why));
+}
+function camKitDialog(p, from) {
+  const g = camKitGuess(p, from), k = camActive(p);
+  if (!g.length) { toast(`Camera ${k}: an empty list. Add its gear from Add Gear.`); return; }
+  let last = "";
+  showModal(`<div class="sheet ck-sheet" data-from="${esc(from)}"><h3 class="plain">Camera ${esc(k)}</h3>
+    <p class="hint">A start from camera ${esc(from)}'s list. Untick what it doesn't need and change the counts; add anything else from Add Gear.</p>
+    <div class="ck-list">${g.map(x => { const head = x.why !== last ? `<div class="ck-h">${esc(x.why)}</div>` : ""; last = x.why;
+      return head + `<label class="ck-row" data-id="${esc(x.id)}"><input type="checkbox" checked><span class="ck-n" dir="auto">${esc(x.name)}</span><span class="stepper sm"><button type="button" data-act="ck-dec" aria-label="Fewer">−</button><input type="number" min="1" max="99" value="${x.qty}" aria-label="How many"><button type="button" data-act="ck-inc" aria-label="More">+</button></span></label>`; }).join("")}</div>
+    <div class="modal-actions"><button class="btn" type="button" data-act="ck-skip">Start empty</button><span class="grow"></span><button class="btn primary" type="button" data-act="ck-ok">Add to camera ${esc(k)}</button></div></div>`);
+}
 function viewProduction() {
   if (app.tab === "media") app.tab = "list";  // the Media Calculator lives on the start page now
   const p = cur(), h = houseById(p.houseId), t = totals(p);
@@ -6338,6 +6407,7 @@ function viewProduction() {
   const prepTxt = p.prep ? dPart(PREP_ICON, "Prep", fmtDM(p.prep), "") : "";
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
+      <div class="cam-row" role="group" aria-label="Cameras"><span class="seg sm cam-sw">${camKeys(p).map(k => `<button type="button" data-act="cam-sw" data-id="${k}" aria-pressed="${k === camActive(p)}" aria-label="Camera ${k}">${k}</button>`).join("")}</span><button class="iconbtn cam-add" type="button" data-act="cam-add" aria-label="Add a camera" title="Add a camera">+</button>${multicam(p) ? `<button class="iconbtn cam-rm" type="button" data-act="cam-rm" aria-label="Remove camera ${camActive(p)}" title="Remove camera ${camActive(p)}">${TRASH_SM}</button>` : ""}</div>
       ${shootTxt || prepTxt ? `<button class="pdates1" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${shootTxt && prepTxt ? `<span class="pd1-sep" aria-hidden="true"></span>` : ""}${prepTxt}</button>` : `<button class="pdates1 ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
     </div></section>`;
   swExtra = extra;
@@ -9680,7 +9750,7 @@ function csvText(p) {
     rows.push([secName(s.id), r.qty, r.name, r.extra.join("; "), r.kids.join("; "), r.sku, l.brand || "", l.cat || "", l.sub || ""]);
   return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
 }
-function fileBase(p) { const pr = docPair(p); if (pr) return fileBase0(pr[0]).replace(/ Main Unit(?= |$)/, " Main + 2nd Unit"); return fileBase0(p); }
+function fileBase(p) { const pr = docPair(p); if (pr && pr[0].camKey) return fileBase0({ ...p, camKey: "ALL" }); if (pr) return fileBase0(pr[0]).replace(/ Main Unit(?= |$)/, " Main + 2nd Unit"); return fileBase0(p); }
 function fileBase0(p) { return ("Camera list - " + (p.name || "production") + (unitLine(p) ? " " + unitLine(p) : "") + (p.shootStart ? " " + fmtDoc(p.shootStart).replace(/\./g, "-") : "") + " v" + docVer(p)).replace(/[\\/:*?"<>|]+/g, " ").trim(); }
 
 /* ----- the clean layout (default), after the camlist look: the production's name with "Camera List" across from it on every page,
@@ -9693,7 +9763,7 @@ function docSigOf(p) {
   let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0;
   return String(h >>> 0);
 }
-const docVer = p => p.docSig && p.docSig === docSigOf(p) ? (p.docVer || 1) : (p.docVer || 0) + 1;
+const docVer = p => p.camKey && p.camKey !== camActive(p) ? (p.docVer || 1) : p.docSig && p.docSig === docSigOf(p) ? (p.docVer || 1) : (p.docVer || 0) + 1;
 function commitVer(p) { statCount("exports"); const sig = docSigOf(p); if (p.docSig !== sig) { p.docVer = docVer(p); p.docSig = sig; touch(p); } }
 /* the title at the top of the list ("Camera List", or the one set in Settings) */
 const docTitle = p => String((p && p.docTitle) || app.settings.docTitle || "Camera List").slice(0, 60);
@@ -9722,7 +9792,7 @@ function crewCols(p) {
   const col = (x, name) => ({ name, dim: x !== p, rows: [{ k: "DP", v: x.dp }, { k: "1st AC", v: acText(x) }, ...(sameDates ? [] : [{ k: "Prep", v: x.prep ? fmtDoc(x.prep) : "" }, { k: "Shoot", v: shootRangeText(x) }])].filter(r => r.v) });
   return [col(q, "2nd Unit"), col(m, "Main Unit")];
 }
-const unitLine = p => otherUnit(p) ? (p.mainOf ? "2nd Unit" : "Main Unit") : "";
+const unitLine = p => [otherUnit(p) ? (p.mainOf ? "2nd Unit" : "Main Unit") : "", p.camKey === "ALL" ? "Cameras " + camKeys(p).join(" + ") : multicam(p) ? "Camera " + (p.camKey || camActive(p)) : ""].filter(Boolean).join(" · ");
 const NOTE_PX = { s: 10.5, m: 12, l: 14.5 }, NOTE_SZ = { s: 19, m: 22, l: 28 };
 const hasHebrew = t => /[\u0590-\u05FF]/.test(String(t || ""));
 /* when the file is saved: "5.11.26 · 23:40" */
@@ -9986,7 +10056,7 @@ async function buildDocx(p) {
       refs += '<w:footerReference w:type="default" r:id="rIdFtr"/><w:footerReference w:type="first" r:id="rIdFtr"/>';
     }
     // each unit: its own section, from a new page, its first page's title in the page, its pages counted from 1
-    const sec = (u, i) => { const x = (i ? docxXml(u) : docXml).replace("<w:body>", "<w:body>" + first(u)).replace(/<w:headerReference w:type="default" r:id="rIdHdr"\/>/, i ? refs.replace('r:id="rIdHdr"', `r:id="rIdHdrU${i}"`) : refs).replace("</w:sectPr>", '<w:pgNumType w:start="1"/><w:titlePg/></w:sectPr>');
+    const sec = (u, i) => { const x = (u === p ? docXml : docxXml(u)).replace("<w:body>", "<w:body>" + first(u)).replace(/<w:headerReference w:type="default" r:id="rIdHdr"\/>/, i ? refs.replace('r:id="rIdHdr"', `r:id="rIdHdrU${i}"`) : refs).replace("</w:sectPr>", '<w:pgNumType w:start="1"/><w:titlePg/></w:sectPr>');
       return { body: x.slice(x.indexOf("<w:body>") + 8, x.lastIndexOf("<w:sectPr>")), sect: x.slice(x.lastIndexOf("<w:sectPr>"), x.lastIndexOf("</w:sectPr>") + 11), head: x.slice(0, x.indexOf("<w:body>") + 8), tail: x.slice(x.lastIndexOf("</w:sectPr>") + 11) }; };
     const S = units.map(sec);
     docXml = (S[0].head + S.map((x, i) => i < S.length - 1 ? x.body + `<w:p><w:pPr>${x.sect}</w:pPr></w:p>` : x.body + x.sect).join("") + S[0].tail)
@@ -10028,6 +10098,7 @@ function openPreview(p) {
   o.innerHTML = `<div class="pv-bar"><b>Preview<span class="pv-pages" id="pvPages"></span></b><span class="hint">${esc(fileBase(p))}</span>
       <button class="x" type="button" data-act="preview-close" aria-label="Close preview">×</button></div>
     ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="pv-units"><span class="seg sm" role="group" aria-label="Unit">${[[m.id, "Main Unit"], [q.id, "2nd Unit"], ["both", "Both"]].map(([x, t]) => `<button type="button" data-act="pv-unit" data-id="${esc(x)}" aria-pressed="${x === "both" ? !!docPair(p) : !docPair(p) && x === p.id}" ${x === "both" ? 'aria-label="Both units in one document"' : ""}>${t}</button>`).join("")}</span></div>` : ""; })()}
+    ${multicam(p) ? `<div class="pv-units pv-cams"><span class="seg sm" role="group" aria-label="Camera">${[...camKeys(p), "all"].map(k => `<button type="button" data-act="pv-cam" data-id="${k}" aria-pressed="${k === "all" ? !!app.settings.pvAllCams : !app.settings.pvAllCams && k === camActive(p)}" ${k === "all" ? 'aria-label="Every camera in one document"' : `aria-label="Camera ${k}"`}>${k === "all" ? "All" : k}</button>`).join("")}</span></div>` : ""}
     <div class="pv-scroll"><div class="pv-fit"><div class="pv-paper">${paperHtml(p)}</div></div></div>
     <div class="pv-actions${app.settings.pvFold ? " folded" : ""}" id="pvActions">
       <button class="pv-fold" type="button" data-act="pv-fold" aria-expanded="${!app.settings.pvFold}" aria-controls="pvEdit"><span>Edit document</span>${CHEV}</button>
@@ -10065,7 +10136,7 @@ function openPreview(p) {
 /* the preview's paper: the list's document, or both units' (the 2nd one marked as starting on a new page) */
 function paperHtml(p) {
   const pr = docPair(p); if (!pr) return exportHtml(p);
-  return `<div class="pv-u">${exportHtml(pr[0])}</div><div class="pv-ubrk"><span>2nd Unit · from a new page</span></div><div class="pv-u">${exportHtml(pr[1])}</div>`;
+  return pr.map((u, i) => (i ? `<div class="pv-ubrk"><span>${u.camKey ? "Camera " + u.camKey : "2nd Unit"} · from a new page</span></div>` : "") + `<div class="pv-u">${exportHtml(u)}</div>`).join("");
 }
 function pvRepaint(p) {   // the preview's paper and logo buttons, after a change to the document's look
   const paper = document.querySelector("#preview .pv-paper"); if (paper) paper.innerHTML = paperHtml(p);
@@ -10218,7 +10289,7 @@ const fileCache = new Map();
 /* a built file is used again only while nothing that shows in it changed: the list, its version, and the document's look (the format,
    the logo: where, how big, how see-through; Ofir 24.11: the Word file kept the logo where it first was) */
 const logoSig = () => { const l = docLogo(); return l ? [l.data.length, l.data.slice(-24), JSON.stringify(l.pos || {})].join("~") : ""; };
-const fileKey0 = (p, fmt) => [p.id, fmt, docSigOf(p), docVer(p), skuOn(), layoutOf(), docTitle(p), docCols(), logoSig()].join(":");
+const fileKey0 = (p, fmt) => [p.id, p.camKey || camActive(p), fmt, docSigOf(p), docVer(p), skuOn(), layoutOf(), docTitle(p), docCols(), logoSig()].join(":");
 const fileKey = (p, fmt) => { const pr = docPair(p); return pr ? pr.map(x => fileKey0(x, fmt)).join("|") + ":both" : fileKey0(p, fmt); };
 const docText = p => { const pr = docPair(p); return pr ? pr.map(listText).join("\n\n————————————\n\n") : listText(p); };
 const fileReady = (p, fmt) => fileCache.has(fileKey(p, fmt)) && fileCache.get(fileKey(p, fmt)).done;
@@ -10602,6 +10673,23 @@ document.addEventListener("click", e => {
     /* home: press-and-hold menu and selecting several */
     case "pm-dup": closeModal(); startDuplicate(id); break;
     case "pm-edit": closeModal(); app.pid = id; app.formFor = id; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
+    case "cam-sw": if (id !== camActive(p)) { camSwitch(p, id); rerenderKeepScroll(); toast(`Camera ${id} list`); } break;
+    case "cam-add": { const k = camAdd(p); if (!k) { toast("Up to 8 cameras."); break; } const from = camActive(p); camSwitch(p, k); rerenderKeepScroll(); camKitDialog(p, from); break; }
+    case "cam-rm": {
+      const k = camActive(p), n = Object.keys(p.items).length;
+      if (n && !b.classList.contains("armed")) { b.classList.add("armed"); toast(`Tap the bin again to remove camera ${k} and its ${n} line${n === 1 ? "" : "s"}.`); setTimeout(() => b.classList.remove("armed"), 3000); break; }
+      const keep = JSON.stringify({ items: p.items, cams: p.cams, cam: p.cam, camKeys: p.camKeys });
+      camRemove(p, k); rerenderKeepScroll();
+      undoable("Removed", "camera " + k, () => { const o = JSON.parse(keep); Object.assign(p, o); touch(p); rerenderKeepScroll(); }); break;
+    }
+    case "ck-dec": case "ck-inc": { const r = b.closest(".ck-row"), inp = r && r.querySelector("input[type=number]"); if (!inp) break; inp.value = Math.max(1, Math.min(99, (+inp.value || 1) + (act === "ck-inc" ? 1 : -1))); break; }
+    case "ck-ok": {
+      const m = b.closest(".ck-sheet"); if (!m) break;
+      for (const r of m.querySelectorAll(".ck-row")) { const on = r.querySelector("input[type=checkbox]").checked, q = +r.querySelector("input[type=number]").value || 1; if (!on) continue;
+        const src = camItems(p, m.dataset.from)[r.dataset.id]; if (!src) continue; p.items[r.dataset.id] = { ...JSON.parse(JSON.stringify(src)), qty: q, auto: 0, autoWhy: undefined }; }
+      applyDefaults(p); touch(p); closeModal(); rerenderKeepScroll(); toast(`Camera ${camActive(p)}: ready to edit`); break;
+    }
+    case "ck-skip": closeModal(); toast(`Camera ${camActive(p)}: an empty list`); break;
     case "unit-sw": if (findProd(id) && id !== app.pid) { app.pid = id; app.editing = null; rerenderKeepScroll(); toast(findProd(id).mainOf ? "2nd Unit list" : "Main Unit list"); } break;
     case "cpf-open": cpfOpen(cur(), b.dataset.from || ""); break;
     case "cpf-src": if (app.cpf) { app.cpf.from = b.dataset.id || ""; cpfRender(); } break;
@@ -11167,6 +11255,12 @@ document.addEventListener("click", e => {
       b.setAttribute("aria-pressed", String(skuOn()));
       const paper = document.querySelector("#preview .pv-paper"); if (paper) { paper.innerHTML = paperHtml(p); fitPreview(); }
       break;
+    }
+    case "pv-cam": {   // the camera to see, or every camera in one document
+      if (id === "all") app.settings.pvAllCams = true; else { app.settings.pvAllCams = false; camSwitch(p, id); }
+      touchSettings(); pvRepaint(p); fitPreview();
+      document.querySelectorAll('#preview [data-act="pv-cam"]').forEach(x => x.setAttribute("aria-pressed", String(app.settings.pvAllCams ? x.dataset.id === "all" : x.dataset.id === camActive(p))));
+      const h = document.querySelector("#preview .pv-bar .hint"); if (h) h.textContent = fileBase(p); break;
     }
     case "pv-unit":
       if (id === "both") { if (!docPair(p)) { app.settings.pvBoth = true; touchSettings(); pvRepaint(p); fitPreview(); document.querySelectorAll('#preview [data-act="pv-unit"]').forEach(x => x.setAttribute("aria-pressed", String(x.dataset.id === "both"))); const h = document.querySelector("#preview .pv-bar .hint"); if (h) h.textContent = fileBase(p); } break; }
