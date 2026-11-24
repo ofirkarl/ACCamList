@@ -615,7 +615,7 @@ A.setQty(dp, mini, 1); ok(dp.items[plate] && dp.items[plate].qty === 2 && dp.ite
 A.setQty(dp, mini, 3); ok(dp.items[plate].qty === 6, "and follows its quantity (3 cameras -> 6)");
 A.setQty(dp, plate, 7); A.setQty(dp, mini, 0); ok(dp.items[plate] && dp.items[plate].qty === 1, "extras you added by hand stay when the camera goes");
 A.app.settings.rules = keepRules;
-ok(/PAGE/.test(A.docxHeaderClean(xp)) && /NUMPAGES/.test(A.docxHeaderClean(xp)) && /Camera List/.test(A.docxHeaderClean(xp)), "Word page header: name (page out of pages) and Camera List");
+ok(/PAGE/.test(A.docxHeaderClean(xp)) && /SECTIONPAGES/.test(A.docxHeaderClean(xp)) && /Page /.test(A.docxHeaderClean(xp)) && /Camera List/.test(A.docxHeaderClean(xp)), "Word page header: Page n of N (the unit's own pages) and Camera List");
 
 // --- batch 5: two versions of one rental item, title and unit on the list
 const ezS = "utopia:angenieux-ez-2-15-40mm-t2-super35-22-60mm-t3-full-frame-pl-e-ef-mount", ezF = ezS + "-ff";
