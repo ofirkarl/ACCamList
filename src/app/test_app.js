@@ -1543,7 +1543,8 @@ ok(A.skuPack(["FIL-N53","FIL-N56","FIL-N510"]) === "FIL-N5\u00a03/6/10" && A.sku
   const k = A.camAdd(q); ok(k === "B" && A.camKeys(q).join() === "A,B" && A.camActive(q) === "A", "multicam: + adds camera B");
   A.camSwitch(q, "B"); ok(A.camActive(q) === "B" && !Object.keys(q.items).length && Object.keys(A.camItems(q, "A")).length >= 4, "multicam: camera B starts empty, A keeps its list");
   const g = A.camKitGuess(q, "A"); ok(g.some(x => x.id === cam && x.why === "Camera") && g.some(x => x.id === legs) && g.some(x => x.id === cdx && x.qty === 4) && !g.some(x => x.id === lens), "multicam: B's start: the body, the legs, the media (not the lenses)");
-  A.app.settings.pvAllCams = true; const pr = A.docPair(q); ok(pr && pr.length === 2 && pr[0].camKey === "A" && /Camera B/.test(A.unitLine(pr[1])) && /Cameras A \+ B/.test(A.fileBase(q)), "multicam: one document for every camera, each titled");
+  A.app.settings.pvAllCams = true; A.setQty(q, cam, 1); A.setQty(q, cdx, 2); const pr = A.docPair(q); ok(pr && pr.length === 1 && pr[0].camKey === "ALL" && A.lineQty(pr[0].items[cam]) === 2 && A.lineQty(pr[0].items[cdx]) === 6 && /Cameras A \+ B/.test(A.unitLine(pr[0])) && /Cameras A \+ B/.test(A.fileBase(q)), "multicam: All is one list, the cameras' quantities added up");
+  A.setQty(q, cam, 0); A.setQty(q, cdx, 0);
   A.app.settings.pvAllCams = false;
   A.camRemove(q, "B"); ok(!A.multicam(q) && Object.keys(q.items).length >= 4 && !A.unitLine(q), "multicam: removing B leaves A as the list");
   A.app.productions = A.app.productions.filter(x => x !== q); }

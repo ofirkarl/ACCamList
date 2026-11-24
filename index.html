@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611241053";
+window.AC_BUILD = "202611241107";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3147,6 +3147,10 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* the preview's unit and camera switches: every button the same width, the group in the middle */
 .pv-units .seg button { min-width: 64px; justify-content: center; text-align: center; }
 .pv-cams .seg button { min-width: 56px; }
+.cal-day.past { color: color-mix(in srgb, var(--fg) 28%, transparent); cursor: default; }
+.cal-day.past:not(.in):not(.pk):not(.pick) { background: none; }
+.cal-day.past.start, .cal-day.past.end, .cal-day.past.pk, .cal-day.past.pick { opacity: .55; }
+.cal-head .iconbtn:disabled { opacity: .3; }
 </style>
 </head>
 <body>
@@ -5725,7 +5729,7 @@ const mainOf = p => (p && p.mainOf && findProd(p.mainOf)) || p;
 /* "Both" in the preview (Ofir, 24.11): the Main Unit and the 2nd Unit as one document, each unit from a new page. The choice stays */
 const docPair = p => {
   if (!p) return null;
-  if (app.settings.pvAllCams && multicam(p)) return camKeys(p).map(k => camView(p, k));   // every camera's list, one after another
+  if (app.settings.pvAllCams && multicam(p)) return [camMerged(p)];   // All (Ofir, 24.11): one list, every camera's quantities added up
   if (!app.settings.pvBoth) return null; const m = (p.mainOf && findProd(p.mainOf)) || p, q = m && m.unit2 ? findProd(m.unit2) : null; return m && q ? [m, q] : null; };
 const unit2Of = p => { const m = mainOf(p); return m && m.unit2 ? findProd(m.unit2) : null; };
 const otherUnit = p => !p ? null : p.mainOf ? findProd(p.mainOf) : p.unit2 ? findProd(p.unit2) : null;
@@ -5737,6 +5741,19 @@ const camActive = p => (p && p.cam) || "A";
 const multicam = p => camKeys(p).length > 1;
 const camItems = (p, k) => k === camActive(p) ? p.items : ((p.cams || {})[k] || {}).items || {};
 const camView = (p, k) => ({ ...p, items: camItems(p, k), camKey: k });   // one camera's list, for its document
+/* every camera's lines as one list: the same item once, its quantities (and its sub-items' quantities) added up */
+function camMerged(p) {
+  const out = {}, N = ["qty", "tx", "rx", "sets"];
+  for (const k of camKeys(p)) for (const [id, l] of Object.entries(camItems(p, k))) {
+    const m = out[id];
+    if (!m) { out[id] = { ...l, children: (l.children || []).map(c => ({ ...c })) }; if (!(l.children || []).length) delete out[id].children; continue; }
+    for (const f of N) if (typeof l[f] === "number") m[f] = (m[f] || 0) + l[f];
+    if (l.note && l.note !== m.note) m.note = [m.note, l.note].filter(Boolean).join(" / ");
+    for (const c of l.children || []) { m.children = m.children || []; const t = m.children.find(x => x.name === c.name);
+      if (t) t.qty = (t.qty || 0) + (c.qty || 0); else m.children.push({ ...c }); }
+  }
+  return { ...p, items: out, camKey: "ALL" };
+}
 function camSwitch(p, k) {
   if (!p || k === camActive(p) || !camKeys(p).includes(k)) return;
   p.cams = p.cams || {}; p.cams[camActive(p)] = { items: p.items }; p.items = (p.cams[k] || {}).items || {}; delete p.cams[k]; p.cam = k; touch(p);
@@ -5998,8 +6015,9 @@ function calHtml() {
       : ["cal-day", wk ? "wknd" : "", inR ? "in" : "", inR && !on ? "off" : "", on ? "on" : "", s === cal.start ? "start" : "", end && s === end ? "end" : "", s === today ? "today" : "", s === cal.prep ? "prepday" : ""];
     const ref = cal.ref && cal.ref.on.has(s), refPrep = cal.ref && cal.ref.prep === s;
     if (ref) cls.push("ref"); if (refPrep) cls.push("refprep");
+    const past = s < today; if (past) cls.push("past");   // gone by: greyed, can't be picked
     const lbl = `${d} ${MONTHS[cal.m - 1]}${prep ? s === cal.prep ? (cal.one ? ", picked" : ", prep day") : on ? ", shoot day" : "" : cal.pick ? on ? ", shoot day" : "" : inR ? on ? ", shoot day" : ", day off" : ""}${ref ? ", Main Unit shoot day" : refPrep ? ", Main Unit prep day" : ""}`;
-    cells += `<button class="${cls.filter(Boolean).join(" ")}" type="button" data-act="cal-day" data-d="${s}" aria-pressed="${prep ? s === cal.prep : on}" aria-label="${lbl}">${d}</button>`;
+    cells += `<button class="${cls.filter(Boolean).join(" ")}" type="button" data-act="cal-day" data-d="${s}"${past ? " disabled" : ""} aria-pressed="${prep ? s === cal.prep : on}" aria-label="${lbl}${past ? ", past" : ""}">${d}</button>`;
   }
   let sum, tip, any;
   if (prep) {
@@ -6012,7 +6030,7 @@ function calHtml() {
     tip = cal.pick ? "Tap each shoot day. Tap it again to take it off." : cal.stage === "start" ? "Tap the first shoot day." : cal.stage === "end" ? "Now tap the last shoot day." : "Tap a day in the range to switch it on or off. Fridays and Saturdays start off.";
   }
   const modes = prep || cal.one ? "" : `<div class="seg sm cal-mode" role="group" aria-label="How to pick the shoot days"><button type="button" data-act="cal-mode" data-v="range" aria-pressed="${!cal.pick}">From – to</button><button type="button" data-act="cal-mode" data-v="days" aria-pressed="${cal.pick}">Day by day</button></div>`;
-  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month">‹</button><b>${cal.one ? "" : prep ? "Prep day · " : "Shoot days · "}${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
+  return `<div class="cal-head"><button class="iconbtn" type="button" data-act="cal-prev" aria-label="Previous month"${cal.y * 12 + cal.m <= now.getFullYear() * 12 + now.getMonth() + 1 ? " disabled" : ""}>‹</button><b>${cal.one ? "" : prep ? "Prep day · " : "Shoot days · "}${MONTHS[cal.m - 1]} ${cal.y}</b><button class="iconbtn" type="button" data-act="cal-next" aria-label="Next month">›</button></div>
     ${modes}
     <div class="cal-grid${prep ? " prep" : ""}${cal.pick && !prep ? " pickm" : ""}" role="group" aria-label="${prep ? "Prep day" : "Shoot days"}">${WEEKDAYS.map((w, i) => `<span class="cal-wd${i >= 5 ? " wknd" : ""}">${w}</span>`).join("")}${cells}</div>
     <p class="cal-sum" aria-live="polite">${sum}</p>
@@ -6035,6 +6053,7 @@ function calClear() {
   else { cal.start = ""; cal.end = ""; cal.days = {}; cal.stage = "start"; }
 }
 function calPick(s) {
+  { const n = new Date(); if (s < isoDate(n.getFullYear(), n.getMonth() + 1, n.getDate())) return; }   // a day gone by can't be picked
   if (cal.mode === "prep") { cal.prep = cal.prep === s ? "" : s; calRefresh(s); return; }
   if (cal.pick) {   // day by day: the day on or off; the range runs from the first day picked to the last, every other day in it off
     const on = new Set(cal.start ? shootOn(cal.start, cal.stage === "done" ? cal.end || cal.start : cal.start, cal.days) : []);
