@@ -2566,6 +2566,7 @@ const unit2Of = p => { const m = mainOf(p); return m && m.unit2 ? findProd(m.uni
 const otherUnit = p => !p ? null : p.mainOf ? findProd(p.mainOf) : p.unit2 ? findProd(p.unit2) : null;
 /* ---------- multicam (Ofir, 24.11): a list for each camera, A, B, C…, in one production. The camera being worked on keeps its
    lines in p.items (so everything else works on it as before); the others wait in p.cams[key].items ---------- */
+const CAM_SM = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="14" height="11" rx="2"/><path d="M16 11l6-3v9l-6-3"/></svg>`;
 const camKeys = p => (p && p.camKeys && p.camKeys.length ? p.camKeys : ["A"]);
 const camActive = p => (p && p.cam) || "A";
 const multicam = p => camKeys(p).length > 1;
@@ -3252,7 +3253,8 @@ function viewProduction() {
   const prepTxt = p.prep ? dPart(PREP_ICON, "Prep", fmtDM(p.prep), "") : "";
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
-      <div class="cam-row" role="group" aria-label="Cameras"><span class="seg sm cam-sw">${camKeys(p).map(k => `<button type="button" data-act="cam-sw" data-id="${k}" aria-pressed="${k === camActive(p)}" aria-label="Camera ${k}">${k}</button>`).join("")}</span><button class="iconbtn cam-add" type="button" data-act="cam-add" aria-label="Add a camera" title="Add a camera">+</button>${multicam(p) ? `<button class="iconbtn cam-rm" type="button" data-act="cam-rm" aria-label="Remove camera ${camActive(p)}" title="Remove camera ${camActive(p)}">${TRASH_SM}</button>` : ""}</div>
+      ${multicam(p) || app.camOpen === p.id ? `<div class="cam-row${app.camAnim ? " cam-in" : ""}" role="group" aria-label="Cameras"><span class="seg sm cam-sw">${camKeys(p).map(k => `<button type="button" data-act="cam-sw" data-id="${k}" aria-pressed="${k === camActive(p)}" aria-label="Camera ${k}">${k}</button>`).join("")}</span><button class="iconbtn cam-add" type="button" data-act="cam-add" aria-label="Add a camera" title="Add a camera">+</button>${multicam(p) ? `<button class="iconbtn cam-rm" type="button" data-act="cam-rm" aria-label="Remove camera ${camActive(p)}" title="Remove camera ${camActive(p)}">${TRASH_SM}</button>` : `<button class="iconbtn cam-rm" type="button" data-act="cam-close" aria-label="Close multicam" title="Close">×</button>`}</div>`
+        : `<div class="cam-row"><button class="btn sm cam-open" type="button" data-act="cam-open" aria-label="Multicam: a list for each camera">${CAM_SM}<span>Multicam</span></button></div>`}
       ${shootTxt || prepTxt ? `<button class="pdates1" type="button" data-act="edit" aria-label="Dates · tap to change">${shootTxt}${shootTxt && prepTxt ? `<span class="pd1-sep" aria-hidden="true"></span>` : ""}${prepTxt}</button>` : `<button class="pdates1 ph-add" type="button" data-act="edit">${CHIP_CAL}<span>Add dates</span></button>`}
     </div></section>`;
   swExtra = extra;
@@ -7526,6 +7528,8 @@ document.addEventListener("click", e => {
     /* home: press-and-hold menu and selecting several */
     case "pm-dup": closeModal(); startDuplicate(id); break;
     case "pm-edit": closeModal(); app.pid = id; app.formFor = id; app.dupFrom = null; app.view = "form"; render(); window.scrollTo(0, 0); break;
+    case "cam-open": app.camOpen = p.id; app.camAnim = true; rerenderKeepScroll(); app.camAnim = false; break;   // the button opens into the cameras: A and +
+    case "cam-close": app.camOpen = null; rerenderKeepScroll(); break;
     case "cam-sw": if (id !== camActive(p)) { camSwitch(p, id); rerenderKeepScroll(); toast(`Camera ${id} list`); } break;
     case "cam-add": { const k = camAdd(p); if (!k) { toast("Up to 8 cameras."); break; } const from = camActive(p); camSwitch(p, k); rerenderKeepScroll(); camKitDialog(p, from); break; }
     case "cam-rm": {
