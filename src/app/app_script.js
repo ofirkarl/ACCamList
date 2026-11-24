@@ -7073,7 +7073,10 @@ const sendUnfill = (t, p) => { let s = String(t || ""); if (p.name && p.name.len
 const sendJob = { key: "", blob: null, wait: null };
 /* a file, once built, is kept while the list stays the same: saving or sending it again uses the same file straight away */
 const fileCache = new Map();
-const fileKey0 = (p, fmt) => [p.id, fmt, docSigOf(p), docVer(p), skuOn(), layoutOf(), docTitle(p)].join(":");
+/* a built file is used again only while nothing that shows in it changed: the list, its version, and the document's look (the format,
+   the logo: where, how big, how see-through; Ofir 24.11: the Word file kept the logo where it first was) */
+const logoSig = () => { const l = docLogo(); return l ? [l.data.length, l.data.slice(-24), JSON.stringify(l.pos || {})].join("~") : ""; };
+const fileKey0 = (p, fmt) => [p.id, fmt, docSigOf(p), docVer(p), skuOn(), layoutOf(), docTitle(p), docCols(), logoSig()].join(":");
 const fileKey = (p, fmt) => { const pr = docPair(p); return pr ? pr.map(x => fileKey0(x, fmt)).join("|") + ":both" : fileKey0(p, fmt); };
 const docText = p => { const pr = docPair(p); return pr ? pr.map(listText).join("\n\n————————————\n\n") : listText(p); };
 const fileReady = (p, fmt) => fileCache.has(fileKey(p, fmt)) && fileCache.get(fileKey(p, fmt)).done;

@@ -1531,3 +1531,9 @@ ok(A.skuPack(["FIL-N53","FIL-N56","FIL-N510"]) === "FIL-N5\u00a03/6/10" && A.sku
   const q = A.newProduction({ name: "Mon", houseId: "utopia" }); A.setQty(q, mons[1], 1); A.setQty(q, mons[2], 2); A.applyDefaults(q);
   ok(mons.length === 3 && q.items[stand] && A.lineQty(q.items[stand]) === 3, "packages: several items set off one package (each monitor brings its stand)");
   A.app.settings.rules = keep; }
+{ const q = A.newProduction({ name: "Key", houseId: "utopia" }); const keepL = A.app.settings.docLogo, keepC = A.app.settings.docCols;
+  A.app.settings.docLogo = { data: "data:image/png;base64,AAAA", w: 10, h: 10, pos: { x: 600, y: 40, h: 60 } }; const k1 = A.fileKey(q, "docx");
+  A.app.settings.docLogo.pos = { x: 200, y: 300, h: 300 }; const k2 = A.fileKey(q, "docx");
+  A.app.settings.docCols = A.app.settings.docCols === "two" ? "one" : "two"; const k3 = A.fileKey(q, "docx");
+  ok(k1 !== k2 && k2 !== k3, "a saved file is built again when the logo moves or the format changes");
+  A.app.settings.docLogo = keepL; A.app.settings.docCols = keepC; }
