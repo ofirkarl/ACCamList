@@ -3264,7 +3264,7 @@ function viewProduction() {
     </div>`;
   // shoot and prep on one slim row; tap it to change the dates
   const dPart = (icon, label, val, more) => `<span class="pd1"><span class="pd1-i">${icon}</span><span class="pd1-t"><b>${label} ${esc(val)}</b>${more ? `<span class="pd1-m"> ${more}</span>` : ""}</span></span>`;
-  const shootTxt = p.shootStart ? dPart(CHIP_CAL, "Shoot", fmtSpan(p.shootStart, p.shootEnd), days > 1 ? `${days} days` : "") : "";
+  const shootTxt = p.shootStart ? dPart(CHIP_CAL, "Shoot", fmtSpan(p.shootStart, p.shootEnd), "") : "";
   const prepTxt = p.prep ? dPart(PREP_ICON, "Prep", fmtDM(p.prep), "") : "";
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
@@ -7318,10 +7318,10 @@ async function sendNow(p, f) {
   } else toast("File saved, and the message copied for your email.");
 }
 window.addEventListener("resize", fitPreview);
-/* the dates bar (Shoot · Prep): when the two don't fit side by side (a narrow phone, large text), one under the other, nothing cut (Ofir, 24.11) */
+/* the dates bar (Shoot · Prep) stays one line (Ofir, 24.11): when it doesn't fit (a narrow phone, large text), a little tighter and smaller, nothing cut */
 function fitDates() {
-  document.querySelectorAll(".pdates1").forEach(b => { b.classList.remove("stack");
-    if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll(".pd1-t")].some(t => t.scrollWidth > t.clientWidth + 1)) b.classList.add("stack"); });
+  document.querySelectorAll(".pdates1").forEach(b => { b.classList.remove("tight");
+    if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll(".pd1-t")].some(t => t.scrollWidth > t.clientWidth + 1)) b.classList.add("tight"); });
 }
 let fitDatesQ = 0; const fitDatesSoon = () => { if (!fitDatesQ) fitDatesQ = requestAnimationFrame(() => { fitDatesQ = 0; fitDates(); }); };
 if (typeof MutationObserver !== "undefined" && document.body) new MutationObserver(fitDatesSoon).observe(document.body, { childList: true, subtree: true });

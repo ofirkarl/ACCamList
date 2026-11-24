@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611241209";
+window.AC_BUILD = "202611241210";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3162,8 +3162,8 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 /* the dates bar stacked when Shoot and Prep don't fit side by side */
 .pdates1 { min-width: 0; max-width: 100%; }
 .prod-head.ph-extra { grid-template-columns: minmax(0, 1fr); }
-.pdates1.stack { flex-direction: column; gap: 2px; padding-block: 8px; }
-.pdates1.stack .pd1-sep { display: none; }
+.pdates1.tight { gap: 8px; padding-inline: 8px; font-size: 12.5px; }
+.pdates1.tight .pd1 { gap: 4px; }
 /* the category chips run to the screen's edges, so a chip half in view is cut by the screen, not inside the page (Ofir, 24.11) */
 .chips.bleed { margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent); }
 @media (hover: hover) and (pointer: fine) { .bar .chips.bleed { margin-inline: 0; padding-inline: 0; } }
@@ -6450,7 +6450,7 @@ function viewProduction() {
     </div>`;
   // shoot and prep on one slim row; tap it to change the dates
   const dPart = (icon, label, val, more) => `<span class="pd1"><span class="pd1-i">${icon}</span><span class="pd1-t"><b>${label} ${esc(val)}</b>${more ? `<span class="pd1-m"> ${more}</span>` : ""}</span></span>`;
-  const shootTxt = p.shootStart ? dPart(CHIP_CAL, "Shoot", fmtSpan(p.shootStart, p.shootEnd), days > 1 ? `${days} days` : "") : "";
+  const shootTxt = p.shootStart ? dPart(CHIP_CAL, "Shoot", fmtSpan(p.shootStart, p.shootEnd), "") : "";
   const prepTxt = p.prep ? dPart(PREP_ICON, "Prep", fmtDM(p.prep), "") : "";
   const extra = finder ? "" : `<section class="pad" data-keep="extra"><div class="prod-head ph-extra">
       ${(() => { const m = mainOf(p), q = unit2Of(p); return q ? `<div class="seg sm unit-sw" role="group" aria-label="Unit">${[[m, "Main Unit"], [q, "2nd Unit"]].map(([x, t]) => `<button type="button" data-act="unit-sw" data-id="${esc(x.id)}" aria-pressed="${x.id === p.id}">${t}</button>`).join("")}</div>` : ""; })()}
@@ -10504,10 +10504,10 @@ async function sendNow(p, f) {
   } else toast("File saved, and the message copied for your email.");
 }
 window.addEventListener("resize", fitPreview);
-/* the dates bar (Shoot · Prep): when the two don't fit side by side (a narrow phone, large text), one under the other, nothing cut (Ofir, 24.11) */
+/* the dates bar (Shoot · Prep) stays one line (Ofir, 24.11): when it doesn't fit (a narrow phone, large text), a little tighter and smaller, nothing cut */
 function fitDates() {
-  document.querySelectorAll(".pdates1").forEach(b => { b.classList.remove("stack");
-    if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll(".pd1-t")].some(t => t.scrollWidth > t.clientWidth + 1)) b.classList.add("stack"); });
+  document.querySelectorAll(".pdates1").forEach(b => { b.classList.remove("tight");
+    if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll(".pd1-t")].some(t => t.scrollWidth > t.clientWidth + 1)) b.classList.add("tight"); });
 }
 let fitDatesQ = 0; const fitDatesSoon = () => { if (!fitDatesQ) fitDatesQ = requestAnimationFrame(() => { fitDatesQ = 0; fitDates(); }); };
 if (typeof MutationObserver !== "undefined" && document.body) new MutationObserver(fitDatesSoon).observe(document.body, { childList: true, subtree: true });

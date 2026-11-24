@@ -874,7 +874,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   for (const [id, e] of A.ITEM) if (e.h.id === "utopia") { A.setQty(q, id, 2); break; }
   const v = A.viewProduction();
   ok(/ph-stack/.test(v) && /data-act="back" aria-label="Back"/.test(v) && /ph-co" dir="auto">Keshet/.test(v) && /class="ph-st soon">Prep in/.test(v), "the top: back, Export, the name, company and status under it");
-  ok(/class="pdates1"/.test(v) && /Shoot 20–25 Nov/.test(v) && /pd1-m"> \d days/.test(v) && /Prep 18 Nov/.test(v) && !/class="pdates two"|class="ph-status/.test(v), "shoot and prep on one slim row");
+  ok(/class="pdates1"/.test(v) && /Shoot 20–25 Nov/.test(v) && !/pd1-m">/.test(v) && /Prep 18 Nov/.test(v) && !/class="pdates two"|class="ph-status/.test(v), "shoot and prep on one slim row");
   ok(/placeholder="Search 1 item"/.test(v) && /data-act="sec-all" data-open="0" aria-label="Close all"/.test(v) && /data-act="list-save" aria-label="Save as a list/.test(v) && !/class="btn save-list"|summary-line/.test(v), "search with Close all, Save as a list and Clear beside it; no big Save button");
   q.shootStart = q.shootEnd = q.prep = ""; ok(/pdates1 ph-add/.test(A.viewProduction()), "no dates: Add dates in the same row");
   A.app.view = "home"; }
