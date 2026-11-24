@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611241204";
+window.AC_BUILD = "202611241209";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -7865,18 +7865,18 @@ function cpfRender() {
     const det = p.mainOf ? "DP, 1st AC, prep and shoot days" : "Production company, DP, 1st AC, prep and shoot days, the note on the list";
     const ks = cpfCams(p, src0), self = src0 === p;
     const camPick = ks.length ? `<div class="cpf-mode cpf-cam"><span class="hint">From camera:</span><div class="seg sm" role="group" aria-label="From camera">${ks.map(k => `<button type="button" data-act="cpf-cam" data-v="${k}" aria-pressed="${k === c.cam}">${k === "ALL" ? "All" : k}</button>`).join("")}</div></div>` : "";
-    const srcLbl = `${esc(cpfName(src0))}${cpfUnit(src0) ? " · " + cpfUnit(src0) : ""}${c.cam ? c.cam === "ALL" ? " · all cameras" : " · Camera " + c.cam : ""}`;
+    const srcLbl = `<bdi>${esc(cpfName(src0))}</bdi>${cpfUnit(src0) ? " · " + cpfUnit(src0) : ""}${c.cam ? c.cam === "ALL" ? " · all cameras" : " · Camera " + c.cam : ""}`;
     body = `<div class="cpf-from"><span><b dir="auto">${self ? "This list" : esc(cpfName(src0))}</b><span class="hint">${self ? "Another camera" : ks.length ? [cpfUnit(src0), `${n} item${n === 1 ? "" : "s"}`].filter(Boolean).join(" · ") : sub(src0)}</span></span><button class="btn ghost sm" type="button" data-act="cpf-src" data-id="">Change</button></div>
       ${camPick}
       ${cross ? `<div class="warnbox" role="alert"><b>From ${esc(sh ? sh.name : "another house")} to ${esc(h.name)}</b><p>Each item is matched to ${esc(h.name)}'s catalog by its name. What has no match comes in as a typed line. You'll see the matches after.</p></div>` : ""}
       <label class="check"><input type="checkbox" id="cpf-gear" ${n ? "checked" : "disabled"}><span>The gear <span class="hint">(${n} item${n === 1 ? "" : "s"})</span></span></label>
-      ${here && n ? `<div class="cpf-mode"><span class="hint">Items already on this list:</span><div class="seg sm" role="group" aria-label="Items already on this list"><button type="button" data-act="cpf-mode" data-v="add" aria-pressed="${c.mode === "add"}">Add to the quantity</button><button type="button" data-act="cpf-mode" data-v="skip" aria-pressed="${c.mode === "skip"}">Leave them</button></div></div>` : ""}
+      ${here && n ? `<div class="cpf-mode"><span class="hint">Items already on this list:</span><div class="seg sm" role="group" aria-label="Items already on this list"><button type="button" data-act="cpf-mode" data-v="add" aria-pressed="${c.mode === "add"}">Add to the quantity</button><button type="button" data-act="cpf-mode" data-v="skip" aria-pressed="${c.mode === "skip"}">Skip</button></div></div>` : ""}
       ${self ? "" : `<label class="check"><input type="checkbox" id="cpf-det"><span>The details <span class="hint">(${det})</span></span></label>`}
-      ${n ? `<label class="check"><input type="checkbox" id="cpf-empty"><span>Then empty <b dir="auto">${srcLbl}</b>'s list <span class="hint">(Undo brings it back)</span></span></label>` : ""}
+      ${n ? `<label class="check"><input type="checkbox" id="cpf-empty"><span>Then empty <b dir="ltr">${srcLbl}</b>'s list <span class="hint">(Undo brings it back)</span></span></label>` : ""}
       <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="cpf-go">Copy</button></div>`;
   }
   showModal(`<div class="sheet cpf-sheet"><div class="cs-head"><h3 class="plain">Copy from another list</h3><button class="iconbtn cs-x" type="button" data-act="modal-close" aria-label="Close">×</button></div>
-    <p class="hint cpf-to">Into <b dir="auto">${esc(cpfName(p))}${cpfUnit(p) ? " · " + cpfUnit(p) : ""}${multicam(p) ? " · Camera " + camActive(p) : ""}</b></p>${body}</div>`);
+    <p class="hint cpf-to">Into <b dir="ltr"><bdi>${esc(cpfName(p))}</bdi>${cpfUnit(p) ? " · " + cpfUnit(p) : ""}${multicam(p) ? " · Camera " + camActive(p) : ""}</b></p>${body}</div>`);
 }
 function cpfGo() {
   const c = app.cpf, p = c && findProd(c.to), src0 = c && findProd(c.from); if (!p || !src0) return;
