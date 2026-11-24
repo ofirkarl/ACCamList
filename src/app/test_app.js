@@ -1546,7 +1546,7 @@ ok(A.skuPack(["FIL-N53","FIL-N56","FIL-N510"]) === "FIL-N5\u00a03/6/10" && A.sku
   A.app.settings.pvAllCams = true; A.setQty(q, cam, 1); A.setQty(q, cdx, 2); const pr = A.docPair(q); ok(pr && pr.length === 1 && pr[0].camKey === "ALL" && A.lineQty(pr[0].items[cam]) === 2 && A.lineQty(pr[0].items[cdx]) === 6 && /Cameras A \+ B/.test(A.unitLine(pr[0])) && /Cameras A \+ B/.test(A.fileBase(q)), "multicam: All is one list, the cameras' quantities added up");
   A.setQty(q, cam, 0); A.setQty(q, cdx, 0);
   { const u = A.newProduction({ name: "Multi", houseId: "utopia" }); A.app.productions.push(u); A.camAdd(u); A.camSwitch(u, "B");
-    ok(A.cpfCamPick(u, q) === "B" && A.cpfCams(u, q).join() === "A,B,ALL" && A.cpfCams(q, q).indexOf(A.camActive(q)) < 0, "copy from a list with cameras: the same camera letter first, All too; from this list, only its other cameras"); }
+    ok(A.cpfCamPick(u, q) === "B" && A.cpfCams(u, q).join() === "A,B" && A.cpfCams(q, q).indexOf(A.camActive(q)) < 0, "copy from a list with cameras: the same camera letter first, All too; from this list, only its other cameras"); }
   A.app.settings.pvAllCams = false;
   A.camRemove(q, "B"); ok(!A.multicam(q) && Object.keys(q.items).length >= 4 && !A.unitLine(q), "multicam: removing B leaves A as the list");
   A.app.productions = A.app.productions.filter(x => x !== q); }

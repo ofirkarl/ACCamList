@@ -3016,6 +3016,13 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .chips.bleed { margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent); }
 @media (hover: hover) and (pointer: fine) { .bar .chips.bleed { margin-inline: 0; padding-inline: 0; } }
 .cpf-cam { padding-inline-start: 0; }
+/* copy from: a production, its lists under it like sub-items (Ofir, 24.11) */
+.cpf-grp { display: grid; gap: 6px; }
+.cpf-gh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 6px 2px 0; }
+.cpf-gh b { font-weight: 700; overflow-wrap: anywhere; }
+.cpf-src.cpf-sub { margin-inline-start: 20px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding-block: 8px; }
+.cpf-src.cpf-sub b { font-weight: 600; }
+.cpf-src b { text-align: left; }
 </style>
 
 <div class="app">
@@ -7656,14 +7663,28 @@ const cpfName = x => { const m = x.mainOf ? findProd(x.mainOf) : null; return (m
 const cpfUnit = x => x.mainOf ? "2nd Unit" : x.unit2 ? "Main Unit" : "";
 function cpfSources(p) {
   const other = otherUnit(p), at = x => x.updatedAt || x.createdAt || 0;
-  const all = app.productions.filter(x => x !== p && !x.browse && (Object.keys(x.items || {}).length || x.dp || x.ac || x.shootStart));
+  const has = x => Object.keys(x.items || {}).length || camKeys(x).some(k => Object.keys(camItems(x, k)).length) || x.dp || x.ac || x.shootStart;
+  const all = app.productions.filter(x => x !== p && !x.browse && has(x));
   const same = all.filter(x => x !== other && x.houseId === p.houseId).sort((a, z) => at(z) - at(a));
   const diff = all.filter(x => x !== other && x.houseId !== p.houseId).sort((a, z) => at(z) - at(a));
   return [...(multicam(p) ? [p] : []), ...(other && all.includes(other) ? [other] : []), ...same, ...diff];
 }
 /* multicam (Ofir, 24.11): a source with cameras is copied from one of them (or all, added up). Picked first: the same letter as the
    camera being filled; from this same list, another camera */
-const cpfCams = (p, src) => !src || !multicam(src) ? [] : src === p ? camKeys(src).filter(k => k !== camActive(p)) : [...camKeys(src), "ALL"];
+const cpfCams = (p, src) => !src || !multicam(src) ? [] : src === p ? camKeys(src).filter(k => k !== camActive(p)) : camKeys(src);
+/* the sources as productions (Ofir, 24.11): a row for the production, under it a row for each of its lists, a unit and a camera each.
+   A production with one list is one row */
+function cpfGroups(p) {
+  const seen = new Set(), out = [];
+  for (const x of cpfSources(p)) { const m = mainOf(x); if (seen.has(m.id)) continue; seen.add(m.id);
+    const units = [m, unit2Of(m)].filter(Boolean), rows = [];
+    for (const u of units) for (const k of multicam(u) ? camKeys(u) : [""]) {
+      if (u === p && (!k || k === camActive(p))) continue;   // the list being filled
+      if (!k && u !== p && !cpfSources(p).includes(u)) continue;
+      rows.push({ u, k, n: Object.keys(k ? camItems(u, k) : u.items || {}).length, lbl: [units.length > 1 ? cpfUnit(u) : "", k ? "Camera " + k : ""].filter(Boolean).join(" · ") }); }
+    if (rows.length) out.push({ m, rows, one: rows.length === 1 && !rows[0].k && units.length === 1 }); }
+  return out;
+}
 const cpfCamPick = (p, src) => { const ks = cpfCams(p, src); return !ks.length ? "" : ks.includes(camActive(p)) && src !== p ? camActive(p) : ks[0]; };
 const cpfView = (src, k) => !k ? src : k === "ALL" ? camMerged(src) : camView(src, k);
 const CPF_STOP = new Set(["the", "with", "and", "of", "for", "a"]);
@@ -7703,8 +7724,12 @@ function cpfRender() {
     return [cpfUnit(x), camTxt(x), x.houseId !== p.houseId && xh ? `<span class="cpf-h" style="--hc:var(--house-${esc(x.houseId)}, var(--accent))">${esc(xh.name)}</span>` : "", x === p ? "" : `${n} item${n === 1 ? "" : "s"}`].filter(Boolean).join(" · "); };
   let body;
   if (!src) {
-    const list = cpfSources(p);
-    body = list.length ? `<div class="cpf-list">${list.map(x => `<button type="button" class="cpf-src" data-act="cpf-src" data-id="${esc(x.id)}"><b dir="auto">${x === p ? "This list" : esc(cpfName(x))}</b><span class="hint">${sub(x)}</span></button>`).join("")}</div>`
+    const gs = cpfGroups(p), hTag = x => { const xh = houseById(x.houseId); return x.houseId !== p.houseId && xh ? `<span class="cpf-h" style="--hc:var(--house-${esc(x.houseId)}, var(--accent))">${esc(xh.name)}</span>` : ""; };
+    const its = n => `${n} item${n === 1 ? "" : "s"}`;
+    body = gs.length ? `<div class="cpf-list">${gs.map(g => g.one
+      ? `<button type="button" class="cpf-src" data-act="cpf-src" data-id="${esc(g.rows[0].u.id)}" data-cam=""><b dir="auto">${esc(cpfName(g.m))}</b><span class="hint">${[hTag(g.m), its(g.rows[0].n)].filter(Boolean).join(" · ")}</span></button>`
+      : `<div class="cpf-grp"><div class="cpf-gh"><b dir="auto">${esc(cpfName(g.m))}</b>${g.m === mainOf(p) ? `<span class="hint">This production</span>` : ""}${hTag(g.m) ? `<span class="hint">${hTag(g.m)}</span>` : ""}</div>
+        ${g.rows.map(r => `<button type="button" class="cpf-src cpf-sub" data-act="cpf-src" data-id="${esc(r.u.id)}" data-cam="${r.k}"><b>${esc(r.lbl || "The list")}</b><span class="hint">${its(r.n)}</span></button>`).join("")}</div>`).join("")}</div>`
       : `<p class="hint">There's no other list to copy from yet.</p>`;
     body += `<div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button></div>`;
   } else {
@@ -7713,8 +7738,8 @@ function cpfRender() {
     const ks = cpfCams(p, src0), self = src0 === p;
     const camPick = ks.length ? `<div class="cpf-mode cpf-cam"><span class="hint">From camera:</span><div class="seg sm" role="group" aria-label="From camera">${ks.map(k => `<button type="button" data-act="cpf-cam" data-v="${k}" aria-pressed="${k === c.cam}">${k === "ALL" ? "All" : k}</button>`).join("")}</div></div>` : "";
     const srcLbl = `<bdi>${esc(cpfName(src0))}</bdi>${cpfUnit(src0) ? " · " + cpfUnit(src0) : ""}${c.cam ? c.cam === "ALL" ? " · all cameras" : " · Camera " + c.cam : ""}`;
-    body = `<div class="cpf-from"><span><b dir="auto">${self ? "This list" : esc(cpfName(src0))}</b><span class="hint">${self ? "Another camera" : ks.length ? [cpfUnit(src0), `${n} item${n === 1 ? "" : "s"}`].filter(Boolean).join(" · ") : sub(src0)}</span></span><button class="btn ghost sm" type="button" data-act="cpf-src" data-id="">Change</button></div>
-      ${camPick}
+    body = `<div class="cpf-from"><span><b dir="auto">${esc(cpfName(src0))}</b><span class="hint">${[cpfUnit(src0), c.cam && c.cam !== "ALL" ? "Camera " + c.cam : "", `${n} item${n === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}</span></span><button class="btn ghost sm" type="button" data-act="cpf-src" data-id="">Change</button></div>
+
       ${cross ? `<div class="warnbox" role="alert"><b>From ${esc(sh ? sh.name : "another house")} to ${esc(h.name)}</b><p>Each item is matched to ${esc(h.name)}'s catalog by its name. What has no match comes in as a typed line. You'll see the matches after.</p></div>` : ""}
       <label class="check"><input type="checkbox" id="cpf-gear" ${n ? "checked" : "disabled"}><span>The gear <span class="hint">(${n} item${n === 1 ? "" : "s"})</span></span></label>
       ${here && n ? `<div class="cpf-mode"><span class="hint">Items already on this list:</span><div class="seg sm" role="group" aria-label="Items already on this list"><button type="button" data-act="cpf-mode" data-v="add" aria-pressed="${c.mode === "add"}">Add to the quantity</button><button type="button" data-act="cpf-mode" data-v="skip" aria-pressed="${c.mode === "skip"}">Skip</button></div></div>` : ""}
@@ -10636,7 +10661,7 @@ document.addEventListener("click", e => {
     case "ck-skip": closeModal(); toast(`Camera ${camActive(p)}: an empty list`); break;
     case "unit-sw": if (findProd(id) && id !== app.pid) { app.pid = id; app.editing = null; rerenderKeepScroll(); toast(findProd(id).mainOf ? "2nd Unit list" : "Main Unit list"); } break;
     case "cpf-open": cpfOpen(cur(), b.dataset.from || ""); break;
-    case "cpf-src": if (app.cpf) { app.cpf.from = b.dataset.id || ""; app.cpf.cam = app.cpf.from ? cpfCamPick(findProd(app.cpf.to), findProd(app.cpf.from)) : ""; cpfRender(); } break;
+    case "cpf-src": if (app.cpf) { app.cpf.from = b.dataset.id || ""; const sp = findProd(app.cpf.from); app.cpf.cam = !sp ? "" : b.dataset.cam !== undefined && multicam(sp) ? b.dataset.cam || cpfCamPick(findProd(app.cpf.to), sp) : ""; cpfRender(); } break;
     case "cpf-cam": if (app.cpf) { app.cpf.cam = b.dataset.v; cpfRender(); } break;
     case "cpf-mode": if (app.cpf) { app.cpf.mode = b.dataset.v; document.querySelectorAll('[data-act="cpf-mode"]').forEach(x => x.setAttribute("aria-pressed", String(x === b))); } break;
     case "cpf-go": cpfGo(); break;
