@@ -3412,7 +3412,7 @@ function viewCatalog(p, h) {
       <input data-sug="search" id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
       <button class="btn icon-btn spec-btn" type="button" data-act="fin-open" aria-label="Lens search: find a lens by focal length and stop" title="Lens search">${LENS_ICON}</button>
       <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
-      <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
+      <div class="chips bleed" role="toolbar" aria-label="Filter by category">${chips}</div>
       ${app.editCat ? `<p class="hint ed-note">The order you set here is also the order in your lists and in the document.</p>` : ""}
     </div>
 
@@ -7304,6 +7304,14 @@ async function sendNow(p, f) {
   } else toast("File saved, and the message copied for your email.");
 }
 window.addEventListener("resize", fitPreview);
+/* the dates bar (Shoot · Prep): when the two don't fit side by side (a narrow phone, large text), one under the other, nothing cut (Ofir, 24.11) */
+function fitDates() {
+  document.querySelectorAll(".pdates1").forEach(b => { b.classList.remove("stack");
+    if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll(".pd1-t")].some(t => t.scrollWidth > t.clientWidth + 1)) b.classList.add("stack"); });
+}
+let fitDatesQ = 0; const fitDatesSoon = () => { if (!fitDatesQ) fitDatesQ = requestAnimationFrame(() => { fitDatesQ = 0; fitDates(); }); };
+if (typeof MutationObserver !== "undefined" && document.body) new MutationObserver(fitDatesSoon).observe(document.body, { childList: true, subtree: true });
+window.addEventListener("resize", fitDatesSoon);
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 /* where the pages end. A page ends between sections: a section that won't fit in what's left of the page starts the next one,
    so a section is never split, unless it is longer than a whole page (then it ends at a row). Before the first section, the details. */

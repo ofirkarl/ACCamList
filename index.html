@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611241154";
+window.AC_BUILD = "202611241201";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -3159,6 +3159,14 @@ label.search input { height: 100%; min-height: 0; padding-block: 0; }
 .ph-camb b { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font: 700 13px/18px var(--font-body); text-align: center; }
 .ph-extra .cam-row { min-height: 0; padding: 0; margin: 0; }
 .prod-head.ph-extra { padding-block: 8px 0; gap: 8px; }
+/* the dates bar stacked when Shoot and Prep don't fit side by side */
+.pdates1 { min-width: 0; max-width: 100%; }
+.prod-head.ph-extra { grid-template-columns: minmax(0, 1fr); }
+.pdates1.stack { flex-direction: column; gap: 2px; padding-block: 8px; }
+.pdates1.stack .pd1-sep { display: none; }
+/* the category chips run to the screen's edges, so a chip half in view is cut by the screen, not inside the page (Ofir, 24.11) */
+.chips.bleed { margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent); }
+@media (hover: hover) and (pointer: fine) { .bar .chips.bleed { margin-inline: 0; padding-inline: 0; } }
 </style>
 </head>
 <body>
@@ -6589,7 +6597,7 @@ function viewCatalog(p, h) {
       <input data-sug="search" id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
       <button class="btn icon-btn spec-btn" type="button" data-act="fin-open" aria-label="Lens search: find a lens by focal length and stop" title="Lens search">${LENS_ICON}</button>
       <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
-      <div class="chips" role="toolbar" aria-label="Filter by category">${chips}</div>
+      <div class="chips bleed" role="toolbar" aria-label="Filter by category">${chips}</div>
       ${app.editCat ? `<p class="hint ed-note">The order you set here is also the order in your lists and in the document.</p>` : ""}
     </div>
 
@@ -10481,6 +10489,14 @@ async function sendNow(p, f) {
   } else toast("File saved, and the message copied for your email.");
 }
 window.addEventListener("resize", fitPreview);
+/* the dates bar (Shoot · Prep): when the two don't fit side by side (a narrow phone, large text), one under the other, nothing cut (Ofir, 24.11) */
+function fitDates() {
+  document.querySelectorAll(".pdates1").forEach(b => { b.classList.remove("stack");
+    if (b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll(".pd1-t")].some(t => t.scrollWidth > t.clientWidth + 1)) b.classList.add("stack"); });
+}
+let fitDatesQ = 0; const fitDatesSoon = () => { if (!fitDatesQ) fitDatesQ = requestAnimationFrame(() => { fitDatesQ = 0; fitDates(); }); };
+if (typeof MutationObserver !== "undefined" && document.body) new MutationObserver(fitDatesSoon).observe(document.body, { childList: true, subtree: true });
+window.addEventListener("resize", fitDatesSoon);
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
 /* where the pages end. A page ends between sections: a section that won't fit in what's left of the page starts the next one,
    so a section is never split, unless it is longer than a whole page (then it ends at a row). Before the first section, the details. */
