@@ -14,6 +14,11 @@ service cloud.firestore {
       allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
       allow write: if request.auth != null && request.auth.uid == uid;
     }
+    // the catalog for everyone: the maker's published catalog edits, one document per rental house; every user reads it
+    match /shared/{house} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     // an account may see whether it is the maker's; nobody writes this from the app
     match /admins/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

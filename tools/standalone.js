@@ -99,7 +99,23 @@
           };
         }
       };
-      return {db: db, user: {id: async function () { return me; }}};
+      // the catalog for everyone: shared/<house> holds the maker's published catalog edits, and the one before it (prev) for an undo.
+      // Anyone reads it; only the maker (admins/) writes it
+      var shared = {
+        all: function () { return F.getDocs(F.collection(fs, 'shared')).then(function (x) { var o = {}; x.docs.forEach(function (d) { var v = d.data(); if (v && v.data) o[d.id] = {data: dec(v.data), at: v.at || '', prevAt: (v.prev && v.prev.at) || ''}; }); return o; }); },
+        publish: async function (hid, data) {
+          var ref = F.doc(fs, 'shared/' + hid), cur = await F.getDoc(ref).catch(function () { return null; }), c = cur && cur.exists() ? cur.data() : null;
+          var at = new Date().toISOString();
+          await F.setDoc(ref, {data: enc(data), at: at, by: me, prev: c && c.data ? {data: c.data, at: c.at || ''} : null}).catch(function (e) { throw wrapErr(e); });
+          return {at: at, prevAt: c && c.at || ''};
+        },
+        undo: async function (hid) {
+          var ref = F.doc(fs, 'shared/' + hid), cur = await F.getDoc(ref).catch(function (e) { throw wrapErr(e); }), c = cur.exists() ? cur.data() : null;
+          if (c && c.prev && c.prev.data) { await F.setDoc(ref, {data: c.prev.data, at: c.prev.at || '', by: me, prev: null}).catch(function (e) { throw wrapErr(e); }); return {data: dec(c.prev.data), at: c.prev.at || '', prevAt: ''}; }
+          await F.deleteDoc(ref).catch(function (e) { throw wrapErr(e); }); return null;
+        }
+      };
+      return {db: db, user: {id: async function () { return me; }}, shared: shared};
     })().catch(function (e) { console.warn('cloud', e); return null; });
     return conn;
   }
@@ -121,6 +137,13 @@
       a.href = url; a.download = o.filename; document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
     }
+  };
+
+  // the catalog for everyone (see shared above), for the app to load on start and the maker to publish
+  if (cfg && cfg.apiKey) window.AC_SHARED = {
+    all: async function () { var c = await connect(); return c ? c.shared.all() : {}; },
+    publish: async function (hid, data) { var c = await connect(); if (!c) throw {code: 'offline'}; return c.shared.publish(hid, data); },
+    undo: async function (hid) { var c = await connect(); if (!c) throw {code: 'offline'}; return c.shared.undo(hid); }
   };
 
   window.claude = {

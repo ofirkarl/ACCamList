@@ -1691,6 +1691,15 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 #tree details.cat:not([open]) > summary .cat-all { display: none; }
 #tree details.sub:not([open]) > summary .cat-all { display: none; }
 .search-row .tree-all[hidden] { display: none; }
+/* cards for a camera: one short list per card type */
+#cardForm .card-grp { display: grid; gap: 6px; margin-block-end: 12px; }
+#cardForm .card-grp .lbl { font-size: 13px; font-weight: 600; color: var(--muted); }
+/* Catalog for everyone: one row per house, the Publish buttons all one width */
+.sh-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px; align-items: center; gap: 12px; padding-block: 10px; border-top: 1px solid var(--line); }
+.sh-row .hint { margin: 2px 0 0; }
+.sh-row .btn { width: 112px; justify-content: center; }
+.sh-undo { border-top: 1px solid var(--line); padding-top: 10px; }
+.sh-list { margin: 0 0 12px; padding-inline-start: 18px; line-height: 1.7; }
 #listSecs .section h3, .sl-open .section h3 { background: none; padding: 0; border-radius: 0; min-height: 30px; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--fg); }
 #listSecs .section h3 > span:first-child, .sl-open .section h3 > span:first-child { gap: 10px; }
 #listSecs .section h3 .tape, .sl-open .section h3 .tape { margin-inline-end: 0; }
@@ -3361,8 +3370,50 @@ const NO_EDITS = { items: {}, heads: {} };
 const STARTER = /*STARTER*/null || { catalog: {}, closedBrands: {}, catColors: {} };
 const clone = o => JSON.parse(JSON.stringify(o || {}));
 const editKey = e => JSON.stringify(Object.entries(e || {}).filter(([, v]) => v && (Array.isArray(v) ? v.length : typeof v === "object" ? Object.keys(v).length : true)).sort((a, b) => a[0] < b[0] ? -1 : 1));
-const peekEdits = hid => (app.settings.catalog || {})[hid] || NO_EDITS;
+/* the catalog for everyone (Ofir, 26.11): the maker publishes his catalog edits of a house (Settings → Catalog for everyone), and every
+   user's app lays them under the user's own edits. SHARED keeps the last published layer of each house, also offline */
+const LS_SHARED = "accam-shared-v1";
+let SHARED = (() => { try { return JSON.parse(localStorage.getItem(LS_SHARED) || "null") || {}; } catch (e) { return {}; } })();   // house id -> { data, at, prevAt }
+const MERGED = new Map();
+const EDIT_DICTS = ["heads", "subMoves", "subOrder", "groupOrder", "itemOrder", "groups", "brandSplit", "flat", "brandOrder", "hidden", "looseAt"];
+const sameJ = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/* the published layer S under the user's U. B is the catalog the user started from (STARTER): what in U is still exactly as it came
+   from B the user never touched, so the published value wins there. U's gone{} holds what the user deleted of the published layer */
+function mergeEdits(S, U, B) {
+  S = S || {}; U = U || {}; B = B || {};
+  const out = {}, gone = U.gone || {};
+  for (const k of EDIT_DICTS) {
+    const o = { ...(S[k] || {}) }, b = B[k] || {};
+    for (const [x, v] of Object.entries(U[k] || {})) if (!(x in b && sameJ(b[x], v))) o[x] = v;
+    out[k] = o;
+  }
+  const items = { ...(S.items || {}) }, bi = B.items || {};
+  for (const [id, v] of Object.entries(U.items || {})) if (!(id in bi && sameJ(bi[id], v))) items[id] = { ...(items[id] || {}), ...v };
+  out.items = items;
+  for (const k of ["cats", "subs", "newItems"]) {
+    const key = d => k === "subs" ? d.c + "/" + d.id : d.id, b = new Map((B[k] || []).map(d => [key(d), d]));
+    const m = new Map((S[k] || []).map(d => [key(d), d]));
+    for (const d of U[k] || []) { const kk = key(d); if (b.has(kk) && sameJ(b.get(kk), d)) continue; m.set(kk, d); }
+    out[k] = [...m.values()].filter(d => !gone[key(d)] && !(k !== "cats" && gone[d.c]));
+  }
+  const so = S.catOrder || [], uo = U.catOrder || [];
+  out.catOrder = uo.length && !sameJ(uo, B.catOrder || []) ? [...uo, ...so.filter(x => !uo.includes(x))] : so.length ? so : uo;
+  return out;
+}
+const userEdits = hid => (app.settings.catalog || {})[hid] || NO_EDITS;
+function peekEdits(hid) {
+  const sh = SHARED[hid]; if (!sh || !sh.data) return userEdits(hid);
+  if (!MERGED.has(hid)) MERGED.set(hid, mergeEdits(sh.data, userEdits(hid), STARTER.catalog[hid]));
+  return MERGED.get(hid);
+}
+/* one of the user's own items to change: one that came with the published layer is copied into the user's edits first */
+function ownNew(hid, id) {
+  const ed = catEdits(hid); let d = ed.newItems.find(x => x.id === id);
+  if (!d) { const sd = SHARED[hid] && SHARED[hid].data && (SHARED[hid].data.newItems || []).find(x => x.id === id); if (sd) { d = clone(sd); ed.newItems.push(d); } }
+  return d || null;
+}
 function catEdits(hid) {
+  MERGED.delete(hid);
   const all = app.settings.catalog || (app.settings.catalog = {});
   const e = all[hid] || (all[hid] = {});
   e.items = e.items || {}; e.heads = e.heads || {}; e.cats = e.cats || []; e.subs = e.subs || [];
@@ -3371,7 +3422,7 @@ function catEdits(hid) {
   e.looseAt = e.looseAt || {};
   return e;
 }
-const hasEdits = h => { const e = peekEdits(h.id); if (editKey(e) === editKey(STARTER.catalog[h.id])) return false; return ["items", "heads", "subMoves", "subOrder", "groupOrder", "itemOrder", "groups", "brandSplit", "flat", "brandOrder", "looseAt", "hidden"].some(k => Object.keys(e[k] || {}).length) || ["cats", "subs", "newItems", "catOrder"].some(k => (e[k] || []).length); };
+const hasEdits = h => { const e = userEdits(h.id); if (editKey(e) === editKey(STARTER.catalog[h.id])) return false; return ["items", "heads", "subMoves", "subOrder", "groupOrder", "itemOrder", "groups", "brandSplit", "flat", "brandOrder", "looseAt", "hidden"].some(k => Object.keys(e[k] || {}).length) || ["cats", "subs", "newItems", "catOrder"].some(k => (e[k] || []).length); };
 const splitKey = k => { const a = String(k).split("/"); return [a[0], a[1], a.length > 2 ? a.slice(2).join("/") : ""]; };
 const subByKey = (h, key) => (h._subs && h._subs.get(key)) || null;
 const subOf = (h, cid, sid) => subByKey(h, cid + "/" + sid);
@@ -3480,6 +3531,7 @@ function deleteCustom(h, k) {
   }
   for (const sk of gone) { delete ed.subMoves[sk]; delete ed.groupOrder[sk]; delete ed.itemOrder[sk]; for (const arr of Object.values(ed.subOrder)) { const i = arr.indexOf(sk); if (i >= 0) arr.splice(i, 1); } }
   ed.newItems = ed.newItems.filter(d => !lost.has(d.id));
+  if (SHARED[h.id]) { const g = ed.gone || (ed.gone = {}); g[s ? k : c] = 1; for (const id of lost) g[id] = 1; }
   for (const [id, o] of Object.entries(ed.items)) if (gone.includes(o.c + "/" + o.s)) {
     delete o.c; delete o.s; delete o.g; delete o.section;
     if (!Object.keys(o).length) delete ed.items[id];
@@ -3488,7 +3540,7 @@ function deleteCustom(h, k) {
   applyCatalog(); touchSettings();
 }
 function applyCatalog() {
-  RANK = null; LENS_NAMES = null;
+  RANK = null; LENS_NAMES = null; MERGED.clear();
   ITEM.clear();
   for (const h of HOUSES) {
     const ed = peekEdits(h.id), io = ed.items || {}, heads = ed.heads || {};
@@ -3633,7 +3685,7 @@ function moveCatItem(h, id, key) {
   const tgt = subOf(h, c, s); if (!tgt) return false;
   const sameSub = e.s === tgt;
   if (sameSub && (!g || g === grpOf(e.it, e.s))) return false;
-  const own = e.it.own && catEdits(h.id).newItems.find(d => d.id === id);
+  const own = e.it.own && ownNew(h.id, id);
   if (own) {
     own.c = c; own.s = s;
     const dg = defaultGroup(e.it, tgt, h);
@@ -3657,7 +3709,7 @@ const pickedGroup = v => v.g === "__new" ? String(v.gnew || "").trim().slice(0, 
 function saveCatItem(h, id, v) {
   const [kc, ks] = splitKey(v.s), tgt = subOf(h, kc, ks); if (!tgt) return;
   const name = String(v.name || "").trim().slice(0, 160);
-  const own = ITEM.get(id)?.it.own && catEdits(h.id).newItems.find(d => d.id === id);
+  const own = ITEM.get(id)?.it.own && ownNew(h.id, id);
   if (own) {
     Object.assign(own, { name: name || own.name, brand: String(v.brand || "").trim().slice(0, 60), sku: String(v.sku || "").trim().slice(0, 40), url: safeUrl(String(v.url || "").trim()),
       c: kc, s: ks, g: pickedGroup(v), section: v.section || own.section });
@@ -3684,7 +3736,7 @@ function saveCatItem(h, id, v) {
 function renameCatItem(h, id, name) {
   const e = ITEM.get(id); name = String(name || "").trim().slice(0, 160);
   if (!e || !name || name === e.it.name) return false;
-  const own = e.it.own && catEdits(h.id).newItems.find(d => d.id === id);
+  const own = e.it.own && ownNew(h.id, id);
   if (own) { own.name = name; applyCatalog(); touchSettings(); }
   else { const base = BITEM.get(id), old = { ...(peekEdits(h.id).items[id] || {}) }; old.name = name !== base.name ? name : undefined; storeItemEdit(h, id, old); }
   return true;
@@ -3711,7 +3763,7 @@ function createOwnItem(h, v) {
   applyCatalog(); touchSettings();
   return d.id;
 }
-function deleteOwnItem(h, id) { const ed = catEdits(h.id); ed.newItems = ed.newItems.filter(d => d.id !== id); if (app.settings.notes) delete app.settings.notes[id]; applyCatalog(); touchSettings(); }
+function deleteOwnItem(h, id) { const ed = catEdits(h.id); ed.newItems = ed.newItems.filter(d => d.id !== id); if (SHARED[h.id]) (ed.gone || (ed.gone = {}))[id] = 1; if (app.settings.notes) delete app.settings.notes[id]; applyCatalog(); touchSettings(); }
 /* a private note on a catalog item: shown under the item in the catalog only, never on the gear list or in exports */
 const noteOf = id => (app.settings.notes || {})[id] || "";
 function setNote(id, text) {
@@ -3982,7 +4034,7 @@ function deleteFolder(h, gkey) {
   if (!ed.groups[skey].length) delete ed.groups[skey];
   const sub = subByKey(h, skey);
   for (const it of sub ? sub.items.filter(x => grpOf(x, sub) === g) : []) {
-    if (it.own) { const d = ed.newItems.find(x => x.id === it.id); if (d) delete d.g; }
+    if (it.own) { const d = ownNew(h.id, it.id); if (d) delete d.g; }
     else if (ed.items[it.id]) { delete ed.items[it.id].g; if (!Object.keys(ed.items[it.id]).length) delete ed.items[it.id]; }
   }
   delete ed.heads[gkey];
@@ -4066,7 +4118,7 @@ function setItemBrand(h, id, brand, quiet) {
   const e = ITEM.get(id);
   if (!e || !brand || brand === e.it.brand) return false;
   const ed = catEdits(h.id);
-  if (e.it.own) { const d = ed.newItems.find(x => x.id === id); if (d) d.brand = brand; }
+  if (e.it.own) { const d = ownNew(h.id, id); if (d) d.brand = brand; }
   else {
     const base = BITEM.get(id), o = { ...(ed.items[id] || {}) };
     if (brand === base.brand) delete o.brand; else o.brand = brand;
@@ -4254,7 +4306,7 @@ function schedule(id) {
   timers.set(id, setTimeout(() => flush(id), 700));
 }
 function touch(p) { if (p && p.browse) return; p.updatedAt = Date.now(); lsSave(); schedule(p.id); }
-function touchSettings() { setStamp(); app.settings.updatedAt = Date.now(); lsPut(LS_SET, app.settings); schedule(SETTINGS_ID); }
+function touchSettings() { MERGED.clear(); setStamp(); app.settings.updatedAt = Date.now(); lsPut(LS_SET, app.settings); schedule(SETTINGS_ID); }
 function flush(id) {
   timers.delete(id);
   const prev = chains.get(id) || Promise.resolve();
@@ -5256,6 +5308,30 @@ function motorPicker(p, hostId) {
   </form>`);
 }
 
+/* cards for a camera just added (Ofir, 26.11): its card types from the house's catalog, nothing picked ahead; the user sets how many.
+   Not asked when a package already brings cards with it, when its cards are on the list, or once the user said "Don't ask again" */
+function cardsFor(p, e) {
+  const types = (e.it.camera && !e.it.camera.film && e.it.camera.media) || []; if (!types.length) return [];
+  const out = [];
+  for (const t of types) { const cs = []; for (const x of ITEM.values()) if (x.h === e.h && x.s.id === "media" && grpOf(x.it, x.s) === t) cs.push(x); if (cs.length) out.push([t, cs.sort((a, b) => capGB(a.it.name) - capGB(b.it.name) || a.ord - b.ord)]); }
+  return out;
+}
+function cardPicker(p, camId) {
+  if (app.settings.noCardAsk || typeof document === "undefined" || document.getElementById("modal")) return;
+  const e = ITEM.get(camId); if (!e || !e.it.camera) return;
+  if ((app.settings.rules || []).some(r => r.kind === "media" ? ruleMatches(r, e) : (r.kind === "item" && ruleMatches(r, e) && ITEM.get(r.add)?.s.id === "media"))) return;
+  const groups = cardsFor(p, e); if (!groups.length) return;
+  if (groups.some(([, cs]) => cs.some(x => p.items[x.it.id]))) return;
+  const row = m => `<li><span class="info"><span class="nm-row"><span class="nm">${esc(m.it.name)}</span>${linkHtml(m.it, m.h)}</span></span>
+      <span class="stepper sm"><button type="button" data-act="pk-dec" data-id="${esc(m.it.id)}" aria-label="Fewer">−</button><input type="number" min="0" max="9" inputmode="numeric" value="0" data-pick="${esc(m.it.id)}" aria-label="${esc(m.it.name)} to add"><button type="button" data-act="pk-inc" data-id="${esc(m.it.id)}" aria-label="More">+</button></span></li>`;
+  showModal(`<form class="form dialog" id="cardForm" autocomplete="off">
+    <h3 class="plain">Cards for the ${esc(shortName(e.it.name))}</h3>
+    <p class="hint">It records on ${esc(groups.map(g => g[0]).join(" and "))}. Pick how many of each card from ${esc(e.h.name)}.</p>
+    ${groups.map(([t, cs]) => `<div class="card-grp"><span class="lbl">${esc(t)}</span><ul class="pick-list">${cs.map(row).join("")}</ul></div>`).join("")}
+    <div class="modal-actions"><button class="btn ghost sm" type="button" data-act="card-noask">Don't ask again</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Not now</button><button class="btn primary" type="submit">Add cards</button></div>
+  </form>`);
+}
+
 /* quantity changes */
 let bulkAdd = false;
 function setQty(p, id, qty, field) {
@@ -5298,6 +5374,7 @@ function setQty(p, id, qty, field) {
   notifyDefaults(adds);
   // an ARRI hand unit (Hi-5, WCU-4) needs motors: ask which ones
   if (wasNew && p.items[id] && !cov && !clash && MOTOR_HOST.test(ITEM.get(id)?.it.name || "")) motorPicker(p, id);
+  else if (wasNew && p.items[id] && !cov && !clash && !bulkAdd && ITEM.get(id)?.it.camera) cardPicker(p, id);
   if (und && !p.items[id]) undoable("Removed", gone, und);
   else if (wasNew && p.items[id] && !cov && !clash) buzz("add");
   return changed;
@@ -6039,9 +6116,10 @@ function viewSettings() {
         <div class="field"><label for="me-phone">Your phone</label><input id="me-phone" name="phone" type="tel" inputmode="tel" maxlength="30" value="${esc(me.phone || "")}"></div></div>
         <span class="hint">Filled in on every new production. You can still change them on each one. <b id="meSaved" class="me-saved" hidden>✓ Saved</b></span></form></div>
     ${lookPickerHtml()}
+    ${app.settings.noCardAsk ? `<div class="set-group"><h3>Cards after a camera</h3><div class="cat-tools"><span class="hint">Off: adding a camera doesn't suggest its cards.</span><button class="btn sm" type="button" data-act="card-ask">Turn on</button></div></div>` : ""}
     ${(() => { const rows = HOUSES.map(h => { const n = hiddenItems(h).length; return n ? `<div class="cat-tools"><b>${esc(h.name)}</b><button class="btn sm" type="button" data-act="removed-list" data-house="${h.id}">Removed items (${n})</button></div>` : ""; }).join("");
       const maker = !window.AC_STATS || app.isAdmin;   // the catalog file is the maker's tool; a user keeps only their removed items
-      return maker ? `<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
+      return maker ? `${sharedHtml()}<div class="set-group"><h3>Catalog</h3>${rows}<div class="cat-io"><button class="btn" type="button" data-act="cat-export">${SAVE_ICON}<span>Save my catalog as a file</span></button>
         <label class="btn"><input type="file" accept=".json,application/json" data-catimport="1" hidden>${LOAD_ICON}<span>Load a catalog file</span></label></div>
       <span class="hint">A catalog file holds its order, names, colors and the items added. Loading one replaces your catalog; your lists stay as they are. Edit the catalog with the pencil in Add Gear.</span></div>`
         : rows ? `<div class="set-group"><h3>Catalog</h3>${rows}</div>` : ""; })()}
@@ -10988,6 +11066,11 @@ document.addEventListener("click", e => {
     case "chip": app.cat = b.dataset.cat; document.getElementById("tree").innerHTML = treeHtml(p, houseById(p.houseId));
       document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", String(c === b))); break;
     /* catalog + favorites rows */
+    case "sh-pub": sharedConfirm(b.dataset.house); break;
+    case "sh-pub-go": closeModal(); sharedPublish(b.dataset.house); break;
+    case "sh-undo": sharedUndo(b.dataset.house); break;
+    case "card-noask": app.settings.noCardAsk = true; touchSettings(); closeModal(); toast("Cards won't be suggested. Turn it back on in Settings."); break;
+    case "card-ask": delete app.settings.noCardAsk; touchSettings(); rerenderKeepScroll(); toast("Cards will be suggested after a camera"); break;
     case "pk-inc": case "pk-dec": {
       const inp = document.querySelector(`[data-pick="${CSS.escape(id)}"]`);
       if (inp) inp.value = Math.max(0, Math.min(9, (parseInt(inp.value, 10) || 0) + (act === "pk-inc" ? 1 : -1)));
@@ -11552,6 +11635,19 @@ document.addEventListener("submit", e => {
       addSection(name, v.pos); toast(`Added ${name}`);
     }
     closeModal(); rerenderKeepScroll();
+    return;
+  }
+  if (f.id === "cardForm") {
+    const p = cur(); if (!p) return;
+    const ids = []; let n = 0;
+    for (const inp of f.querySelectorAll("[data-pick]")) {
+      const k = Math.max(0, Math.min(9, parseInt(inp.value, 10) || 0)), mid = inp.dataset.pick;
+      if (!k) continue;
+      ids.push(...setQty(p, mid, (p.items[mid] ? p.items[mid].qty : 0) + k)); n += k;
+    }
+    closeModal();
+    if (app.tab === "add" && !app.q.trim()) refreshRows(p, ids); else rerenderKeepScroll();
+    if (n) toast(`Added ${n} card${n === 1 ? "" : "s"}`);
     return;
   }
   if (f.id === "motorForm") {
@@ -13212,4 +13308,71 @@ function adminCheck(say) {
   S.check().then(r => { app.isAdmin = r === "ok"; app.adminWhy = r; if (say) app.adminSay = ADMIN_SAY[r] || `Couldn't check (${r}).`; if (app.view === "settings" && !typing()) rerenderKeepScroll(); });
 }
 if (typeof window !== "undefined" && window.claude && typeof window.claude.use === "function") Promise.resolve(window.claude.use("user")).then(() => adminCheck(false)).catch(() => {});
+
+/* ---------- the catalog for everyone: load the published layers; the maker publishes his and can take the last one back ---------- */
+function sharedSave() { try { localStorage.setItem(LS_SHARED, JSON.stringify(SHARED)); } catch (e) {} }
+async function loadShared() {
+  const A = typeof window !== "undefined" && window.AC_SHARED; if (!A) return;
+  let all; try { all = await A.all(); } catch (e) { return; }
+  if (!all || typeof all !== "object" || sameJ(all, SHARED)) return;
+  SHARED = all; sharedSave(); applyCatalog();
+  if (!typing() && !document.getElementById("modal")) rerenderKeepScroll();
+}
+if (typeof window !== "undefined" && window.AC_SHARED) {
+  setTimeout(loadShared, 0);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") loadShared(); });
+}
+/* what the maker changed since his last publish of a house: his own edits against the published layer */
+function sharedDiff(hid) {
+  const a = (SHARED[hid] && SHARED[hid].data) || {}, b = peekEdits(hid), n = { renamed: 0, moved: 0, added: 0, removed: 0, order: 0, other: 0 };
+  const ai = a.items || {}, bi = b.items || {};
+  for (const id of new Set([...Object.keys(ai), ...Object.keys(bi)])) { const x = ai[id] || {}, y = bi[id] || {}; if (sameJ(x, y)) continue;
+    if (x.name !== y.name) n.renamed++; else if (x.c !== y.c || x.s !== y.s || x.g !== y.g) n.moved++; else n.other++; }
+  const an = new Map((a.newItems || []).map(d => [d.id, d])), bn = new Map((b.newItems || []).map(d => [d.id, d]));
+  for (const [id, d] of bn) if (!an.has(id)) n.added++; else if (!sameJ(an.get(id), d)) n.other++;
+  for (const id of an.keys()) if (!bn.has(id)) n.removed++;
+  for (const id of Object.keys(b.hidden || {})) if (!(a.hidden || {})[id]) n.removed++;
+  for (const id of Object.keys(a.hidden || {})) if (!(b.hidden || {})[id]) n.added++;
+  for (const k of ["subOrder", "groupOrder", "itemOrder", "brandOrder"]) for (const x of new Set([...Object.keys(a[k] || {}), ...Object.keys(b[k] || {})])) if (!sameJ((a[k] || {})[x], (b[k] || {})[x])) n.order++;
+  if (!sameJ(a.catOrder || [], b.catOrder || [])) n.order++;
+  for (const k of ["heads", "subMoves", "groups", "brandSplit", "flat", "looseAt"]) for (const x of new Set([...Object.keys(a[k] || {}), ...Object.keys(b[k] || {})])) if (!sameJ((a[k] || {})[x], (b[k] || {})[x])) n.other++;
+  for (const k of ["cats", "subs"]) if (!sameJ(a[k] || [], b[k] || [])) n.other++;
+  n.total = n.renamed + n.moved + n.added + n.removed + n.order + n.other;
+  return n;
+}
+const sharedWhen = at => { const d = new Date(at); return isNaN(d) ? "" : `${d.getDate()}.${d.getMonth() + 1} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+function sharedHtml() {
+  if (!(typeof window !== "undefined" && window.AC_SHARED && app.isAdmin)) return "";
+  const rows = HOUSES.map(h => { const sh = SHARED[h.id], n = sharedDiff(h.id).total;
+    const st = !sh ? (n ? `${n} change${n === 1 ? "" : "s"}, never published` : "Nothing to publish") : n ? `${n} change${n === 1 ? "" : "s"} since ${sharedWhen(sh.at)}` : `Up to date · published ${sharedWhen(sh.at)}`;
+    return `<div class="sh-row"><div><b>${esc(h.name)}</b><div class="hint">${esc(st)}</div></div><button class="btn sm${n ? " primary" : ""}" type="button" data-act="sh-pub" data-house="${h.id}"${n ? "" : " disabled"}>Publish</button></div>`; }).join("");
+  const last = HOUSES.map(h => [h, SHARED[h.id]]).filter(([, x]) => x && x.at).sort((a, b) => String(b[1].at).localeCompare(String(a[1].at)))[0];
+  const undo = last ? `<div class="sh-undo"><button class="btn sm ghost" type="button" data-act="sh-undo" data-house="${last[0].id}">Undo last publish (${esc(last[0].name)}, ${esc(sharedWhen(last[1].at))})</button></div>` : "";
+  return `<div class="set-group"><h3>Catalog for everyone</h3><p class="hint">Your catalog changes (order, names, moves, added and removed items) reach every user only when you publish them. Each user's own changes stay on top.</p>${rows}${undo}</div>`;
+}
+function sharedConfirm(hid) {
+  const h = houseById(hid), n = sharedDiff(hid);
+  const li = [[n.renamed, "renamed"], [n.moved, "moved to another place"], [n.added, "added"], [n.removed, "removed"], [n.order, "new order"], [n.other, "other changes (headings, folders)"]].filter(x => x[0]).map(x => `<li>${x[0]} ${x[1]}</li>`).join("");
+  showModal(`<div class="sheet"><h3 class="plain">Publish ${esc(h.name)} to everyone?</h3><p class="hint">Every user gets these on their next open:</p><ul class="hint sh-list">${li}</ul>
+    <p class="hint">A user's own changes stay as they are. You can undo this publish.</p>
+    <div class="modal-actions"><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Cancel</button><button class="btn primary" type="button" data-act="sh-pub-go" data-house="${hid}">Publish</button></div></div>`);
+}
+const SH_FAIL = "Couldn't publish. If it says it isn't allowed, the Firebase rules need the shared part (tools/firestore.rules).";
+async function sharedPublish(hid) {
+  const A = window.AC_SHARED; if (!A) return;
+  const data = clone(peekEdits(hid)); delete data.gone;
+  let r; try { r = await A.publish(hid, data); } catch (e) { toast(SH_FAIL + (e && e.code ? ` (${e.code})` : "")); return; }
+  SHARED[hid] = { data, at: r.at, prevAt: r.prevAt || "" }; sharedSave();
+  const all = app.settings.catalog || (app.settings.catalog = {}); all[hid] = {};   // the maker's edits are the published layer now
+  applyCatalog(); touchSettings(); rerenderKeepScroll(); toast(`${houseById(hid).name} published to everyone`);
+}
+async function sharedUndo(hid) {
+  const A = window.AC_SHARED; if (!A) return;
+  const was = SHARED[hid]; let r;
+  try { r = await A.undo(hid); } catch (e) { toast("Couldn't undo the publish" + (e && e.code ? ` (${e.code})` : "")); return; }
+  if (r) SHARED[hid] = r; else delete SHARED[hid];
+  sharedSave();
+  if (was && was.data) { const all = app.settings.catalog || (app.settings.catalog = {}); all[hid] = clone(was.data); }   // what was taken back stays as the maker's own edits
+  applyCatalog(); touchSettings(); rerenderKeepScroll(); toast(`Last publish of ${houseById(hid).name} taken back`);
+}
 </script>
