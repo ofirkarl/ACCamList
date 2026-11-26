@@ -288,7 +288,7 @@ CAMERAS = [  # (pattern, sensor, film)
 CAMERA_MEDIA = [  # (pattern, preferred card types in order)
     (r"ALEXA MINI LF|ALEXA 35", ["Codex Compact Drive"]), (r"ALEXA MINI|AMIRA", ["CFast 2.0"]), (r"ALEXA PLUS|ALEXA EV", ["SxS"]),
     (r"VENICE|Rialto", ["AXS", "SxS"]), (r"BURANO", ["CFexpress Type B"]), (r"FX9", ["XQD", "CFexpress Type B"]),
-    (r"FX6|FX3|FX30|ILME-FX2|A7S MARK III|A7 IV|\bFR7\b", ["CFexpress Type A", "SD"]), (r"FS7(?!\d)", ["XQD"]), (r"FS5|FS700|EVA1|C70|EOS C80|BGH1|BS1H|S1H|GH5S|ALPHA A7|A7S|ZV-1", ["SD"]),
+    (r"FX6|FX3|FX30|\bFX5\b|ILME-FX2|A7S MARK III|A7 IV|\bFR7\b", ["CFexpress Type A", "SD"]), (r"FS7(?!\d)", ["XQD"]), (r"FS5|FS700|EVA1|C70|EOS C80|BGH1|BS1H|S1H|GH5S|ALPHA A7|A7S|ZV-1", ["SD"]),
     (r"PMW-F55|PMW-F5\b|PMW-F3", ["SxS", "AXS"]), (r"HELIUM|DRAGON", ["RED Mini-Mag"]), (r"KOMODO", ["CFast 2.0"]),
     (r"VARICAM|AG-HPX500", ["P2 / expressP2"]), (r"C300 Mark II", ["CFast 2.0"]), (r"EOS C300", ["CF"]),
     (r"C500 Mark II|C400", ["CFexpress Type B"]), (r"URSA MINI PRO|Pocket Cinema", ["CFast 2.0", "SD"]), (r"Micro Cinema", ["SD"]),

@@ -5309,25 +5309,23 @@ function motorPicker(p, hostId) {
 }
 
 /* cards for a camera just added (Ofir, 26.11): its card types from the house's catalog, nothing picked ahead; the user sets how many.
-   Not asked when a package already brings cards with it, when its cards are on the list, or once the user said "Don't ask again" */
+   Cards already on the list (a package's) show how many; not asked once the user said "Don't ask again" */
 function cardsFor(p, e) {
   const types = (e.it.camera && !e.it.camera.film && e.it.camera.media) || []; if (!types.length) return [];
   const out = [];
-  for (const t of types) { const cs = []; for (const x of ITEM.values()) if (x.h === e.h && x.s.id === "media" && grpOf(x.it, x.s) === t) cs.push(x); if (cs.length) out.push([t, cs.sort((a, b) => capGB(a.it.name) - capGB(b.it.name) || a.ord - b.ord)]); }
+  for (const t of types) { const cs = []; for (const x of ITEM.values()) if (x.h === e.h && x.s.id === "media" && grpOf(x.it, x.s) === t) cs.push(x); out.push([t, cs.sort((a, b) => capGB(a.it.name) - capGB(b.it.name) || a.ord - b.ord)]); }
   return out;
 }
 function cardPicker(p, camId) {
   if (app.settings.noCardAsk || typeof document === "undefined" || document.getElementById("modal")) return;
   const e = ITEM.get(camId); if (!e || !e.it.camera) return;
-  if ((app.settings.rules || []).some(r => r.kind === "media" ? ruleMatches(r, e) : (r.kind === "item" && ruleMatches(r, e) && ITEM.get(r.add)?.s.id === "media"))) return;
   const groups = cardsFor(p, e); if (!groups.length) return;
-  if (groups.some(([, cs]) => cs.some(x => p.items[x.it.id]))) return;
-  const row = m => `<li><span class="info"><span class="nm-row"><span class="nm">${esc(m.it.name)}</span>${linkHtml(m.it, m.h)}</span></span>
+  const row = m => `<li><span class="info"><span class="nm-row"><span class="nm">${esc(m.it.name)}</span>${linkHtml(m.it, m.h)}</span>${p.items[m.it.id] ? `<span class="specs"><span>${lineQty(p.items[m.it.id])} already on the list</span></span>` : ""}</span>
       <span class="stepper sm"><button type="button" data-act="pk-dec" data-id="${esc(m.it.id)}" aria-label="Fewer">−</button><input type="number" min="0" max="9" inputmode="numeric" value="0" data-pick="${esc(m.it.id)}" aria-label="${esc(m.it.name)} to add"><button type="button" data-act="pk-inc" data-id="${esc(m.it.id)}" aria-label="More">+</button></span></li>`;
   showModal(`<form class="form dialog" id="cardForm" autocomplete="off">
     <h3 class="plain">Cards for the ${esc(shortName(e.it.name))}</h3>
     <p class="hint">It records on ${esc(groups.map(g => g[0]).join(" and "))}. Pick how many of each card from ${esc(e.h.name)}.</p>
-    ${groups.map(([t, cs]) => `<div class="card-grp"><span class="lbl">${esc(t)}</span><ul class="pick-list">${cs.map(row).join("")}</ul></div>`).join("")}
+    ${groups.map(([t, cs]) => `<div class="card-grp"><span class="lbl">${esc(t)}</span>${cs.length ? `<ul class="pick-list">${cs.map(row).join("")}</ul>` : `<p class="hint">${esc(e.h.name)}'s catalog has no ${esc(t)}. Add one by hand in Add Gear.</p>`}</div>`).join("")}
     <div class="modal-actions"><button class="btn ghost sm" type="button" data-act="card-noask">Don't ask again</button><span class="grow"></span><button class="btn" type="button" data-act="modal-close">Not now</button><button class="btn primary" type="submit">Add cards</button></div>
   </form>`);
 }
