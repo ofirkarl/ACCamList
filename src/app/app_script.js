@@ -3432,13 +3432,22 @@ function allTogSync() {
   if (typeof document === "undefined" || !document.querySelectorAll) return;
   const set = (b, allOpen, what) => { if (!b) return; const v = allOpen ? "0" : "1"; if (b.dataset.open === v) return; b.dataset.open = v; b.innerHTML = allOpen ? FOLD_ICON : UNFOLD_ICON;
     const t = (allOpen ? "Close all" : "Open all"); b.title = t; b.setAttribute("aria-label", t + (what ? " of " + what : "")); };
-  document.querySelectorAll("#tree details.cat").forEach(cat => {
-    const subs = [...cat.querySelectorAll(":scope > .cat-body > details.sub")];
-    const b = cat.querySelector(":scope > summary .cat-all");
-    set(b, subs.length > 0 && subs.every(d => d.open), b && b.getAttribute("aria-label").replace(/^(Open|Close) all of /, ""));
-  });
-  const all = [...document.querySelectorAll("#tree details.cat, #tree details.cat > .cat-body > details.sub")];
-  const top = document.querySelector(".tree-all"); if (top) { top.hidden = all.length < 2 || !!app.q.trim(); set(top, all.length > 0 && all.every(d => d.open), ""); }
+  document.querySelectorAll("#tree .deep-all").forEach(b => { const d = b.closest("details"); set(b, !!d && deepOpen(d, false), b.getAttribute("aria-label").replace(/^(Open|Close) all of /, "")); });
+  const tree = document.getElementById("tree"), top = document.querySelector(".tree-all");
+  if (top && tree) { top.hidden = tree.querySelectorAll("details[data-k]").length < 2 || !!app.q.trim(); set(top, deepOpen(tree, true), ""); }
+}
+/* everything under a heading, down to the last folder and manufacturer: open? (the heading itself too, for the whole catalog) */
+function deepOpen(root, self) {
+  const ds = [...root.querySelectorAll("details[data-k]")]; if (self && root.matches && root.matches("details") ) ds.push(root);
+  return ds.length > 0 && ds.every(d => d.open) && !root.querySelector("li.mfr-head.closed");
+}
+function deepSet(root, open, self) {
+  const ds = [...root.querySelectorAll("details[data-k]")]; if (self) ds.push(root);
+  for (const d of ds) { d.open = open; if (open) app.open.add(d.dataset.k); else app.open.delete(d.dataset.k); }
+  const m = app.settings.closedBrands || (app.settings.closedBrands = {}); let mf = false;
+  if (open) root.querySelectorAll("li.mfr-head.closed[data-k]").forEach(li => { delete m[li.dataset.k]; mf = true; });
+  if (mf) { touchSettings(); rerenderKeepScroll(); }
+  allTogSync();
 }
 let allTogT = 0;
 const allTogSoon = () => { if (allTogT) return; allTogT = setTimeout(() => { allTogT = 0; allTogSync(); }, 0); };
@@ -3580,9 +3589,9 @@ function treeHtml(p, h) {
       // open or close everything inside at once, when there are a few headings to go through
       const nHeads = (brands.match(/<details class="brand|class="mfr-head/g) || []).length;
       const anyClosed = /<details class="brand[^>]*" >/.test(brands) || brands.includes('class="mfr-head closed"');
-      const allBtn = !ed && !searching && nHeads >= 2 ? `<div class="sub-tools"><button class="btn ghost sm" type="button" data-act="sub-all" data-k="${esc(kS)}" data-open="${anyClosed ? 1 : 0}">${anyClosed ? "Open all" : "Close all"}</button></div>` : "";
+      const allBtn = "", subArrow = !searching && nHeads >= 1 ? `<button class="iconbtn all-tog cat-all deep-all" type="button" data-act="deep-all" data-open="${anyClosed ? 1 : 0}" aria-label="${anyClosed ? "Open" : "Close"} all of ${esc(s.name)}" title="${anyClosed ? "Open all" : "Close all"}">${anyClosed ? UNFOLD_ICON : FOLD_ICON}</button>` : "";
       subKeys.push(kS);
-      subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}</span></span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
+      subs.push(`<details class="sub" data-k="${esc(kS)}"${dz(subDrop)} ${searching || app.open.has(kS) ? "open" : ""}><summary${dz(subDrop)}><span class="sub-title">${sHandle}<span>${esc(s.name)}${pen(kS, s.name)}</span>${subArrow}</span><span class="sumr">${selBadge(nSel, kS)}<span class="cnt">${items.length}</span>${CHEV}</span></summary>${allBtn}${brands || `<p class="drop-empty"${dz(kS)}>Empty. Drag items here.</p>`}${addItem}</details>`);
     }
     const dItems = searching ? c.direct.items.filter(it => itHit(it, c.direct)) : c.direct.items;
     cn += dItems.length;
@@ -3595,7 +3604,7 @@ function treeHtml(p, h) {
     const nSel = selCount(p, e => e.c.id === c.id && e.h.id === h.id);
     const open = searching || app.cat === c.id || app.open.has(c.id);
     const addSub = ed ? `<div class="add-row"><button class="add-head" type="button" data-act="new-item" data-k="${esc(c.direct.key)}">+ New item in ${esc(c.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(c.id)}">+ New folder in ${esc(c.name)}</button></div>` : "";
-    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}${!searching && subs.length >= 2 ? `<button class="iconbtn all-tog cat-all" type="button" data-act="cat-subs" data-open="1" aria-label="Open all of ${esc(c.name)}" title="Open all">${UNFOLD_ICON}</button>` : ""}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.map((x, i) => x + dUl(dlb.get(subKeys[i]))).join("")}${addSub}</div></details>`);
+    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}${!searching && subs.length >= 2 ? `<button class="iconbtn all-tog cat-all deep-all" type="button" data-act="deep-all" data-open="1" aria-label="Open all of ${esc(c.name)}" title="Open all">${UNFOLD_ICON}</button>` : ""}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.map((x, i) => x + dUl(dlb.get(subKeys[i]))).join("")}${addSub}</div></details>`);
   }
   if (ed && !searching) out.push(`<button class="add-head big" type="button" data-act="new-cat">+ Add category or subcategory</button>`);
   const lq = searching ? parseLensQuery(app.q) : null;
@@ -7853,13 +7862,11 @@ document.addEventListener("click", e => {
       rerenderKeepScroll(); break;
     }
     /* catalog: all subcategories of one category; every category and subcategory */
-    case "cat-subs": { e.preventDefault(); const cat = b.closest("details.cat"); if (!cat) break; const open = b.dataset.open === "1";
-      cat.querySelectorAll(":scope > .cat-body > details.sub").forEach(d => { d.open = open; if (open) app.open.add(d.dataset.k); else app.open.delete(d.dataset.k); });
-      allTogSync(); break; }
-    case "tree-all": { const open = b.dataset.open === "1";
-      document.querySelectorAll("#tree details.cat, #tree details.cat > .cat-body > details.sub").forEach(d => { d.open = open; if (open) app.open.add(d.dataset.k); else app.open.delete(d.dataset.k); });
-      if (!open && app.cat !== "all") { const c = document.querySelector(`#tree details.cat[data-k="${CSS.escape(app.cat)}"]`); if (c) { c.open = true; app.open.add(app.cat); } }   // a category picked in the chips stays open
-      allTogSync(); break; }
+    case "deep-all": { e.preventDefault(); const d = b.closest("details"); if (d) deepSet(d, b.dataset.open === "1", false); break; }   // a category or a subcategory: all of it, to the last folder
+    case "tree-all": { const open = b.dataset.open === "1", tree = document.getElementById("tree"); if (!tree) break;
+      deepSet(tree, open, false);
+      if (!open && app.cat !== "all") { const c = document.querySelector(`#tree details.cat[data-k="${CSS.escape(app.cat)}"]`); if (c) { c.open = true; app.open.add(app.cat); allTogSync(); } }   // a category picked in the chips stays open
+      break; }
     /* catalog: open or close everything inside a subcategory */
     case "sub-all": {
       const sub = b.closest("details.sub"); if (!sub) break;
