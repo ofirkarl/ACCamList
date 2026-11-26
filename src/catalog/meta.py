@@ -344,6 +344,54 @@ SETS = {  # normalized original name -> focal lengths, stop, coverage, squeeze, 
         "TOKINA SET OF 4 Prime Vista - 21, 29, 40, 65mm/ All T1.5 FF PL-Mount": dict(f=S(21, 29, 40, 65), t="T1.5", c="FF"),
         "LAOWA Venus Optics Ranger Full Frame Cine PL SET": dict(f=["16-30", "28-75", "75-180"], t="T2.9", c="FF"),
     },
+    "different": {  # from each set's page on diff-e-rent.com (26.11.26); sets whose page doesn't list the lenses are left out
+        "DZOFILM Vespid FF Lens set of 7 (PL mount)": dict(f=["25", "35", "50", "75", "90 macro", "100", "125"], t="T2.1–T2.8", c="FF"),
+        "Cooke s4 Set of 6 Lenses": dict(f=S(18, 25, 32, 50, 75, 100), t="T2", c="S35"),
+        "Veydra set of 4 lenses E mount": dict(f=S(25, 35, 50, 85), t="T2.2", c="S35"),
+        "ZEISS Standard Lens Set of 8": dict(f=S(24, 28, 32, 40, 50, 85, 100, 135), t="T2.1", c="S35"),
+        "Thypoch Simera-C T1.5 Cine Lens set of 5 (Leica M)": dict(f=S(21, 28, 35, 50, 75), t="T1.5", c="FF"),
+        "Schneider Xenon FF Lens Set Of 6": dict(f=S(18, 25, 35, 50, 75, 100), t="T2.1–T2.4", c="FF"),
+        "DZOFilm Catta Zoom FF 3 lens set E-Mount": dict(f=["18-35", "35-80", "70-135"], t="T2.9", c="FF"),
+        "DZOFilm Catta ACE Zoom FF 3 lens set PL/EF-Mount": dict(f=["18-35", "35-80", "70-135"], t="T2.9", c="FF"),
+        "Carl Zeiss CP3 Lens Set Of 5": dict(f=S(18, 25, 35, 50, 85), t="T2.1–T2.9", c="FF"),
+        "Carl Zeiss Nano Primes lens set of 6": dict(f=S(18, 24, 35, 50, 75, 100), t="T1.5", c="FF"),
+        "Cooke SP3 Lens set of 5": dict(f=S(25, 32, 50, 75, 100), t="T2.4", c="FF"),
+        "Zeiss Ultra Prime Lens Set of 6": dict(f=S(16, 24, 32, 50, 65, 85), t="T1.9", c="S35"),
+        "Angenieux EZ 1+2 S35 Zoom lenses EF mount": dict(f=["15-40", "30-90"], t="T2", c="S35"),
+        "Angenieux EZ 1+2 S35 Zoom lenses PL Mount": dict(f=["15-40", "30-90"], t="T2", c="S35"),
+        "Angenieux Angenieux EZ 1+2 Full-Frame EF Mount": dict(f=["22-60", "45-135"], t="T3", c="FF"),
+        "Angenieux EZ 1+2 Full-Frame Zoom Lenses PL Mount": dict(f=["22-60", "45-135"], t="T3", c="FF"),
+        "Angenieux Optimo DP Rouge Zoom lens kit": dict(f=["16-42", "30-80"], t="T2.8", c="S35"),
+        "Fujinon Cabrio Zoom 14-35mm 19-90mm lens set": dict(f=["14-35", "19-90"], t="T2.9", c="S35"),
+        "DZO pictor zoom s35 lens set 20-55 & 50-125": dict(f=["20-55", "50-125"], t="T2.8", c="S35"),
+        "Blazar Remus 1.5x Anamorphic lens set of 4": dict(f=S(33, 45, 65, 100), t="T2–T2.8", c="FF", sq="1.5x"),
+        "Blazar remus 1.5x Anamorphic lens set of 3": dict(f=S(45, 65, 100), t="T2–T2.8", c="FF", sq="1.5x"),
+        "Blazar Great Joy 1.8x Anamorphic Lens set of 3": dict(f=S(35, 50, 85), t="T2.9", c="FF", sq="1.8x"),
+        "Laowa Nanomorph S35 Anamorphic lens set of 3 (canon RF, blue)": dict(f=S(27, 35, 50), t="T2.4–T2.8", c="S35", sq="1.5x"),
+        "Kowa 2x Anamorphic lens set of 4": dict(f=S(40, 50, 75, 100), t=None, c=None, sq="2x"),
+        "Schneider ISCO4all Lens Set": dict(f=S(43, 58, 85), t="T2.4", c=None, sq="1.5x"),
+        "Richard Gale optics Clavius lens set of 5": dict(f=S(22, 28, 38, 58, 88), t="f/2", c="FF", note="22mm is a wide angle adapter"),
+        "DZO Gnosis Macro Lens Set Of 4": dict(f=S(24, 32, 65, 90), t="T2.8", c="FF"),
+        "Nikon Nikkor AI set of 5 lenses converted EF mount": dict(f=S(24, 35, 50, 85, 135), t="f/2–f/2.8", c="FF"),
+        "Helios Cinemod Soviet lens set of 7 EF Mount": dict(f=S(20, 28, 35, 50, 58, 85, 135), t="f/1.7–f/3.5", c="FF"),
+        "Carl Zeiss ZE Classic lens set y.r": dict(f=S(21, 35, 50, 85, 100), t="f/1.4–f/2.8", c="FF"),
+        "Carl Zeiss ZE Classic lens set a.r": dict(f=S(18, 25, 35, 50, 85, 100), t="f/1.4–f/3.5", c="FF"),
+        "Mamiya Sekor C Lens Set Of 7": dict(f=S(35, 45, 55, 70, 80, 110, 150), t="f/2.8–f/3.5", c="MF"),
+        "Leica R P+S Technik Lens Set Of 6": dict(f=S(19, 28, 35, 50, 80, 135), t="T1.4–T2.9", c="FF"),
+        "Canon FD Lens Set Of 6 Simmod EF Mount": dict(f=S(17, 24, 35, 50, 85, 100), t="f/1.2–f/4", c="FF"),
+        "Minolta Rokkor 11 Lens set": dict(f=S(16, 20, 24, 28, 35, 50, 58, 85, 100, 135, 200), t="f/1.2–f/3.5", c="FF"),
+        "Carl Zeiss Jena Lens set of 5 EF Mount": dict(f=S(20, 35, 50, 80, 135), t="f/1.8–f/3.5", c="FF"),
+        "Canon FD Lens Set Of 5 Rehoused PL Mount": dict(f=S(20, 24, 35, 50, 85), t=None, c="FF"),
+        "Canon FD Lens Set Of 8 Rehoused PL Mount": dict(f=S(14, 20, 24, 28, 35, 50, 85, 135), t="T1.3–T2.9", c="FF", fd="95"),
+        "Leica R CineMod Lens Set of 6 EF mount": dict(f=S(19, 24, 28, 35, 50, 90), t="f/2–f/2.8", c="FF"),
+        "SIGMA DG DN C E MOUNT Lens Set of 8": dict(f=S(17, 20, 24, 35, 45, 50, 65, 90), t="f/2–f/4", c="FF"),
+        "Sigma DG DN Art lens set of 5 ( SONY E )": dict(f=S(20, 28, 35, 50, 85), t="f/1.2–f/1.4", c="FF"),
+        "Sony GM Lens Set Of 4": dict(f=S(24, 35, 50, 85), t="f/1.2–f/1.4", c="FF"),
+        "Sony GM Lens Set Of 6": dict(f=S(14, 24, 35, 50, 85, 135), t="f/1.2–f/1.8", c="FF"),
+        "Sigma Art Set Of 6 Lenses EF mount HSM": dict(f=S(20, 28, 35, 50, 85, 135), t="f/1.4–f/1.8", c="FF"),
+        "Sigma Art lens set of 5 EF HSM": dict(f=S(20, 28, 35, 50, 85), t="f/1.4", c="FF"),
+        "DJI DL Lens Set Of 5": dict(f=S(18, 24, 35, 50, 75), t="f/1.8–f/2.8", c="FF"),
+    },
     "fitussi": {
         "Leitz Summilux C Set": dict(f=S(18, 21, 25, 35, 40, 50, 75, 100, 135), t="T1.4", c="S35"),
         "ARRI SIGNATURE PRIME SET": dict(f=S(18, 25, 35, 47, 75, 125), t="T1.8", c="LF"),
@@ -377,7 +425,19 @@ COVERAGE_RULES = [  # (pattern on name, coverage, note)
      r"COOKE S4|S4i|Summilux|Summicron|CineAlta|Alura|ALURA|Optimo|Cabrio|CABRIO|Cine Zoom 17-120|25-250|Nanomorph|Atlas Orion|S6i|"
      r"Angenieux 15-40|Angenieux 30-90|Master Macro|Cooke S4 ", "S35", None),
 ]
-STOP_RE = re.compile(r"\bT\s?/?\s?(\d+(?:\.\d+)?(?:\s?[-–]\s?\d+(?:\.\d+)?)?)(?![\d.]*mm)", re.I)
+COVERAGE_MORE = [  # after COVERAGE_RULES, for names none of them knows (Different's still and vintage lenses, 26.11)
+    (r"\bRF-S\b|Fujifilm XF|Fujinon XF|\bXF ?\d|E PZ 18-105|ATX-I 11-16", "APS-C"),
+    (r"Mamiya", "MF"),
+    (r"\bS35\b|Super ?35|Veydra", "S35"),
+    (r"\bCP ?[23]\b|Canon RF\b|Sony Sonnar|Vario-Tessar T\* FE|Tamron .*(E Mount|Sony E)|Laowa 100mm f/2\.8 Macro|Laowa 15mm f/4|Xeen CF|Nikkor|Minolta|Rokkor|"
+     r"ZE Classic|Distagon|Planar|Contax|Zeiss Jena|Helios|Mir-|TAIR|Jupiter|Petzval|Belomo|Leica R\b|Sonnar|Angenieux 180mm|DJI 75mm|Leica 15mm", "FF"),
+]
+STOP_SERIES = [  # the stop of a series whose names don't carry it (maker's figure)
+    (r"^Cooke SP3 \d+mm", "T2.4"),
+    (r"Optimo DP Rouge (16-42|30-80)", "T2.8"),
+    (r"^CANON Zoom Lens EF ?24-105", "f/4"),
+]
+STOP_RE = re.compile(r"\bT\*?\s?/?\s?(\d+(?:\.\d+)?(?:\s?[-–]\s?\d+(?:\.\d+)?)?)(?![\d.]*mm)", re.I)
 
 
 def lens_meta(house, cat_id, sub_id, n):
@@ -395,6 +455,7 @@ def lens_meta(house, cat_id, sub_id, n):
         if s.get("sq"): m["squeeze"] = s["sq"]
         if s.get("note"): m["note"] = s["note"]
         if s.get("sku"): m["sku"] = s["sku"]
+        if s.get("fd"): m["fd"] = s["fd"]
         return m
     if sub_id == "b4":
         m["coverage"] = "2/3"
@@ -405,21 +466,31 @@ def lens_meta(house, cat_id, sub_id, n):
         return m
     z = re.search(r"(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*mm", n, re.I) or re.search(r"(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\s*/\s*T", n)
     p = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)\s*mm", n, re.I)
+    if not z and not p:
+        for zz in re.finditer(r"(?<![\d.:fFtT])(?<!f/)(?<!F/)(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)(?![\d.])", n):
+            if 4 <= float(zz.group(1)) < float(zz.group(2)): z = zz; break
     if z:
         m["focals"] = f"{z.group(1)}–{z.group(2)}mm"
     elif p:
         m["focals"] = f"{p.group(1)}mm"
     t = STOP_RE.search(n)
-    fs = re.search(r"\bf\s?/\s?(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)", n, re.I) or re.search(r"\b1:(\d+(?:\.\d+)?)", n)
+    fs = (re.search(r"\bf\s?/\s?(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)", n, re.I) or re.search(r"\b1:(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?)", n)
+          or re.search(r"\bf(\d(?:\.\d+)?(?:-\d(?:\.\d+)?)?)\b", n) or re.search(r"(?<![\d.])(\d(?:\.\d)?)/\d+-\d+", n))   # f2.5-3.3; Sony's 2.8/70-200
     if t:
         m["stop"] = "T" + t.group(1).replace(" ", "").replace("-", "–")
     elif fs:
         m["stop"] = "f/" + fs.group(1)
+    else:
+        for pat, st in STOP_SERIES:
+            if re.search(pat, n, re.I): m["stop"] = st; break
     for pat, cov, note in COVERAGE_RULES:
         if re.search(pat, n, re.I):
             m["coverage"] = cov
             if note: m["note"] = note
             break
+    else:
+        for pat, cov in COVERAGE_MORE:
+            if re.search(pat, n, re.I): m["coverage"] = cov; break
     sq = re.search(r"(1\.33|1\.5|1\.6|2)\s*x\b", n, re.I) if re.search(r"anamorph", n, re.I) else None
     if sq: m["squeeze"] = sq.group(1) + "x"
     elif re.search(r"Atlas Orion|S6i Anamorphic|Optimo Anamorphic", n, re.I): m["squeeze"] = "2x"

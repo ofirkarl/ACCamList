@@ -183,5 +183,185 @@
   "55": "T2.8",
   "75": "T2.8",
   "105": "T2.4"
+ },
+ "different:dzofilm-vespid-ff-lens-set-of-7-pl-mount": {
+  "25": "T2.1",
+  "35": "T2.1",
+  "50": "T2.1",
+  "75": "T2.1",
+  "90": "T2.8",
+  "100": "T2.1",
+  "125": "T2.1"
+ },
+ "different:schneider-xenon-ff-lens-set-of-6": {
+  "18": "T2.4",
+  "25": "T2.1",
+  "35": "T2.1",
+  "50": "T2.1",
+  "75": "T2.1",
+  "100": "T2.1"
+ },
+ "different:carl-zeiss-cp3-lens-set-of-5": {
+  "18": "T2.9",
+  "25": "T2.1",
+  "35": "T2.1",
+  "50": "T2.1",
+  "85": "T2.1"
+ },
+ "different:blazar-remus-1-5x-anamorphic-lens-set-of-4": {
+  "33": "T2",
+  "45": "T2",
+  "65": "T2",
+  "100": "T2.8"
+ },
+ "different:blazar-remus-1-5x-anamorphic-lens-set-of-3": {
+  "45": "T2",
+  "65": "T2",
+  "100": "T2.8"
+ },
+ "different:laowa-nanomorph-s35-anamorphic-lens-set-of-3-canon-rf-blue": {
+  "27": "T2.8",
+  "35": "T2.4",
+  "50": "T2.4"
+ },
+ "different:nikon-nikkor-ai-set-of-5-lenses-converted-ef-mount": {
+  "24": "f/2.8",
+  "35": "f/2",
+  "50": "f/2.8",
+  "85": "f/2",
+  "135": "f/2.8"
+ },
+ "different:helios-cinemod-soviet-lens-set-of-7-ef-mount": {
+  "20": "f/3.5",
+  "28": "f/3.5",
+  "35": "f/2",
+  "50": "f/1.7",
+  "58": "f/2",
+  "85": "f/1.7",
+  "135": "f/2.8"
+ },
+ "different:carl-zeiss-ze-classic-lens-set-y-r": {
+  "21": "f/2.8",
+  "35": "f/1.4",
+  "50": "f/1.4",
+  "85": "f/1.4",
+  "100": "f/2"
+ },
+ "different:carl-zeiss-ze-classic-lens-set-a-r": {
+  "18": "f/3.5",
+  "25": "f/2",
+  "35": "f/1.4",
+  "50": "f/1.4",
+  "85": "f/1.4",
+  "100": "f/2"
+ },
+ "different:mamiya-sekor-c-lens-set-of-7": {
+  "35": "f/3.5",
+  "45": "f/2.8",
+  "55": "f/2.8",
+  "70": "f/2.8",
+  "80": "f/2.8",
+  "110": "f/2.8",
+  "150": "f/3.5"
+ },
+ "different:leica-r-p-s-technik-lens-set-of-6": {
+  "19": "T2.9",
+  "28": "T2.8",
+  "35": "T2.8",
+  "50": "T1.6",
+  "80": "T1.4",
+  "135": "T2.8"
+ },
+ "different:canon-fd-lens-set-of-6-simmod-ef-mount": {
+  "17": "f/4",
+  "24": "f/2.8",
+  "35": "f/2",
+  "50": "f/1.2",
+  "85": "f/1.8",
+  "100": "f/2"
+ },
+ "different:minolta-rokkor-11-lens-set": {
+  "16": "f/2.8",
+  "20": "f/2.8",
+  "24": "f/2.8",
+  "28": "f/2",
+  "35": "f/1.8",
+  "50": "f/1.2",
+  "58": "f/1.2",
+  "85": "f/1.7",
+  "100": "f/2.5",
+  "135": "f/2.8",
+  "200": "f/3.5"
+ },
+ "different:carl-zeiss-jena-lens-set-of-5-ef-mount": {
+  "20": "f/2.8",
+  "35": "f/2.4",
+  "50": "f/1.8",
+  "80": "f/1.8",
+  "135": "f/3.5"
+ },
+ "different:canon-fd-lens-set-of-8-rehoused-pl-mount": {
+  "14": "T2.9",
+  "20": "T2.9",
+  "24": "T1.5",
+  "28": "T2.1",
+  "35": "T2.1",
+  "50": "T1.3",
+  "85": "T1.3",
+  "135": "T2.1"
+ },
+ "different:leica-r-cinemod-lens-set-of-6-ef-mount": {
+  "19": "f/2.8",
+  "24": "f/2.8",
+  "28": "f/2.8",
+  "35": "f/2",
+  "50": "f/2",
+  "90": "f/2"
+ },
+ "different:sigma-dg-dn-c-e-mount-lens-set-of-8": {
+  "17": "f/4",
+  "20": "f/2",
+  "24": "f/2",
+  "35": "f/2",
+  "45": "f/2.8",
+  "50": "f/2",
+  "65": "f/2",
+  "90": "f/2.8"
+ },
+ "different:sigma-dg-dn-art-lens-set-of-5-sony-e": {
+  "20": "f/1.4",
+  "28": "f/1.4",
+  "35": "f/1.4",
+  "50": "f/1.2",
+  "85": "f/1.4"
+ },
+ "different:sony-gm-lens-set-of-4": {
+  "24": "f/1.4",
+  "35": "f/1.4",
+  "50": "f/1.2",
+  "85": "f/1.4"
+ },
+ "different:sony-gm-lens-set-of-6": {
+  "14": "f/1.8",
+  "24": "f/1.4",
+  "35": "f/1.4",
+  "50": "f/1.2",
+  "85": "f/1.4",
+  "135": "f/1.8"
+ },
+ "different:sigma-art-set-of-6-lenses-ef-mount-hsm": {
+  "20": "f/1.4",
+  "28": "f/1.4",
+  "35": "f/1.4",
+  "50": "f/1.4",
+  "85": "f/1.4",
+  "135": "f/1.8"
+ },
+ "different:dji-dl-lens-set-of-5": {
+  "18": "f/2.8",
+  "24": "f/2.8",
+  "35": "f/2.8",
+  "50": "f/2.8",
+  "75": "f/1.8"
  }
 }

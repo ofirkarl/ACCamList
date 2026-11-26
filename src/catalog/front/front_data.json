@@ -459,7 +459,7 @@
   "note": "stock housing"
  },
  "zeiss-standard-speed": {
-  "rx": "^zeiss standard (speed|prime)",
+  "rx": "^zeiss\\b.*\\bstandard (speed|prime)|^zeiss standard lens set",
   "fd": {
    "16": "80",
    "20": "80",

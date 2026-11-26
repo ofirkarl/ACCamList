@@ -18,7 +18,7 @@ RX = [
  ('leitz-summilux-c', r'summilux[- ]c\b'), ('leitz-summicron-c', r'summicron[- ]c\b'), ('leica-m08', r'\bm 0\.8\b'),
  ('angenieux-optimo', r'^angenieux optimo'), ('angenieux-ez', r'^angenieux\b'),
  ('arri-alura', r'\balura\b'),
- ('fujinon-mk', r'^fujinon mk\d'), ('fujinon-xk', r'^fujinon (xk|cabrio premier)'), ('fujinon-zk', r'^fujinon (zk|cine zoom cabrio)'),
+ ('fujinon-mk', r'^fujinon mk\d'), ('fujinon-xk', r'^fujinon (xk|cabrio premier)'), ('fujinon-zk', r'^fujinon (zk|cine zoom cabrio|cabrio\b(?! premier))'),
  ('canon-cine-servo', r'^canon cine zoom 17-120'),
  ('sigma-cine-ff-hs', r'^sigma (cine )?ff high[- ]speed'),
  ('tokina-cinema-macro', r'^tokina cinema at-x 100'), ('tokina-cinema-zoom', r'^tokina (cinema 11-|vista 16-28)'), ('tokina-vista', r'^tokina .*vista'),
