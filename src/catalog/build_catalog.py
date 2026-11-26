@@ -179,7 +179,7 @@ from meta import (title_case, filter_sub, filter_group, filter_sort_key, FILTER_
                   is_txrx, camera_meta, lens_meta, MEDIA_SUBS, MEDIA_ORDER, media_kind, media_group, FF_ORDER, ff_group, POWER_ORDER, power_group,
                   FUNC_GROUPS, func_group)
 
-EXCLUDE = {"sound", "logistics"}  # user asked for camera dept only: no lighting, grip, sound, logistics
+EXCLUDE = {"logistics"}  # camera dept only, plus the grip and sound items the user picked (picks_data.py, different_data.py)
 
 # App UI is English: category and subcategory display names
 EN = {
@@ -222,6 +222,10 @@ SUB_SECTION = {
     "underwater": "accessories", "general": "accessories",
     "power": "power", "media_recorders": "media", "media_other": "media",
     "media": "media", "card_readers": "media", "recorders": "media", "other": "accessories",
+    "stills_flash": "accessories",
+    # Grip and Sound (picked from the houses' grip and sound departments, 26.11.2026)
+    "camera_mounting": "grip", "camera_movement": "grip", "stands": "grip", "clamps": "grip", "boxes": "grip",
+    "sound_wireless": "accessories", "sound_recorders": "accessories", "sound_speakers": "accessories",
 }
 
 
@@ -340,6 +344,10 @@ def build(houses):
                     seen.add(iid)
                     display = title_case(name)
                     item = {"id": iid, "name": display, "brand": brand_of(name), "section": section_of(cat_id, sub_id, name)}
+                    if house["id"] == "different":  # its names often start with a size or a type, not the maker
+                        import different_data as _dd
+                        from brands import GENERIC as _G
+                        item["brand"] = _dd.maker(name, item["brand"], _G)
                     if site_name != display:
                         item["site_name"] = site_name
                     lm = lens_meta(house["id"], cat_id, sub_id, name)
@@ -415,9 +423,12 @@ def build(houses):
 if __name__ == "__main__":
     import sys, os
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import utopia_data
+    import utopia_data, different_data
+    from picks_data import add_picks
     out = sys.argv[1]
-    data, rows = build([(HOUSE, regroup_media(regroup_filters(CATALOG))), (utopia_data.HOUSE, regroup_media(regroup_filters(utopia_data.CATALOG)))])
+    # a house's own sound department stays out: only the sound items the user picked go in
+    prep = lambda h, cat: (h, regroup_media(regroup_filters(add_picks(h["id"], [c for c in cat if c[0] != "sound"]))))
+    data, rows = build([prep(HOUSE, CATALOG), prep(utopia_data.HOUSE, utopia_data.CATALOG), prep(different_data.HOUSE, different_data.CATALOG)])
     with open(f"{out}/ac_cam_list_inventory.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     with open(f"{out}/ac_cam_list_inventory.csv", "w", encoding="utf-8-sig", newline="") as f:

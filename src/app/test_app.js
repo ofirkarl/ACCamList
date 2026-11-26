@@ -960,7 +960,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   A.savedLists().splice(A.savedLists().indexOf(L), 1); A.app.view = "home"; }
 // --- Camera cards: a card for each camera body on the list, the Media Calculator's choices, typed fields, the printed card
 { const keepRules = A.app.settings.rules; A.app.settings.rules = [];
-  const pc = A.newProduction({ name: "Multi", houseId: "utopia", shootStart: "2026-11-20", shootEnd: "2026-11-25" }); A.app.productions.push(pc); pc.updatedAt = Date.now() + 1e6;
+  const pc = A.newProduction({ name: "Multi", houseId: "utopia", shootStart: "2030-11-20", shootEnd: "2030-11-25" }); A.app.productions.push(pc); pc.updatedAt = Date.now() + 1e6;
   const a35 = find("utopia", /^ARRI Alexa 35$/), fx9 = find("utopia", /^Sony PXW-FX9$/i);
   A.setQty(pc, a35, 2); A.setQty(pc, fx9, 1);
   A.app.settings.camList = pc.id; A.app.view = "cams";
@@ -996,7 +996,7 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   modals.length = 0; A.camPicker("sensor"); const ms = modals.pop() || "";
   ok(!/→/.test(ms) && (ms.match(/data-k="sensor"/g) || []).length === 8, "the Sensor coverage list: each sensor area once, no arrows");
   A.app.camFold = true; const hf = A.viewCams(); A.app.camFold = false;
-  ok(/class="cf-l">List<\/span>/.test(h) && /aria-expanded="false"/.test(h) && !/class="cam-fp"/.test(h) && /class="cam-fp"/.test(hf) && /<b>Shoot<\/b> 20–25 Nov 2026/.test(hf) && /data-act="cam-src"/.test(hf), "the list folded in one row; open, the lists to tick and the shoot (and prep) dates");
+  ok(/class="cf-l">List<\/span>/.test(h) && /aria-expanded="false"/.test(h) && !/class="cam-fp"/.test(h) && /class="cam-fp"/.test(hf) && /<b>Shoot<\/b> 20–25 Nov 2030/.test(hf) && /data-act="cam-src"/.test(hf), "the list folded in one row; open, the lists to tick and the shoot (and prep) dates");
   ok((h.match(/class="cam-chip( on)?"/g) || []).length === 3 && /grid-template-columns|cam-chips/.test(h) && /class="iconbtn cb-cmp"/.test(h) && !/ph-sub/.test(h), "the letters in a row of their own; Compare a small button at the top, beside back");
   ok(A.CAM_COLORS.slice(0, 6).join() === "#3ee24b,#e8f20c,#ff2e93,#ff6a10,#e5484d,#1e9be8" && A.camInk("#e8f20c") === "#18171d" && A.camInk("#1e9be8") === "#fff", "colors: fluorescent green, yellow, pink, orange, then red and blue; a dark letter on the bright ones");
   A.app.view = "camprint"; const pr = A.viewCamPrint(); A.app.view = "cams";
@@ -1216,12 +1216,17 @@ ok(!A.qHit("ARRI Alexa Mini", "alxea mini") && A.qHit("ARRI Alexa Mini", "alexx 
   ok((v.match(/data-act="lc-k" data-v="-?1"/g) || []).length === 2 && (v.match(/data-act="lc-zoom" data-v="-?1"/g) || []).length === 2 && /id="lc-zl"[^>]*>1×</.test(v) && /data-act="lc-zoom" data-v="-1"[^>]*disabled/.test(v) && /class="lc-bar"/.test(v) && /data-act="lc-k1"[^>]*hidden/.test(v) && !/Actual size/.test(v), "under the card: its size with − +, back to the first size only once changed; the preview's zoom in steps, from 1×");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); A.app.view = "home"; }
 
+// --- Different (26.11): its catalog, and the grip and sound items picked at every house; a Grip the user made holds the catalog's Grip
+{ const d = A.houseById("different"), u = A.houseById("utopia"), all = h => h.categories.flatMap(c => c.subcategories.flatMap(s => s.items));
+  ok(d && all(d).length > 1000 && d.categories.some(c => c.id === "sound") && all(d).some(i => /Zeiss Ultra Prime 50mm/i.test(i.name)) && all(d).some(i => /Hollyland LARK MAX/i.test(i.name)), "Different: its camera department and lenses, and its picked sound");
+  const g = u.categories.filter(c => /^grip$/i.test(c.name.trim()));
+  ok(g.length === 1 && all({ categories: g }).some(i => /MOVMAX Slider 90cm/i.test(i.name)) && all(u).some(i => /ZOOM F8/i.test(i.name)), "Utopia: the picked grip in one Grip category, and its picked sound"); }
 // --- Lens card: lines from a Word list or typed by hand are matched to catalog lenses by name, or read from their own name
 { const m = A.newProduction({ houseId: "utopia", name: "Word list" }); A.app.productions.push(m);
-  for (const n of ["ARRI Signature Prime Set Of 8", "Cooke S4i T2/32mm", "Cooke 50mm", "Matte box MB-20", "Zeiss Master Macro 100 (PL Mount)"]) { const id = A.addCustomLine(m, n, "lenses"); m.items[id].qty = 1; }
+  for (const n of ["ARRI Signature Prime Set Of 8", "Cooke S4i T2/32mm", "Zeiss 50mm", "Matte box MB-20", "Zeiss Master Macro 100 (PL Mount)"]) { const id = A.addCustomLine(m, n, "lenses"); m.items[id].qty = 1; }
   const R = A.lcRows(m), sig = R.sets.find(r => /Signature/.test(r.name));
   ok(sig && sig.lenses.length === 8 && sig.lenses[7].cf === "3'4\"", "a set typed by name: found in the catalog (Signature Prime set of 8), close focus and all");
-  ok(R.ones.some(r => r.mm === "32" && r.cf === "1'") && R.ones.some(r => r.name === "Cooke" && r.mm === "50" && !r.cf), "one lens matched by name; one that fits many (Cooke 50mm) read from its own name, no close focus guessed");
+  ok(R.ones.some(r => r.mm === "32" && r.cf === "1'") && R.ones.some(r => r.name === "Zeiss" && r.mm === "50" && !r.cf), "one lens matched by name; one that fits many (Zeiss 50mm) read from its own name, no close focus guessed");
   ok(!R.ones.some(r => /Matte/.test(r.name)) && R.ones.some(r => /Master Macro/.test(r.name) && r.cf === "1'1\u00be\""), "not a lens: left out; the Master Macro (no mm in its name) is in");
   A.app.productions.splice(A.app.productions.indexOf(m), 1); }
 { const m = A.newProduction({ houseId: "fitussi", name: "Thypoch" }); A.app.productions.push(m);

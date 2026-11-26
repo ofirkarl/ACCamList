@@ -1113,11 +1113,11 @@ h2.page, .ph-name, .f-title { font-family: var(--font-body); font-weight: 700; f
 }
 
 /* ---- home: a greeting, then the productions with their status and rental house ---- */
-:root { --house-utopia: #cc4f0a; --house-fitussi: #7e3af2;
+:root { --house-utopia: #cc4f0a; --house-fitussi: #7e3af2; --house-different: #0b7a55;
   --b1: #e5484d; --b2: #f5a524; --b3: #22b45e; --b4: #1e9be8; --b5: #4f46e5; --b6: #d946ef; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --house-utopia: #ff9a5c; --house-fitussi: #b39dff;
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --house-utopia: #ff9a5c; --house-fitussi: #b39dff; --house-different: #5fd4a0;
   --b1: #f2696d; --b2: #f7ba4d; --b3: #4ade80; --b4: #4cc2f1; --b5: #8b87ff; --b6: #e879f9; } }
-:root[data-theme="dark"] { --house-utopia: #ff9a5c; --house-fitussi: #b39dff;
+:root[data-theme="dark"] { --house-utopia: #ff9a5c; --house-fitussi: #b39dff; --house-different: #5fd4a0;
   --b1: #f2696d; --b2: #f7ba4d; --b3: #4ade80; --b4: #4cc2f1; --b5: #8b87ff; --b6: #e879f9; }
 .greet { display: grid; }
 .greet .gr-date { margin: 0; font-size: 13px; font-weight: 500; color: var(--muted); }
@@ -1135,6 +1135,7 @@ h2.page, .ph-name, .f-title { font-family: var(--font-body); font-weight: 700; f
 .pc-house::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: currentColor; }
 .pc-house[data-house="utopia"] { --hc: var(--house-utopia); }
 .pc-house[data-house="fitussi"] { --hc: var(--house-fitussi); }
+.pc-house[data-house="different"] { --hc: var(--house-different); }
 
 /* ---- the first open: color bars, what the app does, your name ---- */
 body.welcome-on { margin: 0; }
@@ -2424,6 +2425,7 @@ button, a, label, summary, [data-act], [data-lp] { -webkit-tap-highlight-color: 
    --house-<id> color), and change as another house is picked */
 html[data-house="utopia"] body.form-on { --hc: var(--house-utopia); }
 html[data-house="fitussi"] body.form-on { --hc: var(--house-fitussi); }
+html[data-house="different"] body.form-on { --hc: var(--house-different); }
 html[data-house] body.form-on { --accent: var(--hc); --accent-fg: #fff; --accent-soft: color-mix(in srgb, var(--hc) 10%, var(--surface));
   --sf: var(--hc); --sf-ink: color-mix(in srgb, var(--hc) 72%, #000); --sf-tint: color-mix(in srgb, var(--hc) 7%, var(--surface)); --sf-line: color-mix(in srgb, var(--hc) 30%, var(--line)); --sf-on: color-mix(in srgb, var(--hc) 15%, var(--surface));
   --bg: color-mix(in srgb, var(--hc) 7%, #f8f7f4); }
@@ -3377,7 +3379,7 @@ function customDef(h, k) {
 /* category colors: a palette that has a light and a dark shade of each color, or any color the user picks.
    Kept in settings.catColors by category id, so Cameras has the same color at every rental house. */
 const PALETTE = [["red", "Red"], ["orange", "Orange"], ["amber", "Amber"], ["olive", "Olive"], ["green", "Green"], ["teal", "Teal"], ["sky", "Sky"], ["blue", "Blue"], ["indigo", "Indigo"], ["violet", "Violet"], ["pink", "Pink"], ["slate", "Slate"]];
-const DEFAULT_PAL = { camera: "red", lenses: "amber", camera_accessories: "blue", filters: "violet" };
+const DEFAULT_PAL = { camera: "red", lenses: "amber", camera_accessories: "blue", filters: "violet", grip: "olive", sound: "teal" };
 const defaultPal = c => DEFAULT_PAL[c.id] || "slate";
 /* each category and gear list section has a small icon on its color tile */
 const TAPE_ICONS = {
@@ -3391,9 +3393,10 @@ const TAPE_ICONS = {
   bolt: '<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z"/>',
   grip: '<path d="M7 4h7a4 4 0 0 1 4 4v1h-3.5V7.5h-6v9h6V15H18v1a4 4 0 0 1-4 4H7z"/>',
   box: '<path d="M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9"/>',
-  tag: '<path d="M3.5 12.5V3.5h9l8 8-9 9z"/><circle cx="8" cy="8" r="1.5"/>'
+  tag: '<path d="M3.5 12.5V3.5h9l8 8-9 9z"/><circle cx="8" cy="8" r="1.5"/>',
+  mic: '<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v4M8.5 21.5h7"/>'
 };
-const TAPE_OF = { camera: "cam", lens: "lens", lenses: "lens", accessories: "knob", camera_accessories: "knob", filters: "filter", support: "tripod", display: "monitor", media: "card", power: "bolt", grip: "grip", aks: "box" };
+const TAPE_OF = { camera: "cam", lens: "lens", lenses: "lens", accessories: "knob", camera_accessories: "knob", filters: "filter", support: "tripod", display: "monitor", media: "card", power: "bolt", grip: "grip", aks: "box", sound: "mic" };
 const TAPE_BY_NAME = [[/grip/i, "grip"], [/power|batter/i, "bolt"], [/monitor|display|video village/i, "monitor"], [/media|card|storage/i, "card"], [/support|tripod|head/i, "tripod"], [/filter/i, "filter"], [/lens/i, "lens"], [/accessor/i, "knob"], [/camera/i, "cam"]];
 const tapeIcon = (key, name = "") => { const k = TAPE_OF[key] || (TAPE_BY_NAME.find(([re]) => re.test(name)) || [])[1] || "tag";
   return `<span class="tape" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TAPE_ICONS[k]}</svg></span>`; };
@@ -3487,6 +3490,13 @@ function applyCatalog() {
     for (const us of ed.subs || []) {
       const c = h.categories.find(x => x.id === us.c);
       if (c) c.subcategories.push(mkSub({ id: us.id, name: us.name }, us.c + "/" + us.id, { custom: true, section: us.section }));
+    }
+    // a category of the catalog with the name of one the user made (his own Grip, 26.11): one category, the user's, holding both
+    for (const uc of h.categories.filter(c => c.custom)) {
+      const b = h.categories.find(c => !c.custom && c.name.trim().toLowerCase() === uc.name.trim().toLowerCase());
+      if (!b) continue;
+      uc.subcategories.push(...b.subcategories); uc.merged = b.id;
+      h.categories.splice(h.categories.indexOf(b), 1);
     }
     // items placed straight in a category, with no subcategory
     for (const c of h.categories) { c.direct = { id: "_", key: c.id + "/_", name: "", direct: true, items: [] }; subs.set(c.direct.key, c.direct); }
@@ -4632,7 +4642,7 @@ const REC_OF = [[/alexa 35 (xtreme|extreme)/i, "alexa35xtreme"], [/alexa 35/i, "
   [/\bb?s1h\b/i, "s1h"], [/\bbgh1\b/i, "bgh1"], [/gh5s/i, "gh5s"], [/micro cinema camera/i, "microcinema"],
   [/a7 iv|a7iv/i, "sonySI4K"], [/fx3|fx30|fx2\b|a7s (mark )?iii|a7s3/i, "sonySI"], [/a7s (mark )?ii\b|alpha a7s$|a7 (mark )?iii|alpha a7 mark iii/i, "sonyS"],
   [/komodo/i, "komodo"], [/helium/i, "helium"], [/dragon/i, "dragon"],
-  [/c400/i, "c400"], [/c500 mark ii/i, "c500"], [/c80\b/i, "c80"], [/c70\b/i, "c70"], [/c300 mark ii/i, "c300ii"], [/c300\b/i, "c300"],
+  [/c400/i, "c400"], [/c500 mark ii/i, "c500"], [/c80\b/i, "c80"], [/c70\b/i, "c70"], [/c300 mark ii\b/i, "c300ii"], [/c300\b(?! mark ?(iii|3)\b)/i, "c300"],
   [/pyxis 6k/i, "pyxis6k"], [/pyxis 12k/i, "pyxis12k"], [/ursa mini pro 12k/i, "ursa12k"], [/ursa mini pro 4\.6k/i, "ursa46"], [/pocket cinema camera 4k/i, "pocket4k"], [/pocket cinema camera 6k/i, "pocket6k"],
   [/ronin 4d/i, "ronin4d"]];
 const recProfile = name => { const hit = REC_OF.find(([re]) => re.test(name || "")); return hit ? REC[hit[1]] || null : null; };
@@ -5411,7 +5421,7 @@ function greetHtml() {
   return `<div class="greet${app.justWelcomed ? " hello" : ""}"><p class="gr-date">${esc(date)}</p><h2 class="page gr-hi">${text}</h2></div>`;
 }
 /* the first open: what the app does, and your name for the lists */
-const WELCOME_STEPS = [["camera", "Pick the rental house", "Utopia or Fitussi, with its whole catalog"], ["lenses", "Add the gear", "Search, tap, set how many"], ["camera_accessories", "Send the list", "As a PDF or a Word file"]];
+const WELCOME_STEPS = [["camera", "Pick the rental house", "Utopia, Fitussi or Different, with its whole catalog"], ["lenses", "Add the gear", "Search, tap, set how many"], ["camera_accessories", "Send the list", "As a PDF or a Word file"]];
 /* the welcome's Google sign-in: a clear second way in, beside typing a name. It appears as soon as the installed app's sign-in is
    ready (filled into its place, so it never interrupts typing); signed in, it says with which account */
 function wlAuthHtml() {
@@ -8127,7 +8137,9 @@ const mcFreeHead = (list, id) => list.length > 1 ? `<div class="mc-head"><span>C
 const mcCamList = (p, F, fid) => `<div class="mc-panel mc-cams"><label class="mc-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><input data-sug="search" type="search" data-mcs placeholder="Search cameras" aria-label="Search cameras" autocomplete="off" enterkeyhint="search"></label>${mcFreeCams(p.houseId).map(k => `<button type="button" class="mc-opt wrap${k === F.id ? " on" : ""}" data-act="mc-pick" data-id="${fid}" data-k="cam" data-v="${esc(k)}" aria-pressed="${k === F.id}"><span class="t-a">${esc(ITEM.get(k).it.name)}</span></button>`).join("")}<p class="mc-none" hidden>No camera by that name</p></div>`;
 /* the same camera at both rental houses under different names: one key, so the camera lists show it once */
 const CAM_SAME = [[/^sony (ilme-)?fx3$/i, "fx3"], [/^sony venice( 6k)?$/i, "venice"], [/^dji ronin 4d\b/i, "ronin4d"], [/^gopro hero ?black ?7$|^gopro hero7 black$/i, "gopro7"], [/^arri alexa 35( production set.*)?$/i, "alexa35"]];
-const camModelKey = n => { for (const [re, k] of CAM_SAME) if (re.test(n.trim())) return "=" + k; return qKey(n); };
+/* one camera model however a rental house writes it: "Sony FX6 Full-Frame Cinema Camera", "SONY PXW-FX6", "SONY PXW FX6" */
+const camModelBase = n => n.trim().replace(/\s+(full-frame |digital |s35 )*(cinema |mirrorless |digital |box |action )*camera$/i, "").replace(/^sony (pxw|ilme)[- ]?/i, "Sony ").replace(/^canon (eos )?/i, "Canon ");
+const camModelKey = n => { const b = camModelBase(n); for (const [re, k] of CAM_SAME) if (re.test(b)) return "=" + k; return qKey(b); };
 const mcFreeCams = houseId => { const seen = new Set();
   return [...ITEM.keys()].filter(k => { const x = ITEM.get(k); if (!(houseId === "any" || x.h.id === houseId) || !hasRec(x) || /\bfor\b/i.test(x.it.name)) return false; const n = camModelKey(x.it.name); if (seen.has(n)) return false; seen.add(n); return true; }).sort((a, b) => ITEM.get(a).it.name.localeCompare(ITEM.get(b).it.name)); };
 function mediaCamHtml(p, id) {
