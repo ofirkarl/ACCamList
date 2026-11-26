@@ -1,6 +1,6 @@
 # Different (diff-e-rent.com): its camera department and lens collection in full, its stills gear, and the grip and sound
 # items the user picked (Gear to add, 26.11.2026). Read from the site 26.11.2026.
-HOUSE = {"id": "different", "name": "Different", "website": "https://www.diff-e-rent.com/", "scraped_at": "2026-11-26"}
+HOUSE = {"id": "different", "name": "Diff-e-rent", "website": "https://www.diff-e-rent.com/", "scraped_at": "2026-11-26"}
 
 CATALOG = [
     ("camera", "Cameras", [

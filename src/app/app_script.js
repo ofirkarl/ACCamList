@@ -2379,7 +2379,7 @@ function greetHtml() {
   return `<div class="greet${app.justWelcomed ? " hello" : ""}"><p class="gr-date">${esc(date)}</p><h2 class="page gr-hi">${text}</h2></div>`;
 }
 /* the first open: what the app does, and your name for the lists */
-const WELCOME_STEPS = [["camera", "Pick the rental house", "Utopia, Fitussi or Different, with its whole catalog"], ["lenses", "Add the gear", "Search, tap, set how many"], ["camera_accessories", "Send the list", "As a PDF or a Word file"]];
+const WELCOME_STEPS = [["camera", "Pick the rental house", "Utopia, Fitussi or Diff-e-rent, with its whole catalog"], ["lenses", "Add the gear", "Search, tap, set how many"], ["camera_accessories", "Send the list", "As a PDF or a Word file"]];
 /* the welcome's Google sign-in: a clear second way in, beside typing a name. It appears as soon as the installed app's sign-in is
    ready (filled into its place, so it never interrupts typing); signed in, it says with which account */
 function wlAuthHtml() {
