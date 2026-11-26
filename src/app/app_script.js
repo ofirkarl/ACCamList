@@ -1295,7 +1295,7 @@ async function initAccount() {
       // (even a change still on its way up) stays and is sent up
       setStamp();
       const m = setMerge(app.settings, rset.data());
-      if (m.fromR) { app.settings = upData({ favorites: {}, rules: [], ...m.s }, "settings"); applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); setPrevReset(); changed = true; }
+      if (m.fromR) { app.settings = upData({ favorites: {}, rules: [], ...m.s }, "settings"); if (migrateDups1()) setTimeout(touchSettings, 0); applyCatalog(); app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); setPrevReset(); changed = true; }
       else if (stab(m.s.gone) !== stab(app.settings.gone)) { app.settings.gone = m.s.gone; lsPut(LS_SET, app.settings); changed = true; }
       if (m.fromL) { if (!m.fromR) app.settings._t = m.s._t; schedule(SETTINGS_ID); }
     }
@@ -9097,6 +9097,27 @@ document.addEventListener("keydown", e => {
   document.querySelector(`[data-drag="line"][data-id="${CSS.escape(id)}"]`)?.focus();
 });
 
+/* the duplicates review of 26.11 (Utopia): what the user chose, done once on his own catalog. True when it changed something */
+function migrateDups1() {
+  const st = app.settings; if ((st.migr || {}).dups1) return false;
+  const ed = (st.catalog || {}).utopia; (st.migr || (st.migr = {})).dups1 = 1;
+  if (!ed) return true;
+  const cat = n => (ed.cats || []).find(c => c.name.trim().toLowerCase() === n);
+  const grip = cat("grip"), aks = cat("aks");
+  if (Array.isArray(ed.newItems)) {
+    ed.newItems = ed.newItems.filter(d => !(grip && d.c === grip.id && ["Danna Dolly", "Apple Box 10", "Apple Box 20", "Mafer"].includes(d.name)));
+    for (const d of ed.newItems) {
+      const m = /^Metallini (Long|Short)$/.exec(d.name);
+      if (m) Object.assign(d, { name: "Matthews Matthellini " + m[1], brand: "Matthews", sku: "LA-MET", c: "grip", s: "clamps", section: "grip" });
+    }
+  }
+  const io = ed.items || (ed.items = {});
+  for (const n of ["5", "10", "20", "30", "40"]) io["utopia:utopia-apple-box-50x30x" + n] = { ...(io["utopia:utopia-apple-box-50x30x" + n] || {}), name: "Utopia Apple Box " + n };
+  (ed.hidden || (ed.hidden = {}))["utopia:matthews-matthellini-clamp"] = true;
+  if (aks) io["utopia:utopia-magliner-cart"] = { ...(io["utopia:utopia-magliner-cart"] || {}), c: aks.id, s: "_", section: "accessories" };
+  return true;
+}
+
 /* ---------- start ---------- */
 app.productions = lsGet(LS_KEY, []);
 if (!Array.isArray(app.productions)) app.productions = [];
@@ -9108,6 +9129,7 @@ unitRepair();
   else Object.assign(app.settings, { catalog: clone(STARTER.catalog), closedBrands: clone(STARTER.closedBrands), catColors: clone(STARTER.catColors) });  // first open: the starting catalog
   if (!app.settings.mediaSeeded) { app.settings.mediaSeeded = true; lsPut(LS_SET, app.settings); }
   upData(app.settings, "settings");
+  if (migrateDups1()) { if (s && typeof s === "object") touchSettings(); else lsPut(LS_SET, app.settings); }   // a first open only takes the result, it changes nothing to send
   setPrevReset();
   applyCatalog();
   const ui = lsGet(LS_UI, {}), recent = ui.at && Date.now() - ui.at < RESUME_MS;
