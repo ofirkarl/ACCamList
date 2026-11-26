@@ -73,14 +73,16 @@ for (const h of HOUSES) for (const c of h.categories) for (const s of c.subcateg
 function flatKey(t) { return String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 /* a house that has a camera has its cards (Ofir, 26.11): a card type its cameras record on that the catalog doesn't list gets a
    generic card in Media, so the cards suggestion and the packages always have one to offer */
-const CARD_SIZE = { "Codex Compact Drive": "1TB" };   // the size a generic card is written with (Ofir, 26.11)
+const CARD_SIZE = { "Codex Compact Drive": "1TB", "AXS": "1TB", "SxS": "128GB", "RED Mini-Mag": "512GB", "DJI PROSSD": "1TB", "CFexpress Type B": "512GB",
+  "microSD": ["8GB", "16GB", "32GB", "64GB", "128GB", "256GB"] };   // the size(s) a generic card is written with (Ofir, 26.11); a list makes one card per size
 const CARD_NAME = { "Codex Compact Drive": "Codex Compact Drive", "AXS": "AXS Memory Card", "RED Mini-Mag": "RED Mini-Mag", "DJI PROSSD": "DJI PROSSD", "SSD": "SSD Drive", "P2 / expressP2": "P2 Card" };
 for (const h of HOUSES) {
   const media = h.categories.flatMap(c => c.subcategories).find(s => s.id === "media"); if (!media) continue;
   const have = new Set(media.items.map(it => it.group)), need = [];
   for (const c of h.categories) for (const s of c.subcategories) for (const it of s.items) for (const t of (it.camera && !it.camera.film && it.camera.media) || []) if (!have.has(t) && !need.includes(t)) need.push(t);
   for (const t of need) {
-    media.items.push({ id: h.id + ":card-" + flatKey(t), name: (CARD_NAME[t] || t + " Card") + (CARD_SIZE[t] ? " " + CARD_SIZE[t] : ""), brand: "Generic", section: (media.items[0] || {}).section || "media", group: t, generic: true });
+    const sz = [].concat(CARD_SIZE[t] || "");
+    sz.forEach((s, i) => media.items.push({ id: h.id + ":card-" + flatKey(t) + (i ? "-" + flatKey(s) : ""), name: (CARD_NAME[t] || t + " Card") + (s ? " " + s : ""), brand: "Generic", section: (media.items[0] || {}).section || "media", group: t, generic: true }));
     if (media.groups && !media.groups.includes(t)) media.groups.push(t);
   }
 }

@@ -1082,15 +1082,15 @@ ok(!/data-act="rename-sec" data-k="camera"/.test(vlist2), "the Camera List's own
   const miss = []; for (const [id, e] of A.ITEM) { const prof = A.recProfile(e.it.name); if (!prof) continue; for (const cd of prof) for (const m of cd.m) { const key = m[0].split(" → ")[0]; if (!cd.m.every(x => /^(UHD|4K DCI|HD|C4K|2K)$/.test(x[0]))) continue; const sc = A.camScanOf(e, cd, key, Math.min(25, m[3] || 25)); if (!sc || !sc.length) miss.push(e.it.name + " · " + cd.n + " · " + key); } }
   ok(!miss.length, "every file-only format has its sensor coverage" + (miss.length ? ": missing " + [...new Set(miss)].slice(0, 6).join("; ") : ""));
   Object.assign(c, keep); A.app.settings.camList = keepList; }
+const ITEM_NAME = id => (A.ITEM.get(id) || { it: { name: "" } }).it.name;
 // --- Media whose size the catalog doesn't give (Fitussi's "CFast Card"): its size is chosen, then the recording time shows
 { const keepList = A.app.settings.camList, made = [];
   const fm = A.newProduction({ houseId: "fitussi", name: "Mini" }); A.app.productions.push(fm); made.push(fm);
   const mini = find("fitussi", /^ARRI Alexa Mini$/); A.setQty(fm, mini, 1); A.app.settings.camList = fm.id;
   const c = A.camsOf(fm)[0]; let v = A.camVals(fm, c);
-  ok(v.gbAsk && !v.per && !/data-k="gb"/.test(A.camFormHtml(fm, c)) && /Tap to choose its size/.test(A.camFormHtml(fm, c)), "a card with no size in the catalog: no extra field, it asks for its size");
-  A.camPicker("card"); const sh = A.modalsSeen ? "" : ""; 
-  A.camSetVal(fm, c, "card", c.rec.card + "@256"); v = A.camVals(fm, c);
-  ok(c.rec.gb === 256 && v.per && /CFast 256GB/.test(v.media), "its size chosen: the recording time, and the size on the card (" + v.per + ")");
+  ok(!v.gbAsk && v.per && /CFast Card (128|256)GB/.test(ITEM_NAME(c.rec.card)) && v.cards.length === 2, "Fitussi's CFast cards carry their sizes (128GB, 256GB): the recording time shows right away (" + v.per + ")");
+  const gx = A.ITEM.get("fitussi:card-microsd-64gb"), gc = A.ITEM.get("fitussi:card-axs");
+  ok(gx && /microSD Card 64GB/.test(gx.it.name) && gc && /AXS Memory Card 1TB/.test(gc.it.name), "generic cards carry a size; microSD, one card per size");
   A.app.settings.camList = "none"; const fp = A.camCur(), b = A.camsOf(fp)[0], keep = { id: b.id, rec: b.rec };
   b.rec = {}; A.camSetVal(fp, b, "cam", mini); b.rec.card = undefined; v = A.camVals(fp, b);
   ok(v.per && !v.gbAsk && v.cards.length >= 3, "no list: cards from every house, starting on one whose size is known");

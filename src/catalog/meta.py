@@ -194,7 +194,7 @@ def media_group(n):
     types = []
     for pat, g in [(r"codex", "Codex Compact Drive"), (r"\baxs\b|axs-", "AXS"), (r"cfexpress.*type a|type a", "CFexpress Type A"),
                    (r"cfexpress", "CFexpress Type B"), (r"cfast", "CFast 2.0"), (r"sxs", "SxS"), (r"xqd", "XQD"),
-                   (r"p2", "P2 / expressP2"), (r"mini-?mag|redmag", "RED Mini-Mag"), (r"prossd", "DJI PROSSD"),
+                   (r"p2", "P2 / expressP2"), (r"mini-?mag|redmag", "RED Mini-Mag"), (r"prossd|4d pro ssd", "DJI PROSSD"),
                    (r"micro\s?sd", "microSD"), (r"\bssd\b|\bt5\b", "SSD"), (r"\bsd\b|sdxc|sd card|sd memory|v90", "SD"), (r"\bcf\b", "CF")]:
         if re.search(pat, n, re.I) and g not in types:
             if g == "CFexpress Type B" and "CFexpress Type A" in types:

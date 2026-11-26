@@ -300,6 +300,18 @@ VARIANTS = {
     "utopia:angenieux-ez-3-45-165mm-t2-3-super35-68-250mm-t3-5-full-frame-pl-e-ef-mount": _ez(3, "45-165mm", "T2.3", "68-250mm", "T3.5"),
     "utopia:cartoni-focus-22-fluid-head-150-100mm": [{"name": "Cartoni Focus 22 Fluid Head 100mm"}, {"id": "-150mm", "name": "Cartoni Focus 22 Fluid Head 150mm"}],
 }
+# Fitussi's cards, one line per size it rents (sizes from Ofir, 26.11); the size without an "id" keeps the item's id
+def _sizes(base, keep, *sizes):
+    return [{**({} if s == keep else {"id": "-" + s.lower()}), "name": f"{base} {s}"} for s in sizes]
+VARIANTS.update({
+    "fitussi:cfast-card": _sizes("CFast Card", "256GB", "128GB", "256GB"),
+    "fitussi:xqd-card": _sizes("XQD Card", "64GB", "64GB", "120GB", "128GB"),
+    "fitussi:sxs-card": _sizes("SxS Card", "128GB", "64GB", "128GB"),
+    "fitussi:sd-memory-card": _sizes("SD Memory Card", "64GB", "64GB", "128GB"),
+    "fitussi:v90-sd-memory-card": _sizes("V90 SD Memory Card", "64GB", "64GB", "128GB", "256GB"),
+    "fitussi:p2-express-card-512g-256g": _sizes("P2 Express Card", "512GB", "256GB", "512GB"),
+    "different:cfast-512": [{"name": "CFast 512GB"}],  # "512" on the site is GB (Ofir, 26.11)
+})
 def with_variants(item):
     vs = VARIANTS.get(item["id"])
     if not vs:
