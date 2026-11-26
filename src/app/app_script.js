@@ -734,7 +734,8 @@ const X_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stro
 const LINK_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/></svg>`;
 const safeUrl = u => { if (!/^https?:\/\//i.test(u || "")) return ""; try { return encodeURI(decodeURI(u)); } catch (e) { return ""; } };
 const linkHtml = (it, h) => it && safeUrl(it.url) ? `<a class="ext" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer" title="Product page${h ? " on " + esc(h.name) : ""}" aria-label="Open ${esc(it.name)} on ${esc(h ? h.name : "the rental house")}'s site">${LINK_ICON}</a>` : "";
-const noteHtml = id => noteOf(id) ? `<span class="inote">${esc(noteOf(id))}</span>` : "";
+const genNote = id => { const e = ITEM.get(id); return e && e.it.generic ? `Not in ${e.h.name}'s catalog. Check with them.` : ""; };   // the generic cards added for a camera
+const noteHtml = id => (genNote(id) ? `<span class="inote">${esc(genNote(id))}</span>` : "") + (noteOf(id) ? `<span class="inote">${esc(noteOf(id))}</span>` : "");
 /* drag a subcategory: into a category, before or after another subcategory */
 /* a subcategory dropped by a block of its category's own items (items in no subcategory, which sit after the subcategory they
    were put by): just above that block, or just below it */
@@ -2275,7 +2276,7 @@ function cardPicker(p, camId) {
   if (app.settings.noCardAsk || typeof document === "undefined" || document.getElementById("modal")) return;
   const e = ITEM.get(camId); if (!e || !e.it.camera) return;
   const groups = cardsFor(p, e); if (!groups.length) return;
-  const row = m => `<li><span class="info"><span class="nm-row"><span class="nm">${esc(m.it.name)}</span>${linkHtml(m.it, m.h)}</span>${p.items[m.it.id] ? `<span class="specs"><span>${lineQty(p.items[m.it.id])} already on the list</span></span>` : ""}</span>
+  const row = m => `<li><span class="info"><span class="nm-row"><span class="nm">${esc(m.it.name)}</span>${linkHtml(m.it, m.h)}</span>${p.items[m.it.id] ? `<span class="specs"><span>${lineQty(p.items[m.it.id])} already on the list</span></span>` : ""}${genNote(m.it.id) ? `<span class="inote">${esc(genNote(m.it.id))}</span>` : ""}</span>
       <span class="stepper sm"><button type="button" data-act="pk-dec" data-id="${esc(m.it.id)}" aria-label="Fewer">−</button><input type="number" min="0" max="9" inputmode="numeric" value="0" data-pick="${esc(m.it.id)}" aria-label="${esc(m.it.name)} to add"><button type="button" data-act="pk-inc" data-id="${esc(m.it.id)}" aria-label="More">+</button></span></li>`;
   showModal(`<form class="form dialog" id="cardForm" autocomplete="off">
     <h3 class="plain">Cards for the ${esc(shortName(e.it.name))}</h3>
