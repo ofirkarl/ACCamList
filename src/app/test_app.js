@@ -1088,7 +1088,7 @@ const ITEM_NAME = id => (A.ITEM.get(id) || { it: { name: "" } }).it.name;
   const fm = A.newProduction({ houseId: "fitussi", name: "Mini" }); A.app.productions.push(fm); made.push(fm);
   const mini = find("fitussi", /^ARRI Alexa Mini$/); A.setQty(fm, mini, 1); A.app.settings.camList = fm.id;
   const c = A.camsOf(fm)[0]; let v = A.camVals(fm, c);
-  ok(!v.gbAsk && v.per && /CFast Card (128|256)GB/.test(ITEM_NAME(c.rec.card)) && v.cards.length === 2, "Fitussi's CFast cards carry their sizes (128GB, 256GB): the recording time shows right away (" + v.per + ")");
+  ok(!v.gbAsk && v.per && /CFast Card (128|256|512)GB/.test(ITEM_NAME(c.rec.card)) && v.cards.length === 3, "Fitussi's CFast cards carry their sizes (128GB, 256GB, 512GB): the recording time shows right away (" + v.per + ")");
   const gx = A.ITEM.get("fitussi:card-microsd-64gb"), gc = A.ITEM.get("fitussi:card-axs");
   ok(gx && /microSD Card 64GB/.test(gx.it.name) && gc && /AXS Memory Card 1TB/.test(gc.it.name), "generic cards carry a size; microSD, one card per size");
   A.app.settings.camList = "none"; const fp = A.camCur(), b = A.camsOf(fp)[0], keep = { id: b.id, rec: b.rec };
