@@ -16,7 +16,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon-v5.png">
 <script src="config.js"></script>
 <script>
-window.AC_BUILD = "202611261827";
+window.AC_BUILD = "202611261904";
 /* AC Cam List outside Claude: the same small surface the app asks Claude for (db, user, downloads),
    answered by Firebase (Firestore + sign-in) when config.js has a project, and by nothing otherwise,
    so the app keeps everything in this browser on its own. */
@@ -1863,6 +1863,8 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
 /* double arrows: all subcategories of an open category, right after its name */
 #tree .cat-all { flex: none; width: 28px; height: 28px; margin-block: -6px; margin-inline-start: -4px; display: grid; place-items: center; color: var(--muted); border-radius: 8px; }
 #tree .cat-all svg { width: 16px; height: 16px; }
+#tree .cat-all { position: relative; }
+#tree .cat-all::after { content: ""; position: absolute; inset: -8px; }   /* a 44px finger target around the small arrow, so a tap near it opens all instead of folding the row */
 #tree details.cat:not([open]) > summary .cat-all { display: none; }
 #tree details.sub:not([open]) > summary .cat-all { display: none; }
 .search-row .tree-all[hidden] { display: none; }
