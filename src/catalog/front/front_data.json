@@ -479,5 +479,90 @@
   "check": "2 rental houses",
   "src": "https://www.keslowcamera.com/gear/zeiss-standard-speed-primes/ + https://lemac.com.au/Rentals/ZeissMKIIStandardSpeeds.aspx",
   "note": "10mm and 14mm from Keslow only"
+ },
+ "schneider-xenon-ff": {
+  "src": "https://www.bpm-media.de/media/pdf/60/a6/60/EN_Schneider-Kreuznach_Xenon_FF-Primes_Brochure.pdf (Schneider-Kreuznach brochure)",
+  "fd": {
+   "18": "100",
+   "25": "100",
+   "35": "100",
+   "50": "100",
+   "75": "100",
+   "100": "100"
+  }
+ },
+ "samyang-v-af": {
+  "src": "https://www.lksamyang.com/en/product/v-af (LK Samyang specifications, MFD in m)",
+  "fd": {
+   "20": "70",
+   "24": "70",
+   "35": "70",
+   "45": "70",
+   "75": "70",
+   "100": "70"
+  }
+ },
+ "blazar-remus": {
+  "src": "https://www.newsshooter.com/2023/12/05/blazar-remus-1-5x-full-frame-anamorphic-lens-review/ (Blazar specs as published: MFD in feet; 80mm outer diameter for the series)",
+  "fd": {
+   "33": "80",
+   "45": "80",
+   "65": "80",
+   "100": "80"
+  }
+ },
+ "dzofilm-arles": {
+  "src": "https://dzofilm.com/products/arles-prime (DZOFilm spec table)",
+  "fd": {
+   "14": "95",
+   "21": "95",
+   "25": "95",
+   "35": "95",
+   "40": "95",
+   "50": "95",
+   "75": "95",
+   "100": "95",
+   "135": "95",
+   "180": "95"
+  }
+ },
+ "dzofilm-gnosis": {
+  "src": "https://www.dzofilm.com/products/gnosis-macro (DZOFilm spec table)",
+  "fd": {
+   "24": "114",
+   "32": "114",
+   "65": "114",
+   "90": "114"
+  }
+ },
+ "dzofilm-pictor": {
+  "src": "https://dzofilm.com/products/pictor-zoom (DZOFilm spec table)",
+  "fd": {
+   "12-25": "95",
+   "20-55": "95",
+   "50-125": "95"
+  }
+ },
+ "xeen-cf": {
+  "src": "https://xeenglobal.com/en/m/xeen-cf.php (XEEN CF specifications)",
+  "fd": {
+   "16": "95",
+   "24": "95",
+   "35": "95",
+   "50": "95",
+   "85": "95"
+  }
+ },
+ "veydra": {
+  "src": "https://www.provideocoalition.com/first-look-veydra-mini-primes-for-micro-four-thirds/ (Veydra figures from the focal plane; 80mm front for the series)",
+  "fd": {
+   "12": "80",
+   "16": "80",
+   "19": "80",
+   "25": "80",
+   "35": "80",
+   "50": "80",
+   "85": "80"
+  }
  }
 }

@@ -628,7 +628,7 @@
   "note": "Canon gives metres; converted to the nearest inch. 16-35 f/2.8L: every version 0.28 m; 24-105 f/4L: both versions 0.45 m"
  },
  "sigma-art": {
-  "src": "https://www.afcinema.com/IMG/pdf/e/8/1/sigma_cine_lens_brochure_180912.pdf (the Cine FF High Speed primes share the Art optics) + https://www.sigma-global.com/en/lenses/a016_85_14/",
+  "src": "https://www.afcinema.com/IMG/pdf/e/8/1/sigma_cine_lens_brochure_180912.pdf (the Cine FF High Speed primes share the Art optics) + https://www.sigma-global.com/en/lenses/a016_85_14/ + 28mm: diff-e-rent's Sigma Art set page (28 cm)",
   "mod": {
    "14": "11\"",
    "20": "11\"",
@@ -637,7 +637,8 @@
    "50": "1'4\"",
    "85": "2'9½\"",
    "105": "3'3\"",
-   "135": "2'10\""
+   "135": "2'10\"",
+   "28": "11\""
   },
   "check": "maker (cine twin)",
   "note": "Sigma's metric figures (85 Art: 85 cm / 33.5 in on sigma-global.com); the others from their Cine twins, converted to the inch"
@@ -874,5 +875,154 @@
   },
   "check": "launch specs",
   "note": "Catta Zoom (E-mount) launch spec table"
+ },
+ "schneider-xenon-ff": {
+  "src": "https://www.bpm-media.de/media/pdf/60/a6/60/EN_Schneider-Kreuznach_Xenon_FF-Primes_Brochure.pdf (Schneider-Kreuznach brochure)",
+  "mod": {
+   "18": "1'4\"",
+   "25": "1'",
+   "35": "1'2\"",
+   "50": "1'8\"",
+   "75": "2'6\"",
+   "100": "3'3\""
+  },
+  "check": "maker"
+ },
+ "samyang-v-af": {
+  "src": "https://www.lksamyang.com/en/product/v-af (LK Samyang specifications, MFD in m)",
+  "mod": {
+   "20": "8\"",
+   "24": "7½\"",
+   "35": "11½\"",
+   "45": "1'3\"",
+   "75": "2'3\"",
+   "100": "2'4\""
+  },
+  "check": "maker"
+ },
+ "zeiss-standard-speed": {
+  "src": "https://lemac.com.au/Rentals/ZeissMKIIStandardSpeeds.aspx + https://www.keslowcamera.com/gear/zeiss-standard-speed-primes/ (rental house tables, marked minimum distance; the two agree where both list a lens)",
+  "mod": {
+   "16": "10\"",
+   "24": "1'2\"",
+   "28": "11\"",
+   "32": "2'",
+   "40": "1'4\"",
+   "50": "1'6\"",
+   "85": "3'",
+   "100": "3'4\"",
+   "135": "5'",
+   "180": "5'"
+  },
+  "check": "rental"
+ },
+ "blazar-remus": {
+  "src": "https://www.newsshooter.com/2023/12/05/blazar-remus-1-5x-full-frame-anamorphic-lens-review/ (Blazar specs as published: MFD in feet; 80mm outer diameter for the series)",
+  "mod": {
+   "45": "2'3\"",
+   "65": "2'3\"",
+   "100": "2'4\""
+  },
+  "check": "maker"
+ },
+ "blazar-great-joy": {
+  "src": "https://www.cinelenswiki.com/_export/raw/lens:blazargreatjoy35mmt2.9 (35mm) + https://www.newsshooter.com/2022/12/11/great-joy-85mm-t2-9-1-8x-anamorphic-lens-review/ (50, 85mm: 2.35 ft)",
+  "mod": {
+   "35": "2'3\"",
+   "50": "2'4\"",
+   "85": "2'4\""
+  },
+  "check": "maker"
+ },
+ "dzofilm-arles": {
+  "src": "https://dzofilm.com/products/arles-prime (DZOFilm spec table)",
+  "mod": {
+   "14": "11\"",
+   "21": "1'1\"",
+   "25": "1'2\"",
+   "35": "1'4\"",
+   "40": "1'7\"",
+   "50": "2'6\"",
+   "75": "2'11\"",
+   "100": "3'3\""
+  },
+  "check": "maker"
+ },
+ "dzofilm-gnosis": {
+  "src": "https://www.dzofilm.com/products/gnosis-macro (DZOFilm spec table)",
+  "mod": {
+   "24": "6\"",
+   "32": "6½\"",
+   "65": "9½\"",
+   "90": "10\""
+  },
+  "check": "maker"
+ },
+ "dzofilm-pictor": {
+  "src": "https://dzofilm.com/products/pictor-zoom (DZOFilm spec table)",
+  "mod": {
+   "20-55": "2'8\"",
+   "12-25": "1'4\""
+  },
+  "check": "maker"
+ },
+ "xeen-cf": {
+  "src": "https://xeenglobal.com/en/m/xeen-cf.php (XEEN CF specifications)",
+  "mod": {
+   "16": "1'",
+   "24": "10\"",
+   "35": "1'1\"",
+   "50": "1'6\"",
+   "85": "3'9\""
+  },
+  "check": "maker"
+ },
+ "veydra": {
+  "src": "https://www.provideocoalition.com/first-look-veydra-mini-primes-for-micro-four-thirds/ (Veydra figures from the focal plane; 80mm front for the series)",
+  "mod": {
+   "16": "8\"",
+   "50": "1'3\""
+  },
+  "check": "maker"
+ },
+ "sigma-dg-dn": {
+  "src": "https://en.wikipedia.org/wiki/List_of_third-party_E-mount_lenses (Sigma's specifications, MFD in m)",
+  "mod": {
+   "17": "5\"",
+   "20 f/2": "9\"",
+   "20 f/1.4": "9\"",
+   "24 f/2": "10\"",
+   "24 f/1.4": "10\"",
+   "35 f/2": "11\"",
+   "35 f/1.4": "1'",
+   "45": "9\"",
+   "50 f/2": "1'6\"",
+   "50 f/1.2": "1'4\"",
+   "65": "1'10\"",
+   "90": "1'8\"",
+   "85": "2'9\"",
+   "14-24": "11\"",
+   "24-70": "7\"–1'3\"",
+   "24-70 II": "7\"–1'1\"",
+   "28-70": "7½\"–1'3\"",
+   "28-105": "1'4\""
+  },
+  "check": "maker"
+ },
+ "tamron-e": {
+  "src": "https://en.wikipedia.org/wiki/List_of_third-party_E-mount_lenses (Tamron's specifications, MFD in m)",
+  "mod": {
+   "17-28": "7½\"–10\"",
+   "35-150": "1'1\"–2'9\""
+  },
+  "check": "maker"
+ },
+ "samyang-af-zoom": {
+  "src": "https://en.wikipedia.org/wiki/List_of_third-party_E-mount_lenses (Samyang's specifications, MFD in m)",
+  "mod": {
+   "35-150": "1'1\"–2'9\"",
+   "14-24": "7\""
+  },
+  "check": "maker"
  }
 }

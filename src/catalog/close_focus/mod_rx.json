@@ -1,6 +1,6 @@
 {
  "atlas-orion": "^atlas orion",
- "laowa-nanomorph-prime": "^laowa nanomorph s35 anamorphic prime",
+ "laowa-nanomorph-prime": "^laowa nanomorph (s35 anamorphic (prime|lens set)|(blue|silver) \\d)",
  "viltrox-epic": "^viltrox epic",
  "sony-70-200-gm1": "^sony e 70-200mm f\\/2\\.8 gm oss$",
  "sony-e": "^sony (?!.*cinealta)",
@@ -28,5 +28,18 @@
  "tokina-11-16-dx": "^tokina ef 11-16",
  "samyang-af-35": "^samyang e-mount 35mm f\\/2\\.8 af",
  "viltrox-af-13": "^viltrox af 13mm",
- "dzofilm-catta": "^dzofilm catta (35-80|70-135)"
+ "dzofilm-catta": "^dzofilm catta (35-80|70-135)",
+ "schneider-xenon-ff": "^schneider xenon ff",
+ "samyang-v-af": "^samyang (cine )?v-af",
+ "zeiss-standard-speed": "^zeiss\\b.*\\bstandard (speed|prime)|^zeiss standard lens set",
+ "blazar-remus": "^blazar remus",
+ "blazar-great-joy": "^blazar great joy",
+ "dzofilm-arles": "^dzofilm arles(?! lust)",
+ "dzofilm-gnosis": "^(dzo|dzofilm) gnosis",
+ "dzofilm-pictor": "^(dzo|dzofilm) pictor",
+ "xeen-cf": "xeen cf",
+ "veydra": "^veydra",
+ "sigma-dg-dn": "^sigma\\b.*\\bdg dn\\b",
+ "tamron-e": "^tamron\\b",
+ "samyang-af-zoom": "^(samyang af 35-150|schneider-kreuznach lk samyang af 14-24)"
 }
