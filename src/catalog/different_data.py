@@ -645,6 +645,7 @@ CATALOG = [
             'Atomos Shinobi SDI 7" 3G-SDI & 4K HDMI',
             '7" SWIT CM-S75F Monitor',
             'Atomos Sumo 19" PRO Brightness Monitor Recorder',
+            'Atomos Sumo 19" HDR/High Brightness Monitor Recorder',
             'Swit K15 15.4" FHD 1500nit Field Monitor',
             'SmallHD ULTRA 10 4K Portable Production Monitor',
             'Swit 17" monitor set',
