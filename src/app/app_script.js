@@ -53,7 +53,7 @@ for (const h of HOUSES) for (const c of h.categories) for (const s of c.subcateg
   for (const it of s.items) {
     if (/variable|vario|fader|\bvnd\b/i.test(it.name)) { out.push(it); continue; }
     // the density at the end ("– 03"), or inside the name as Diff-e-rent writes it ("4x5.65" Tiffen ND 0.6 Filter", "Vaxis IRND 1.2")
-    const m = it.name.match(ND_RX), m2 = !m && !/\bset\b|\bkit\b/i.test(it.name) && it.name.match(ND_MID);
+    const m = it.name.match(ND_RX), m2 = false;   // Diff-e-rent's "ND 0.6" singles stay single, in density folders (Ofir, 26.11)
     if (!m && !m2) { if (!ND_DENS.test(it.name) && !/coral|colou?r|\d\/\d/i.test(it.name) && /\b\d+(?:\.\d+)?\s*["”]?\s*x\s*\d/i.test(it.name)) { it.ndset = ND_STD[kind].map(d => ({ d })); it.ndstd = ND_STD[kind]; } out.push(it); continue; }
     const key = m ? it.name.replace(ND_RX, "").trim() : (m2[1] + " " + m2[3]).replace(/\s+filter\s*$/i, "").replace(/(\d)["”]\s*x/i, "$1x").replace(/\s+/g, " ").trim(), fk = flatKey(key.replace(/["”″]/g, ""));
     if (!fam.has(fk)) { const set = { key, items: [] }; fam.set(fk, set); out.push(set); }

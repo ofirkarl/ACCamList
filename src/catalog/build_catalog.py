@@ -175,7 +175,7 @@ def slug(s):
 import os as _os, sys as _sys
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 from brands import brand_of
-from meta import (title_case, filter_sub, filter_group, filter_sort_key, FILTER_SUBS, FILTER_GROUP_BY, SIZE_ORDER, FILTER_WORDS,
+from meta import (title_case, filter_sub, filter_group, filter_sort_key, DENSITY_HOUSES, DENSITY_ORDER, density_sort_key, FILTER_SUBS, FILTER_GROUP_BY, SIZE_ORDER, FILTER_WORDS,
                   is_txrx, camera_meta, lens_meta, MEDIA_SUBS, MEDIA_ORDER, media_kind, media_group, FF_ORDER, ff_group, POWER_ORDER, power_group,
                   FUNC_GROUPS, func_group)
 
@@ -374,13 +374,15 @@ def build(houses):
                     rows.append([house["name"], cat_name, sub_name, item["brand"], display, dict((a, b) for a, b, _ in SECTIONS)[item["section"]], item.get("sku", ""), (item.get("lens") or {}).get("coverage", "") or (item.get("camera") or {}).get("sensor", ""), (item.get("lens") or {}).get("focals", ""), (item.get("lens") or {}).get("stop", ""), item.get("site_name", ""), item.get("url", "")])
                 # third level: filters by size or type, cards and readers by card type, the rest by brand
                 if cat_id == "filters":
+                    dens = sub_id in ("nd", "ndg") and house["id"] in DENSITY_HOUSES
                     for item, nm in zip(sub["items"], names):
-                        item["group"] = filter_group(sub_id, nm)
-                    order = {id(i): filter_sort_key(sub_id, nm) for i, nm in zip(sub["items"], names)}
+                        item["group"] = filter_group(sub_id, nm, house["id"])
+                    order = {id(i): (density_sort_key(nm) if dens else filter_sort_key(sub_id, nm)) for i, nm in zip(sub["items"], names)}
                     sub["items"].sort(key=lambda i: order[id(i)])
-                    sub["groupBy"] = FILTER_GROUP_BY.get(sub_id, "type")
+                    sub["groupBy"] = "density" if dens else FILTER_GROUP_BY.get(sub_id, "type")
                     present = {i["group"] for i in sub["items"]}
-                    sub["groups"] = [g for g in SIZE_ORDER if g in present] if sub["groupBy"] == "size" else sorted(present)
+                    sub["groups"] = ([g for g in DENSITY_ORDER if g in present] if dens else
+                                     [g for g in SIZE_ORDER if g in present] if sub["groupBy"] == "size" else sorted(present))
                 elif sub_id in ("media", "card_readers"):
                     for item, nm in zip(sub["items"], names):
                         item["group"] = media_group(nm)

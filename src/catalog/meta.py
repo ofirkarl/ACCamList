@@ -103,9 +103,23 @@ def filter_sub(n):
     return "effects"
 
 
-def filter_group(sub, n):
+DENSITY_HOUSES = {"different"}  # houses whose ND filters are single filters: folders by density, not by size (Ofir, 26.11)
+DENSITY_ORDER = ["ND 0.3", "ND 0.6", "ND 0.9", "ND 1.2", "ND 1.5", "ND 1.8", "ND 2.1", "Variable ND", "ND Sets",
+                 "NDG 0.3", "NDG 0.6", "NDG 0.9", "NDG Sets", "Other"]
+
+
+def _density_group(sub, n):
+    if re.search(r"variable|vario|fader|\bvnd\b", n, re.I): return "Variable ND"
+    if re.search(r"\bset\b|\bkit\b", n, re.I): return "NDG Sets" if sub == "ndg" else "ND Sets"
+    m = re.search(r"(?:\bir)?ndg?\s*([0-2]\.\d)\b(?!\d)|\bgrad\s+([0-2]\.\d)\b", n, re.I)
+    if not m: return "Other"
+    d = m.group(1) or m.group(2)
+    return ("NDG " if sub == "ndg" else "ND ") + d
+
+
+def filter_group(sub, n, house=None):
     if sub in ("nd", "ndg"):
-        return _size(n)
+        return _density_group(sub, n) if house in DENSITY_HOUSES else _size(n)
     if sub == "diffusers":
         for pat, g in [(r"warm pro-?mist", "Warm Pro-Mist"), (r"b\.?\s?pro-?mist|black pro[- ]?mist", "Black Pro-Mist"),
                        (r"pro[- ]?mist", "Pro-Mist"), (r"glimmer", "Glimmerglass"), (r"soft ?[/-]? ?fx", "Soft FX"), (r"black magic", "Hollywood Black Magic"),
@@ -154,6 +168,10 @@ def filter_sort_key(sub, n):
     kind = 0 if re.search(r"\bndf\b|nd filter", n, re.I) else 1 if re.search(r"irnd", n, re.I) else 2
     size = SIZE_ORDER.index(_size(n))
     return (kind, strength(n), n) if sub in ("nd", "ndg") else (size, strength(n), n)
+
+
+def density_sort_key(n):
+    return (SIZE_ORDER.index(_size(n)), n.lower())
 
 
 # ---------------------------------------------------------------- media and card readers
