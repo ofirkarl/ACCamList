@@ -78,11 +78,11 @@ FILTER_WORDS = re.compile(r"filter|\bnd[fg]?\b|pola|pro mist|diopter|proxar", re
 
 
 def _size(n):
-    if re.search(r"4\s*[x×]\s*5\.6", n, re.I):
+    if re.search(r"4[\"”]?\s*[x×]\s*5\.6", n, re.I):
         return "4x5.6"
-    if re.search(r"4\s*[x×]\s*4(?![.\d])", n, re.I):
+    if re.search(r"4[\"”]?\s*[x×]\s*4(?![.\d])", n, re.I):
         return "4x4"
-    if re.search(r"6(\.6)?\s*[x×]\s*6", n, re.I):
+    if re.search(r"6(\.6)?[\"”]?\s*[x×]\s*6", n, re.I):
         return "6x6"
     return "Round & Variable"
 
@@ -98,7 +98,7 @@ def filter_sub(n):
         return "ndg"
     if re.search(r"\bndf\b|\birnd\b|\bnd\b|\bvnd\b|variable nd|solid nd|nd\d", n, re.I):
         return "nd"
-    if re.search(r"mist|glimmer|soft fx|pearlescent|satin|diffusion|low contrast|allure", n, re.I):
+    if re.search(r"mist|glimmer|soft ?[/-]? ?fx|pearlescent|satin|diffusion|black diff\b|black magic|low contrast|allure", n, re.I):
         return "diffusers"
     return "effects"
 
@@ -108,9 +108,9 @@ def filter_group(sub, n):
         return _size(n)
     if sub == "diffusers":
         for pat, g in [(r"warm pro-?mist", "Warm Pro-Mist"), (r"b\.?\s?pro-?mist|black pro[- ]?mist", "Black Pro-Mist"),
-                       (r"pro[- ]?mist", "Pro-Mist"), (r"glimmer", "Glimmerglass"), (r"soft fx", "Soft FX"),
+                       (r"pro[- ]?mist", "Pro-Mist"), (r"glimmer", "Glimmerglass"), (r"soft ?[/-]? ?fx", "Soft FX"), (r"black magic", "Hollywood Black Magic"),
                        (r"pearlescent", "Pearlescent"), (r"satin", "Black Satin"), (r"g\.?\s?diffusion", "Gold Diffusion FX"),
-                       (r"b\.?\s?diffusion", "Black Diffusion FX"), (r"low contrast", "Low Contrast"),
+                       (r"b\.?\s?diffusion|black diff(usion)?\b", "Black Diffusion FX"), (r"low contrast", "Low Contrast"),
                        (r"allure mist black", "Allure Mist Black"), (r"allure mist white", "Allure Mist White"),
                        (r"black mist", "Black Mist"), (r"pure mist", "Pure Mist")]:
             if re.search(pat, n, re.I):

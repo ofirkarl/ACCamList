@@ -3091,24 +3091,27 @@ if (typeof window !== "undefined" && window.addEventListener) {
    (Fitussi's "NDF 4X5.65") gets the standard ones to choose from ---------- */
 const ND_STD = { nd: ["0.3", "0.6", "0.9", "1.2", "1.5", "1.8", "2.1"], ndg: ["0.3", "0.6", "0.9"] };
 const ND_RX = /\s*[–-]\s*(\d+(?:\.\d+)?)\s*$/;
+const ND_MID = /^(.*?\b(?:ir)?ndg?|.*?\bgrad)\s+((?:0|1|2)\.\d)\b(?!\d)(.*)$/i;   // "... ND 0.6 Filter", "... IRND 1.2", "... ND Grad 0.3 Soft"
+const ND_DENS = /\b(?:ir)?ndg?\s+[0-2]\.\d\b|\bgrad\s+[0-2]\.\d\b/i;
 const ndLabel = t => { const v = /^0\d$/.test(t) ? +("0." + t[1]) : parseFloat(t); return isFinite(v) ? v.toFixed(1) : t; };   // "03" and "0.3": 0.3
 const ND_MEMBER = new Map();   // a single density's catalog id -> its set's id (lists made before the sets still find the filter)
 for (const h of HOUSES) for (const c of h.categories) for (const s of c.subcategories) {
   const kind = /^nd$|^ndg$/.test(s.id) && c.id === "filters" ? s.id : null; if (!kind) continue;
   const fam = new Map(), out = [];
   for (const it of s.items) {
-    if (/variable/i.test(it.name)) { out.push(it); continue; }
-    const m = it.name.match(ND_RX);
-    if (!m) { if (/\b\d+(?:\.\d+)?\s*x\s*\d/i.test(it.name)) { it.ndset = ND_STD[kind].map(d => ({ d })); it.ndstd = ND_STD[kind]; } out.push(it); continue; }
-    const key = it.name.replace(ND_RX, "").trim();
-    if (!fam.has(key)) { const set = { key, items: [] }; fam.set(key, set); out.push(set); }
-    fam.get(key).items.push(it);
+    if (/variable|vario|fader|\bvnd\b/i.test(it.name)) { out.push(it); continue; }
+    // the density at the end ("– 03"), or inside the name as Diff-e-rent writes it ("4x5.65" Tiffen ND 0.6 Filter", "Vaxis IRND 1.2")
+    const m = it.name.match(ND_RX), m2 = !m && !/\bset\b|\bkit\b/i.test(it.name) && it.name.match(ND_MID);
+    if (!m && !m2) { if (!ND_DENS.test(it.name) && !/coral|colou?r|\d\/\d/i.test(it.name) && /\b\d+(?:\.\d+)?\s*["”]?\s*x\s*\d/i.test(it.name)) { it.ndset = ND_STD[kind].map(d => ({ d })); it.ndstd = ND_STD[kind]; } out.push(it); continue; }
+    const key = m ? it.name.replace(ND_RX, "").trim() : (m2[1] + " " + m2[3]).replace(/\s+filter\s*$/i, "").replace(/(\d)["”]\s*x/i, "$1x").replace(/\s+/g, " ").trim(), fk = flatKey(key.replace(/["”″]/g, ""));
+    if (!fam.has(fk)) { const set = { key, items: [] }; fam.set(fk, set); out.push(set); }
+    fam.get(fk).items.push(it);
   }
   s.items = out.map(x => {
     if (!x.items) return x;
     if (x.items.length < 2) return x.items[0];
     const m0 = x.items[0], id = m0.id.split(":")[0] + ":ndset-" + flatKey(x.key);
-    const ndset = x.items.map(it => ({ d: ndLabel(it.name.match(ND_RX)[1]), id: it.id, sku: it.sku || "", name: it.name })).sort((a, b) => parseFloat(a.d) - parseFloat(b.d));
+    const ndset = x.items.map(it => ({ d: ndLabel((it.name.match(ND_RX) || it.name.match(ND_MID))[ND_RX.test(it.name) ? 1 : 2]), id: it.id, sku: it.sku || "", name: it.name, url: it.url || "" })).sort((a, b) => parseFloat(a.d) - parseFloat(b.d));
     x.items.forEach(it => ND_MEMBER.set(it.id, id));
     const set = { ...m0, id, name: x.key + " Set", ndset, ndstd: ND_STD[kind].filter(d => ndset.some(n => n.d === d)) };
     delete set.sku; delete set.url; delete set.site_name;
