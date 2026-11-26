@@ -1685,6 +1685,11 @@ input[type="search"]:placeholder-shown::-webkit-search-cancel-button { display: 
    the category heading (color tile, name 15px, count, chevron), a sub-heading band in small capitals, and rows of the same height */
 #tree > details.cat > summary { padding-block: 7px; gap: 10px; }
 #tree .cat-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; gap: 10px; line-height: 1.2; }
+/* double arrows: all subcategories of an open category, right after its name */
+#tree .cat-all { flex: none; width: 28px; height: 28px; margin-block: -6px; margin-inline-start: -4px; display: grid; place-items: center; color: var(--muted); border-radius: 8px; }
+#tree .cat-all svg { width: 16px; height: 16px; }
+#tree details.cat:not([open]) > summary .cat-all { display: none; }
+.search-row .tree-all[hidden] { display: none; }
 #listSecs .section h3, .sl-open .section h3 { background: none; padding: 0; border-radius: 0; min-height: 30px; font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--fg); }
 #listSecs .section h3 > span:first-child, .sl-open .section h3 > span:first-child { gap: 10px; }
 #listSecs .section h3 .tape, .sl-open .section h3 .tape { margin-inline-end: 0; }
@@ -6461,13 +6466,29 @@ function viewCatalog(p, h) {
       <div class="search-row"><label class="search" for="q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
       <input data-sug="search" id="q" type="search" placeholder="Search ${esc(h.name)}" autocomplete="off" value="${esc(app.q)}"></label>
       <button class="btn icon-btn spec-btn" type="button" data-act="fin-open" aria-label="Lens search: find a lens by focal length and stop" title="Lens search">${LENS_ICON}</button>
-      <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button></div>
+      <button class="btn icon-btn${app.editCat ? " primary" : ""}" type="button" data-act="cat-editmode" aria-pressed="${app.editCat}" aria-label="${app.editCat ? "Done editing the catalog" : "Edit the catalog"}" title="${app.editCat ? "Done editing" : "Edit the catalog"}">${PEN_ICON}</button><button class="btn icon-btn tree-all" type="button" data-act="tree-all" data-open="1" aria-label="Open all" title="Open all"${app.q.trim() ? " hidden" : ""}>${UNFOLD_ICON}</button></div>
       <div class="chips bleed" role="toolbar" aria-label="Filter by category">${chips}</div>
       ${app.editCat ? `<p class="hint ed-note">The order you set here is also the order in your lists and in the document.</p>` : ""}
     </div>
 
     <div class="pad" id="tree">${treeHtml(p, h)}</div>`;
 }
+/* the catalog's double arrows: open (or close) all subcategories of one category, or every category and subcategory at once.
+   Each shows what a tap does now, from what is open on the screen */
+function allTogSync() {
+  if (typeof document === "undefined" || !document.querySelectorAll) return;
+  const set = (b, allOpen, what) => { if (!b) return; const v = allOpen ? "0" : "1"; if (b.dataset.open === v) return; b.dataset.open = v; b.innerHTML = allOpen ? FOLD_ICON : UNFOLD_ICON;
+    const t = (allOpen ? "Close all" : "Open all"); b.title = t; b.setAttribute("aria-label", t + (what ? " of " + what : "")); };
+  document.querySelectorAll("#tree details.cat").forEach(cat => {
+    const subs = [...cat.querySelectorAll(":scope > .cat-body > details.sub")];
+    const b = cat.querySelector(":scope > summary .cat-all");
+    set(b, subs.length > 0 && subs.every(d => d.open), b && b.getAttribute("aria-label").replace(/^(Open|Close) all of /, ""));
+  });
+  const all = [...document.querySelectorAll("#tree details.cat, #tree details.cat > .cat-body > details.sub")];
+  const top = document.querySelector(".tree-all"); if (top) { top.hidden = all.length < 2 || !!app.q.trim(); set(top, all.length > 0 && all.every(d => d.open), ""); }
+}
+let allTogT = 0;
+const allTogSoon = () => { if (allTogT) return; allTogT = setTimeout(() => { allTogT = 0; allTogSync(); }, 0); };
 const PEN_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>`;
 function selCount(p, pred) { let n = 0; for (const id of Object.keys(p.items)) { const e = ITEM.get(id); if (e && pred(e)) n++; } return n; }
 function selBadge(n, key) { return `<span class="sel" data-sel="${esc(key)}" ${n ? "" : "hidden"}>${n}</span>`; }
@@ -6542,6 +6563,7 @@ function lensFormats(groups, s) {
   return { covs: [...m.entries()].sort((a, b) => COV_ORDER.indexOf(a[0]) - COV_ORDER.indexOf(b[0])).map(([cov, its]) => ({ cov, its })), other };
 }
 function treeHtml(p, h) {
+  allTogSoon();   // the double arrows follow what this draws
   const q = norm(app.q.trim()), searching = q.length > 0, ed = app.editCat;
   // exact matches first; only when there are none does a slightly misspelled word still find its item
   const fz = searching && !h.categories.some(c => [c.direct, ...c.subcategories].some(sub => sub.items.some(it => qHit(hay(it, sub), q))));
@@ -6620,7 +6642,7 @@ function treeHtml(p, h) {
     const nSel = selCount(p, e => e.c.id === c.id && e.h.id === h.id);
     const open = searching || app.cat === c.id || app.open.has(c.id);
     const addSub = ed ? `<div class="add-row"><button class="add-head" type="button" data-act="new-item" data-k="${esc(c.direct.key)}">+ New item in ${esc(c.name)}</button><button class="add-head" type="button" data-act="new-folder" data-k="${esc(c.id)}">+ New folder in ${esc(c.name)}</button></div>` : "";
-    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.map((x, i) => x + dUl(dlb.get(subKeys[i]))).join("")}${addSub}</div></details>`);
+    out.push(`<details class="cat" data-k="${esc(c.id)}"${dz(c.direct.key)} style="--tape: ${catTape(c)}" ${open ? "open" : ""}><summary${dz(c.direct.key)}><span class="cat-title">${ed ? `<button class="handle" type="button" data-drag="ccat" data-id="${esc(c.id)}" data-label="${esc(c.name)}" aria-label="Move ${esc(c.name)}: drag, or use the arrow keys">${GRIP}</button>` : ""}${tapeIcon(c.id, c.name)}${esc(c.name)}${pen(c.id, c.name)}${!searching && subs.length >= 2 ? `<button class="iconbtn all-tog cat-all" type="button" data-act="cat-subs" data-open="1" aria-label="Open all of ${esc(c.name)}" title="Open all">${UNFOLD_ICON}</button>` : ""}</span><span class="sumr">${selBadge(nSel, c.id)}<span class="cnt">${cn}</span>${CHEV}</span></summary><div class="cat-body">${direct}${subs.map((x, i) => x + dUl(dlb.get(subKeys[i]))).join("")}${addSub}</div></details>`);
   }
   if (ed && !searching) out.push(`<button class="add-head big" type="button" data-act="new-cat">+ Add category or subcategory</button>`);
   const lq = searching ? parseLensQuery(app.q) : null;
@@ -10856,6 +10878,14 @@ document.addEventListener("click", e => {
       for (const s of allSections()) { if (open) app.open.delete("secx/" + s.id); else app.open.add("secx/" + s.id); }
       rerenderKeepScroll(); break;
     }
+    /* catalog: all subcategories of one category; every category and subcategory */
+    case "cat-subs": { e.preventDefault(); const cat = b.closest("details.cat"); if (!cat) break; const open = b.dataset.open === "1";
+      cat.querySelectorAll(":scope > .cat-body > details.sub").forEach(d => { d.open = open; if (open) app.open.add(d.dataset.k); else app.open.delete(d.dataset.k); });
+      allTogSync(); break; }
+    case "tree-all": { const open = b.dataset.open === "1";
+      document.querySelectorAll("#tree details.cat, #tree details.cat > .cat-body > details.sub").forEach(d => { d.open = open; if (open) app.open.add(d.dataset.k); else app.open.delete(d.dataset.k); });
+      if (!open && app.cat !== "all") { const c = document.querySelector(`#tree details.cat[data-k="${CSS.escape(app.cat)}"]`); if (c) { c.open = true; app.open.add(app.cat); } }   // a category picked in the chips stays open
+      allTogSync(); break; }
     /* catalog: open or close everything inside a subcategory */
     case "sub-all": {
       const sub = b.closest("details.sub"); if (!sub) break;
@@ -11261,6 +11291,7 @@ document.addEventListener("toggle", e => {
   const k = e.target && e.target.dataset && e.target.dataset.k;
   if (!k || app.q.trim()) return;
   if (e.target.open) app.open.add(k); else app.open.delete(k);
+  if (e.target.closest && e.target.closest("#tree")) allTogSoon();
 }, true);
 document.addEventListener("input", e => {
   const t = e.target, p = cur();
