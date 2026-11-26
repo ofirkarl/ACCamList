@@ -1,10 +1,11 @@
 // Run the page script with DOM stubs, then exercise the model: batteries, TX/RX, sub-items, favorites, coverage, exports.
+const DOC = process.argv[2] || require("path").join(__dirname, "../build/document.xml");
 const fs = require("fs");
-const builtHtml = fs.readFileSync("/home/claude/fitussi-catalog.html", "utf8");
+const builtHtml = fs.readFileSync(process.env.APP_HTML || require("path").join(__dirname, "../build/ac-cam-list.html"), "utf8");
 // the feature tests run on a fixed starting catalog (the one they were written against); the app's real one is checked at the end
 const STARTER_RE = /const STARTER = (.*?) \|\| \{ catalog: \{\}, closedBrands: \{\}, catColors: \{\} \};/s;
 const realStarter = JSON.parse(builtHtml.match(STARTER_RE)[1]);
-const html = builtHtml.replace(STARTER_RE, () => `const STARTER = ${fs.readFileSync(__dirname + "/test_starter_fixture.json", "utf8")} || { catalog: {}, closedBrands: {}, catColors: {} };`);
+const html = builtHtml.replace(STARTER_RE, () => `const STARTER = ${fs.readFileSync(require("path").join(__dirname, "test_starter_fixture.json"), "utf8")} || { catalog: {}, closedBrands: {}, catColors: {} };`);
 const js = html.split("<script>")[1].split("</script>")[0];
 const el = () => ({ innerHTML: "", className: "", textContent: "", hidden: true, value: "", dataset: {}, classList: { toggle() {}, add() {}, remove() {} }, querySelectorAll: () => [], querySelector: () => null, focus() {}, setAttribute() {}, remove() {}, appendChild() {} });
 const store = {};
@@ -178,8 +179,8 @@ ok(/\n(Teradek|[^\n\d]*Bolt) 6 LT 750[^\n]*\n   - 2x TX · 3x RX\n/.test(txt) &&
 { const w = A.newProduction({ houseId: "utopia", name: "W" }); A.setQty(w, bolt, 2); ok(!/- \d+x [TR]X/.test(A.listText(w)), "whole sets exported as just the sets, no TX or RX under them"); }
 ok(/- 1x USB Hub/.test(txt), "sub-items exported");
 ok(/   - Charger\n/.test(txt) && !/\dx Charger/.test(txt), "a sub-item with no quantity: exported as just its name");
-fs.writeFileSync(process.argv[2], A.docxXml(p));
-fs.writeFileSync(process.argv[2].replace("document.xml", "pdf.html"), "<meta charset=utf-8>" + A.exportHtml(p));
+fs.writeFileSync(DOC, A.docxXml(p));
+fs.writeFileSync(DOC.replace("document.xml", "pdf.html"), "<meta charset=utf-8>" + A.exportHtml(p));
 console.log(A.csvText(p).split("\r\n").slice(0, 3).join("\n"));
 
 // --- editing: catalog items, headings, gear list order
