@@ -261,6 +261,9 @@ CAMERAS = [  # (pattern, sensor, film)
     (r"PXW-X400|PMW-400|PDW-[78]00|DVW-970|HSC-300|AG-HPX500|DSR-450", "2/3"),
     (r"PXW-X70|Z90|Z150|CX350|PX270|UX180|DVX-200|AC160|HMC154|X180|PMW-100|TM900|HC-|Osmo|GOPRO|GoPro|INSTA360|OZO|360RIZE|"
      r"3DA1|BRC-|AW-UE|MARSHALL|LAWMATE|ZV-1|MISSION 1", "fixed"),
+    # the stills and newer cinema cameras of Different's list (26.11)
+    (r"V-Raptor 8K VV", "LF"), (r"\bFX5\b|\bC50\b|\bC80\b|\bS1 ?II|\bS5\b|\bS5 ?IIx?\b|EOS R5|EOS R6|EOS R8\b|\ba7R ?V\b", "FF"),
+    (r"X-H2S|X-T50|X-T5\b|X-S20|X-T30|EOS R50|EOS R7\b|EOS R10\b", "APS-C"), (r"\bGH6\b|\bGH5 II\b|\bG9\b|DC-G9|\bG9 II\b", "MFT"),
 ]
 
 
@@ -275,6 +278,8 @@ CAMERA_MEDIA = [  # (pattern, preferred card types in order)
     (r"PXW-X400|PMW-400", ["SxS"]), (r"PMW-100", ["SxS", "SD"]),
     (r"PXW-X180|PXW-X70|Z90|Z150|CX350|PX270|UX180|DVX-200|AC160|HMC154|TM900|HC-", ["SD"]),
     (r"GOPRO|GoPro|INSTA360|Osmo|MISSION 1", ["microSD"]),
+    (r"V-Raptor", ["CFexpress Type B"]), (r"\bC50\b|EOS R5|X-H2S|\bS1 ?II|\bGH6\b", ["CFexpress Type B", "SD"]), (r"\ba7R ?V\b", ["CFexpress Type A", "SD"]),
+    (r"\bC80\b|\bS5|EOS R6|EOS R8\b|EOS R7\b|EOS R10\b|EOS R50|X-T50|X-T5\b|X-S20|X-T30|\bG9|\bGH5 II\b", ["SD"]),
 ]
 
 
