@@ -73,13 +73,14 @@ for (const h of HOUSES) for (const c of h.categories) for (const s of c.subcateg
 function flatKey(t) { return String(t).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 /* a house that has a camera has its cards (Ofir, 26.11): a card type its cameras record on that the catalog doesn't list gets a
    generic card in Media, so the cards suggestion and the packages always have one to offer */
+const CARD_SIZE = { "Codex Compact Drive": "1TB" };   // the size a generic card is written with (Ofir, 26.11)
 const CARD_NAME = { "Codex Compact Drive": "Codex Compact Drive", "AXS": "AXS Memory Card", "RED Mini-Mag": "RED Mini-Mag", "DJI PROSSD": "DJI PROSSD", "SSD": "SSD Drive", "P2 / expressP2": "P2 Card" };
 for (const h of HOUSES) {
   const media = h.categories.flatMap(c => c.subcategories).find(s => s.id === "media"); if (!media) continue;
   const have = new Set(media.items.map(it => it.group)), need = [];
   for (const c of h.categories) for (const s of c.subcategories) for (const it of s.items) for (const t of (it.camera && !it.camera.film && it.camera.media) || []) if (!have.has(t) && !need.includes(t)) need.push(t);
   for (const t of need) {
-    media.items.push({ id: h.id + ":card-" + flatKey(t), name: CARD_NAME[t] || t + " Card", brand: "Generic", section: (media.items[0] || {}).section || "media", group: t, generic: true });
+    media.items.push({ id: h.id + ":card-" + flatKey(t), name: (CARD_NAME[t] || t + " Card") + (CARD_SIZE[t] ? " " + CARD_SIZE[t] : ""), brand: "Generic", section: (media.items[0] || {}).section || "media", group: t, generic: true });
     if (media.groups && !media.groups.includes(t)) media.groups.push(t);
   }
 }
@@ -734,7 +735,7 @@ const X_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stro
 const LINK_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9c-2.6-2.6-3.9-5.6-3.9-9S9.4 5.6 12 3z"/></svg>`;
 const safeUrl = u => { if (!/^https?:\/\//i.test(u || "")) return ""; try { return encodeURI(decodeURI(u)); } catch (e) { return ""; } };
 const linkHtml = (it, h) => it && safeUrl(it.url) ? `<a class="ext" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer" title="Product page${h ? " on " + esc(h.name) : ""}" aria-label="Open ${esc(it.name)} on ${esc(h ? h.name : "the rental house")}'s site">${LINK_ICON}</a>` : "";
-const genNote = id => { const e = ITEM.get(id); return e && e.it.generic ? `Not in ${e.h.name}'s catalog. Check with them.` : ""; };   // the generic cards added for a camera
+const genNote = id => { const e = ITEM.get(id); return e && e.it.generic ? `Not listed in ${e.h.name}'s catalog. Check with them.` : ""; };   // the generic cards added for a camera
 const noteHtml = id => (genNote(id) ? `<span class="inote">${esc(genNote(id))}</span>` : "") + (noteOf(id) ? `<span class="inote">${esc(noteOf(id))}</span>` : "");
 /* drag a subcategory: into a category, before or after another subcategory */
 /* a subcategory dropped by a block of its category's own items (items in no subcategory, which sit after the subcategory they
